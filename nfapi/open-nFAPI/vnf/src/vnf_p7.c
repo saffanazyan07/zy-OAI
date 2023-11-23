@@ -2058,7 +2058,7 @@ void vnf_nr_handle_timing_info(void *pRecvMsg, int recvMsgLen, vnf_p7_t* vnf_p7)
 		  //printf("VNF-PNF delta - %d", vnf_pnf_sfnslot_delta);
           if (vnf_pnf_sfnslot_delta != 0)
           {
-            NFAPI_TRACE(NFAPI_TRACE_INFO, "%s() LARGE SFN/SLOT DELTA between PNF and VNF. Delta %d. PNF:%d.%d VNF:%d.%d\n\n\n\n\n\n\n\n\n",
+            NFAPI_TRACE(NFAPI_TRACE_INFO, "%s() LARGE SFN/SLOT DELTA between PNF and VNF. Delta %d. PNF:%d.%d VNF:%d.%d\n",
                         __FUNCTION__, vnf_pnf_sfnslot_delta,
                         ind.last_sfn, ind.last_slot,
                         vnf_p7->p7_connections[0].sfn, vnf_p7->p7_connections[0].slot);

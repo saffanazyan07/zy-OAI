@@ -2344,14 +2344,7 @@ int nfapi_nr_p5_message_unpack(void *pMessageBuf,
   }
 
   uint8_t *ptr = pReadPackedMessage;
-  printf("\n Read NR message unpack: ");
 
-  while (ptr < end) {
-    printf(" %02x ", *ptr);
-    ptr++;
-  }
-
-  printf("\n");
   // clean the supplied buffer for - tag value blanking
   (void)memset(pUnpackedBuf, 0, unpackedBufLen);
 
