@@ -548,7 +548,6 @@ int param_request(nfapi_pnf_config_t *config, nfapi_pnf_phy_config_t *phy, nfapi
   nfapi_resp.num_tlv++;
   nfapi_pnf_param_resp(config, &nfapi_resp);
   printf("[PNF] Sent NFAPI_PARAM_RESPONSE phy_id:%d number_of_tlvs:%u\n", req->header.phy_id, nfapi_resp.num_tlv);
-  printf("[PNF] param request .. exit\n");
   return 0;
 }
 
@@ -767,7 +766,6 @@ int nr_param_request(nfapi_pnf_config_t *config, nfapi_pnf_phy_config_t *phy, nf
   nfapi_nr_pnf_param_resp(config, &nfapi_resp);
 
   printf("[PNF] Sent NFAPI_PNF_PARAM_RESPONSE phy_id:%d number_of_tlvs:%u\n", req->header.phy_id, nfapi_resp.num_tlv);
-  printf("[PNF] param request .. exit\n");
   return 0;
 }
 
