@@ -88,16 +88,14 @@ void vnf_p7_connection_info_list_add(vnf_p7_t* vnf_p7, nfapi_vnf_p7_connection_i
 nfapi_vnf_p7_connection_info_t* vnf_p7_connection_info_list_find(vnf_p7_t* vnf_p7, uint16_t phy_id)
 {
 	nfapi_vnf_p7_connection_info_t* curr = vnf_p7->p7_connections;
-	while(curr != 0)
-	{
-		if(curr->phy_id == phy_id)
-		{
-			return curr;
-		}
-		curr = curr->next;
-	}
+  while (curr != 0) {
+    if (curr->phy_id == phy_id)
+      return curr;
+    curr = curr->next;
+  }
+  NFAPI_TRACE(NFAPI_TRACE_ERROR, "%s(): could not find P7 connection for phy_id %d\n", __func__, phy_id);
 
-	return 0;
+  return 0;
 }
 
 nfapi_vnf_p7_connection_info_t* vnf_p7_connection_info_list_delete(vnf_p7_t* vnf_p7, uint16_t phy_id)
