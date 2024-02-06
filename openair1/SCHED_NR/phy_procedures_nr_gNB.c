@@ -776,8 +776,6 @@ int phy_procedures_gNB_uespec_RX(PHY_VARS_gNB *gNB, int frame_rx, int slot_rx)
   for (int i = 0; i < gNB->max_nb_pucch; i++) {
     NR_gNB_PUCCH_t *pucch = &gNB->pucch[i];
     if (pucch) {
-      if (NFAPI_MODE == NFAPI_MODE_PNF)
-        pucch->frame = frame_rx;
       if (pucch->active && (pucch->frame == frame_rx) && (pucch->slot == slot_rx)) {
         c16_t **rxdataF = gNB->common_vars.rxdataF[pucch->beam_nb];
         pucch_decode_done = 1;
