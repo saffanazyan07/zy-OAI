@@ -242,6 +242,7 @@ void nr_schedule_response(NR_Sched_Rsp_t *Sched_INFO)
 
   if (NFAPI_MODE == NFAPI_MODE_VNF) { // If VNF, oai_nfapi functions send respective p7 msgs to PNF for which nPDUs > 0
 
+    // order wrong!!
     if (number_ul_tti_pdu > 0)
       oai_nfapi_ul_tti_req(UL_tti_req);
 
