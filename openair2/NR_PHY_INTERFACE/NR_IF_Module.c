@@ -393,7 +393,15 @@ static void match_crc_rx_pdu(nfapi_nr_rx_data_indication_t *rx_ind, nfapi_nr_crc
   }
 }
 
-static void run_scheduler(module_id_t module_id, int CC_id, int frame, int slot)
+extern void handle_nr_slot_ind(uint16_t sfn, uint16_t slot);
+static void pnf_send_slot_ind(module_id_t module_id, int CC_id, int frame, int slot)
+{
+	(void) module_id;
+	(void) CC_id;
+  handle_nr_slot_ind(frame, slot);
+}
+
+static void run_scheduler_monolithic(module_id_t module_id, int CC_id, int frame, int slot)
 {
   NR_IF_Module_t *ifi = nr_if_inst[module_id];
 
@@ -416,6 +424,8 @@ static void run_scheduler(module_id_t module_id, int CC_id, int frame, int slot)
 
   sched_info->TX_req      = &mac->TX_req[CC_id];
   */
+  //
+
 #ifdef DUMP_FAPI
   dump_dl(sched_info);
 #endif
@@ -506,7 +516,12 @@ NR_IF_Module_t *NR_IF_Module_init(int Mod_id) {
 
     nr_if_inst[Mod_id]->CC_mask=0;
     nr_if_inst[Mod_id]->NR_UL_indication = NR_UL_indication;
-    nr_if_inst[Mod_id]->NR_slot_indication = run_scheduler;
+    if (NFAPI_MODE == NFAPI_MONOLITHIC)
+      nr_if_inst[Mod_id]->NR_slot_indication = run_scheduler_monolithic;
+    else if (NFAPI_MODE == NFAPI_MODE_PNF)
+      nr_if_inst[Mod_id]->NR_slot_indication = pnf_send_slot_ind;
+    else // NFAPI_MODE_VNF
+      NULL;
     AssertFatal(pthread_mutex_init(&nr_if_inst[Mod_id]->if_mutex,NULL)==0,
                 "allocation of nr_if_inst[%d]->if_mutex fails\n",Mod_id);
   }
