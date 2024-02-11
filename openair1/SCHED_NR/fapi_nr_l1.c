@@ -280,7 +280,7 @@ void nr_schedule_response(NR_Sched_Rsp_t *Sched_INFO)
   }
 
   /* this thread is done with the sched_info, decrease the reference counter */
-  if (slot_type == NR_DOWNLINK_SLOT || slot_type == NR_MIXED_SLOT) {
+  if ((slot_type == NR_DOWNLINK_SLOT || slot_type == NR_MIXED_SLOT) && NFAPI_MODE == NFAPI_MONOLITHIC) {
     LOG_D(NR_PHY, "Calling dref_sched_response for id %d in %d.%d (sched_response)\n", Sched_INFO->sched_response_id, frame, slot);
     deref_sched_response(Sched_INFO->sched_response_id);
   }
