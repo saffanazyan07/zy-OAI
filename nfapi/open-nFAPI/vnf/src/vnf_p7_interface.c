@@ -157,7 +157,7 @@ int nfapi_nr_vnf_p7_start(nfapi_vnf_p7_config_t* config)
 
     struct timespec ref_time;
 	clock_gettime(CLOCK_MONOTONIC, &ref_time);
-	uint8_t setup_done;
+	uint8_t setup_done = 1;
 	while(vnf_p7->terminate == 0)
 	{	
 		fd_set rfds;
@@ -194,8 +194,10 @@ int nfapi_nr_vnf_p7_start(nfapi_vnf_p7_config_t* config)
 				gNB->UL_INFO.CC_id     = gNB->CC_id;
 				NFAPI_TRACE(NFAPI_TRACE_DEBUG, "Calling NR_UL_indication for gNB->UL_INFO.frame = %d and slot %d\n",
 					    gNB->UL_INFO.frame, gNB->UL_INFO.slot);
-				gNB->if_inst->NR_UL_indication(&gNB->UL_INFO);
+				gNB_dlsch_ulsch_scheduler(0, 0, slot_ind->sfn, slot_ind->slot);
 				prev_slot = gNB->UL_INFO.slot;
+
+        // TODO send stuff
 			}
 			free(slot_ind);
 			slot_ind = NULL;
