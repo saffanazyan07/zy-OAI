@@ -2254,9 +2254,9 @@ void oai_subframe_ind(uint16_t sfn, uint16_t sf) {
 void handle_nr_slot_ind(uint16_t sfn, uint16_t slot)
 {
     //send VNF slot indication, which is aligned with TX thread, so that it can call the scheduler
-    //we give two additional slots which should be enough time for the VNF to
+    //we give four additional slots (2ms) which should be enough time for the VNF to
     //answer
-    uint8_t slot_ahead = 2;
+    uint8_t slot_ahead = 4;
     uint32_t sfn_slot_tx = sfnslot_add_slot(sfn, slot, slot_ahead);
     uint16_t sfn_tx = NFAPI_SFNSLOT2SFN(sfn_slot_tx);
     uint8_t slot_tx = NFAPI_SFNSLOT2SLOT(sfn_slot_tx);
