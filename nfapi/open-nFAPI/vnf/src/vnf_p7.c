@@ -1465,7 +1465,7 @@ void vnf_handle_nr_slot_indication(void *pRecvMsg, int recvMsgLen, vnf_p7_t* vnf
 	}
 	else
 	{
-		nfapi_nr_slot_indication_scf_t ind;
+		nfapi_nr_slot_indication_scf_t ind = {0};
 	
 		if(nfapi_nr_p7_message_unpack(pRecvMsg, recvMsgLen, &ind, sizeof(ind), &vnf_p7->_public.codec_config) < 0)
 		{

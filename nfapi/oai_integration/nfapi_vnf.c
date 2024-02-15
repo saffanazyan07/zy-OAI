@@ -1172,15 +1172,45 @@ int phy_cqi_indication(struct nfapi_vnf_p7_config *config, nfapi_cqi_indication_
 
 //NR phy indication
 
+
+NR_Sched_Rsp_t g_sched_resp;
+void gNB_dlsch_ulsch_scheduler(module_id_t module_idP, frame_t frame, sub_frame_t slot, NR_Sched_Rsp_t* sched_info);
+int oai_nfapi_dl_tti_req(nfapi_nr_dl_tti_request_t *dl_config_req);
+int oai_nfapi_ul_tti_req(nfapi_nr_ul_tti_request_t *ul_tti_req);
+int oai_nfapi_tx_data_req(nfapi_nr_tx_data_request_t* tx_data_req);
+int oai_nfapi_ul_dci_req(nfapi_nr_ul_dci_request_t* ul_dci_req);
+
+int trigger_scheduler(nfapi_nr_slot_indication_scf_t *slot_ind)
+{
+  // Call into the scheduler (this is hardcoded and should be init properly!)
+  // memset(sched_resp, 0, sizeof(*sched_resp));
+  gNB_dlsch_ulsch_scheduler(0, slot_ind->sfn, slot_ind->slot, &g_sched_resp);
+
+  if (g_sched_resp.DL_req.dl_tti_request_body.nPDUs > 0)
+    oai_nfapi_dl_tti_req(&g_sched_resp.DL_req);
+
+  if (g_sched_resp.UL_tti_req.n_pdus > 0)
+    oai_nfapi_ul_tti_req(&g_sched_resp.UL_tti_req);
+
+  if (g_sched_resp.TX_req.Number_of_PDUs > 0)
+    oai_nfapi_tx_data_req(&g_sched_resp.TX_req);
+
+  if (g_sched_resp.UL_dci_req.numPdus > 0)
+    oai_nfapi_ul_dci_req(&g_sched_resp.UL_dci_req);
+  return 1;
+}
+
 int phy_nr_slot_indication(nfapi_nr_slot_indication_scf_t *ind) {
 
   uint8_t vnf_slot_ahead = 0;
   uint32_t vnf_sfn_slot = sfnslot_add_slot(ind->sfn, ind->slot, vnf_slot_ahead);
   uint16_t vnf_sfn = NFAPI_SFNSLOT2SFN(vnf_sfn_slot);
   uint8_t vnf_slot = NFAPI_SFNSLOT2SLOT(vnf_sfn_slot);
-  LOG_I(MAC, "VNF SFN/Slot %d.%d \n", vnf_sfn, vnf_slot);
+  LOG_D(MAC, "VNF SFN/Slot %d.%d \n", vnf_sfn, vnf_slot);
+  trigger_scheduler(ind);
 
   // received slot indication
+  /*
   nfapi_nr_slot_indication_scf_t *nr_slot_ind = CALLOC(1, sizeof(*nr_slot_ind));
   nr_slot_ind->header = ind->header;
   nr_slot_ind->sfn = vnf_sfn;
@@ -1191,6 +1221,7 @@ int phy_nr_slot_indication(nfapi_nr_slot_indication_scf_t *ind) {
     free(nr_slot_ind);
     nr_slot_ind = NULL;
   }
+  */
 
   return 1;
 }

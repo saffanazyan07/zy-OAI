@@ -96,15 +96,8 @@ struct timespec timespec_sub(struct timespec lhs, struct timespec rhs)
 
 // monitor the p7 endpoints and the timing loop and
 // send indications to mac
-extern void gNB_dlsch_ulsch_scheduler(module_id_t module_idP, frame_t frame, sub_frame_t slot, NR_Sched_Rsp_t* sched_info);
-extern int oai_nfapi_dl_tti_req(nfapi_nr_dl_tti_request_t *dl_config_req);
-extern int oai_nfapi_ul_tti_req(nfapi_nr_ul_tti_request_t *ul_tti_req);
-extern int oai_nfapi_tx_data_req(nfapi_nr_tx_data_request_t* tx_data_req);
-extern int oai_nfapi_ul_dci_req(nfapi_nr_ul_dci_request_t* ul_dci_req);
 int nfapi_nr_vnf_p7_start(nfapi_vnf_p7_config_t* config)
 {	
-	struct PHY_VARS_gNB_s *gNB = RC.gNB[0];
-	uint8_t prev_slot = 0;
 	if(config == 0)
 		return -1;
 
@@ -163,8 +156,6 @@ int nfapi_nr_vnf_p7_start(nfapi_vnf_p7_config_t* config)
     struct timespec ref_time;
 	clock_gettime(CLOCK_MONOTONIC, &ref_time);
 	uint8_t setup_done = 1;
-  NR_Sched_Rsp_t *sched_resp = malloc(sizeof(*sched_resp));
-  AssertFatal(sched_resp != NULL, "out of memory\n");
 	while(vnf_p7->terminate == 0)
 	{	
 		fd_set rfds;
@@ -184,43 +175,6 @@ int nfapi_nr_vnf_p7_start(nfapi_vnf_p7_config_t* config)
         setup_done = 1;
       }
     }
-
-		nfapi_nr_slot_indication_scf_t *slot_ind = get_queue(&gnb_slot_ind_queue);
-		NFAPI_TRACE(NFAPI_TRACE_DEBUG, "This is the slot_ind queue size %ld in %s():%d\n",
-			    gnb_slot_ind_queue.num_items, __FUNCTION__, __LINE__);
-		if (slot_ind) {
-			gNB->UL_INFO.frame     = slot_ind->sfn;
-			gNB->UL_INFO.slot      = slot_ind->slot;
-
-			NFAPI_TRACE(NFAPI_TRACE_DEBUG, "gNB->UL_INFO.frame = %d and slot %d, prev_slot = %d\n",
-				    gNB->UL_INFO.frame, gNB->UL_INFO.slot, prev_slot);
-			if (setup_done && prev_slot != gNB->UL_INFO.slot) { //Give the VNF sufficient time to setup before starting scheduling  && prev_slot != gNB->UL_INFO.slot
-
-				// Call into the scheduler (this is hardcoded and should be init properly!)
-				gNB->UL_INFO.module_id = gNB->Mod_id;
-				gNB->UL_INFO.CC_id     = gNB->CC_id;
-				NFAPI_TRACE(NFAPI_TRACE_DEBUG, "Calling NR_UL_indication for gNB->UL_INFO.frame = %d and slot %d\n",
-					    gNB->UL_INFO.frame, gNB->UL_INFO.slot);
-        memset(sched_resp, 0, sizeof(*sched_resp));
-				gNB_dlsch_ulsch_scheduler(0, slot_ind->sfn, slot_ind->slot, sched_resp);
-				prev_slot = gNB->UL_INFO.slot;
-      }
-
-        if (sched_resp->DL_req.dl_tti_request_body.nPDUs > 0)
-          oai_nfapi_dl_tti_req(&sched_resp->DL_req);
-
-        if (sched_resp->UL_tti_req.n_pdus > 0)
-          oai_nfapi_ul_tti_req(&sched_resp->UL_tti_req);
-
-        if (sched_resp->TX_req.Number_of_PDUs > 0)
-          oai_nfapi_tx_data_req(&sched_resp->TX_req);
-
-        if (sched_resp->UL_dci_req.numPdus > 0)
-          oai_nfapi_ul_dci_req(&sched_resp->UL_dci_req);
-
-        free(slot_ind);
-        slot_ind = NULL;
-		}
 
 		selectRetval = pselect(maxSock+1, &rfds, NULL, NULL, &pselect_timeout, NULL);
 
@@ -254,7 +208,6 @@ int nfapi_nr_vnf_p7_start(nfapi_vnf_p7_config_t* config)
 			}
 		}
 	}
-  free(sched_resp);
 	NFAPI_TRACE(NFAPI_TRACE_INFO, "Closing p7 socket\n");
 	close(vnf_p7->socket);
 
