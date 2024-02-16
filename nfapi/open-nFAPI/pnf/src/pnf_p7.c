@@ -1008,17 +1008,6 @@ int pnf_p7_slot_ind(pnf_p7_t* pnf_p7, uint16_t phy_id, uint16_t sfn, uint16_t sl
 				(pnf_p7->_public.tx_data_req_fn)(&(pnf_p7->_public), tx_slot_buffer->tx_data_req);
 			}
 		}
-		else 
-		{
-			// send dummy
-			if(pnf_p7->_public.tx_data_req_fn && pnf_p7->_public.dummy_slot.tx_data_req)
-			{
-				pnf_p7->_public.dummy_slot.tx_data_req->SFN = sfn_tx;
-				pnf_p7->_public.dummy_slot.tx_data_req->Slot = slot_tx; 
-					
-				(pnf_p7->_public.tx_data_req_fn)(&(pnf_p7->_public), pnf_p7->_public.dummy_slot.tx_data_req);
-			}
-		}
 		 
 		if(tx_slot_buffer->dl_tti_req != 0 && tx_slot_buffer->dl_tti_req->SFN == sfn_tx && tx_slot_buffer->dl_tti_req->Slot == slot_tx) 
 		{
@@ -1026,16 +1015,6 @@ int pnf_p7_slot_ind(pnf_p7_t* pnf_p7, uint16_t phy_id, uint16_t sfn, uint16_t sl
 			{
 				LOG_D(PHY, "Process dl_tti SFN/slot %d.%d buffer index: %d \n",sfn_tx,slot_tx,buffer_index_tx);
 				(pnf_p7->_public.dl_tti_req_fn)(NULL, &(pnf_p7->_public), tx_slot_buffer->dl_tti_req);
-			}
-		}
-		else
-		{
-			// send dummy
-			if(pnf_p7->_public.dl_tti_req_fn && pnf_p7->_public.dummy_slot.dl_tti_req)
-			{   
-				pnf_p7->_public.dummy_slot.dl_tti_req->SFN = sfn_tx;
-				pnf_p7->_public.dummy_slot.dl_tti_req->Slot = slot_tx;
-				(pnf_p7->_public.dl_tti_req_fn)(NULL, &(pnf_p7->_public), pnf_p7->_public.dummy_slot.dl_tti_req);
 			}
 		}
 
@@ -1049,31 +1028,12 @@ int pnf_p7_slot_ind(pnf_p7_t* pnf_p7, uint16_t phy_id, uint16_t sfn, uint16_t sl
  				(pnf_p7->_public.ul_dci_req_fn)(NULL, &(pnf_p7->_public), tx_slot_buffer->ul_dci_req);
 			}
 		}
-		else
-		{
-			//send dummy
-			if(pnf_p7->_public.ul_dci_req_fn && pnf_p7->_public.dummy_slot.ul_dci_req)
-			{
-				pnf_p7->_public.dummy_slot.ul_dci_req->SFN = sfn_tx;
-				pnf_p7->_public.dummy_slot.ul_dci_req->Slot = slot_tx;
-				(pnf_p7->_public.ul_dci_req_fn)(NULL, &(pnf_p7->_public), pnf_p7->_public.dummy_slot.ul_dci_req);
-			}
-		}
+
 		if(tx_slot_buffer->ul_tti_req != 0)
 		{
 			if(pnf_p7->_public.ul_tti_req_fn)
 			{ 
 				(pnf_p7->_public.ul_tti_req_fn)(NULL, &(pnf_p7->_public), tx_slot_buffer->ul_tti_req);
-			}
-		}
-		else
-		{
-			// send dummy
-			if(pnf_p7->_public.ul_tti_req_fn && pnf_p7->_public.dummy_slot.ul_tti_req)
-			{
-				pnf_p7->_public.dummy_slot.ul_tti_req->SFN = sfn_tx;
-				pnf_p7->_public.dummy_slot.ul_tti_req->Slot = slot_tx;
-				(pnf_p7->_public.ul_tti_req_fn)(NULL, &(pnf_p7->_public), pnf_p7->_public.dummy_slot.ul_tti_req);
 			}
 		}
 
