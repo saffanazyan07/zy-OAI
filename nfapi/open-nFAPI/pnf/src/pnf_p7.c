@@ -977,64 +977,36 @@ int pnf_p7_slot_ind(pnf_p7_t* pnf_p7, uint16_t phy_id, uint16_t sfn, uint16_t sl
 
 		nfapi_pnf_p7_slot_buffer_t* tx_slot_buffer = &(pnf_p7->slot_buffer[buffer_index_tx]);
 
-                // if (0) NFAPI_TRACE(NFAPI_TRACE_INFO, "%s() shift:%d slot_buffer->sfn_sf:%d tx_slot_buffer->sfn_slot:%d sfn_sf:%d subframe_buffer[buffer_index:%u dl_config_req:%p tx_req:%p] "
-                //     "TX:sfn_sf:%d:tx_buffer_index:%d[dl_config_req:%p tx_req:%p]\n", 
-                //     __FUNCTION__, 
-                //     pnf_p7->slot_shift, 
-                //     NFAPI_SFNSLOT2DEC(rx_slot_buffer->sfn, rx_slot_buffer->slot), 
-                //     NFAPI_SFNSLOT2DEC(tx_slot_buffer->sfn, tx_slot_buffer->slot), 
-                //        	slot_dec,    buffer_index_rx, rx_slot_buffer->dl_tti_req, rx_slot_buffer->tx_data_req, 
-                //     	tx_slot_dec, buffer_index_tx, tx_slot_buffer->dl_tti_req, tx_slot_buffer->tx_data_req);
-					//TODO: Change later if required
-
-		// todo : how to handle the messages we don't have, send dummies for
-		// now
-
-		//printf("tx_subframe_buffer->sfn_sf:%d sfn_sf_tx:%d\n", tx_subframe_buffer->sfn_sf, sfn_sf_tx);
-		//printf("subframe_buffer->sfn_sf:%d sfn_sf:%d\n", subframe_buffer->sfn_sf, sfn_sf);
-		//printf("tx_slot_buff_sfn - %d, tx_slot_buf_slot - %d, sfn_tx = %d, sllot_tx - %d \n",tx_slot_buffer->sfn,tx_slot_buffer->slot,sfn_tx,slot_tx);
-		// if(tx_slot_buffer->slot == slot_tx && tx_slot_buffer->sfn == sfn_tx)
-		// {	
-		
-		//checking in the tx slot buffers to see if a p7 msg is present. todo: what if it's a mixed slot? 
-
-		if(tx_slot_buffer->tx_data_req != 0 && tx_slot_buffer->tx_data_req->SFN == sfn_tx && tx_slot_buffer->tx_data_req->Slot == slot_tx)
+		if(tx_slot_buffer->dl_tti_req != 0 && tx_slot_buffer->dl_tti_req->SFN == sfn_tx && tx_slot_buffer->dl_tti_req->Slot == slot_tx)
 		{
-				
-			if(pnf_p7->_public.tx_data_req_fn)
-			{	
-				//NFAPI_TRACE(NFAPI_TRACE_INFO, "Calling tx_data_req_fn in SFN/slot %d.%d \n",sfn,slot);
-				LOG_D(PHY, "Process tx_data SFN/slot %d.%d buffer index: %d \n",sfn_tx,slot_tx,buffer_index_tx);	
-				(pnf_p7->_public.tx_data_req_fn)(&(pnf_p7->_public), tx_slot_buffer->tx_data_req);
-			}
-		}
-		 
-		if(tx_slot_buffer->dl_tti_req != 0 && tx_slot_buffer->dl_tti_req->SFN == sfn_tx && tx_slot_buffer->dl_tti_req->Slot == slot_tx) 
-		{
-			if(pnf_p7->_public.dl_tti_req_fn)
-			{
-				LOG_D(PHY, "Process dl_tti SFN/slot %d.%d buffer index: %d \n",sfn_tx,slot_tx,buffer_index_tx);
-				(pnf_p7->_public.dl_tti_req_fn)(NULL, &(pnf_p7->_public), tx_slot_buffer->dl_tti_req);
-			}
-		}
-
-
-		if(tx_slot_buffer->ul_dci_req!= 0 && tx_slot_buffer->ul_dci_req->SFN == sfn_tx && tx_slot_buffer->ul_dci_req->Slot == slot_tx)
-		{
-			if(pnf_p7->_public.ul_dci_req_fn)
-			{   
-				//NFAPI_TRACE(NFAPI_TRACE_INFO, "Calling UL_dci_req_fn in SFN/slot %d.%d \n",sfn,slot);
-				LOG_D(PHY, "Process ul_dci SFN/slot %d.%d buffer index: %d \n",sfn_tx,slot_tx,buffer_index_tx);
- 				(pnf_p7->_public.ul_dci_req_fn)(NULL, &(pnf_p7->_public), tx_slot_buffer->ul_dci_req);
-			}
+			DevAssert(pnf_p7->_public.dl_tti_req_fn != NULL);
+			// pnf_phy_dl_tti_req()
+			(pnf_p7->_public.dl_tti_req_fn)(NULL, &(pnf_p7->_public), tx_slot_buffer->dl_tti_req);
 		}
 
 		if(tx_slot_buffer->ul_tti_req != 0)
 		{
-			if(pnf_p7->_public.ul_tti_req_fn)
-			{ 
-				(pnf_p7->_public.ul_tti_req_fn)(NULL, &(pnf_p7->_public), tx_slot_buffer->ul_tti_req);
-			}
+			DevAssert(pnf_p7->_public.ul_tti_req_fn != NULL);
+			// pnf_phy_ul_tti_req()
+			(pnf_p7->_public.ul_tti_req_fn)(NULL, &(pnf_p7->_public), tx_slot_buffer->ul_tti_req);
+		}
+
+		if(tx_slot_buffer->tx_data_req != 0 && tx_slot_buffer->tx_data_req->SFN == sfn_tx && tx_slot_buffer->tx_data_req->Slot == slot_tx)
+		{
+				
+			DevAssert(pnf_p7->_public.tx_data_req_fn != NULL);
+			LOG_I(PHY, "Process tx_data SFN/slot %d.%d buffer index: %d \n",sfn_tx,slot_tx,buffer_index_tx);	
+			// pnf_phy_tx_data_req()
+			(pnf_p7->_public.tx_data_req_fn)(&(pnf_p7->_public), tx_slot_buffer->tx_data_req);
+		}
+		 
+
+		if(tx_slot_buffer->ul_dci_req!= 0 && tx_slot_buffer->ul_dci_req->SFN == sfn_tx && tx_slot_buffer->ul_dci_req->Slot == slot_tx)
+		{
+			DevAssert(pnf_p7->_public.ul_dci_req_fn != NULL);
+			LOG_D(PHY, "Process ul_dci SFN/slot %d.%d buffer index: %d \n",sfn_tx,slot_tx,buffer_index_tx);
+			// pnf_phy_ul_dci_req()
+			(pnf_p7->_public.ul_dci_req_fn)(NULL, &(pnf_p7->_public), tx_slot_buffer->ul_dci_req);
 		}
 
 		//deallocate slot buffers after passing down the PDUs to PHY processing
