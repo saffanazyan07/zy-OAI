@@ -166,27 +166,18 @@ void nr_schedule_response(NR_Sched_Rsp_t *Sched_INFO)
 
   clear_slot_beamid(gNB, slot);  // reset beam_id information for the slot to be processed
   DevAssert(NFAPI_MODE == NFAPI_MONOLITHIC);
+  bool is_dl = slot_type == NR_DOWNLINK_SLOT || slot_type == NR_MIXED_SLOT;
 
-  if (slot_type == NR_DOWNLINK_SLOT || slot_type == NR_MIXED_SLOT) {
-    processingData_L1tx_t *msgTx = gNB->msgDataTx;
-    msgTx->num_ul_pdcch = number_ul_dci_pdu;
-    /* store the sched_response_id for the TX thread to release it when done */
-    msgTx->sched_response_id = Sched_INFO->sched_response_id;
+  processingData_L1tx_t *msgTx = gNB->msgDataTx;
+  msgTx->num_ul_pdcch = number_ul_dci_pdu;
+  /* store the sched_response_id for the TX thread to release it when done */
+  msgTx->sched_response_id = Sched_INFO->sched_response_id;
 
-    DevAssert(Sched_INFO->DL_req.SFN == frame);
-    DevAssert(Sched_INFO->DL_req.Slot == slot);
+  DevAssert(Sched_INFO->DL_req.SFN == frame);
+  DevAssert(Sched_INFO->DL_req.Slot == slot);
+
+  if (is_dl) {
     nr_schedule_dl_tti_req(gNB, &Sched_INFO->DL_req);
-
-    for (int i = 0; i < number_ul_dci_pdu; i++)
-      msgTx->ul_pdcch_pdu[i] = UL_dci_req->ul_dci_pdu_list[i];
-
-    nr_schedule_tx_req(gNB, &Sched_INFO->TX_req);
-
-    /* Both the current thread and the TX thread will access the sched_info
-     * at the same time, so increase its reference counter, so that it is
-     * released only when both threads are done with it.
-     */
-    inc_ref_sched_response(Sched_INFO->sched_response_id);
   }
 
   for (int i = 0; i < number_ul_tti_pdu; i++) {
@@ -231,6 +222,18 @@ void nr_schedule_response(NR_Sched_Rsp_t *Sched_INFO)
         nr_fill_srs(gNB, UL_tti_req->SFN, UL_tti_req->Slot, &UL_tti_req->pdus_list[i].srs_pdu);
         break;
     }
+  }
+
+  if (is_dl) {
+    nr_schedule_tx_req(gNB, &Sched_INFO->TX_req);
+
+    for (int i = 0; i < number_ul_dci_pdu; i++)
+      msgTx->ul_pdcch_pdu[i] = UL_dci_req->ul_dci_pdu_list[i];
+    /* Both the current thread and the TX thread will access the sched_info
+     * at the same time, so increase its reference counter, so that it is
+     * released only when both threads are done with it.
+     */
+    inc_ref_sched_response(Sched_INFO->sched_response_id);
   }
 
   /*
