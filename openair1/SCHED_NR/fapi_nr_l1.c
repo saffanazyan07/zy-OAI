@@ -84,12 +84,68 @@ void handle_nfapi_nr_csirs_pdu(processingData_L1tx_t *msgTx, int frame, int slot
     LOG_E(MAC,"CSI-RS list is full\n");
 }
 
+void nr_schedule_dl_tti_req(PHY_VARS_gNB *gNB, nfapi_nr_dl_tti_request_t *DL_req)
+{
+  DevAssert(gNB != NULL);
+  DevAssert(DL_req != NULL);
+  nfapi_nr_config_request_scf_t *cfg = &gNB->gNB_config;
+
+  int frame = DL_req->SFN;
+  int slot = DL_req->Slot;
+
+  int slot_type = nr_slot_select(cfg, frame, slot);
+  DevAssert(slot_type == NR_DOWNLINK_SLOT || slot_type == NR_MIXED_SLOT);
+
+  processingData_L1tx_t *msgTx = gNB->msgDataTx;
+  msgTx->num_pdsch_slot = 0;
+  msgTx->num_dl_pdcch = 0;
+  msgTx->slot = slot;
+  msgTx->frame = frame;
+
+  uint8_t number_dl_pdu = DL_req->dl_tti_request_body.nPDUs;
+
+  for (int i = 0; i < number_dl_pdu; i++) {
+    nfapi_nr_dl_tti_request_pdu_t *dl_tti_pdu = &DL_req->dl_tti_request_body.dl_tti_pdu_list[i];
+    LOG_D(NR_PHY, "NFAPI: dl_pdu %d : type %d\n", i, dl_tti_pdu->PDUType);
+    switch (dl_tti_pdu->PDUType) {
+      case NFAPI_NR_DL_TTI_SSB_PDU_TYPE:
+        handle_nr_nfapi_ssb_pdu(msgTx, frame, slot, dl_tti_pdu);
+        break;
+
+      case NFAPI_NR_DL_TTI_PDCCH_PDU_TYPE:
+        LOG_D(NR_PHY, "frame %d, slot %d, Got NFAPI_NR_DL_TTI_PDCCH_PDU_TYPE for %d.%d\n", frame, slot, DL_req->SFN, DL_req->Slot);
+        msgTx->pdcch_pdu[msgTx->num_dl_pdcch] = dl_tti_pdu->pdcch_pdu;
+        msgTx->num_dl_pdcch++;
+        break;
+
+      case NFAPI_NR_DL_TTI_CSI_RS_PDU_TYPE:
+        LOG_D(NR_PHY, "frame %d, slot %d, Got NFAPI_NR_DL_TTI_CSI_RS_PDU_TYPE for %d.%d\n", frame, slot, DL_req->SFN, DL_req->Slot);
+        handle_nfapi_nr_csirs_pdu(msgTx, frame, slot, &dl_tti_pdu->csi_rs_pdu);
+        break;
+
+      case NFAPI_NR_DL_TTI_PDSCH_PDU_TYPE:
+        LOG_D(NR_PHY, "frame %d, slot %d, Got NFAPI_NR_DL_TTI_PDSCH_PDU_TYPE for %d.%d\n", frame, slot, DL_req->SFN, DL_req->Slot);
+        nr_fill_dlsch_dl_tti_req(msgTx, &dl_tti_pdu->pdsch_pdu);
+    }
+  }
+}
+
+void nr_schedule_tx_req(PHY_VARS_gNB *gNB, nfapi_nr_tx_data_request_t *TX_req)
+{
+  DevAssert(gNB != NULL);
+  DevAssert(TX_req != NULL);
+  processingData_L1tx_t *msgTx = gNB->msgDataTx;
+
+  for (int idx = 0; idx < TX_req->Number_of_PDUs; ++idx) {
+    uint8_t *sdu = (uint8_t *)TX_req->pdu_list[idx].TLVs[0].value.direct;
+    nr_fill_dlsch_tx_req(msgTx, idx, sdu);
+  }
+}
+
 void nr_schedule_response(NR_Sched_Rsp_t *Sched_INFO)
 {
   // copy data from L2 interface into L1 structures
   module_id_t                   Mod_id       = Sched_INFO->module_id;
-  nfapi_nr_dl_tti_request_t     *DL_req      = &Sched_INFO->DL_req;
-  nfapi_nr_tx_data_request_t    *TX_req      = &Sched_INFO->TX_req;
   nfapi_nr_ul_tti_request_t     *UL_tti_req  = &Sched_INFO->UL_tti_req;
   nfapi_nr_ul_dci_request_t     *UL_dci_req  = &Sched_INFO->UL_dci_req;
   frame_t                       frame        = Sched_INFO->frame;
@@ -105,7 +161,6 @@ void nr_schedule_response(NR_Sched_Rsp_t *Sched_INFO)
 
   int slot_type = nr_slot_select(cfg,frame,slot);
 
-  uint8_t number_dl_pdu             = (DL_req==NULL) ? 0 : DL_req->dl_tti_request_body.nPDUs;
   uint8_t number_ul_dci_pdu         = (UL_dci_req==NULL) ? 0 : UL_dci_req->numPdus;
   uint8_t number_ul_tti_pdu         = (UL_tti_req==NULL) ? 0 : UL_tti_req->n_pdus;
 
@@ -114,66 +169,18 @@ void nr_schedule_response(NR_Sched_Rsp_t *Sched_INFO)
 
   if (slot_type == NR_DOWNLINK_SLOT || slot_type == NR_MIXED_SLOT) {
     processingData_L1tx_t *msgTx = gNB->msgDataTx;
-    msgTx->num_pdsch_slot = 0;
-    msgTx->num_dl_pdcch = 0;
     msgTx->num_ul_pdcch = number_ul_dci_pdu;
-    msgTx->slot = slot;
-    msgTx->frame = frame;
     /* store the sched_response_id for the TX thread to release it when done */
     msgTx->sched_response_id = Sched_INFO->sched_response_id;
 
-    for (int i = 0; i < number_dl_pdu; i++) {
-      nfapi_nr_dl_tti_request_pdu_t *dl_tti_pdu = &DL_req->dl_tti_request_body.dl_tti_pdu_list[i];
-      LOG_D(NR_PHY, "NFAPI: dl_pdu %d : type %d\n", i, dl_tti_pdu->PDUType);
-      switch (dl_tti_pdu->PDUType) {
-        case NFAPI_NR_DL_TTI_SSB_PDU_TYPE:
-          handle_nr_nfapi_ssb_pdu(msgTx, frame, slot, dl_tti_pdu);
-          break;
-
-        case NFAPI_NR_DL_TTI_PDCCH_PDU_TYPE:
-          LOG_D(NR_PHY,
-                "frame %d, slot %d, Got NFAPI_NR_DL_TTI_PDCCH_PDU_TYPE for %d.%d\n",
-                frame,
-                slot,
-                DL_req->SFN,
-                DL_req->Slot);
-          msgTx->pdcch_pdu[msgTx->num_dl_pdcch] = dl_tti_pdu->pdcch_pdu;
-          msgTx->num_dl_pdcch++;
-          break;
-
-        case NFAPI_NR_DL_TTI_CSI_RS_PDU_TYPE:
-          LOG_D(NR_PHY,
-                "frame %d, slot %d, Got NFAPI_NR_DL_TTI_CSI_RS_PDU_TYPE for %d.%d\n",
-                frame,
-                slot,
-                DL_req->SFN,
-                DL_req->Slot);
-          handle_nfapi_nr_csirs_pdu(msgTx, frame, slot, &dl_tti_pdu->csi_rs_pdu);
-          break;
-
-        case NFAPI_NR_DL_TTI_PDSCH_PDU_TYPE:
-          LOG_D(NR_PHY,
-                "frame %d, slot %d, Got NFAPI_NR_DL_TTI_PDSCH_PDU_TYPE for %d.%d\n",
-                frame,
-                slot,
-                DL_req->SFN,
-                DL_req->Slot);
-          nr_fill_dlsch_dl_tti_req(msgTx, &dl_tti_pdu->pdsch_pdu);
-
-          nfapi_nr_dl_tti_pdsch_pdu_rel15_t *pdsch_pdu_rel15 = &dl_tti_pdu->pdsch_pdu.pdsch_pdu_rel15;
-          uint16_t pduIndex = pdsch_pdu_rel15->pduIndex;
-          AssertFatal(TX_req->pdu_list[pduIndex].num_TLV == 1,
-                      "TX_req->pdu_list[%d].num_TLV %d != 1\n",
-                      pduIndex,
-                      TX_req->pdu_list[pduIndex].num_TLV);
-          uint8_t *sdu = (uint8_t *)TX_req->pdu_list[pduIndex].TLVs[0].value.direct;
-          nr_fill_dlsch_tx_req(msgTx, pduIndex, sdu);
-
-      }
-    }
+    DevAssert(Sched_INFO->DL_req.SFN == frame);
+    DevAssert(Sched_INFO->DL_req.Slot == slot);
+    nr_schedule_dl_tti_req(gNB, &Sched_INFO->DL_req);
 
     for (int i = 0; i < number_ul_dci_pdu; i++)
       msgTx->ul_pdcch_pdu[i] = UL_dci_req->ul_dci_pdu_list[i];
+
+    nr_schedule_tx_req(gNB, &Sched_INFO->TX_req);
 
     /* Both the current thread and the TX thread will access the sched_info
      * at the same time, so increase its reference counter, so that it is
