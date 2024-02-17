@@ -994,7 +994,6 @@ int main(int argc, char **argv)
         exit(1);
       }
       memset(Sched_INFO, 0, sizeof(*Sched_INFO));
-      Sched_INFO->sched_response_id = -1;
 
       while (round < num_rounds && !UE_harq_process->decodeResult) {
         round_trials[round]++;

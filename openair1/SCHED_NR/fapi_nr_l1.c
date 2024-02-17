@@ -233,8 +233,6 @@ void nr_schedule_response(NR_Sched_Rsp_t *Sched_INFO)
   bool is_ul = slot_type == NR_UPLINK_SLOT || slot_type == NR_MIXED_SLOT;
 
   processingData_L1tx_t *msgTx = gNB->msgDataTx;
-  /* store the sched_response_id for the TX thread to release it when done */
-  msgTx->sched_response_id = Sched_INFO->sched_response_id;
 
   DevAssert(Sched_INFO->DL_req.SFN == frame);
   DevAssert(Sched_INFO->DL_req.Slot == slot);
@@ -250,11 +248,6 @@ void nr_schedule_response(NR_Sched_Rsp_t *Sched_INFO)
     nr_schedule_tx_req(gNB, &Sched_INFO->TX_req);
 
     nr_schedule_ul_dci_req(gNB, &Sched_INFO->UL_dci_req);
-    /* Both the current thread and the TX thread will access the sched_info
-     * at the same time, so increase its reference counter, so that it is
-     * released only when both threads are done with it.
-     */
-    inc_ref_sched_response(Sched_INFO->sched_response_id);
   }
 
   /*
@@ -298,11 +291,5 @@ void nr_schedule_response(NR_Sched_Rsp_t *Sched_INFO)
 #endif
   }
   */
-
-  /* this thread is done with the sched_info, decrease the reference counter */
-  if ((slot_type == NR_DOWNLINK_SLOT || slot_type == NR_MIXED_SLOT) && NFAPI_MODE == NFAPI_MONOLITHIC) {
-    LOG_D(NR_PHY, "Calling dref_sched_response for id %d in %d.%d (sched_response)\n", Sched_INFO->sched_response_id, frame, slot);
-    deref_sched_response(Sched_INFO->sched_response_id);
-  }
   stop_meas(&gNB->schedule_response_stats);
 }

@@ -727,7 +727,6 @@ int main(int argc, char *argv[])
   NR_Sched_Rsp_t *Sched_INFO = malloc16_clear(sizeof(*Sched_INFO));
   memset((void*)Sched_INFO,0,sizeof(*Sched_INFO));
   nfapi_nr_ul_tti_request_t *UL_tti_req = &Sched_INFO->UL_tti_req;
-  Sched_INFO->sched_response_id = -1;
 
   nr_phy_data_tx_t phy_data = {0};
 
