@@ -83,8 +83,6 @@ typedef struct {
 
 
 typedef struct {
-  /// the ID of this sched_response - used by sched_reponse memory management
-  int sched_response_id;
   /// Module ID
   module_id_t module_id;
   /// CC ID
