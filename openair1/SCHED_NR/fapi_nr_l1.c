@@ -130,57 +130,19 @@ void nr_schedule_dl_tti_req(PHY_VARS_gNB *gNB, nfapi_nr_dl_tti_request_t *DL_req
   }
 }
 
-void nr_schedule_tx_req(PHY_VARS_gNB *gNB, nfapi_nr_tx_data_request_t *TX_req)
+void nr_schedule_ul_tti_req(PHY_VARS_gNB *gNB, nfapi_nr_ul_tti_request_t *UL_tti_req)
 {
   DevAssert(gNB != NULL);
-  DevAssert(TX_req != NULL);
-  processingData_L1tx_t *msgTx = gNB->msgDataTx;
+  DevAssert(UL_tti_req != NULL);
 
-  for (int idx = 0; idx < TX_req->Number_of_PDUs; ++idx) {
-    uint8_t *sdu = (uint8_t *)TX_req->pdu_list[idx].TLVs[0].value.direct;
-    nr_fill_dlsch_tx_req(msgTx, idx, sdu);
-  }
-}
-
-void nr_schedule_response(NR_Sched_Rsp_t *Sched_INFO)
-{
-  // copy data from L2 interface into L1 structures
-  module_id_t                   Mod_id       = Sched_INFO->module_id;
-  nfapi_nr_ul_tti_request_t     *UL_tti_req  = &Sched_INFO->UL_tti_req;
-  nfapi_nr_ul_dci_request_t     *UL_dci_req  = &Sched_INFO->UL_dci_req;
-  frame_t                       frame        = Sched_INFO->frame;
-  sub_frame_t                   slot         = Sched_INFO->slot;
-
-  AssertFatal(RC.gNB!=NULL,"RC.gNB is null\n");
-  AssertFatal(RC.gNB[Mod_id]!=NULL,"RC.gNB[%d] is null\n",Mod_id);
-
-  PHY_VARS_gNB *gNB = RC.gNB[Mod_id];
-  start_meas(&gNB->schedule_response_stats);
-
+  int frame = UL_tti_req->SFN;
+  int slot = UL_tti_req->Slot;
   nfapi_nr_config_request_scf_t *cfg = &gNB->gNB_config;
 
-  int slot_type = nr_slot_select(cfg,frame,slot);
+  int slot_type = nr_slot_select(cfg, frame, slot);
+  DevAssert(slot_type == NR_UPLINK_SLOT || slot_type == NR_MIXED_SLOT);
 
-  uint8_t number_ul_dci_pdu         = (UL_dci_req==NULL) ? 0 : UL_dci_req->numPdus;
-  uint8_t number_ul_tti_pdu         = (UL_tti_req==NULL) ? 0 : UL_tti_req->n_pdus;
-
-  clear_slot_beamid(gNB, slot);  // reset beam_id information for the slot to be processed
-  DevAssert(NFAPI_MODE == NFAPI_MONOLITHIC);
-  bool is_dl = slot_type == NR_DOWNLINK_SLOT || slot_type == NR_MIXED_SLOT;
-
-  processingData_L1tx_t *msgTx = gNB->msgDataTx;
-  msgTx->num_ul_pdcch = number_ul_dci_pdu;
-  /* store the sched_response_id for the TX thread to release it when done */
-  msgTx->sched_response_id = Sched_INFO->sched_response_id;
-
-  DevAssert(Sched_INFO->DL_req.SFN == frame);
-  DevAssert(Sched_INFO->DL_req.Slot == slot);
-
-  if (is_dl) {
-    nr_schedule_dl_tti_req(gNB, &Sched_INFO->DL_req);
-  }
-
-  for (int i = 0; i < number_ul_tti_pdu; i++) {
+  for (int i = 0; i < UL_tti_req->n_pdus; i++) {
     switch (UL_tti_req->pdus_list[i].pdu_type) {
       case NFAPI_NR_UL_CONFIG_PUSCH_PDU_TYPE:
         LOG_D(NR_PHY,
@@ -223,6 +185,60 @@ void nr_schedule_response(NR_Sched_Rsp_t *Sched_INFO)
         break;
     }
   }
+}
+
+void nr_schedule_tx_req(PHY_VARS_gNB *gNB, nfapi_nr_tx_data_request_t *TX_req)
+{
+  DevAssert(gNB != NULL);
+  DevAssert(TX_req != NULL);
+  processingData_L1tx_t *msgTx = gNB->msgDataTx;
+
+  for (int idx = 0; idx < TX_req->Number_of_PDUs; ++idx) {
+    uint8_t *sdu = (uint8_t *)TX_req->pdu_list[idx].TLVs[0].value.direct;
+    nr_fill_dlsch_tx_req(msgTx, idx, sdu);
+  }
+}
+
+void nr_schedule_response(NR_Sched_Rsp_t *Sched_INFO)
+{
+  // copy data from L2 interface into L1 structures
+  module_id_t Mod_id = Sched_INFO->module_id;
+  nfapi_nr_ul_dci_request_t *UL_dci_req = &Sched_INFO->UL_dci_req;
+  frame_t frame = Sched_INFO->frame;
+  sub_frame_t slot = Sched_INFO->slot;
+
+  AssertFatal(RC.gNB != NULL, "RC.gNB is null\n");
+  AssertFatal(RC.gNB[Mod_id] != NULL, "RC.gNB[%d] is null\n", Mod_id);
+
+  PHY_VARS_gNB *gNB = RC.gNB[Mod_id];
+  start_meas(&gNB->schedule_response_stats);
+
+  nfapi_nr_config_request_scf_t *cfg = &gNB->gNB_config;
+
+  int slot_type = nr_slot_select(cfg, frame, slot);
+
+  uint8_t number_ul_dci_pdu = (UL_dci_req == NULL) ? 0 : UL_dci_req->numPdus;
+
+  clear_slot_beamid(gNB, slot);  // reset beam_id information for the slot to be processed
+  DevAssert(NFAPI_MODE == NFAPI_MONOLITHIC);
+  bool is_dl = slot_type == NR_DOWNLINK_SLOT || slot_type == NR_MIXED_SLOT;
+  bool is_ul = slot_type == NR_UPLINK_SLOT || slot_type == NR_MIXED_SLOT;
+
+  processingData_L1tx_t *msgTx = NULL;
+  msgTx = gNB->msgDataTx;
+  msgTx->num_ul_pdcch = number_ul_dci_pdu;
+  /* store the sched_response_id for the TX thread to release it when done */
+  msgTx->sched_response_id = Sched_INFO->sched_response_id;
+
+  DevAssert(Sched_INFO->DL_req.SFN == frame);
+  DevAssert(Sched_INFO->DL_req.Slot == slot);
+
+  if (is_dl) {
+    nr_schedule_dl_tti_req(gNB, &Sched_INFO->DL_req);
+  }
+
+  if (is_ul)
+    nr_schedule_ul_tti_req(gNB, &Sched_INFO->UL_tti_req);
 
   if (is_dl) {
     nr_schedule_tx_req(gNB, &Sched_INFO->TX_req);
