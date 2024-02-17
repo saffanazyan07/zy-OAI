@@ -66,44 +66,6 @@ void handle_nr_nfapi_ssb_pdu(processingData_L1tx_t *msgTx,int frame,int slot,
   }
 }
 
-/*void handle_nr_nfapi_pdsch_pdu(PHY_VARS_gNB *gNB,int frame,int subframe,gNB_L1_rxtx_proc_t *proc,
-                            uint8_t codeword_index,
-                            uint8_t *sdu)
-{
-
-	int UE_id = 0; //Hardcode UE_id for now
-	int harq_pid;
-
-	NR_gNB_DLSCH_t *dlsch0=NULL, *dlsch1=NULL;
-	NR_DL_gNB_HARQ_t *dlsch0_harq=NULL,*dlsch1_harq=NULL;
-
-    // Based on nr_fill_dci_and_dlsch only gNB->dlsch[0][0] gets filled now. So maybe we do not need dlsch1.
-	dlsch0 = gNB->dlsch[UE_id][0];
-	dlsch1 = gNB->dlsch[UE_id][1];
-
-	harq_pid        = dlsch0->harq_ids[subframe];
-	dlsch0_harq     = dlsch0->harq_processes[harq_pid];
-	dlsch1_harq     = dlsch1->harq_processes[harq_pid];
-
-
-	//if (dlsch0_harq->round==0) {  //get pointer to SDU if this a new SDU
-    if(sdu == NULL) {
-      LOG_E(PHY,"NFAPI: SFN/SF:%04d%d proc:TX:[frame %d subframe %d]: programming dlsch for round 0 \n",
-            frame,subframe,
-            proc->frame_tx,proc->slot_tx);
-      return;
-    }
-    //AssertFatal(sdu!=NULL,"NFAPI: SFN/SF:%04d%d proc:TX:[frame %d subframe %d]: programming dlsch for round 0, rnti %x, UE_id %d, harq_pid %d : sdu is null for pdu_index %d dlsch0_harq[round:%d SFN/SF:%d%d pdu:%p mcs:%d ndi:%d pdschstart:%d]\n",
-    //            frame,subframe,
-    //            proc->frame_tx,proc->subframe_tx,rel8->rnti,UE_id,harq_pid,
-    //            dl_tti_pdu->pdsch_pdu.pdsch_pdu_rel8.pdu_index,dlsch0_harq->round,dlsch0_harq->frame,dlsch0_harq->subframe,dlsch0_harq->pdu,dlsch0_harq->mcs,dlsch0_harq->ndi,dlsch0_harq->pdsch_start);
-    if (codeword_index == 0) dlsch0_harq->pdu                    = sdu;
-    else                     dlsch1_harq->pdu                    = sdu;
-    LOG_I(PHY, "SFN/SF: %d/%d DLSCH PDU filled \n",frame, subframe);
-//  }
-
-}*/
-
 void handle_nfapi_nr_csirs_pdu(processingData_L1tx_t *msgTx, int frame, int slot, nfapi_nr_dl_tti_csi_rs_pdu *csirs_pdu)
 {
   int found = 0;
@@ -120,15 +82,6 @@ void handle_nfapi_nr_csirs_pdu(processingData_L1tx_t *msgTx, int frame, int slot
   }
   if (found == 0)
     LOG_E(MAC,"CSI-RS list is full\n");
-}
-
-void handle_nr_nfapi_pdsch_pdu(processingData_L1tx_t *msgTx,
-                            nfapi_nr_dl_tti_pdsch_pdu *pdsch_pdu,
-                            uint8_t *sdu)
-{
-
-  nr_fill_dlsch(msgTx,pdsch_pdu,sdu);
-
 }
 
 void nr_schedule_response(NR_Sched_Rsp_t *Sched_INFO)
@@ -155,7 +108,6 @@ void nr_schedule_response(NR_Sched_Rsp_t *Sched_INFO)
   uint8_t number_dl_pdu             = (DL_req==NULL) ? 0 : DL_req->dl_tti_request_body.nPDUs;
   uint8_t number_ul_dci_pdu         = (UL_dci_req==NULL) ? 0 : UL_dci_req->numPdus;
   uint8_t number_ul_tti_pdu         = (UL_tti_req==NULL) ? 0 : UL_tti_req->n_pdus;
-  uint8_t number_tx_data_pdu        = (TX_req == NULL) ? 0 : TX_req->Number_of_PDUs;
 
   clear_slot_beamid(gNB, slot);  // reset beam_id information for the slot to be processed
   DevAssert(NFAPI_MODE == NFAPI_MONOLITHIC);
@@ -206,6 +158,8 @@ void nr_schedule_response(NR_Sched_Rsp_t *Sched_INFO)
                 slot,
                 DL_req->SFN,
                 DL_req->Slot);
+          nr_fill_dlsch_dl_tti_req(msgTx, &dl_tti_pdu->pdsch_pdu);
+
           nfapi_nr_dl_tti_pdsch_pdu_rel15_t *pdsch_pdu_rel15 = &dl_tti_pdu->pdsch_pdu.pdsch_pdu_rel15;
           uint16_t pduIndex = pdsch_pdu_rel15->pduIndex;
           AssertFatal(TX_req->pdu_list[pduIndex].num_TLV == 1,
@@ -213,11 +167,8 @@ void nr_schedule_response(NR_Sched_Rsp_t *Sched_INFO)
                       pduIndex,
                       TX_req->pdu_list[pduIndex].num_TLV);
           uint8_t *sdu = (uint8_t *)TX_req->pdu_list[pduIndex].TLVs[0].value.direct;
-          AssertFatal(msgTx->num_pdsch_slot < gNB->max_nb_pdsch,
-                      "Number of PDSCH PDUs %d exceeded the limit %d\n",
-                      msgTx->num_pdsch_slot,
-                      gNB->max_nb_pdsch);
-          handle_nr_nfapi_pdsch_pdu(msgTx, &dl_tti_pdu->pdsch_pdu, sdu);
+          nr_fill_dlsch_tx_req(msgTx, pduIndex, sdu);
+
       }
     }
 
