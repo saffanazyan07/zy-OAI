@@ -199,11 +199,21 @@ void nr_schedule_tx_req(PHY_VARS_gNB *gNB, nfapi_nr_tx_data_request_t *TX_req)
   }
 }
 
+void nr_schedule_ul_dci_req(PHY_VARS_gNB *gNB, nfapi_nr_ul_dci_request_t *UL_dci_req)
+{
+  DevAssert(gNB != NULL);
+  DevAssert(UL_dci_req != NULL);
+  processingData_L1tx_t *msgTx = gNB->msgDataTx;
+
+  msgTx->num_ul_pdcch = UL_dci_req->numPdus;
+  for (int i = 0; i < UL_dci_req->numPdus; i++)
+    msgTx->ul_pdcch_pdu[i] = UL_dci_req->ul_dci_pdu_list[i];
+}
+
 void nr_schedule_response(NR_Sched_Rsp_t *Sched_INFO)
 {
   // copy data from L2 interface into L1 structures
   module_id_t Mod_id = Sched_INFO->module_id;
-  nfapi_nr_ul_dci_request_t *UL_dci_req = &Sched_INFO->UL_dci_req;
   frame_t frame = Sched_INFO->frame;
   sub_frame_t slot = Sched_INFO->slot;
 
@@ -217,16 +227,12 @@ void nr_schedule_response(NR_Sched_Rsp_t *Sched_INFO)
 
   int slot_type = nr_slot_select(cfg, frame, slot);
 
-  uint8_t number_ul_dci_pdu = (UL_dci_req == NULL) ? 0 : UL_dci_req->numPdus;
-
   clear_slot_beamid(gNB, slot);  // reset beam_id information for the slot to be processed
   DevAssert(NFAPI_MODE == NFAPI_MONOLITHIC);
   bool is_dl = slot_type == NR_DOWNLINK_SLOT || slot_type == NR_MIXED_SLOT;
   bool is_ul = slot_type == NR_UPLINK_SLOT || slot_type == NR_MIXED_SLOT;
 
-  processingData_L1tx_t *msgTx = NULL;
-  msgTx = gNB->msgDataTx;
-  msgTx->num_ul_pdcch = number_ul_dci_pdu;
+  processingData_L1tx_t *msgTx = gNB->msgDataTx;
   /* store the sched_response_id for the TX thread to release it when done */
   msgTx->sched_response_id = Sched_INFO->sched_response_id;
 
@@ -243,8 +249,7 @@ void nr_schedule_response(NR_Sched_Rsp_t *Sched_INFO)
   if (is_dl) {
     nr_schedule_tx_req(gNB, &Sched_INFO->TX_req);
 
-    for (int i = 0; i < number_ul_dci_pdu; i++)
-      msgTx->ul_pdcch_pdu[i] = UL_dci_req->ul_dci_pdu_list[i];
+    nr_schedule_ul_dci_req(gNB, &Sched_INFO->UL_dci_req);
     /* Both the current thread and the TX thread will access the sched_info
      * at the same time, so increase its reference counter, so that it is
      * released only when both threads are done with it.
