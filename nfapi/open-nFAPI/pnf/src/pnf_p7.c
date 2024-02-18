@@ -1020,7 +1020,7 @@ int pnf_p7_slot_ind(pnf_p7_t* pnf_p7, uint16_t phy_id, uint16_t sfn, uint16_t sl
 
 		if(tx_slot_buffer->tx_data_req != 0)
 		{
-			deallocate_nfapi_tx_data_request(tx_slot_buffer->tx_data_req, pnf_p7);
+			//deallocate_nfapi_tx_data_request(tx_slot_buffer->tx_data_req, pnf_p7);
 			tx_slot_buffer->tx_data_req = 0;
 		}
 
