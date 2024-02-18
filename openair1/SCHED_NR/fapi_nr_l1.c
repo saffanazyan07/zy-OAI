@@ -97,8 +97,6 @@ void nr_schedule_dl_tti_req(PHY_VARS_gNB *gNB, nfapi_nr_dl_tti_request_t *DL_req
   DevAssert(slot_type == NR_DOWNLINK_SLOT || slot_type == NR_MIXED_SLOT);
 
   processingData_L1tx_t *msgTx = gNB->msgDataTx;
-  msgTx->num_pdsch_slot = 0;
-  msgTx->num_dl_pdcch = 0;
   msgTx->slot = slot;
   msgTx->frame = frame;
 
