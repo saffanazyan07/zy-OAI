@@ -333,7 +333,11 @@ static uint8_t pack_dl_tti_pdsch_pdu_rel15_value(void *tlv, uint8_t **ppWritePac
         push8(0, ppWritePackedMsg, end))) { // powerControlOffsetSS
     return 0;
   }
-  // TODO Add CBG Fields
+
+  if (!push8(value->maintenance_parms_v3.ldpcBaseGraph, ppWritePackedMsg, end)
+      || !push32(value->maintenance_parms_v3.tbSizeLbrmBytes, ppWritePackedMsg, end))
+    return 0;
+
   return 1;
 }
 
@@ -4077,7 +4081,11 @@ static uint8_t unpack_dl_tti_pdsch_pdu_rel15_value(void *tlv, uint8_t **ppReadPa
         pull8(ppReadPackedMsg, &powerControlOffsetSS, end))) { // powerControlOffsetSS
     return 0;
   }
-  // TODO Add CBG Fields
+
+  if (!pull8(ppReadPackedMsg, &value->maintenance_parms_v3.ldpcBaseGraph, end)
+      || !pull32(ppReadPackedMsg, &value->maintenance_parms_v3.tbSizeLbrmBytes, end))
+    return 0;
+
   return 1;
 }
 
