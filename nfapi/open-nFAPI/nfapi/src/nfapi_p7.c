@@ -1035,11 +1035,7 @@ static uint8_t pack_ul_tti_request_pusch_pdu(nfapi_nr_pusch_pdu_t *pusch_pdu, ui
             && push8(pusch_pdu->pusch_data.new_data_indicator, ppWritePackedMsg, end)
             && push32(pusch_pdu->pusch_data.tb_size, ppWritePackedMsg, end)
             && push16(pusch_pdu->pusch_data.num_cb, ppWritePackedMsg, end)
-            && pusharray8(pusch_pdu->pusch_data.cb_present_and_position,
-                          (pusch_pdu->pusch_data.num_cb + 7) / 8,
-                          (pusch_pdu->pusch_data.num_cb + 7) / 8,
-                          ppWritePackedMsg,
-                          end))) {
+            )) {
         return 0;
       }
     } break;
@@ -1088,19 +1084,10 @@ static uint8_t pack_ul_tti_request_pusch_pdu(nfapi_nr_pusch_pdu_t *pusch_pdu, ui
       NFAPI_TRACE(NFAPI_TRACE_INFO, "Invalid pdu bitmap %d \n", pusch_pdu->pdu_bit_map);
     }
   }
-  // Pack RX Beamforming PDU
-  if (!(push16(pusch_pdu->beamforming.num_prgs, ppWritePackedMsg, end)
-        && push16(pusch_pdu->beamforming.prg_size, ppWritePackedMsg, end)
-        && push8(pusch_pdu->beamforming.dig_bf_interface, ppWritePackedMsg, end))) {
+
+  if (!(push8(pusch_pdu->maintenance_parms_v3.ldpcBaseGraph, ppWritePackedMsg, end)
+        && push32(pusch_pdu->maintenance_parms_v3.tbSizeLbrmBytes, ppWritePackedMsg, end)))
     return 0;
-  }
-  for (int prg = 0; prg < pusch_pdu->beamforming.num_prgs; prg++) {
-    for (int digBFInterface = 0; digBFInterface < pusch_pdu->beamforming.dig_bf_interface; digBFInterface++) {
-      if (!push16(pusch_pdu->beamforming.prgs_list[prg].dig_bf_interface_list[digBFInterface].beam_idx, ppWritePackedMsg, end)) {
-        return 0;
-      }
-    }
-  }
   return 1;
 }
 
@@ -4871,9 +4858,10 @@ static uint8_t unpack_ul_tti_request_pusch_pdu(void *tlv, uint8_t **ppReadPacked
       // pack optional TLVs
       if (!(pull8(ppReadPackedMsg, &pusch_pdu->pusch_data.rv_index, end)
             && pull8(ppReadPackedMsg, &pusch_pdu->pusch_data.harq_process_id, end)
+            && pull8(ppReadPackedMsg, &pusch_pdu->pusch_data.new_data_indicator, end)
             && pull32(ppReadPackedMsg, &pusch_pdu->pusch_data.tb_size, end)
             && pull16(ppReadPackedMsg, &pusch_pdu->pusch_data.num_cb, end)
-            && pullarray8(ppReadPackedMsg, pusch_pdu->pusch_data.cb_present_and_position, 1, 1, end))) {
+            )) {
         return 0;
       }
     } break;
@@ -4915,11 +4903,10 @@ static uint8_t unpack_ul_tti_request_pusch_pdu(void *tlv, uint8_t **ppReadPacked
       NFAPI_TRACE(NFAPI_TRACE_INFO, "Invalid pdu bitmap %d \n", pusch_pdu->pdu_bit_map);
     }
   }
-  uint16_t dummy16 = 0;
-  uint8_t dummy8 = 0;
-  if (!(pull16(ppReadPackedMsg, &dummy16, end) && pull16(ppReadPackedMsg, &dummy16, end) && pull8(ppReadPackedMsg, &dummy8, end))) {
+
+  if (!(pull8(ppReadPackedMsg, &pusch_pdu->maintenance_parms_v3.ldpcBaseGraph, end)
+        && pull32(ppReadPackedMsg, &pusch_pdu->maintenance_parms_v3.tbSizeLbrmBytes, end)))
     return 0;
-  }
 
   return 1;
 }
