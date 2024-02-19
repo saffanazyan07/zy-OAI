@@ -1197,6 +1197,9 @@ int trigger_scheduler(nfapi_nr_slot_indication_scf_t *slot_ind)
 
   if (g_sched_resp.UL_dci_req.numPdus > 0)
     oai_nfapi_ul_dci_req(&g_sched_resp.UL_dci_req);
+
+  NR_UL_IND_t ind = {.frame = slot_ind->sfn, .slot = slot_ind->slot, };
+  NR_UL_indication(&ind);
   return 1;
 }
 
