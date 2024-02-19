@@ -173,7 +173,7 @@ int8_t nr_ue_scheduled_response_stub(nr_scheduled_response_t *scheduled_response
               crc_ind->crc_list[j].harq_id = pusch_config_pdu->pusch_data.harq_process_id;
               LOG_D(NR_MAC, "This is the harq pid %d for crc_list[%d]\n", crc_ind->crc_list[j].harq_id, j);
               LOG_D(NR_MAC, "This is sched sfn/sl [%d %d] and crc sfn/sl [%d %d]\n", frame, slot, crc_ind->sfn, crc_ind->slot);
-              crc_ind->crc_list[j].num_cb = pusch_config_pdu->pusch_data.num_cb;
+              crc_ind->crc_list[j].num_cb = 0;
               crc_ind->crc_list[j].rnti = pusch_config_pdu->rnti;
               crc_ind->crc_list[j].tb_crc_status = 0;
               crc_ind->crc_list[j].timing_advance = 31;
