@@ -1067,6 +1067,7 @@ static int rfsimulator_read(openair0_device *device, openair0_timestamp *ptimest
         *ptimestamp,
         t->nextRxTstamp,
         signal_energy(samplesVoid[0], nsamps));
+  usleep(1000);
   return nsamps;
 }
 
