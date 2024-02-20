@@ -85,3 +85,22 @@ old `README.md` from tag `2024.w44`
 [here](https://gitlab.eurecom.fr/oai/openairinterface5g/-/blob/2024.w44/ci-scripts/yaml_files/5g_l2sim_tdd/README.md).
 In the same directory is a `docker-compose.yaml` file that can be used to run
 L2sim.
+
+## 5G PNF-VNF split
+
+Start VNF
+
+```
+sudo NFAPI_TRACE_LEVEL=info ./nr-softmodem -O ../../../targets/PROJECTS/GENERIC-LTE-EPC/CONF/rcc.band78.tm1.106PRB.nfapi.conf --nfapi VNF --sa --log_config.global_log_options wall_clock  --emulate-l1
+```
+
+Start PNF
+
+```
+sudo NFAPI_TRACE_LEVEL=info ./nr-softmodem -O ../../../targets/PROJECTS/GENERIC-LTE-EPC/CONF/oaiL1.nfapi.usrpb210.conf --nfapi PNF --rfsim --rfsimulator.serveraddr server --log_config.global_log_options wall_clock --sa
+```
+
+Start UE
+```
+sudo ./nr-uesoftmodem -r 106 --numerology 1 --band 78 -C 3619200000 -O ue.conf
+```
