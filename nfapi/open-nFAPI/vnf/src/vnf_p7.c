@@ -1499,7 +1499,7 @@ void vnf_handle_nr_rx_data_indication(void *pRecvMsg, int recvMsgLen, vnf_p7_t* 
 		}
 		else
 		{
-			NFAPI_TRACE(NFAPI_TRACE_INFO, "%s: Handling RX Indication\n", __FUNCTION__);
+			NFAPI_TRACE(NFAPI_TRACE_DEBUG, "%s: Handling RX Indication\n", __FUNCTION__);
                         if(vnf_p7->_public.nr_rx_data_indication)
 			{
 				(vnf_p7->_public.nr_rx_data_indication)(&ind);
@@ -1525,7 +1525,7 @@ void vnf_handle_nr_crc_indication(void *pRecvMsg, int recvMsgLen, vnf_p7_t* vnf_
 		}
 		else
 		{
-		        NFAPI_TRACE(NFAPI_TRACE_INFO, "%s: Handling CRC Indication\n", __FUNCTION__);
+		        NFAPI_TRACE(NFAPI_TRACE_DEBUG, "%s: Handling CRC Indication\n", __FUNCTION__);
 			if(vnf_p7->_public.nr_crc_indication)
 			{
 				(vnf_p7->_public.nr_crc_indication)(&ind);
@@ -1576,7 +1576,7 @@ void vnf_handle_nr_uci_indication(void *pRecvMsg, int recvMsgLen, vnf_p7_t* vnf_
 		}
 		else
 		{
-		        NFAPI_TRACE(NFAPI_TRACE_INFO, "%s: Handling UCI Indication\n", __FUNCTION__);
+		        NFAPI_TRACE(NFAPI_TRACE_DEBUG, "%s: Handling UCI Indication\n", __FUNCTION__);
 			if(vnf_p7->_public.nr_uci_indication)
 			{
 				(vnf_p7->_public.nr_uci_indication)(&ind);
