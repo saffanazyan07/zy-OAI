@@ -821,55 +821,6 @@ void pnf_nr_pack_and_send_timing_info(pnf_p7_t* pnf_p7)
 	pnf_p7->timing_info_ms_counter = 0;
 }
 
-
-void send_dummy_slot(pnf_p7_t* pnf_p7, uint16_t sfn, uint16_t slot)
-{
-  struct timespec t;
-  clock_gettime( CLOCK_MONOTONIC, &t);
-
-  //NFAPI_TRACE(NFAPI_TRACE_INFO, "%s(sfn_sf:%d) t:%ld.%09ld\n", __FUNCTION__, NFAPI_SFNSF2DEC(sfn_sf), t.tv_sec, t.tv_nsec);
-
-	if(pnf_p7->_public.tx_data_req_fn && pnf_p7->_public.dummy_slot.tx_data_req)
-	{
-		pnf_p7->_public.dummy_slot.tx_data_req->SFN = sfn;
-		pnf_p7->_public.dummy_slot.tx_data_req->Slot = slot;
-		//NFAPI_TRACE(NFAPI_TRACE_INFO, "Dummy tx_req - enter\n");
-		(pnf_p7->_public.tx_data_req_fn)(&pnf_p7->_public, pnf_p7->_public.dummy_slot.tx_data_req);
-		//NFAPI_TRACE(NFAPI_TRACE_INFO, "Dummy tx_req - exit\n");
-	}
-	if(pnf_p7->_public.dl_tti_req_fn && pnf_p7->_public.dummy_slot.dl_tti_req)
-	{
-		pnf_p7->_public.dummy_slot.dl_tti_req->SFN = sfn;
-		pnf_p7->_public.dummy_slot.dl_tti_req->Slot = slot;
-		//NFAPI_TRACE(NFAPI_TRACE_INFO, "Dummy dl_config_req - enter\n");
-		(pnf_p7->_public.dl_tti_req_fn)(NULL, &(pnf_p7->_public), pnf_p7->_public.dummy_slot.dl_tti_req);
-		//NFAPI_TRACE(NFAPI_TRACE_INFO, "Dummy dl_config_req - exit\n");
-	}
-	if(pnf_p7->_public.ul_tti_req_fn && pnf_p7->_public.dummy_slot.ul_tti_req)
-	{
-		pnf_p7->_public.dummy_slot.ul_tti_req->SFN = sfn;
-		pnf_p7->_public.dummy_slot.ul_tti_req->Slot = slot;
-		NFAPI_TRACE(NFAPI_TRACE_INFO, "Dummy ul_config_req - enter\n");
-		(pnf_p7->_public.ul_tti_req_fn)(NULL, &pnf_p7->_public, pnf_p7->_public.dummy_slot.ul_tti_req);
-	}
-	if(pnf_p7->_public.ul_dci_req_fn && pnf_p7->_public.dummy_slot.ul_dci_req)
-	{
-		pnf_p7->_public.dummy_slot.ul_dci_req->SFN = sfn;
-		pnf_p7->_public.dummy_slot.ul_dci_req->Slot = slot;
-		NFAPI_TRACE(NFAPI_TRACE_INFO, "Dummy hi_dci0 - enter\n");
-		(pnf_p7->_public.ul_dci_req_fn)(NULL, &pnf_p7->_public, pnf_p7->_public.dummy_slot.ul_dci_req);
-	}
-	#if 0
-	if(pnf_p7->_public.lbt_dl_config_req && pnf_p7->_public.dummy_subframe.lbt_dl_config_req) // TODO: Change later
-	{
-		pnf_p7->_public.dummy_slot.lbt_dl_config_req->sfn_sf = sfn;
-		NFAPI_TRACE(NFAPI_TRACE_INFO, "Dummy lbt - enter\n");
-		(pnf_p7->_public.lbt_dl_config_req)(&pnf_p7->_public, pnf_p7->_public.dummy_slot.lbt_dl_config_req);
-	}
-	#endif
-}
-
-
 void send_dummy_subframe(pnf_p7_t* pnf_p7, uint16_t sfn_sf)
 {
   struct timespec t;
