@@ -272,38 +272,61 @@ static size_t dump_L1_meas_stats(PHY_VARS_gNB *gNB, RU_t *ru, char *output, size
   const char *begin = output;
   const char *end = output + outputlen;
   output += print_meas_log(&gNB->phy_proc_tx, "L1 Tx processing", NULL, NULL, output, end - output);
+  reset_meas(&gNB->phy_proc_tx);
   output += print_meas_log(&gNB->dlsch_encoding_stats, "DLSCH encoding", NULL, NULL, output, end - output);
+  reset_meas(&gNB->dlsch_encoding_stats);
   output += print_meas_log(&gNB->dlsch_scrambling_stats, "DLSCH scrambling", NULL, NULL, output, end-output);
+  reset_meas(&gNB->dlsch_scrambling_stats);
   output += print_meas_log(&gNB->dlsch_modulation_stats, "DLSCH modulation", NULL, NULL, output, end - output);
+  reset_meas(&gNB->dlsch_modulation_stats);
   output += print_meas_log(&gNB->dlsch_resource_mapping_stats, "DLSCH resource mapping", NULL, NULL, output,end-output);
+  reset_meas(&gNB->dlsch_resource_mapping_stats);
   output += print_meas_log(&gNB->dlsch_precoding_stats, "DLSCH precoding", NULL, NULL, output,end-output);
+  reset_meas(&gNB->dlsch_precoding_stats);
   output += print_meas_log(&gNB->phy_proc_rx, "L1 Rx processing", NULL, NULL, output, end - output);
+  reset_meas(&gNB->phy_proc_rx);
   output += print_meas_log(&gNB->ul_indication_stats, "UL Indication", NULL, NULL, output, end - output);
+  reset_meas(&gNB->ul_indication_stats);
   output += print_meas_log(&gNB->slot_indication_stats, "Slot Indication", NULL, NULL, output, end - output);
+  reset_meas(&gNB->slot_indication_stats);
   output += print_meas_log(&gNB->rx_pusch_stats, "PUSCH inner-receiver", NULL, NULL, output, end - output);
+  reset_meas(&gNB->rx_pusch_stats);
   output += print_meas_log(&gNB->schedule_response_stats, "Schedule Response", NULL, NULL, output, end - output);
+  reset_meas(&gNB->schedule_response_stats);
   output += print_meas_log(&gNB->rx_prach, "PRACH RX", NULL, NULL, output, end - output);
-  if (ru->feprx)
+  reset_meas(&gNB->rx_prach);
+  if (ru->feprx) {
     output += print_meas_log(&ru->ofdm_demod_stats, "feprx", NULL, NULL, output, end - output);
+    reset_meas(&ru->ofdm_demod_stats);
+  }
 
   if (ru->feptx_prec) {
     output += print_meas_log(&ru->precoding_stats,"feptx_prec",NULL,NULL, output, end - output);
+    reset_meas(&ru->precoding_stats);
   }
 
   if (ru->feptx_ofdm) {
     output += print_meas_log(&ru->txdataF_copy_stats,"txdataF_copy",NULL,NULL, output, end - output);
+    reset_meas(&ru->txdataF_copy_stats);
     output += print_meas_log(&ru->ofdm_mod_stats,"feptx_ofdm",NULL,NULL, output, end - output);
+    reset_meas(&ru->ofdm_mod_stats);
     output += print_meas_log(&ru->ofdm_total_stats,"feptx_total",NULL,NULL, output, end - output);
+    reset_meas(&ru->ofdm_total_stats);
   }
 
-  if (ru->fh_north_asynch_in)
+  if (ru->fh_north_asynch_in) {
     output += print_meas_log(&ru->rx_fhaul,"rx_fhaul",NULL,NULL, output, end - output);
+    reset_meas(&ru->rx_fhaul);
+  }
 
   output += print_meas_log(&ru->tx_fhaul,"tx_fhaul",NULL,NULL, output, end - output);
+  reset_meas(&ru->tx_fhaul);
 
   if (ru->fh_north_out) {
     output += print_meas_log(&ru->compression,"compression",NULL,NULL, output, end - output);
+    reset_meas(&ru->compression);
     output += print_meas_log(&ru->transport,"transport",NULL,NULL, output, end - output);
+    reset_meas(&ru->transport);
   }
   return output - begin;
 }
