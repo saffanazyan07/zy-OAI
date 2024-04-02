@@ -972,7 +972,6 @@ int pnf_p7_slot_ind(pnf_p7_t* pnf_p7, uint16_t phy_id, uint16_t sfn, uint16_t sl
 		if ( rx_slot_buffer->dl_tti_req == 0 &&
 			 rx_slot_buffer->ul_tti_req == 0)
 		{
-			memset(&(pnf_p7->slot_buffer[buffer_index_rx]), 0, sizeof(nfapi_pnf_p7_slot_buffer_t));
 			pnf_p7->slot_buffer[buffer_index_rx].sfn = -1;
 			pnf_p7->slot_buffer[buffer_index_rx].slot = -1;
 		}
