@@ -596,6 +596,9 @@ int main( int argc, char **argv ) {
   nvIPC_Init(nrmac->nvipc_params_s);
 #endif
 
+  for (int idx = 0; idx < RC.nb_nr_L1_inst; idx++)
+    RC.gNB[idx]->if_inst->sl_ahead = sl_ahead;
+
   if (NFAPI_MODE==NFAPI_MODE_PNF) {
     wait_nfapi_init("main?");
   }
@@ -604,7 +607,6 @@ int main( int argc, char **argv ) {
     wait_RUs();
     // once all RUs are ready initialize the rest of the gNBs ((dependence on final RU parameters after configuration)
 
-    for (int idx=0;idx<RC.nb_nr_L1_inst;idx++) RC.gNB[idx]->if_inst->sl_ahead = sl_ahead;
     if (IS_SOFTMODEM_DOSCOPE || IS_SOFTMODEM_IMSCOPE_ENABLED) {
       sleep(1);
       scopeParms_t p;
