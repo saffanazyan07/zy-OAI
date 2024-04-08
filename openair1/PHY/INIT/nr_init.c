@@ -480,6 +480,7 @@ void init_nr_transport(PHY_VARS_gNB *gNB)
 
   int buffer_ul_slots; // the UL channels are scheduled sl_ahead before they are transmitted
   int slot_ahead = gNB->if_inst ? gNB->if_inst->sl_ahead : 6;
+  DevAssert(slot_ahead > 0);
   if (slot_ahead > nb_slots_per_period)
     buffer_ul_slots = nb_ul_slots_period + (slot_ahead - nb_slots_per_period);
   else
