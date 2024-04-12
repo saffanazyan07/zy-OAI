@@ -488,7 +488,7 @@ void nr_generate_pdsch(processingData_L1tx_t *msgTx, int frame, int slot)
         int rb = 0;
         while(rb < rel15->rbSize) {
           //get pmi info
-          const int pmi = (pb->prg_size > 0) ? (pb->prgs_list[(int)rb / pb->prg_size].pm_idx) : 0;
+          const int pmi = (pb->num_prgs > 0 && pb->prg_size > 0) ? (pb->prgs_list[(int)rb / pb->prg_size].pm_idx) : 0;
           const int pmi2 = (rb < (rel15->rbSize - 1) && pb->prg_size > 0) ? (pb->prgs_list[(int)(rb+1)/pb->prg_size].pm_idx) : -1;
 
           // If pmi of next RB and pmi of current RB are the same, we do 2 RB in a row
