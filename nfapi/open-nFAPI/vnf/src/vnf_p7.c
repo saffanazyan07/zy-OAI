@@ -506,7 +506,7 @@ int vnf_nr_p7_pack_and_send_p7_msg(vnf_p7_t* vnf_p7, nfapi_p7_message_header_t* 
 			int segment = 0;
 			int offset = NFAPI_P7_HEADER_LENGTH;
 			uint8_t tx_buffer[vnf_p7->_public.segment_size];
-                        NFAPI_TRACE(NFAPI_TRACE_INFO, "%s() MORE THAN ONE SEGMENT phy_id:%d nfapi_p7_message_pack()=len=%d vnf_p7->_public.segment_size:%u\n", __FUNCTION__, header->phy_id, len, vnf_p7->_public.segment_size);
+                        NFAPI_TRACE(NFAPI_TRACE_DEBUG, "%s() MORE THAN ONE SEGMENT phy_id:%d nfapi_p7_message_pack()=len=%d vnf_p7->_public.segment_size:%u\n", __FUNCTION__, header->phy_id, len, vnf_p7->_public.segment_size);
 			for(segment = 0; segment < segment_count; ++segment)
 			{
 				uint8_t last = 0;
