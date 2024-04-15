@@ -408,171 +408,17 @@ bool nr_pdcp_data_ind(const protocol_ctxt_t *const ctxt_pP,
   return true;
 }
 
-/****************************************************************************/
-/* pdcp_data_ind thread - end                                               */
-/****************************************************************************/
-
-/****************************************************************************/
-/* hacks to be cleaned up at some point - begin                             */
-/****************************************************************************/
-
-#include "LAYER2/MAC/mac_extern.h"
-
-static void reblock_tun_socket(void)
+uint64_t nr_pdcp_module_init(uint64_t _pdcp_optmask, int id)
 {
-  extern int nas_sock_fd[];
-  int f;
+  pdcp_optmask = pdcp_optmask | _pdcp_optmask;
 
-  f = fcntl(nas_sock_fd[0], F_GETFL, 0);
-  f &= ~(O_NONBLOCK);
-  if (fcntl(nas_sock_fd[0], F_SETFL, f) == -1) {
-    LOG_E(PDCP, "fcntl(F_SETFL) failed on fd %d: errno %d, %s\n", nas_sock_fd[0], errno, strerror(errno));
+  if (ENB_NAS_USE_TUN) {
+    start_sdap_tun_gnb(id + 1);
   }
+  /* UE's tun interface in NOS1 is created from SDAP entity of default DRB in nr_sdap_entity.c */
+
+  return pdcp_optmask;
 }
-
-static void *enb_tun_read_thread(void *_)
-{
-  extern int nas_sock_fd[];
-  char rx_buf[NL_MAX_PAYLOAD];
-  int len;
-  protocol_ctxt_t ctxt;
-  ue_id_t UEid;
-
-  int rb_id = 1;
-  pthread_setname_np( pthread_self(),"enb_tun_read");
-
-  while (1) {
-    len = read(nas_sock_fd[0], &rx_buf, NL_MAX_PAYLOAD);
-    if (len == -1) {
-      LOG_E(PDCP, "could not read(): errno %d %s\n", errno, strerror(errno));
-      return NULL;
-    }
-
-    LOG_D(PDCP, "%s(): nas_sock_fd read returns len %d\n", __func__, len);
-
-    nr_pdcp_manager_lock(nr_pdcp_ue_manager);
-    const bool has_ue = nr_pdcp_get_first_ue_id(nr_pdcp_ue_manager, &UEid);
-    nr_pdcp_manager_unlock(nr_pdcp_ue_manager);
-
-    if (!has_ue) continue;
-
-    ctxt.module_id = 0;
-    ctxt.enb_flag = 1;
-    ctxt.instance = 0;
-    ctxt.frame = 0;
-    ctxt.subframe = 0;
-    ctxt.eNB_index = 0;
-    ctxt.brOption = 0;
-    ctxt.rntiMaybeUEid = UEid;
-
-    uint8_t qfi = 7;
-    bool rqi = 0;
-    int pdusession_id = 10;
-
-    sdap_data_req(&ctxt,
-                  UEid,
-                  SRB_FLAG_NO,
-                  rb_id,
-                  RLC_MUI_UNDEFINED,
-                  RLC_SDU_CONFIRM_NO,
-                  len,
-                  (unsigned char *)rx_buf,
-                  PDCP_TRANSMISSION_MODE_DATA,
-                  NULL,
-                  NULL,
-                  qfi,
-                  rqi,
-                  pdusession_id);
-  }
-
-  return NULL;
-}
-
-static void *ue_tun_read_thread(void *_)
-{
-  extern int nas_sock_fd[];
-  char rx_buf[NL_MAX_PAYLOAD];
-  int len;
-  protocol_ctxt_t ctxt;
-  ue_id_t UEid;
-  int has_ue;
-
-  int rb_id = 1;
-  pthread_setname_np( pthread_self(),"ue_tun_read"); 
-  while (1) {
-    len = read(nas_sock_fd[0], &rx_buf, NL_MAX_PAYLOAD);
-    if (len == -1) {
-      LOG_E(PDCP, "error: cannot read() from fd %d: errno %d, %s\n", nas_sock_fd[0], errno, strerror(errno));
-      return NULL; /* exit thread */
-    }
-
-    LOG_D(PDCP, "%s(): nas_sock_fd read returns len %d\n", __func__, len);
-
-    nr_pdcp_manager_lock(nr_pdcp_ue_manager);
-    has_ue = nr_pdcp_get_first_ue_id(nr_pdcp_ue_manager, &UEid);
-    nr_pdcp_manager_unlock(nr_pdcp_ue_manager);
-
-    if (!has_ue) continue;
-
-    ctxt.module_id = 0;
-    ctxt.enb_flag = 0;
-    ctxt.instance = 0;
-    ctxt.frame = 0;
-    ctxt.subframe = 0;
-    ctxt.eNB_index = 0;
-    ctxt.brOption = 0;
-    ctxt.rntiMaybeUEid = UEid;
-
-    bool dc = SDAP_HDR_UL_DATA_PDU;
-    extern uint8_t nas_qfi;
-    extern uint8_t nas_pduid;
-
-    sdap_data_req(&ctxt,
-                  UEid,
-                  SRB_FLAG_NO,
-                  rb_id,
-                  RLC_MUI_UNDEFINED,
-                  RLC_SDU_CONFIRM_NO,
-                  len,
-                  (unsigned char *)rx_buf,
-                  PDCP_TRANSMISSION_MODE_DATA,
-                  NULL,
-                  NULL,
-                  nas_qfi,
-                  dc,
-                  nas_pduid);
-  }
-
-  return NULL;
-}
-
-static void start_pdcp_tun_enb(void)
-{
-  pthread_t t;
-
-  reblock_tun_socket();
-
-  if (pthread_create(&t, NULL, enb_tun_read_thread, NULL) != 0) {
-    LOG_E(PDCP, "%s:%d:%s: fatal\n", __FILE__, __LINE__, __FUNCTION__);
-    exit(1);
-  }
-}
-
-static void start_pdcp_tun_ue(void)
-{
-  pthread_t t;
-
-  reblock_tun_socket();
-
-  if (pthread_create(&t, NULL, ue_tun_read_thread, NULL) != 0) {
-    LOG_E(PDCP, "%s:%d:%s: fatal\n", __FILE__, __LINE__, __FUNCTION__);
-    exit(1);
-  }
-}
-
-/****************************************************************************/
-/* hacks to be cleaned up at some point - end                               */
-/****************************************************************************/
 
 int pdcp_fifo_flush_sdus(const protocol_ctxt_t *const ctxt_pP)
 {
@@ -588,6 +434,8 @@ void pdcp_layer_init(void)
 {
   abort();
 }
+
+#include "LAYER2/MAC/mac_extern.h"
 
 void nr_pdcp_layer_init(void)
 {
@@ -620,44 +468,6 @@ void nr_pdcp_layer_init(void)
 #include "nfapi/oai_integration/vendor_ext.h"
 #include "executables/lte-softmodem.h"
 #include "common/utils/tun_if.h"
-
-uint64_t nr_pdcp_module_init(uint64_t _pdcp_optmask, int id)
-{
-  /* hack: be sure to initialize only once */
-  static pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
-  static int initialized = 0;
-  if (pthread_mutex_lock(&m) != 0) abort();
-  if (initialized) {
-    abort();
-  }
-  initialized = 1;
-  if (pthread_mutex_unlock(&m) != 0) abort();
-
-  pdcp_optmask = pdcp_optmask | _pdcp_optmask ;
-
-  if (UE_NAS_USE_TUN) {
-    char *ifprefix = get_softmodem_params()->nsa ? "oaitun_nrue" : "oaitun_ue";
-    int num_if = (NFAPI_MODE == NFAPI_UE_STUB_PNF || IS_SOFTMODEM_SIML1 || NFAPI_MODE == NFAPI_MODE_STANDALONE_PNF)
-                     ? MAX_MOBILES_PER_ENB
-                     : 1;
-    tun_init(ifprefix, num_if, id);
-    if (IS_SOFTMODEM_NOS1) {
-      const char *ip = !get_softmodem_params()->nsa ? "10.0.1.2" : "10.0.1.3";
-      tun_config(1, ip, NULL, ifprefix);
-      set_qfi_pduid(7, 10);
-    }
-    LOG_I(PDCP, "UE pdcp will use tun interface\n");
-    start_pdcp_tun_ue();
-  } else if (ENB_NAS_USE_TUN) {
-    char *ifprefix = get_softmodem_params()->nsa ? "oaitun_gnb" : "oaitun_enb";
-    tun_init(ifprefix, 1, id);
-    tun_config(1, "10.0.1.1", NULL, ifprefix);
-    LOG_I(PDCP, "ENB pdcp will use tun interface\n");
-    start_pdcp_tun_enb();
-  }
-
-  return pdcp_optmask ;
-}
 
 static void deliver_sdu_drb(void *_ue, nr_pdcp_entity_t *entity,
                             char *buf, int size,
@@ -1248,16 +1058,6 @@ bool nr_pdcp_data_req_drb(protocol_ctxt_t *ctxt_pP,
   nr_pdcp_ue_t *ue;
   nr_pdcp_entity_t *rb;
   ue_id_t ue_id = ctxt_pP->rntiMaybeUEid;
-
-  if (ctxt_pP->module_id != 0 ||
-      //ctxt_pP->enb_flag != 1 ||
-      ctxt_pP->instance != 0 ||
-      ctxt_pP->eNB_index != 0 /*||
-      ctxt_pP->configured != 1 ||
-      ctxt_pP->brOption != 0*/) {
-    LOG_E(PDCP, "%s:%d:%s: fatal\n", __FILE__, __LINE__, __FUNCTION__);
-    exit(1);
-  }
 
   nr_pdcp_manager_lock(nr_pdcp_ue_manager);
 

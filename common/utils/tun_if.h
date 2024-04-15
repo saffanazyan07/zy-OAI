@@ -24,6 +24,9 @@
 
 #include <stdbool.h>
 
+int tun_alloc(char *dev);
+
+bool doesInterfaceExist(const char *interfaceName);
 /* TODO: doc */
 int tun_init(const char *ifprefix, int num_if, int id);
 
@@ -39,12 +42,13 @@ int tun_init_mbms(char *ifsuffix, int id);
  * \param[in] ipv4 IPv4 address of this interface as a string
  * \param[in] ipv6 IPv6 address of this interface as a string
  * \param[in] ifprefix interface name prefix to which an interface number will
- * be appended
+ * \param[in] ifsuffix to differentiate multiple tun interfaces on the same UE
+ * process
  * \return true on success, otherwise false
  * \note
  * @ingroup  _nas
  */
-bool tun_config(int interface_id, const char *ipv4, const char *ipv6, const char *ifprefix);
+bool tun_config(int interface_id, const char *ipv4, const char *ipv6, const char *ifprefix, const char *ifsuffix);
 
 /*!
  * \brief Setup a IPv4 rule in table (interface_id - 1 + 10000) and route to
@@ -58,6 +62,9 @@ bool tun_config(int interface_id, const char *ipv4, const char *ipv6, const char
  * \param[in] ifprefix interface name prefix to which an interface number will
  * be appended
  */
-void setup_ue_ipv4_route(int interface_id, const char *ipv4, const char *ifpref);
+void setup_ue_ipv4_route(int interface_id, int pdu_id, const char *ipv4, const char *ifpref, const char *ifsuffix);
+typedef enum { INTERFACE_DOWN, INTERFACE_UP } if_action_t;
+bool change_interface_state(int sock_fd, const char *ifn, if_action_t if_action);
+
 
 #endif /*TUN_IF_H_*/

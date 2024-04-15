@@ -32,6 +32,7 @@
 #include "gtpv1_u_messages_types.h"
 #include "intertask_interface.h"
 #include "rlc.h"
+#include "tun_if.h"
 
 typedef struct {
   nr_sdap_entity_t *sdap_entity_llist;
@@ -322,8 +323,7 @@ static void nr_sdap_rx_entity(nr_sdap_entity_t *entity,
      * 5.2.2 Downlink
      * deliver the retrieved SDAP SDU to the upper layer.
      */
-    extern int nas_sock_fd[];
-    int len = write(nas_sock_fd[0], &buf[offset], size-offset);
+    int len = write(entity->pdusession_sock, &buf[offset], size - offset);
     LOG_D(SDAP, "RX Entity len : %d\n", len);
     LOG_D(SDAP, "RX Entity size : %d\n", size);
     LOG_D(SDAP, "RX Entity offset : %d\n", offset);
@@ -514,6 +514,8 @@ nr_sdap_entity_t *new_nr_sdap_entity(int is_gnb,
   sdap_entity->qfi2drb_map_delete = nr_sdap_qfi2drb_map_del;
   sdap_entity->qfi2drb_map = nr_sdap_qfi2drb_map;
 
+  sdap_entity->pdusession_sock = -1;
+
   if(is_defaultDRB) {
     sdap_entity->default_drb = drb_identity;
     LOG_I(SDAP, "Default DRB for the created SDAP entity: %ld \n", sdap_entity->default_drb);
@@ -564,6 +566,30 @@ void nr_sdap_release_drb(ue_id_t ue_id, int drb_id, int pdusession_id)
     LOG_E(SDAP, "Couldn't find a SDAP entity associated with PDU session ID %d\n", pdusession_id);
 }
 
+void remove_ue_ip_if(ue_id_t ue_id, int pdusession_id)
+{
+  nr_sdap_entity_t *entity = nr_sdap_get_entity(ue_id, pdusession_id);
+  DevAssert(entity != NULL);
+  // Stop the read thread
+  entity->stop_thread = true;
+  // Bring down the IP interface
+  char ifname[20];
+  char ifsuffix[10];
+  sprintf(ifsuffix, "p%d", pdusession_id);
+  int default_pdu = get_softmodem_params()->default_pdu_session_id;
+  const char *p_ifsuffix = (pdusession_id == default_pdu) ? NULL : ifsuffix;
+  snprintf(ifname, sizeof(ifname), "%s%ld%s", "oaitun_ue", ue_id, (p_ifsuffix) ? p_ifsuffix : "");
+  if (change_interface_state(entity->pdusession_sock, ifname, INTERFACE_DOWN) == 0) {
+    // Close the socket associated with the interface
+    close(entity->pdusession_sock);
+    LOG_I(SDAP, "Interface %s is now down.\n", ifname);
+  } else {
+    LOG_E(SDAP, "Could not bring interface %s down.\n", ifname);
+    exit(1);
+  }
+  nr_sdap_delete_entity(ue_id, pdusession_id);
+}
+
 bool nr_sdap_delete_entity(ue_id_t ue_id, int pdusession_id)
 {
   nr_sdap_entity_t *entityPtr = sdap_info.sdap_entity_llist;
@@ -592,6 +618,9 @@ bool nr_sdap_delete_entity(ue_id_t ue_id, int pdusession_id)
 
     if (entityPtr->ue_id == ue_id && entityPtr->pdusession_id == pdusession_id) {
       entityPrev->next_entity = entityPtr->next_entity;
+      if (entityPrev->pdusession_sock != -1) {
+        remove_ue_ip_if(entityPrev->ue_id, entityPrev->pdusession_id);
+      }
       free(entityPtr);
       LOG_D(SDAP, "Successfully deleted Entity.\n");
       ret = true;
@@ -674,4 +703,12 @@ void nr_reconfigure_sdap_entity(NR_SDAP_Config_t *sdap_config, ue_id_t ue_id, in
       sdap_entity->qfi2drb_map_delete(sdap_entity, qfi);
     }
   }
+}
+
+void set_qfi(uint8_t qfi, uint8_t pduid, ue_id_t ue_id)
+{
+  nr_sdap_entity_t *entity = nr_sdap_get_entity(ue_id, pduid);
+  DevAssert(entity != NULL);
+  entity->qfi = qfi;
+  return;
 }

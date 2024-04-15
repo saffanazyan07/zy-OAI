@@ -2173,21 +2173,23 @@ uint64_t pdcp_module_init( uint64_t pdcp_optmask, int id) {
   if (UE_NAS_USE_TUN) {
     int num_if = (NFAPI_MODE == NFAPI_UE_STUB_PNF || IS_SOFTMODEM_SIML1 || NFAPI_MODE == NFAPI_MODE_STANDALONE_PNF) ? MAX_MOBILES_PER_ENB : 1;
     tun_init("oaitun_ue", num_if, id);
+    if (IS_SOFTMODEM_NOS1)
+      tun_config(1, "10.0.1.2", NULL, "oaitun_ue", NULL);
     tun_init_mbms("oaitun_uem", id + 1);
-    tun_config(1, "10.0.2.2", NULL, "oaitun_uem");
+    tun_config(1, "10.0.2.2", NULL, "oaitun_uem", NULL);
     LOG_I(PDCP, "UE pdcp will use tun interface\n");
   } else if (ENB_NAS_USE_TUN) {
     tun_init("oaitun_enb", 1, 0);
-    tun_config(1, "10.0.1.1", NULL, "oaitun_enb");
+    tun_config(1, "10.0.1.1", NULL, "oaitun_enb", NULL);
     if (pdcp_optmask & ENB_NAS_USE_TUN_W_MBMS_BIT) {
       tun_init_mbms("oaitun_enm", 1);
-      tun_config(1, "10.0.2.1", NULL, "oaitun_enm");
+      tun_config(1, "10.0.2.1", NULL, "oaitun_enm", NULL);
       LOG_I(PDCP, "ENB pdcp will use mbms tun interface\n");
     }
     LOG_I(PDCP, "ENB pdcp will use tun interface\n");
   } else if (pdcp_optmask & ENB_NAS_USE_TUN_W_MBMS_BIT) {
     tun_init_mbms("oaitun_enm", 0);
-    tun_config(1, "10.0.2.1", NULL, "oaitun_enm");
+    tun_config(1, "10.0.2.1", NULL, "oaitun_enm", NULL);
     LOG_I(PDCP, "ENB pdcp will use mbms tun interface\n");
   }
 

@@ -5264,7 +5264,7 @@ rrc_eNB_process_RRCConnectionReconfigurationComplete(
                   ctxt_pP->module_id);
             char ip[20];
             snprintf(ip, sizeof(ip), "10.0.%d.%d", ctxt_pP->module_id + 1, ctxt_pP->module_id + 1);
-            oip_ifup = tun_config(ctxt_pP->module_id, ip, NULL, "oaitun_oai");
+            oip_ifup = tun_config(ctxt_pP->module_id, ip, NULL, "oaitun_oai", NULL);
 
             if (oip_ifup == 0) { // interface is up --> send a config the DRB
               module_id_t ue_module_id;

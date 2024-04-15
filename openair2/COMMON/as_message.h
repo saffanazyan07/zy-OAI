@@ -43,6 +43,7 @@ Description Defines the messages supported by the Access Stratum sublayer
 
 #include "commonDef.h"
 #include "networkDef.h"
+#include "common/platform_types.h"
 /****************************************************************************/
 /*********************  G L O B A L    C O N S T A N T S  *******************/
 /****************************************************************************/
@@ -461,6 +462,10 @@ typedef ul_info_transfer_cnf_t dl_info_transfer_cnf_t;
  * at the UE side.
  */
 typedef ul_info_transfer_ind_t dl_info_transfer_ind_t;
+
+typedef struct nas_nos1_msg_s {
+  rnti_t rnti;
+} nas_nos1_msg_t;
 
 typedef struct nas_pdu_session_req_s {
   int pdusession_id;

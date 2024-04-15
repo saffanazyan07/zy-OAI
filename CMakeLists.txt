@@ -1716,7 +1716,7 @@ add_library(LIB_NAS_SIMUE
   $<TARGET_OBJECTS:ds>
   )
 target_include_directories(LIB_NAS_SIMUE PRIVATE ${OPENAIR_DIR}/common/utils/ds/)
-target_link_libraries(LIB_NAS_SIMUE PRIVATE lte_rrc)
+target_link_libraries(LIB_NAS_SIMUE PRIVATE lte_rrc UTIL)
 
 
 
