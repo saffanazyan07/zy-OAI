@@ -934,12 +934,12 @@ int pnf_p7_slot_ind(pnf_p7_t* pnf_p7, uint16_t phy_id, uint16_t sfn, uint16_t sl
 		}
 		 
 
-		if(tx_slot_buffer->ul_dci_req!= 0 && tx_slot_buffer->ul_dci_req->SFN == sfn_tx && tx_slot_buffer->ul_dci_req->Slot == slot_tx)
+		if(tx_slot_buffer->ul_dci_req.numPdus > 0 && tx_slot_buffer->ul_dci_req.SFN == sfn_tx && tx_slot_buffer->ul_dci_req.Slot == slot_tx)
 		{
 			DevAssert(pnf_p7->_public.ul_dci_req_fn != NULL);
 			LOG_D(PHY, "Process ul_dci SFN/slot %d.%d buffer index: %d \n",sfn_tx,slot_tx,buffer_index_tx);
 			// pnf_phy_ul_dci_req()
-			(pnf_p7->_public.ul_dci_req_fn)(NULL, &(pnf_p7->_public), tx_slot_buffer->ul_dci_req);
+     		(pnf_p7->_public.ul_dci_req_fn)(NULL, &(pnf_p7->_public), &tx_slot_buffer->ul_dci_req);
 		}
 
 		//deallocate slot buffers after passing down the PDUs to PHY processing
@@ -950,13 +950,6 @@ int pnf_p7_slot_ind(pnf_p7_t* pnf_p7, uint16_t phy_id, uint16_t sfn, uint16_t sl
 			tx_slot_buffer->dl_tti_req = 0;
 			LOG_D(PHY,"SFN/slot %d.%d Buffer index : %d freed \n",sfn_tx,slot_tx,buffer_index_tx);
 		}
-
-		if(tx_slot_buffer->ul_dci_req != 0)
-		{
-			deallocate_nfapi_ul_dci_request(tx_slot_buffer->ul_dci_req, pnf_p7);
-			tx_slot_buffer->ul_dci_req = 0;
-		}
-
 
 		//checking in the rx slot buffers to see if a p7 msg is present.
 
@@ -1743,20 +1736,28 @@ void pnf_handle_ul_config_request(void* pRecvMsg, int recvMsgLen, pnf_p7_t* pnf_
 	}
 }
 
+static void cp_nr_ul_dci_req(nfapi_nr_ul_dci_request_t* dst, const nfapi_nr_ul_dci_request_t* src)
+{
+  dst->header = src->header;
+  dst->SFN = src->SFN;
+  dst->Slot = src->Slot;
+  dst->numPdus = src->numPdus;
+
+  for (int i = 0; i < dst->numPdus; ++i) {
+    nfapi_nr_ul_dci_request_pdus_t* dst_pdu = &dst->ul_dci_pdu_list[i];
+    const nfapi_nr_ul_dci_request_pdus_t* src_pdu = &src->ul_dci_pdu_list[i];
+
+    dst_pdu->PDUType = src_pdu->PDUType;
+    dst_pdu->PDUSize = src_pdu->PDUSize;
+    dst_pdu->pdcch_pdu = src_pdu->pdcch_pdu;
+  }
+}
 
 void pnf_handle_ul_dci_request(void* pRecvMsg, int recvMsgLen, pnf_p7_t* pnf_p7)
 {
-	//NFAPI_TRACE(NFAPI_TRACE_INFO, "HI_DCI0.req Received\n");
+	nfapi_nr_ul_dci_request_t req;
 
-	nfapi_nr_ul_dci_request_t* req  = allocate_nfapi_ul_dci_request(pnf_p7);
-
-	if(req == NULL)
-	{
-		NFAPI_TRACE(NFAPI_TRACE_INFO, "failed to allocate nfapi_ul_dci_request structure\n");
-		return;
-	}
-
-	int unpack_result = nfapi_nr_p7_message_unpack(pRecvMsg, recvMsgLen, req, sizeof(nfapi_nr_ul_dci_request_t), &pnf_p7->_public.codec_config);
+	int unpack_result = nfapi_nr_p7_message_unpack(pRecvMsg, recvMsgLen, &req, sizeof(nfapi_nr_ul_dci_request_t), &pnf_p7->_public.codec_config);
 
 	if(unpack_result == 0)
 	{
@@ -1766,31 +1767,20 @@ void pnf_handle_ul_dci_request(void* pRecvMsg, int recvMsgLen, pnf_p7_t* pnf_p7)
 			return;
 		}
 
-		if(is_nr_p7_request_in_window(req->SFN,req->Slot,"ul_dci_request", pnf_p7))
+		if(is_nr_p7_request_in_window(req.SFN,req.Slot,"ul_dci_request", pnf_p7))
 		{
-			uint32_t sfn_slot_dec = NFAPI_SFNSLOT2DEC(req->SFN,req->Slot);
+			uint32_t sfn_slot_dec = NFAPI_SFNSLOT2DEC(req.SFN,req.Slot);
 			uint8_t buffer_index = sfn_slot_dec % 20;
 
-			if(pnf_p7->slot_buffer[buffer_index].ul_dci_req!= 0)
-			{
-				//NFAPI_TRACE(NFAPI_TRACE_NOTE, "[%d] Freeing hi_dci0_req at index %d (%d/%d)", 
-				//			pMyPhyInfo->sfnSf, bufferIdx,
-				//			SFNSF2SFN(dreq->sfn_sf), SFNSF2SF(dreq->sfn_sf));
+			pnf_p7->slot_buffer[buffer_index].sfn = req.SFN;
+			cp_nr_ul_dci_req(&pnf_p7->slot_buffer[buffer_index].ul_dci_req, &req);
 
-				deallocate_nfapi_ul_dci_request(pnf_p7->slot_buffer[buffer_index].ul_dci_req, pnf_p7);
-			}
-
-			pnf_p7->slot_buffer[buffer_index].sfn = req->SFN;
-			pnf_p7->slot_buffer[buffer_index].ul_dci_req = req;
 
 			pnf_p7->stats.ul_dci_ontime++;
 			
 		}
 		else
 		{
-			//NFAPI_TRACE(NFAPI_TRACE_NOTE, "[%d] NOT storing hi_dci0_req SFN/SF %d/%d\n", pMyPhyInfo->sfnSf, SFNSF2SFN(req->sfn_sf), SFNSF2SF(req->sfn_sf));
-			deallocate_nfapi_ul_dci_request(req, pnf_p7);
-
 			if(pnf_p7->_public.timing_info_mode_aperiodic)
 			{
 				pnf_p7->timing_info_aperiodic_send = 1;
@@ -1808,7 +1798,6 @@ void pnf_handle_ul_dci_request(void* pRecvMsg, int recvMsgLen, pnf_p7_t* pnf_p7)
 	else
 	{
 		NFAPI_TRACE(NFAPI_TRACE_ERROR, "Failed to unpack UL DCI req\n");
-		deallocate_nfapi_ul_dci_request(req, pnf_p7);
 	}
 }
 
