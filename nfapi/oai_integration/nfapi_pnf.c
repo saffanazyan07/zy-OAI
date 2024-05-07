@@ -1148,9 +1148,6 @@ int pnf_phy_dl_tti_req(gNB_L1_rxtx_proc_t *proc, nfapi_pnf_p7_config_t *pnf_p7, 
 
   nr_schedule_dl_tti_req(gNB, DL_req);
 
-  if(DL_req->vendor_extension)
-    free(DL_req->vendor_extension);
-
   return 0;
 }
 

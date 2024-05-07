@@ -572,7 +572,7 @@ typedef struct
 {
 	int16_t sfn;
 	int16_t slot;
-	nfapi_nr_dl_tti_request_t* dl_tti_req;
+	nfapi_nr_dl_tti_request_t  dl_tti_req;
 	nfapi_nr_ul_tti_request_t  ul_tti_req;
 	nfapi_nr_ul_dci_request_t  ul_dci_req;
 	nfapi_nr_tx_data_request_t tx_data_req;
