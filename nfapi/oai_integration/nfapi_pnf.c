@@ -2087,8 +2087,21 @@ void oai_subframe_ind(uint16_t sfn, uint16_t sf) {
   }
 }
 
+#define SLOT_DURATION 300  // in microseconds
 void handle_nr_slot_ind(uint16_t sfn, uint16_t slot)
 {
+    /* uses a usleep to wait for approximately the same time period (300 us) */
+    static struct timespec last_execution = {0};
+    struct timespec current_execution;
+    clock_gettime(CLOCK_REALTIME, &current_execution);
+    // Calculate elapsed time since last execution
+    long elapsed_time = (current_execution.tv_sec - last_execution.tv_sec) * 1000000; // Convert seconds to microseconds
+    elapsed_time += (current_execution.tv_nsec - last_execution.tv_nsec) / 1000; // Convert nanoseconds to microseconds
+    if (elapsed_time < SLOT_DURATION) 
+        usleep(SLOT_DURATION - elapsed_time);
+    // Update last_execution time
+    last_execution = current_execution;
+    
     //send VNF slot indication, which is aligned with TX thread, so that it can call the scheduler
     //we give four additional slots (2ms) which should be enough time for the VNF to
     //answer
