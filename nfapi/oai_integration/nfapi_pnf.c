@@ -1446,8 +1446,6 @@ int pnf_sim_pack_vendor_extention_tlv(void *ve, uint8_t **ppWritePackedMsg, uint
 nfapi_dl_config_request_t dummy_dl_config_req;
 nfapi_tx_request_t dummy_tx_req;
 
-nfapi_pnf_p7_subframe_buffer_t dummy_subframe;
-
 int start_request(nfapi_pnf_config_t *config, nfapi_pnf_phy_config_t *phy, nfapi_start_request_t *req) {
   printf("[PNF] Received NFAPI_START_REQ phy_id:%d\n", req->header.phy_id);
   pnf_info *pnf = (pnf_info *)(config->user_data);
@@ -1508,12 +1506,8 @@ int start_request(nfapi_pnf_config_t *config, nfapi_pnf_phy_config_t *phy, nfapi
   memset(&dummy_tx_req, 0, sizeof(dummy_tx_req));
   dummy_tx_req.tx_request_body.number_of_pdus=0;
   dummy_tx_req.tx_request_body.tl.tag=NFAPI_TX_REQUEST_BODY_TAG;
-  dummy_subframe.dl_config_req = &dummy_dl_config_req;
-  dummy_subframe.tx_req = 0;//&dummy_tx_req;
-  dummy_subframe.ul_config_req=0;
-  dummy_subframe.hi_dci0_req=0;
-  dummy_subframe.lbt_dl_config_req=0;
-  p7_config->dummy_subframe = dummy_subframe;
+  memset(&p7_config->dummy_subframe, 0, sizeof(p7_config->dummy_subframe));
+  p7_config->dummy_subframe.dl_config_req = &dummy_dl_config_req;
   p7_config->vendor_ext = &pnf_phy_vendor_ext;
   p7_config->allocate_p7_vendor_ext = &pnf_phy_allocate_p7_vendor_ext;
   p7_config->deallocate_p7_vendor_ext = &pnf_phy_deallocate_p7_vendor_ext;
@@ -1635,12 +1629,8 @@ int nr_start_request(nfapi_pnf_config_t *config, nfapi_pnf_phy_config_t *phy,  n
   memset(&dummy_tx_req, 0, sizeof(dummy_tx_req));
   dummy_tx_req.tx_request_body.number_of_pdus=0;
   dummy_tx_req.tx_request_body.tl.tag=NFAPI_TX_REQUEST_BODY_TAG;
-  dummy_subframe.dl_config_req = &dummy_dl_config_req;
-  dummy_subframe.tx_req = 0;//&dummy_tx_req;
-  dummy_subframe.ul_config_req=0;
-  dummy_subframe.hi_dci0_req=0;
-  dummy_subframe.lbt_dl_config_req=0;
-  p7_config->dummy_subframe = dummy_subframe;
+  memset(&p7_config->dummy_subframe, 0, sizeof(p7_config->dummy_subframe));
+  p7_config->dummy_subframe.dl_config_req = &dummy_dl_config_req;
   p7_config->vendor_ext = &pnf_phy_vendor_ext;
   p7_config->allocate_p7_vendor_ext = &pnf_phy_allocate_p7_vendor_ext;
   p7_config->deallocate_p7_vendor_ext = &pnf_phy_deallocate_p7_vendor_ext;
