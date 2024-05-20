@@ -397,6 +397,16 @@ typedef struct nas_release_ind_s {
   release_cause_t cause;      /* Release cause            */
 } nas_release_ind_t;
 
+typedef struct nas_registration_req_s {
+  /* UE lower layer identifier */
+  uint32_t UEid;
+} nas_registration_req_t;
+
+typedef struct nas_init_ue_msg_ind_s {
+  /* NAS message to transfer */
+  as_nas_info_t nasMsg;
+} nas_init_ue_msg_ind_t;
+
 typedef struct nas_deregistration_req_s {
   release_cause_t cause;
 } nas_deregistration_req_t;
@@ -405,6 +415,13 @@ typedef struct nas_detach_req_s {
   bool wait_release;
 } nas_detach_req_t;
 
+/**
+ * @brief 5GS mobility management information
+ * @ref   clause 9.11.3 of 3GPP TS 24.501
+ */
+typedef struct nas_5gmm_ind_s {
+  uint64_t fiveG_STMSI;
+} nas_5gmm_ind_t;
 /*
  * --------------------------------------------------------------------------
  *              NAS information transfer
@@ -579,6 +596,9 @@ typedef struct as_message_s {
     rab_establish_cnf_t rab_establish_cnf;
     rab_release_req_t rab_release_req;
     rab_release_ind_t rab_release_ind;
+    nas_registration_req_t NasRegistrationReq;
+    nas_5gmm_ind_t Nas5GMMInd;
+    nas_init_ue_msg_ind_t NasInitialUEMsgInd;
   } __attribute__((__packed__)) msg;
 } as_message_t;
 

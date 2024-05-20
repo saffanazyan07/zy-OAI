@@ -564,6 +564,8 @@ NR_UE_RRC_INST_t* nr_rrc_init_ue(char* uecap_file, int nb_inst, int num_ant_tx)
     rrc->as_security_activated = false;
     rrc->detach_after_release = false;
     rrc->reconfig_after_reestab = false;
+    /* 5G-S-TMSI */
+    rrc->fiveG_S_TMSI = UINT64_MAX;
 
     FILE *f = NULL;
     if (uecap_file)
@@ -1033,24 +1035,27 @@ static void rrc_ue_generate_RRCSetupComplete(const NR_UE_RRC_INST_t *rrc, const 
 {
   uint8_t buffer[100];
   const char *nas_msg;
-  int   nas_msg_length;
+  int nas_msg_length;
 
   if (IS_SA_MODE(get_softmodem_params())) {
-    as_nas_info_t initialNasMsg;
-    nr_ue_nas_t *nas = get_ue_nas_info(rrc->ue_id);
-    generateRegistrationRequest(&initialNasMsg, nas);
-    nas_msg = (char *)initialNasMsg.nas_data;
-    nas_msg_length = initialNasMsg.length;
+    if (rrc->nasInitialUEMsg.nas_data) {
+      nas_msg = (char *)rrc->nasInitialUEMsg.nas_data;
+      nas_msg_length = rrc->nasInitialUEMsg.length;
+      LOG_D(NR_RRC, "NAS InitialUEMessage with length %d \n", nas_msg_length);
+    } else {
+      LOG_E(NR_RRC, "Failed to complete RRCSetup. NAS InitialUEMessage message not found. \n");
+      return;
+    }
   } else {
     nas_msg = nr_nas_attach_req_imsi_dummy_NSA_case;
     nas_msg_length = sizeof(nr_nas_attach_req_imsi_dummy_NSA_case);
   }
 
   int size = do_RRCSetupComplete(buffer, sizeof(buffer), Transaction_id, rrc->selected_plmn_identity, nas_msg_length, nas_msg);
+  free(rrc->nasInitialUEMsg.nas_data);
   LOG_I(NR_RRC, "[UE %ld][RAPROC] Logical Channel UL-DCCH (SRB1), Generating RRCSetupComplete (bytes%d)\n", rrc->ue_id, size);
   int srb_id = 1; // RRC setup complete on SRB1
   LOG_D(NR_RRC, "[RRC_UE %ld] PDCP_DATA_REQ/%d Bytes RRCSetupComplete ---> %d\n", rrc->ue_id, size, srb_id);
-
   nr_pdcp_data_req_srb(rrc->ue_id, srb_id, 0, size, buffer, deliver_pdu_srb_rlc, NULL);
 }
 
@@ -1988,6 +1993,19 @@ void *rrc_nrue(void *notUsed)
     break;
   }
 
+  case NAS_5GMM_IND: {
+    nas_5gmm_ind_t *req = &NAS_5GMM_IND(msg_p);
+    rrc->fiveG_S_TMSI = req->fiveG_STMSI;
+    break;
+  }
+
+  case NAS_INITIAL_UE_MSG_IND:
+    LOG_I(NR_RRC, "Received InitialUEMessage indication from NAS\n");
+    nas_init_ue_msg_ind_t *ind = &NAS_INITIAL_UE_MSG_IND(msg_p);
+    rrc->nasInitialUEMsg.length = ind->nasMsg.length;
+    rrc->nasInitialUEMsg.nas_data = calloc_or_fail(ind->nasMsg.length, sizeof(*ind->nasMsg.nas_data));
+    memcpy(rrc->nasInitialUEMsg.nas_data, ind->nasMsg.nas_data, rrc->nasInitialUEMsg.length);
+    break;
   default:
     LOG_E(NR_RRC, "[UE %ld] Received unexpected message %s\n", rrc->ue_id, ITTI_MSG_NAME(msg_p));
     break;

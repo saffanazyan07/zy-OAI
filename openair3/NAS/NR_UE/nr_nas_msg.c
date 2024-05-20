@@ -57,6 +57,7 @@ extern uint16_t NB_UE_INST;
 static nr_ue_nas_t nr_ue_nas[MAX_NAS_UE] = {0};
 static nr_nas_msg_snssai_t nas_allowed_nssai[8];
 
+const char *nr_release_cause_desc[] = {"RRC_CONNECTION_FAILURE", "RRC_RESUME_FAILURE", "OTHER"};
 typedef enum {
   NAS_SECURITY_NO_SECURITY_CONTEXT,
   NAS_SECURITY_UNPROTECTED,
@@ -493,7 +494,7 @@ nr_ue_nas_t *get_ue_nas_info(module_id_t module_id)
   return &nr_ue_nas[module_id];
 }
 
-void generateRegistrationRequest(as_nas_info_t *initialNasMsg, nr_ue_nas_t *nas)
+static void generateRegistrationRequest(as_nas_info_t *initialNasMsg, nr_ue_nas_t *nas)
 {
   int size = sizeof(mm_msg_header_t);
   fgs_nas_message_t nas_msg = {0};
@@ -1098,6 +1099,15 @@ static void send_nas_detach_req(nr_ue_nas_t *nas, bool wait_release)
   itti_send_msg_to_task(TASK_RRC_NRUE, nas->UE_id, msg);
 }
 
+static void send_nas_5gmm_ind(instance_t instance, const Guti5GSMobileIdentity_t *guti)
+{
+  MessageDef *msg = itti_alloc_new_message(TASK_NAS_NRUE, 0, NAS_5GMM_IND);
+  nas_5gmm_ind_t *ind = &NAS_5GMM_IND(msg);
+  LOG_I(NR_RRC, "5G-GUTI: AMF pointer %u, AMF Set ID %u, 5G-TMSI %u \n", guti->amfpointer, guti->amfsetid, guti->tmsi);
+  ind->fiveG_STMSI = ((uint64_t)guti->amfsetid << 38) | ((uint64_t)guti->amfpointer << 32) | guti->tmsi;
+  itti_send_msg_to_task(TASK_RRC_NRUE, instance, msg);
+}
+
 static void parse_allowed_nssai(nr_nas_msg_snssai_t nssaiList[8], const uint8_t *buf, const uint32_t len)
 {
   int nssai_cnt = 0;
@@ -1227,6 +1237,9 @@ static void handle_registration_accept(nr_ue_nas_t *nas, const uint8_t *pdu_buff
   decodeRegistrationAccept(pdu_buffer, msg_length, nas);
   get_allowed_nssai(nas_allowed_nssai, pdu_buffer, msg_length);
 
+  if(nas->guti)
+    send_nas_5gmm_ind(nas->UE_id, nas->guti);
+
   as_nas_info_t initialNasMsg = {0};
   generateRegistrationComplete(nas, &initialNasMsg, NULL);
   if (initialNasMsg.length > 0) {
@@ -1239,6 +1252,20 @@ static void handle_registration_accept(nr_ue_nas_t *nas, const uint8_t *pdu_buff
   } else {
     request_default_pdusession(nas, nssai_idx);
   }
+}
+
+/**
+ * @brief Generate NAS Registration Request and transfer to RRC
+ */
+static void transfer_initial_ue_message(nr_ue_nas_t *nas, instance_t instance)
+{
+  as_nas_info_t initialNasMsg = {0};
+  generateRegistrationRequest(&initialNasMsg, nas);
+  MessageDef *msg = itti_alloc_new_message(TASK_NAS_NRUE, 0, NAS_INITIAL_UE_MSG_IND);
+  nas_init_ue_msg_ind_t *ind = &NAS_INITIAL_UE_MSG_IND(msg);
+  ind->nasMsg.nas_data = (uint8_t *)initialNasMsg.nas_data;
+  ind->nasMsg.length = initialNasMsg.length;
+  itti_send_msg_to_task(TASK_RRC_NRUE, instance, msg);
 }
 
 void *nas_nrue(void *args_p)
@@ -1270,11 +1297,6 @@ void *nas_nrue(void *args_p)
               NAS_CELL_SELECTION_CNF(msg_p).errCode,
               NAS_CELL_SELECTION_CNF(msg_p).cellID,
               NAS_CELL_SELECTION_CNF(msg_p).tac);
-        // as_stmsi_t s_tmsi={0, 0};
-        // as_nas_info_t nas_info;
-        // plmn_t plmnID={0, 0, 0, 0};
-        // generateRegistrationRequest(&nas_info);
-        // nr_nas_itti_nas_establish_req(0, AS_TYPE_ORIGINATING_SIGNAL, s_tmsi, plmnID, nas_info.data, nas_info.length, 0);
         break;
 
       case NAS_CELL_SELECTION_IND:
@@ -1345,8 +1367,14 @@ void *nas_nrue(void *args_p)
         break;
       }
 
-      case NR_NAS_CONN_RELEASE_IND:
-        LOG_I(NAS, "[UE %ld] Received %s: cause %u\n", nas->UE_id, ITTI_MSG_NAME(msg_p), NR_NAS_CONN_RELEASE_IND(msg_p).cause);
+      case NR_NAS_CONN_RELEASE_IND: {
+        LOG_I(NAS, "[UE %ld] Received %s: cause %s\n",
+              nas->UE_id, ITTI_MSG_NAME (msg_p), nr_release_cause_desc[NR_NAS_CONN_RELEASE_IND (msg_p).cause]);
+        /* In N1 mode, upon indication from lower layers that the access stratum connection has been released,
+           the UE shall enter 5GMM-IDLE mode and consider the N1 NAS signalling connection released (3GPP TS 24.501) */
+        nas->fiveGMM_mode = FGS_IDLE;
+        // Generate InitialUEMessage and transfer to RRC
+        transfer_initial_ue_message(nas, nas->UE_id);
         // TODO handle connection release
         if (nas->termination_procedure) {
           /* the following is not clean, but probably necessary: we need to give
@@ -1357,7 +1385,7 @@ void *nas_nrue(void *args_p)
           itti_wait_tasks_unblock(); /* will unblock ITTI to stop nr-uesoftmodem */
         }
         break;
-
+      }
       case NAS_UPLINK_DATA_CNF:
         LOG_I(NAS,
               "[UE %ld] Received %s: UEid %u, errCode %u\n",
@@ -1367,6 +1395,14 @@ void *nas_nrue(void *args_p)
               NAS_UPLINK_DATA_CNF(msg_p).errCode);
 
         break;
+
+      case NAS_REGISTRATION_REQ: {
+        nas_registration_req_t *req = &NAS_REGISTRATION_REQ(msg_p);
+        nr_ue_nas_t *nas = get_ue_nas_info(req->UEid);
+        transfer_initial_ue_message(nas, req->UEid);
+        LOG_D(NAS, "Transfer InitialUEMessage: Registration Request\n");
+        break;
+      }
 
       case NAS_DEREGISTRATION_REQ: {
         LOG_I(NAS, "[UE %ld] Received %s\n", nas->UE_id, ITTI_MSG_NAME(msg_p));
