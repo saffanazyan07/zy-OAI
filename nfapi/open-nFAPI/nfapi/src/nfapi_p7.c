@@ -352,7 +352,6 @@ static uint8_t pack_dl_tti_ssb_pdu_rel15_value(void *tlv, uint8_t **ppWritePacke
         && push8((value->bchPayload >> 16) & 0xff, ppWritePackedMsg, end)
         && push8((value->bchPayload >> 8) & 0xff, ppWritePackedMsg, end) && push8(value->bchPayload & 0xff, ppWritePackedMsg, end)
         && push8(0, ppWritePackedMsg, end)
-        // TODO add Tx Power Info
         && push16(value->precoding_and_beamforming.num_prgs, ppWritePackedMsg, end)
         && push16(value->precoding_and_beamforming.prg_size, ppWritePackedMsg, end)
         && push8(value->precoding_and_beamforming.dig_bf_interfaces, ppWritePackedMsg, end))) {
@@ -4122,9 +4121,8 @@ static uint8_t unpack_dl_tti_ssb_pdu_rel15_value(void *tlv, uint8_t **ppReadPack
   value->bchPayload |= byte2;
   value->bchPayload = value->bchPayload << 8;
   value->bchPayload |= byte1;
-  // TODO add Tx Power Info
-  if (!(pull8(ppReadPackedMsg, &byte1, end) && pull8(ppReadPackedMsg, &byte0, end)
-        && pull16(ppReadPackedMsg, &value->precoding_and_beamforming.num_prgs, end)
+
+  if (!(pull16(ppReadPackedMsg, &value->precoding_and_beamforming.num_prgs, end)
         && pull16(ppReadPackedMsg, &value->precoding_and_beamforming.prg_size, end)
         && pull8(ppReadPackedMsg, &value->precoding_and_beamforming.dig_bf_interfaces, end))) {
     return 0;
