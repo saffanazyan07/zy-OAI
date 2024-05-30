@@ -69,5 +69,6 @@ void nr_fill_dlsch_tx_req(processingData_L1tx_t *msgTx, int idx, uint8_t *pdu, u
   nfapi_nr_dl_tti_pdsch_pdu *pdsch = &harq->pdsch_pdu;
   AssertFatal(pdsch->pdsch_pdu_rel15.pduIndex == idx, "PDSCH PDU index %d does not match %d\n", pdsch->pdsch_pdu_rel15.pduIndex, idx);
   harq->pdu_len = pdu_len;
+  AssertFatal(pdu_len <= sizeof(harq->pdu), "buffer too small\n");
   memcpy(harq->pdu, pdu, pdu_len);
 }
