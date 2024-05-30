@@ -92,7 +92,7 @@ NR_gNB_DLSCH_t new_gNB_dlsch(NR_DL_FRAME_PARMS *frame_parms, uint16_t N_RB)
   bzero(harq, sizeof(NR_DL_gNB_HARQ_t));
   harq->b = malloc16(dlsch_bytes);
   AssertFatal(harq->b, "cannot allocate memory for harq->b\n");
-  bzero(harq->pdu, dlsch_bytes);
+  //bzero(harq->pdu, dlsch_bytes);
   harq->pdu_len = dlsch_bytes;
   nr_emulate_dlsch_payload(harq->pdu, (dlsch_bytes) >> 3);
   bzero(harq->b, dlsch_bytes);
