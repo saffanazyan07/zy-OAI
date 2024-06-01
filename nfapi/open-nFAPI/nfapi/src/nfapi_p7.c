@@ -2041,12 +2041,9 @@ static uint8_t pack_tx_data_pdu_list_value(void *tlv, uint8_t **ppWritePackedMsg
 
     switch (value->TLVs[i].tag) {
       case 0: {
-        if (!pusharray32(value->TLVs[i].value.direct,
-                         (value->TLVs[i].length + 3) / 4,
-                         (value->TLVs[i].length + 3) / 4,
-                         ppWritePackedMsg,
-                         end)) {
-          NFAPI_TRACE(NFAPI_TRACE_ERROR, "%s():%d. value->TLVs[i].length %d \n", __FUNCTION__, __LINE__, value->TLVs[i].length);
+        uint32_t len32 = (value->TLVs[i].length + 3) / 4;
+        if (!pusharray32(value->TLVs[i].value.direct, sizeof(value->TLVs[i].value.direct), len32, ppWritePackedMsg, end)) {
+          NFAPI_TRACE(NFAPI_TRACE_ERROR, "%s():%d. value->TLVs[i].length %d len32 %u max %lu pos %p end %p bytes %lu\n", __FUNCTION__, __LINE__, value->TLVs[i].length, len32, sizeof(value->TLVs[i].value.direct), *ppWritePackedMsg, end, end - *ppWritePackedMsg);
           return 0;
         }
         break;
