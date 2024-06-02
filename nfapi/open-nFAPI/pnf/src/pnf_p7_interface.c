@@ -21,10 +21,11 @@
 
 nfapi_pnf_p7_config_t* nfapi_pnf_p7_config_create()
 {
-	pnf_p7_t* _this = (pnf_p7_t*)calloc(1, sizeof(pnf_p7_t));
+  pnf_p7_t* _this = NULL;
+  int rc = posix_memalign((void**)&_this, 32, sizeof(pnf_p7_t));
 
-	if(_this == 0)
-		return 0;
+  if (_this == NULL || rc != 0)
+    return 0;
 
 
 	// set the default parameters
