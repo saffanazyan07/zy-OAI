@@ -727,6 +727,10 @@ static void _nr_rx_sdu(const module_id_t gnb_mod_idP,
           timing_advance,
           sduP,
           rssi);
+    if (harq_pid < 0) {
+      LOG_E(NR_MAC, "UE %04x received ULSCH when feedback UL HARQ %d (unexpected ULSCH transmission)\n", rntiP, harq_pid);
+      return;
+    }
 
     // if not missed detection (10dB threshold for now)
     if (rssi > 0) {
