@@ -539,7 +539,7 @@ static void tci_handling(NR_UE_info_t *UE, frame_t frame, slot_t slot)
   int rsrp_index = sched_ctrl->CSI_report.ssb_cri_report.RSRP;
   bool valid = get_measured_rsrp(rsrp_index, &strongest_ssb_rsrp);
   if (!valid) {
-    LOG_E(NR_MAC, "UE %04x: reported RSRP index %d invalid\n", UE->rnti, rsrp_index);
+    LOG_D(NR_MAC, "UE %04x: reported RSRP index %d invalid\n", UE->rnti, rsrp_index);
     return;
   }
   ssb_rsrp[idx * nb_of_csi_ssb_report] = strongest_ssb_rsrp;
@@ -742,7 +742,7 @@ static void evaluate_rsrp_report(NR_UE_info_t *UE,
   int rsrp_index = sched_ctrl->CSI_report.ssb_cri_report.RSRP;
   bool valid = get_measured_rsrp(rsrp_index, &strongest_ssb_rsrp);
   if (!valid) {
-    LOG_E(NR_MAC, "UE %04x: reported RSRP index %d invalid\n", UE->rnti, rsrp_index);
+    LOG_D(NR_MAC, "UE %04x: reported RSRP index %d invalid\n", UE->rnti, rsrp_index);
     return;
   }
   NR_mac_stats_t *stats = &UE->mac_stats;

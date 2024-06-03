@@ -242,7 +242,7 @@ uint16_t get_pm_index(const gNB_MAC_INST *nrmac,
 uint8_t get_mcs_from_cqi(int mcs_table, int cqi_table, int cqi_idx)
 {
   if (cqi_idx <= 0) {
-    LOG_E(NR_MAC, "invalid cqi_idx %d, default to MCS 9\n", cqi_idx);
+    LOG_D(NR_MAC, "invalid cqi_idx %d, default to MCS 9\n", cqi_idx);
     return 9;
   }
 
