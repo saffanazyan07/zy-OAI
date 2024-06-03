@@ -842,7 +842,7 @@ static void pf_dl(module_id_t module_id,
                   sched_pdsch->nrOfLayers,
                   tda_info->nrOfSymbols,
                   sched_pdsch->dmrs_parms.N_PRB_DMRS * sched_pdsch->dmrs_parms.N_DMRS_SLOT,
-                  sched_ctrl->num_total_bytes + oh,
+                  min(sched_ctrl->num_total_bytes + oh, 0xfc00), // to avoid nFAPI packets > 0xffff
                   min_rbSize,
                   max_rbSize,
                   &TBS,

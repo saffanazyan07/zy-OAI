@@ -3668,6 +3668,7 @@ int nfapi_nr_p7_message_pack(void *pMessageBuf, void *pPackedBuf, uint32_t packe
   uint8_t *end = (uint8_t *)pPackedBuf + packedBufLen;
 
   // process the header
+  // TODO do as in 3.1
   if (!(push16(pMessageHeader->phy_id, &pWritePackedMessage, end) && push16(pMessageHeader->message_id, &pWritePackedMessage, end)
         && push16(0 /*pMessageHeader->message_length*/, &pWritePackedMessage, end)
         && push16(pMessageHeader->m_segment_sequence, &pWritePackedMessage, end)
@@ -3769,6 +3770,7 @@ int nfapi_nr_p7_message_pack(void *pMessageBuf, void *pPackedBuf, uint32_t packe
   uintptr_t msgEnd = (uintptr_t)pWritePackedMessage;
   uint32_t packedMsgLen = msgEnd - msgHead;
   uint16_t packedMsgLen16;
+  // TB can be bigger that 0xffff, what now here?
   if (packedMsgLen > 0xFFFF || packedMsgLen > packedBufLen) {
     NFAPI_TRACE(NFAPI_TRACE_ERROR, "Packed message length error %d, buffer supplied %d\n", packedMsgLen, packedBufLen);
     return -1;

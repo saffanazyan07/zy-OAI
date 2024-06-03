@@ -59,7 +59,7 @@ typedef struct {
   /// length of PDU to encode
   uint32_t pdu_len;
   /// pdu from MAC interface (this is "a" in 36.212)
-  uint8_t pdu[65536];
+  uint8_t pdu[262144];
   /// Pointer to the payload
   uint8_t *b;
   /// Pointers to transport block segments
