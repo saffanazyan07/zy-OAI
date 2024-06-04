@@ -23,7 +23,7 @@
 #define OPENAIRINTERFACE_NR_FAPI_P5_UTILS_H
 #include "stdio.h"
 #include "stdint.h"
-#include "nr_fapi.h"
+#include "nfapi/open-nFAPI/fapi/inc/nr_fapi.h"
 #include "nfapi/oai_integration/vendor_ext.h"
 
 bool eq_param_request(const nfapi_nr_param_request_scf_t *unpacked_req, const nfapi_nr_param_request_scf_t *req);

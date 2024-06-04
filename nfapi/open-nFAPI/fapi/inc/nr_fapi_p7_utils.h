@@ -33,7 +33,7 @@
 #define OPENAIRINTERFACE_NR_FAPI_P7_UTILS_H
 #include "stdio.h"
 #include "stdint.h"
-#include "nr_fapi.h"
+#include "nfapi/open-nFAPI/fapi/inc/nr_fapi.h"
 
 bool eq_dl_tti_request(const nfapi_nr_dl_tti_request_t *a, const nfapi_nr_dl_tti_request_t *b);
 bool eq_ul_tti_request(const nfapi_nr_ul_tti_request_t *a, const nfapi_nr_ul_tti_request_t *b);

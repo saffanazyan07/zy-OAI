@@ -29,6 +29,7 @@
 #include "nfapi_nr_interface.h"
 #include "nfapi_nr_interface_scf.h"
 #include "pnf.h"
+#include "nfapi/open-nFAPI/fapi/inc/nr_fapi.h"
 
 # if 1 // for hard-code (remove later)
 #include "common/platform_types.h"
@@ -46,6 +47,7 @@
 
 #include "NR_MIB.h"
 #include "openair2/LAYER2/NR_MAC_COMMON/nr_mac_common.h"
+#include "wls_integration/include/wls_pnf.h"
 
 #endif
 
@@ -1709,6 +1711,10 @@ void pnf_handle_p5_message(pnf_t* pnf, void *pRecvMsg, int recvMsgLen)
 
 int pnf_nr_pack_and_send_p5_message(pnf_t* pnf, nfapi_nr_p4_p5_message_header_t* msg, uint32_t msg_len)
 {
+#ifdef ENABLE_WLS
+  return wls_pnf_nr_pack_and_send_p5_message(pnf, msg, msg_len);
+  //return pnf_send_message(pnf, pnf->tx_message_buffer, packed_len, 0/*msg->stream_id*/);
+#else
   int packed_len =
       nfapi_nr_p5_message_pack(msg, msg_len, pnf->tx_message_buffer, sizeof(pnf->tx_message_buffer), &pnf->_public.codec_config);
 
@@ -1718,6 +1724,7 @@ int pnf_nr_pack_and_send_p5_message(pnf_t* pnf, nfapi_nr_p4_p5_message_header_t*
   }
 
   return pnf_send_message(pnf, pnf->tx_message_buffer, packed_len, 0 /*msg->stream_id*/);
+#endif
 }
 
 

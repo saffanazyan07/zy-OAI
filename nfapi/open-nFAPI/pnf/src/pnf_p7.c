@@ -32,6 +32,9 @@
 
 #include "common/ran_context.h"
 #include <SCHED_NR/phy_frame_config_nr.h>
+#ifdef ENABLE_WLS
+#include "wls_integration/include/wls_pnf.h"
+#endif
 #define FAPI2_IP_DSCP	0
 
 extern int sf_ahead;
@@ -571,6 +574,11 @@ int pnf_p7_pack_and_send_p7_message(pnf_p7_t* pnf_p7, nfapi_p7_message_header_t*
 
 int pnf_nr_p7_pack_and_send_p7_message(pnf_p7_t* pnf_p7, nfapi_nr_p7_message_header_t* header, uint32_t msg_len)
 {
+#ifdef ENABLE_WLS
+  printf("Trying to send message 0x%02x\n",header->message_id);
+  wls_pnf_nr_pack_and_send_p7_message(header);
+  return 0;
+#else
   header->m_segment_sequence = NFAPI_P7_SET_MSS(0, 0, pnf_p7->sequence_number);
 
   // Need to guard against different threads calling the encode function at the same time
@@ -646,6 +654,7 @@ int pnf_nr_p7_pack_and_send_p7_message(pnf_p7_t* pnf_p7, nfapi_nr_p7_message_hea
   }
 
   return 0;
+#endif
 }
 
 void pnf_pack_and_send_timing_info(pnf_p7_t* pnf_p7)
