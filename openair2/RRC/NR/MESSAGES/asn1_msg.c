@@ -767,7 +767,7 @@ int do_RRCReconfiguration(const gNB_RRC_UE_t *UE,
     return((enc_rval.encoded+7)/8);
 }
 
-int do_RRCSetupRequest(uint8_t *buffer, size_t buffer_size, uint8_t *rv)
+int do_RRCSetupRequest(uint8_t *buffer, size_t buffer_size, uint8_t *rv, uint64_t fiveG_S_TMSI)
 {
   NR_UL_CCCH_Message_t ul_ccch_msg = {0};
   ul_ccch_msg.message.present           = NR_UL_CCCH_MessageType_PR_c1;
@@ -775,24 +775,37 @@ int do_RRCSetupRequest(uint8_t *buffer, size_t buffer_size, uint8_t *rv)
   c1->present = NR_UL_CCCH_MessageType__c1_PR_rrcSetupRequest;
   asn1cCalloc(c1->choice.rrcSetupRequest, rrcSetupRequest);
 
-  if (1) {
+  if (fiveG_S_TMSI == UINT64_MAX) {
+    /* set the ue-Identity to a random value */
     rrcSetupRequest->rrcSetupRequest.ue_Identity.present = NR_InitialUE_Identity_PR_randomValue;
     BIT_STRING_t *str = &rrcSetupRequest->rrcSetupRequest.ue_Identity.choice.randomValue;
     str->size = 5;
     str->bits_unused = 1;
-    str->buf = CALLOC(1, str->size);
+    str->buf = CALLOC(str->size, sizeof(uint8_t));
     str->buf[0] = rv[0];
     str->buf[1] = rv[1];
     str->buf[2] = rv[2];
     str->buf[3] = rv[3];
     str->buf[4] = rv[4] & 0xfe;
   } else {
+    uint64_t fiveG_S_TMSI_part1 = fiveG_S_TMSI & ((1ULL << 39) - 1);
+    /** set the ue-Identity to ng-5G-S-TMSI-Part1
+     * ng-5G-S-TMSI-Part1: the rightmost 39 bits of 5G-S-TMSI
+     * BIT STRING (SIZE (39)) - 3GPP TS 38.331 */
+    LOG_D(NR_RRC, "5G-S-TMSI: %lu, set the ue-Identity to ng-5G-S-TMSI-Part1 %lu\n", fiveG_S_TMSI, fiveG_S_TMSI_part1);
     rrcSetupRequest->rrcSetupRequest.ue_Identity.present = NR_InitialUE_Identity_PR_ng_5G_S_TMSI_Part1;
     BIT_STRING_t *str = &rrcSetupRequest->rrcSetupRequest.ue_Identity.choice.ng_5G_S_TMSI_Part1;
-    str->size = 1;
-    str->bits_unused = 0;
+    str->size = 5;
+    str->bits_unused = 1;
     str->buf = CALLOC(1, str->size);
-    str->buf[0] = 0x12;
+    /* shift, mask and fill the buffer */
+    int i;
+    uint8_t mask = 0xFF;
+    for (i = 0; i < str->size - 1; i++) {
+      int shift = ((str->size - i - 1) * 8) - str->bits_unused;
+      str->buf[i] = (fiveG_S_TMSI_part1 >> shift) & mask;
+    }
+    str->buf[i] = (fiveG_S_TMSI_part1 << str->bits_unused) & mask;
   }
 
   rrcSetupRequest->rrcSetupRequest.establishmentCause = NR_EstablishmentCause_mo_Signalling; //EstablishmentCause_mo_Data;
@@ -874,6 +887,8 @@ int do_RRCSetupComplete(uint8_t *buffer,
                         size_t buffer_size,
                         const uint8_t Transaction_id,
                         uint8_t sel_plmn_id,
+                        bool is_rrc_connection_setup,
+                        uint64_t fiveG_s_tmsi,
                         const int dedicatedInfoNASLength,
                         const char *dedicatedInfoNAS)
 {
@@ -889,7 +904,29 @@ int do_RRCSetupComplete(uint8_t *buffer,
   NR_RRCSetupComplete_IEs_t *ies = RrcSetupComplete->criticalExtensions.choice.rrcSetupComplete;
   ies->selectedPLMN_Identity = sel_plmn_id;
   ies->registeredAMF = NULL;
-  ies->ng_5G_S_TMSI_Value = NULL;
+  /* RRCSetup is received in response to an RRCSetupRequest
+   * set the ng-5G-S-TMSI-Value to ng-5G-S-TMSI-Part2 (5.3.3.4 of 3GPP TS 38.331) */
+  if (fiveG_s_tmsi != UINT64_MAX) {
+    if (is_rrc_connection_setup) {
+      ies->ng_5G_S_TMSI_Value = CALLOC(1, sizeof(struct NR_RRCSetupComplete_IEs__ng_5G_S_TMSI_Value));
+      ies->ng_5G_S_TMSI_Value->present = NR_RRCSetupComplete_IEs__ng_5G_S_TMSI_Value_PR_ng_5G_S_TMSI_Part2;
+      BIT_STRING_t *str = &ies->ng_5G_S_TMSI_Value->choice.ng_5G_S_TMSI_Part2;
+      str->size = 2;
+      str->bits_unused = 7;
+      str->buf = CALLOC(str->size, sizeof(uint8_t));
+      uint16_t fiveG_s_tmsi_part2 = (fiveG_s_tmsi >> 39) & ((1ULL << 9) - 1);
+      str->buf[0] = (fiveG_s_tmsi_part2 >> (8 - str->bits_unused)) & 0xFF;
+      str->buf[1] = (fiveG_s_tmsi_part2 << str->bits_unused) & 0xFF;
+      LOG_D(NR_RRC, "5G-S-TMSI part 2 %d in RRCSetupComplete (5G-S-TMSI %ld)\n", fiveG_s_tmsi_part2, fiveG_s_tmsi);
+    } else {
+      ies->ng_5G_S_TMSI_Value = CALLOC(1, sizeof(struct NR_RRCSetupComplete_IEs__ng_5G_S_TMSI_Value));
+      ies->ng_5G_S_TMSI_Value->present = NR_RRCSetupComplete_IEs__ng_5G_S_TMSI_Value_PR_ng_5G_S_TMSI;
+      FIVEG_S_TMSI_TO_BIT_STRING(fiveG_s_tmsi, &ies->ng_5G_S_TMSI_Value->choice.ng_5G_S_TMSI);
+      LOG_D(NR_RRC, "5G-S-TMSI %lu in RRCSetupComplete\n", fiveG_s_tmsi);
+    }
+  } else {
+    ies->ng_5G_S_TMSI_Value = NULL;
+  }
 
   memset(&ies->dedicatedNAS_Message,0,sizeof(OCTET_STRING_t));
   OCTET_STRING_fromBuf(&ies->dedicatedNAS_Message, dedicatedInfoNAS, dedicatedInfoNASLength);
