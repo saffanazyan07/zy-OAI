@@ -513,7 +513,12 @@ static void generateRegistrationRequest(as_nas_info_t *initialNasMsg, nr_ue_nas_
   size += 1;
   mm_msg->registration_request.messagetype = REGISTRATION_REQUEST;
   size += 1;
-  mm_msg->registration_request.fgsregistrationtype = INITIAL_REGISTRATION;
+
+  if (nas->fiveGMM_state == FGS_DEREGISTERED) {
+    mm_msg->registration_request.fgsregistrationtype = INITIAL_REGISTRATION;
+  } else {
+    mm_msg->registration_request.fgsregistrationtype = MOBILITY_REGISTRATION_UPDATING;
+  }
   mm_msg->registration_request.naskeysetidentifier.naskeysetidentifier = 1;
   size += 1;
   if (nas->guti) {
