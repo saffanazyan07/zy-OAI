@@ -18,18 +18,7 @@
  * For more information about the OpenAirInterface (OAI) Software Alliance:
  *      contact@openairinterface.org
  */
-/*! \file nfapi/tests/p5/nr_fapi_param_request_test.c
- * \brief
- * \author Ruben S. Silva
- * \date 2024
- * \version 0.1
- * \company OpenAirInterface Software Alliance
- * \email: contact@openairinterface.org, rsilva@allbesmart.pt
- * \note
- * \warning
- */
 #include "nfapi/tests/nr_fapi_test.h"
-#include "nr_fapi_p5.h"
 #include "nr_fapi.h"
 void printbits(uint64_t n, uint8_t numBytesToPrint)
 {
