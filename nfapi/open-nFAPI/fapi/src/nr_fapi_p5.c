@@ -18,19 +18,8 @@
  * For more information about the OpenAirInterface (OAI) Software Alliance:
  *      contact@openairinterface.org
  */
-/*! \file nfapi/open-nFAPI/fapi/src/nr_fapi_p5.c
- * \brief
- * \author Ruben S. Silva
- * \date 2024
- * \version 0.1
- * \company OpenAirInterface Software Alliance
- * \email: contact@openairinterface.org, rsilva@allbesmart.pt
- * \note
- * \warning
- */
 #include "nr_fapi.h"
 #include "nr_fapi_p5.h"
-#include "nr_fapi_p5_utils.h"
 #include "debug.h"
 
 bool isFAPIMessageIDValid(uint16_t id)
@@ -41,8 +30,8 @@ bool isFAPIMessageIDValid(uint16_t id)
          || id == NFAPI_NR_PHY_MSG_TYPE_TIMING_INFO;
 }
 
-int fapi_nr_p5_message_header_unpack(uint8_t **pMessageBuf,
-                                     uint32_t messageBufLen,
+int fapi_nr_message_header_unpack(uint8_t **pMessageBuf,
+                                  uint32_t messageBufLen,
                                      void *pUnpackedBuf,
                                      uint32_t unpackedBufLen,
                                      nfapi_p4_p5_codec_config_t *config)
@@ -74,7 +63,7 @@ uint8_t fapi_nr_p5_message_body_pack(nfapi_p4_p5_message_header_t *header,
   // look for the specific message
   switch (header->message_id) {
     case NFAPI_NR_PHY_MSG_TYPE_PARAM_REQUEST:
-      result = 0;
+      result = 1;
       break;
 
     case NFAPI_NR_PHY_MSG_TYPE_PARAM_RESPONSE:
@@ -110,7 +99,7 @@ uint8_t fapi_nr_p5_message_body_pack(nfapi_p4_p5_message_header_t *header,
       break;
 
     default: {
-      AssertFatal(header->message_id >= 0x00 && header->message_id <= 0xFF,
+      AssertFatal(header->message_id <= 0xFF,
                   "FAPI message IDs are defined between 0x00 and 0xFF the message provided 0x%02x, which is not a FAPI message",
                   header->message_id);
       break;
@@ -122,7 +111,7 @@ uint8_t fapi_nr_p5_message_body_pack(nfapi_p4_p5_message_header_t *header,
 int fapi_nr_p5_message_pack(void *pMessageBuf,
                             uint32_t messageBufLen,
                             void *pPackedBuf,
-                            uint32_t packedBufLen,
+                            const uint32_t packedBufLen,
                             nfapi_p4_p5_codec_config_t *config)
 {
   nfapi_p4_p5_message_header_t *pMessageHeader = pMessageBuf;
@@ -130,9 +119,6 @@ int fapi_nr_p5_message_pack(void *pMessageBuf,
   AssertFatal(isFAPIMessageIDValid(pMessageHeader->message_id),
               "FAPI message IDs are defined between 0x00 and 0xFF the message provided 0x%02x, which is not a FAPI message",
               pMessageHeader->message_id);
-  uint32_t packedMsgLen;
-  uint32_t packedBodyLen;
-  uint16_t packedMsgLen16;
   AssertFatal(pMessageBuf != NULL && pPackedBuf != NULL, "P5 Pack supplied pointers are null");
 
   uint8_t *pPackMessageEnd = pPackedBuf + packedBufLen;
@@ -140,8 +126,8 @@ int fapi_nr_p5_message_pack(void *pMessageBuf,
   uint8_t *pPacketBodyField = &pWritePackedMessage[8];
   uint8_t *pPacketBodyFieldStart = &pWritePackedMessage[8];
 
-  uint8_t res = fapi_nr_p5_message_body_pack(pMessageHeader, &pPacketBodyField, pPackMessageEnd, config);
-  AssertFatal(res >= 0, "fapi_nr_p5_message_body_pack error packing message body %d\n", res);
+  const uint8_t res = fapi_nr_p5_message_body_pack(pMessageHeader, &pPacketBodyField, pPackMessageEnd, config);
+  AssertFatal(res > 0, "fapi_nr_p5_message_body_pack error packing message body %d\n", res);
 
   // PHY API message header
   push8(1, &pWritePackedMessage, pPackMessageEnd); // Number of messages
@@ -151,9 +137,8 @@ int fapi_nr_p5_message_pack(void *pMessageBuf,
   push16(pMessageHeader->message_id, &pWritePackedMessage, pPackMessageEnd); // Message type ID
 
   // check for a valid message length
-  packedMsgLen = get_packed_msg_len((uintptr_t)pPackedBuf, (uintptr_t)pPacketBodyField);
-  packedBodyLen = get_packed_msg_len((uintptr_t)pPacketBodyFieldStart, (uintptr_t)pPacketBodyField);
-  packedMsgLen16 = (uint16_t)packedBodyLen;
+  const uint32_t packedMsgLen = get_packed_msg_len((uintptr_t)pPackedBuf, (uintptr_t)pPacketBodyField);
+  uint16_t packedMsgLen16 = get_packed_msg_len((uintptr_t)pPacketBodyFieldStart, (uintptr_t)pPacketBodyField);
   if (pMessageHeader->message_id == NFAPI_NR_PHY_MSG_TYPE_PARAM_REQUEST
       || pMessageHeader->message_id == NFAPI_NR_PHY_MSG_TYPE_START_REQUEST
       || pMessageHeader->message_id == NFAPI_NR_PHY_MSG_TYPE_STOP_REQUEST
@@ -171,13 +156,13 @@ int fapi_nr_p5_message_pack(void *pMessageBuf,
     return -1;
 
   // return the packed length
-  return (int)(packedMsgLen);
+  return packedMsgLen;
 }
 
 int fapi_nr_p5_message_unpack(void *pMessageBuf,
-                              uint32_t messageBufLen,
+                              const uint32_t messageBufLen,
                               void *pUnpackedBuf,
-                              uint32_t unpackedBufLen,
+                              const uint32_t unpackedBufLen,
                               nfapi_p4_p5_codec_config_t *config)
 {
   fapi_message_header_t *pMessageHeader = pUnpackedBuf;
@@ -191,7 +176,7 @@ int fapi_nr_p5_message_unpack(void *pMessageBuf,
               unpackedBufLen);
   // clean the supplied buffer for - tag value blanking
   (void)memset(pUnpackedBuf, 0, unpackedBufLen);
-  if (fapi_nr_p5_message_header_unpack(&pReadPackedMessage, NFAPI_HEADER_LENGTH, pMessageHeader, sizeof(fapi_message_header_t), 0)
+  if (fapi_nr_message_header_unpack(&pReadPackedMessage, NFAPI_HEADER_LENGTH, pMessageHeader, sizeof(fapi_message_header_t), 0)
       < 0) {
     // failed to read the header
     return -1;
@@ -370,12 +355,7 @@ uint8_t pack_nr_param_response(void *msg, uint8_t **ppWritePackedMsg, uint8_t *e
                            &pack_uint16_tlv_value);
 
   for (int i = 0; i < pNfapiMsg->cell_param.num_config_tlvs_to_report.value; ++i) {
-    /*retval &= pack_nr_tlv(pNfapiMsg->cell_param.config_tlvs_to_report_list[i].tl.tag,
-                          &(pNfapiMsg->cell_param.config_tlvs_to_report_list[i]),
-                          ppWritePackedMsg,
-                          end,
-                          &pack_uint8_tlv_value);*/
-    retval &= push16(pNfapiMsg->cell_param.config_tlvs_to_report_list[i].tl.tag, ppWritePackedMsg, end);
+    retval &= push16(pNfapiMsg->cell_param.config_tlvs_to_report_list[i].tl.tag, ppWritePackedMsg, end) != 0;
     retval &= push8(pNfapiMsg->cell_param.config_tlvs_to_report_list[i].tl.length, ppWritePackedMsg, end);
     retval &= push8(pNfapiMsg->cell_param.config_tlvs_to_report_list[i].value, ppWritePackedMsg, end);
     // Add padding that ensures multiple of 4 bytes (SCF 225 Section 2.3.2.1)
@@ -1706,8 +1686,8 @@ uint8_t unpack_nr_stop_indication(uint8_t **ppReadPackedMsg, uint8_t *end, void 
 uint8_t pack_nr_error_indication(void *msg, uint8_t **ppWritePackedMsg, uint8_t *end, nfapi_p4_p5_codec_config_t *config)
 {
   nfapi_nr_error_indication_scf_t *pNfapiMsg = (nfapi_nr_error_indication_scf_t *)msg;
-  uint8_t retval = push16(pNfapiMsg->sfn, ppWritePackedMsg, end);
-  retval &= push16(pNfapiMsg->slot, ppWritePackedMsg, end);
+  uint8_t retval = push16(pNfapiMsg->sfn, ppWritePackedMsg, end) != 0;
+  retval &= push16(pNfapiMsg->slot, ppWritePackedMsg, end) != 0;
   retval &= push8(pNfapiMsg->message_id, ppWritePackedMsg, end);
   retval &= push8(pNfapiMsg->error_code, ppWritePackedMsg, end);
 

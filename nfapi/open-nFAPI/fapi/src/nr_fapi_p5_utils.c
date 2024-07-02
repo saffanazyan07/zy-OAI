@@ -18,16 +18,6 @@
  * For more information about the OpenAirInterface (OAI) Software Alliance:
  *      contact@openairinterface.org
  */
-/*! \file nfapi/open-nFAPI/fapi/src/nr_fapi_p5_utils.c
- * \brief
- * \author Ruben S. Silva
- * \date 2024
- * \version 0.1
- * \company OpenAirInterface Software Alliance
- * \email: contact@openairinterface.org, rsilva@allbesmart.pt
- * \note
- * \warning
- */
 #include "nr_fapi_p5_utils.h"
 
 void copy_vendor_extension_value(nfapi_vendor_extension_tlv_t *dst, const nfapi_vendor_extension_tlv_t *src)

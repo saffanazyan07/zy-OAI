@@ -18,16 +18,6 @@
  * For more information about the OpenAirInterface (OAI) Software Alliance:
  *      contact@openairinterface.org
  */
-/*! \file nfapi/open-nFAPI/fapi/inc/nr_fapi.h
- * \brief
- * \author Ruben S. Silva
- * \date 2024
- * \version 0.1
- * \company OpenAirInterface Software Alliance
- * \email: contact@openairinterface.org, rsilva@allbesmart.pt
- * \note
- * \warning
- */
 
 #ifndef OPENAIRINTERFACE_NR_FAPI_H
 #define OPENAIRINTERFACE_NR_FAPI_H
@@ -50,23 +40,10 @@ typedef struct {
   uint32_t message_length;
 } fapi_message_header_t;
 
-int fapi_nr_p5_message_header_unpack(uint8_t **pMessageBuf,
-                                     uint32_t messageBufLen,
-                                     void *pUnpackedBuf,
-                                     uint32_t unpackedBufLen,
-                                     nfapi_p4_p5_codec_config_t *config);
+int fapi_nr_message_header_unpack(uint8_t **pMessageBuf,
+                                  uint32_t messageBufLen,
+                                  void *pUnpackedBuf,
+                                  uint32_t unpackedBufLen,
+                                  nfapi_p4_p5_codec_config_t *config);
 
-int fapi_nr_p5_message_pack(void *pMessageBuf,
-                            uint32_t messageBufLen,
-                            void *pPackedBuf,
-                            uint32_t packedBufLen,
-                            nfapi_p4_p5_codec_config_t *config);
-
-int fapi_nr_p5_message_unpack(void *pMessageBuf,
-                              uint32_t messageBufLen,
-                              void *pUnpackedBuf,
-                              uint32_t unpackedBufLen,
-                              nfapi_p4_p5_codec_config_t *config);
-
-int check_nr_fapi_unpack_length(nfapi_nr_phy_msg_type_e msgId, uint32_t unpackedBufLen);
 #endif // OPENAIRINTERFACE_NR_FAPI_H

@@ -38,7 +38,6 @@
 #include "nfapi/oai_integration/vendor_ext.h"
 #include <debug.h>
 #include "nr_fapi_p5.h"
-#include "nr_fapi.h"
 
 // Pack routines
 //TODO: Add pacl/unpack fns for uint32 and uint64
