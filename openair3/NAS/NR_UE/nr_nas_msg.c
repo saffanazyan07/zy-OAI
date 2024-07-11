@@ -508,7 +508,7 @@ static void generateRegistrationRequest(as_nas_info_t *initialNasMsg, nr_ue_nas_
     nas_msg.header.protocol_discriminator = FGS_MOBILITY_MANAGEMENT_MESSAGE;
     nas_msg.header.security_header_type = INTEGRITY_PROTECTED;
     nas_msg.header.sequence_number = nas->security.nas_count_ul & 0xff;
-    size += 7;
+    size += sizeof(fgs_nas_message_security_header_t);
     mm_msg = &nas_msg.security_protected.plain.mm_msg;
   } else {
     // set plain 5GS NAS message header
@@ -716,7 +716,7 @@ static void generateSecurityModeComplete(nr_ue_nas_t *nas, as_nas_info_t *initia
   nas_msg.header.protocol_discriminator = FGS_MOBILITY_MANAGEMENT_MESSAGE;
   nas_msg.header.security_header_type = INTEGRITY_PROTECTED_AND_CIPHERED_WITH_NEW_SECU_CTX;
   nas_msg.header.sequence_number = nas->security.nas_count_ul & 0xff;
-  size += 7;
+  size += sizeof(fgs_nas_message_security_header_t);
 
   mm_msg = &nas_msg.security_protected.plain.mm_msg;
 
@@ -817,7 +817,7 @@ static void decodeRegistrationAccept(const uint8_t *buf, int len, nr_ue_nas_t *n
   registration_accept_msg reg_acc = {0};
   /* it seems there is no 5G corresponding emm_msg_decode() function, so here
    * we just jump to the right decision */
-  buf += 7; /* skip security header */
+  buf += sizeof(fgs_nas_message_security_header_t); /* skip security header */
   buf += 2; /* skip prot discriminator, security header, half octet */
   AssertFatal(*buf == 0x42, "this is not a NAS Registration Accept\n");
   buf++;
@@ -854,7 +854,7 @@ static void generateRegistrationComplete(nr_ue_nas_t *nas,
   sp_msg->header.security_header_type = INTEGRITY_PROTECTED_AND_CIPHERED;
   sp_msg->header.message_authentication_code = 0;
   sp_msg->header.sequence_number = nas->security.nas_count_ul & 0xff;
-  length = 7;
+  length = sizeof(fgs_nas_message_security_header_t);
   sp_msg->plain.mm_msg.registration_complete.protocoldiscriminator = FGS_MOBILITY_MANAGEMENT_MESSAGE;
   length += 1;
   sp_msg->plain.mm_msg.registration_complete.securityheadertype = PLAIN_5GS_MSG;
@@ -1014,7 +1014,7 @@ static void generatePduSessionEstablishRequest(nr_ue_nas_t *nas, as_nas_info_t *
   fgs_nas_message_t nas_msg = {0};
 
   // setup pdu session establishment request
-  uint16_t req_length = 7;
+  uint16_t req_length = sizeof(fgs_nas_message_security_header_t);
   uint8_t *req_buffer = malloc(req_length);
   pdu_session_establishment_request_msg pdu_session_establish;
   pdu_session_establish.protocoldiscriminator = FGS_SESSION_MANAGEMENT_MESSAGE;
@@ -1031,8 +1031,7 @@ static void generatePduSessionEstablishRequest(nr_ue_nas_t *nas, as_nas_info_t *
   nas_msg.header.protocol_discriminator = FGS_MOBILITY_MANAGEMENT_MESSAGE;
   nas_msg.header.security_header_type = INTEGRITY_PROTECTED_AND_CIPHERED;
   nas_msg.header.sequence_number = nas->security.nas_count_ul & 0xff;
-
-  size += 7;
+  size += sizeof(fgs_nas_message_security_header_t);
 
   mm_msg = &nas_msg.security_protected.plain.mm_msg;
 
