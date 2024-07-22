@@ -28,6 +28,120 @@ bool isFAPIMessageIDValid(const uint16_t id)
          || id == NFAPI_NR_PHY_MSG_TYPE_TIMING_INFO;
 }
 
+int check_nr_fapi_unpack_length(nfapi_nr_phy_msg_type_e msgId, uint32_t unpackedBufLen)
+{
+  int retLen = 0;
+
+  // check for size of nFAPI struct without the nFAPI specific parameters
+  switch (msgId) {
+    case NFAPI_NR_PHY_MSG_TYPE_PARAM_REQUEST:
+      if (unpackedBufLen >= sizeof(nfapi_nr_param_request_scf_t) - sizeof(nfapi_vendor_extension_tlv_t))
+        retLen = sizeof(fapi_message_header_t);
+
+      break;
+    case NFAPI_NR_PHY_MSG_TYPE_PARAM_RESPONSE:
+      if (unpackedBufLen >= sizeof(nfapi_nr_param_response_scf_t) - sizeof(nfapi_vendor_extension_tlv_t) - sizeof(nfapi_nr_nfapi_t))
+        retLen = sizeof(nfapi_nr_param_request_scf_t);
+
+      break;
+    case NFAPI_NR_PHY_MSG_TYPE_CONFIG_REQUEST:
+      if (unpackedBufLen >= sizeof(nfapi_nr_config_request_scf_t) - sizeof(nfapi_vendor_extension_tlv_t) - sizeof(nfapi_nr_nfapi_t))
+        retLen = sizeof(nfapi_nr_config_request_scf_t);
+
+      break;
+    case NFAPI_NR_PHY_MSG_TYPE_CONFIG_RESPONSE:
+      if (unpackedBufLen >= sizeof(nfapi_nr_config_response_scf_t) - sizeof(nfapi_vendor_extension_tlv_t))
+        retLen = sizeof(nfapi_nr_config_response_scf_t);
+
+      break;
+    case NFAPI_NR_PHY_MSG_TYPE_START_REQUEST:
+      if (unpackedBufLen >= sizeof(nfapi_nr_start_request_scf_t) - sizeof(nfapi_vendor_extension_tlv_t))
+        retLen = sizeof(fapi_message_header_t);
+
+      break;
+    case NFAPI_NR_PHY_MSG_TYPE_START_RESPONSE:
+      if (unpackedBufLen >= sizeof(nfapi_nr_start_response_scf_t) - sizeof(nfapi_vendor_extension_tlv_t))
+        retLen = sizeof(fapi_message_header_t);
+
+      break;
+    case NFAPI_NR_PHY_MSG_TYPE_STOP_REQUEST:
+      if (unpackedBufLen >= sizeof(nfapi_nr_stop_request_scf_t) - sizeof(nfapi_vendor_extension_tlv_t))
+        retLen = sizeof(fapi_message_header_t);
+
+      break;
+    case NFAPI_NR_PHY_MSG_TYPE_STOP_INDICATION:
+      if (unpackedBufLen >= sizeof(nfapi_nr_stop_indication_scf_t) - sizeof(nfapi_vendor_extension_tlv_t))
+        retLen = sizeof(fapi_message_header_t);
+
+      break;
+    case NFAPI_NR_PHY_MSG_TYPE_ERROR_INDICATION:
+      if (unpackedBufLen >= sizeof(nfapi_nr_error_indication_scf_t) - sizeof(nfapi_vendor_extension_tlv_t))
+        retLen = sizeof(fapi_message_header_t);
+
+      break;
+    case NFAPI_NR_PHY_MSG_TYPE_DL_TTI_REQUEST:
+      if (unpackedBufLen >= sizeof(nfapi_nr_dl_tti_request_t))
+        retLen = sizeof(nfapi_nr_dl_tti_request_t);
+      break;
+
+    case NFAPI_NR_PHY_MSG_TYPE_UL_TTI_REQUEST:
+      if (unpackedBufLen >= sizeof(nfapi_nr_ul_tti_request_t))
+        retLen = sizeof(nfapi_nr_ul_tti_request_t);
+      break;
+
+    case NFAPI_NR_PHY_MSG_TYPE_SLOT_INDICATION:
+    case NFAPI_NR_PHY_MSG_TYPE_VENDOR_EXT_SLOT_RESPONSE:
+      if (unpackedBufLen >= sizeof(nfapi_nr_slot_indication_scf_t))
+        retLen = sizeof(nfapi_nr_slot_indication_scf_t);
+      break;
+
+    case NFAPI_NR_PHY_MSG_TYPE_UL_DCI_REQUEST:
+      if (unpackedBufLen >= sizeof(nfapi_nr_ul_dci_request_t))
+        retLen = sizeof(nfapi_nr_ul_dci_request_t);
+      break;
+
+    case NFAPI_NR_PHY_MSG_TYPE_TX_DATA_REQUEST:
+      if (unpackedBufLen >= sizeof(nfapi_nr_tx_data_request_t))
+        retLen = sizeof(nfapi_nr_tx_data_request_t);
+      break;
+    case NFAPI_NR_PHY_MSG_TYPE_RX_DATA_INDICATION:
+      if (unpackedBufLen >= sizeof(nfapi_nr_rx_data_indication_t))
+        retLen = sizeof(nfapi_nr_rx_data_indication_t);
+      break;
+    case NFAPI_NR_PHY_MSG_TYPE_CRC_INDICATION:
+      if (unpackedBufLen >= sizeof(nfapi_nr_crc_indication_t))
+        retLen = sizeof(nfapi_nr_crc_indication_t);
+      break;
+
+    case NFAPI_NR_PHY_MSG_TYPE_RACH_INDICATION:
+      if (unpackedBufLen >= sizeof(nfapi_nr_rach_indication_t))
+        retLen = sizeof(nfapi_nr_rach_indication_t);
+      break;
+    case NFAPI_NR_PHY_MSG_TYPE_UCI_INDICATION:
+      if (unpackedBufLen >= sizeof(nfapi_nr_uci_indication_t))
+        retLen = sizeof(nfapi_nr_uci_indication_t);
+      break;
+    case NFAPI_NR_PHY_MSG_TYPE_SRS_INDICATION:
+      if (unpackedBufLen >= sizeof(nfapi_nr_srs_indication_t))
+        retLen = sizeof(nfapi_nr_srs_indication_t);
+      break;
+    case NFAPI_NR_PHY_MSG_TYPE_DL_NODE_SYNC:
+      if (unpackedBufLen >= sizeof(nfapi_nr_dl_node_sync_t))
+        retLen = sizeof(nfapi_nr_dl_node_sync_t);
+      break;
+
+    case NFAPI_NR_PHY_MSG_TYPE_UL_NODE_SYNC:
+      if (unpackedBufLen >= sizeof(nfapi_nr_ul_node_sync_t))
+        retLen = sizeof(nfapi_nr_ul_node_sync_t);
+      break;
+    default:
+      NFAPI_TRACE(NFAPI_TRACE_ERROR, "%s Unknown message ID %d\n", __FUNCTION__, msgId);
+      break;
+  }
+
+  return retLen;
+}
+
 int fapi_nr_message_header_unpack(uint8_t **pMessageBuf,
                                   uint32_t messageBufLen,
                                   void *pUnpackedBuf,
