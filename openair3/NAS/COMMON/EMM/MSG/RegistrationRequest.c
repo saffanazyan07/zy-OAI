@@ -70,6 +70,34 @@ int decode_registration_request(registration_request_msg *registration_request, 
   return decoded;
 }
 
+int encode_pduSessionStatus(PDUSessionStatus *pduSessionStatus, uint8_t iei, uint8_t *buffer, uint32_t len)
+{
+  int encoded = 0;
+  if (iei) {
+    *buffer = pduSessionStatus->iei;
+    encoded++;
+    *(buffer + encoded) = pduSessionStatus->length;
+    encoded++;
+    *(buffer + encoded) = pduSessionStatus->psi;
+    encoded += 2;
+  }
+  return encoded;
+}
+
+int encode_ulDataStatus(UplinkDataStatus *ulDataStatus, uint8_t iei, uint8_t *buffer, uint32_t len)
+{
+  int encoded = 0;
+  if (iei) {
+    *buffer = ulDataStatus->iei;
+    encoded++;
+    *(buffer + encoded) = ulDataStatus->length;
+    encoded++;
+    *(buffer + encoded) = ulDataStatus->psi;
+    encoded += 2;
+  }
+  return encoded;
+}
+
 int encode_registration_request(registration_request_msg *registration_request, uint8_t *buffer, uint32_t len)
 {
   int encoded = 0;
@@ -107,6 +135,44 @@ int encode_registration_request(registration_request_msg *registration_request, 
       encoded += encode_result;
   }
 
+  if ((registration_request->presencemask & REGISTRATION_REQUEST_PDU_SESSION_STATUS_PRESENT)
+      == REGISTRATION_REQUEST_PDU_SESSION_STATUS_PRESENT) {
+    if ((encode_result = encode_pduSessionStatus(&registration_request->pdusessionstatus,
+                                                 REGISTRATION_REQUEST_PDU_SESSION_STATUS_IEI,
+                                                 buffer + encoded,
+                                                 len - encoded))
+        < 0)
+      // Return in case of error
+      return encode_result;
+    else
+      encoded += encode_result;
+  }
+
+  if ((registration_request->presencemask & REGISTRATION_REQUEST_UPLINK_DATA_STATUS_PRESENT)
+      == REGISTRATION_REQUEST_UPLINK_DATA_STATUS_PRESENT) {
+    if ((encode_result = encode_ulDataStatus(&registration_request->ulDataStatus,
+                                             REGISTRATION_REQUEST_UPLINK_DATA_STATUS_IEI,
+                                             buffer + encoded,
+                                             len - encoded))
+        < 0)
+      // Return in case of error
+      return encode_result;
+    else
+      encoded += encode_result;
+  }
+
+  if ((registration_request->presencemask & REGISTRATION_REQUEST_NAS_MESSAGE_CONTAINER_PRESENT)
+      == REGISTRATION_REQUEST_NAS_MESSAGE_CONTAINER_PRESENT) {
+    if ((encode_result = encode_fgc_nas_message_container(&registration_request->fgsnasmessagecontainer,
+                                                          REGISTRATION_REQUEST_NAS_MESSAGE_CONTAINER_IEI,
+                                                          buffer + encoded,
+                                                          len - encoded))
+        < 0)
+      // Return in case of error
+      return encode_result;
+    else
+      encoded += encode_result;
+  }
 
   // TODO, Encoding optional fields
   return encoded;
