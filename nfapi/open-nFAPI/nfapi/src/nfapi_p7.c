@@ -39,6 +39,7 @@
 #include <debug.h>
 #include "nfapi_nr_interface_scf.h"
 #include "nr_nfapi_p7.h"
+#include "nr_fapi.h"
 
 extern int nfapi_unpack_p7_vendor_extension(nfapi_p7_message_header_t *header, uint8_t **ppReadPackedMsg, void *user_data);
 extern int nfapi_pack_p7_vendor_extension(nfapi_p7_message_header_t *header, uint8_t **ppWritePackedMsg, void *user_data);
@@ -8109,77 +8110,6 @@ static int check_unpack_length(nfapi_message_id_e msgId, uint32_t unpackedBufLen
   return retLen;
 }
 
-static int check_nr_unpack_length(nfapi_nr_phy_msg_type_e msgId, uint32_t unpackedBufLen)
-{
-	int retLen = 0;
-
-	switch (msgId)
-	{
-		case NFAPI_NR_PHY_MSG_TYPE_DL_TTI_REQUEST:
-			if (unpackedBufLen >= sizeof(nfapi_nr_dl_tti_request_t))
-				retLen = sizeof(nfapi_nr_dl_tti_request_t);
-			break;
-
-		case NFAPI_NR_PHY_MSG_TYPE_UL_TTI_REQUEST:
-			if (unpackedBufLen >= sizeof(nfapi_nr_ul_tti_request_t))
-				retLen = sizeof(nfapi_nr_ul_tti_request_t);
-			break;
-
-		case NFAPI_SUBFRAME_INDICATION:
-			if (unpackedBufLen >= sizeof(nfapi_subframe_indication_t))
-				retLen = sizeof(nfapi_subframe_indication_t);
-			break;
-
-		case NFAPI_NR_PHY_MSG_TYPE_UL_DCI_REQUEST:
-			if (unpackedBufLen >= sizeof(nfapi_nr_ul_dci_request_t))
-				retLen = sizeof(nfapi_nr_ul_dci_request_t);
-			break;
-
-		case NFAPI_NR_PHY_MSG_TYPE_TX_DATA_REQUEST:
-			if (unpackedBufLen >= sizeof(nfapi_nr_tx_data_request_t))
-				retLen = sizeof(nfapi_nr_tx_data_request_t);
-			break;
-		case NFAPI_NR_PHY_MSG_TYPE_RX_DATA_INDICATION:
-			if (unpackedBufLen >= sizeof(nfapi_nr_rx_data_indication_t))
-				retLen = sizeof(nfapi_nr_rx_data_indication_t);
-			break;
-		case NFAPI_NR_PHY_MSG_TYPE_CRC_INDICATION:
-			if (unpackedBufLen >= sizeof(nfapi_nr_crc_indication_t))
-				retLen = sizeof(nfapi_nr_crc_indication_t);
-			break;
-
-		case NFAPI_NR_PHY_MSG_TYPE_RACH_INDICATION:
-			if (unpackedBufLen >= sizeof(nfapi_nr_rach_indication_t))
-				retLen = sizeof(nfapi_nr_rach_indication_t);
-			break;
-		case NFAPI_NR_PHY_MSG_TYPE_UCI_INDICATION:
-			if (unpackedBufLen >= sizeof(nfapi_nr_uci_indication_t))
-				retLen = sizeof(nfapi_nr_uci_indication_t);
-			break;
-		case NFAPI_NR_PHY_MSG_TYPE_SRS_INDICATION:
-			if (unpackedBufLen >= sizeof(nfapi_nr_srs_indication_t))
-				retLen = sizeof(nfapi_nr_srs_indication_t);
-			break;
-		case NFAPI_NR_PHY_MSG_TYPE_DL_NODE_SYNC:
-			if (unpackedBufLen >= sizeof(nfapi_nr_dl_node_sync_t))
-				retLen = sizeof(nfapi_nr_dl_node_sync_t);
-			break;
-
-		case NFAPI_NR_PHY_MSG_TYPE_UL_NODE_SYNC:
-			if (unpackedBufLen >= sizeof(nfapi_nr_ul_node_sync_t))
-				retLen = sizeof(nfapi_nr_ul_node_sync_t);
-			break;
-
-		default:
-			NFAPI_TRACE(NFAPI_TRACE_ERROR, "Unknown message ID %d\n", msgId);
-			break;
-	}
-
-	return retLen;
-}
-
-
-
 // Main unpack functions - public
 
 int nfapi_p7_message_header_unpack(void *pMessageBuf,
@@ -8530,20 +8460,20 @@ int nfapi_nr_p7_message_unpack(void *pMessageBuf,
   // look for the specific message
   switch (pMessageHeader->message_id) {
     case NFAPI_NR_PHY_MSG_TYPE_DL_TTI_REQUEST:
-      if (check_nr_unpack_length(NFAPI_NR_PHY_MSG_TYPE_DL_TTI_REQUEST, unpackedBufLen))
+      if (check_nr_fapi_unpack_length(NFAPI_NR_PHY_MSG_TYPE_DL_TTI_REQUEST, unpackedBufLen))
         result = unpack_dl_tti_request(&pReadPackedMessage, end, pMessageHeader, config);
       break;
 
     case NFAPI_NR_PHY_MSG_TYPE_UL_TTI_REQUEST:
-      if (check_nr_unpack_length(NFAPI_NR_PHY_MSG_TYPE_UL_TTI_REQUEST, unpackedBufLen))
+      if (check_nr_fapi_unpack_length(NFAPI_NR_PHY_MSG_TYPE_UL_TTI_REQUEST, unpackedBufLen))
         result = unpack_ul_tti_request(&pReadPackedMessage, end, pMessageHeader, config);
       break;
     case NFAPI_NR_PHY_MSG_TYPE_TX_DATA_REQUEST:
-      if (check_nr_unpack_length(NFAPI_NR_PHY_MSG_TYPE_TX_DATA_REQUEST, unpackedBufLen))
+      if (check_nr_fapi_unpack_length(NFAPI_NR_PHY_MSG_TYPE_TX_DATA_REQUEST, unpackedBufLen))
         result = unpack_tx_data_request(&pReadPackedMessage, end, pMessageHeader, config);
       break;
     case NFAPI_NR_PHY_MSG_TYPE_UL_DCI_REQUEST:
-      if (check_nr_unpack_length(NFAPI_NR_PHY_MSG_TYPE_UL_DCI_REQUEST, unpackedBufLen))
+      if (check_nr_fapi_unpack_length(NFAPI_NR_PHY_MSG_TYPE_UL_DCI_REQUEST, unpackedBufLen))
         result = unpack_ul_dci_request(&pReadPackedMessage, end, pMessageHeader, config);
       break;
     case NFAPI_UE_RELEASE_REQUEST:
@@ -8551,14 +8481,14 @@ int nfapi_nr_p7_message_unpack(void *pMessageBuf,
         result = unpack_ue_release_request(&pReadPackedMessage, end, pMessageHeader, config);
       break;
     case NFAPI_NR_PHY_MSG_TYPE_SLOT_INDICATION:
-      if (check_nr_unpack_length(NFAPI_NR_PHY_MSG_TYPE_SLOT_INDICATION, unpackedBufLen)) {
+      if (check_nr_fapi_unpack_length(NFAPI_NR_PHY_MSG_TYPE_SLOT_INDICATION, unpackedBufLen)) {
         nfapi_nr_slot_indication_scf_t *msg = (nfapi_nr_slot_indication_scf_t *)pMessageHeader;
         result = unpack_nr_slot_indication(&pReadPackedMessage, end, msg, config);
       }
       break;
 
     case NFAPI_NR_PHY_MSG_TYPE_RX_DATA_INDICATION:
-      if (check_nr_unpack_length(NFAPI_NR_PHY_MSG_TYPE_RX_DATA_INDICATION, unpackedBufLen)) {
+      if (check_nr_fapi_unpack_length(NFAPI_NR_PHY_MSG_TYPE_RX_DATA_INDICATION, unpackedBufLen)) {
         nfapi_nr_rx_data_indication_t *msg = (nfapi_nr_rx_data_indication_t *)pMessageHeader;
         msg->pdu_list = (nfapi_nr_rx_data_pdu_t *)malloc(sizeof(nfapi_nr_rx_data_pdu_t));
         msg->pdu_list->pdu = (uint8_t *)malloc(sizeof(uint8_t));
@@ -8567,7 +8497,7 @@ int nfapi_nr_p7_message_unpack(void *pMessageBuf,
       break;
 
     case NFAPI_NR_PHY_MSG_TYPE_CRC_INDICATION:
-      if (check_nr_unpack_length(NFAPI_NR_PHY_MSG_TYPE_CRC_INDICATION, unpackedBufLen)) {
+      if (check_nr_fapi_unpack_length(NFAPI_NR_PHY_MSG_TYPE_CRC_INDICATION, unpackedBufLen)) {
         nfapi_nr_crc_indication_t *msg = (nfapi_nr_crc_indication_t *)pMessageHeader;
         msg->crc_list = (nfapi_nr_crc_t *)malloc(sizeof(nfapi_nr_crc_t));
         result = unpack_nr_crc_indication(&pReadPackedMessage, end, msg, config);
@@ -8575,7 +8505,7 @@ int nfapi_nr_p7_message_unpack(void *pMessageBuf,
       break;
 
     case NFAPI_NR_PHY_MSG_TYPE_UCI_INDICATION:
-      if (check_nr_unpack_length(NFAPI_NR_PHY_MSG_TYPE_UCI_INDICATION, unpackedBufLen)) {
+      if (check_nr_fapi_unpack_length(NFAPI_NR_PHY_MSG_TYPE_UCI_INDICATION, unpackedBufLen)) {
         nfapi_nr_uci_indication_t *msg = (nfapi_nr_uci_indication_t *)pMessageHeader;
         msg->uci_list = (nfapi_nr_uci_t *)malloc(sizeof(nfapi_nr_uci_t));
         result = unpack_nr_uci_indication(&pReadPackedMessage, end, msg, config);
@@ -8583,7 +8513,7 @@ int nfapi_nr_p7_message_unpack(void *pMessageBuf,
       break;
 
     case NFAPI_NR_PHY_MSG_TYPE_SRS_INDICATION:
-      if (check_nr_unpack_length(NFAPI_NR_PHY_MSG_TYPE_SRS_INDICATION, unpackedBufLen)) {
+      if (check_nr_fapi_unpack_length(NFAPI_NR_PHY_MSG_TYPE_SRS_INDICATION, unpackedBufLen)) {
         nfapi_nr_srs_indication_t *msg = (nfapi_nr_srs_indication_t *)pMessageHeader;
         msg->pdu_list = (nfapi_nr_srs_indication_pdu_t *)malloc(sizeof(nfapi_nr_srs_indication_pdu_t));
         result = unpack_nr_srs_indication(&pReadPackedMessage, end, msg, config);
@@ -8591,19 +8521,19 @@ int nfapi_nr_p7_message_unpack(void *pMessageBuf,
       break;
 
     case NFAPI_NR_PHY_MSG_TYPE_RACH_INDICATION:
-      if (check_nr_unpack_length(NFAPI_NR_PHY_MSG_TYPE_RACH_INDICATION, unpackedBufLen)) {
+      if (check_nr_fapi_unpack_length(NFAPI_NR_PHY_MSG_TYPE_RACH_INDICATION, unpackedBufLen)) {
         nfapi_nr_rach_indication_t *msg = (nfapi_nr_rach_indication_t *)pMessageHeader;
         result = unpack_nr_rach_indication(&pReadPackedMessage, end, msg, config);
       }
       break;
 
     case NFAPI_NR_PHY_MSG_TYPE_DL_NODE_SYNC:
-      if (check_nr_unpack_length(NFAPI_NR_PHY_MSG_TYPE_DL_NODE_SYNC, unpackedBufLen))
+      if (check_nr_fapi_unpack_length(NFAPI_NR_PHY_MSG_TYPE_DL_NODE_SYNC, unpackedBufLen))
         result = unpack_nr_dl_node_sync(&pReadPackedMessage, end, pMessageHeader, config);
       break;
 
     case NFAPI_NR_PHY_MSG_TYPE_UL_NODE_SYNC:
-      if (check_nr_unpack_length(NFAPI_NR_PHY_MSG_TYPE_UL_NODE_SYNC, unpackedBufLen))
+      if (check_nr_fapi_unpack_length(NFAPI_NR_PHY_MSG_TYPE_UL_NODE_SYNC, unpackedBufLen))
         result = unpack_nr_ul_node_sync(&pReadPackedMessage, end, pMessageHeader, config);
       break;
 
