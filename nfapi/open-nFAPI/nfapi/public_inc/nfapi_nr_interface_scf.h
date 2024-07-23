@@ -897,6 +897,19 @@ typedef struct {
   uint8_t nEpreRatioOfPDSCHToPTRS;
   // Beamforming
   nfapi_nr_tx_precoding_and_beamforming_t precodingAndBeamforming;
+  // TX Power info
+  /// Ratio of PDSCH EPRE to NZP CSI-RSEPRE [TS38.214,sec 5.2.2.3.1]
+  uint8_t powerControlOffset;
+  /// Ratio of SSB/PBCH block EPRE to NZP CSI-RS EPRES [TS38.214, sec 5.2.2.3.1]
+  uint8_t powerControlOffsetSS;
+  // CBG fields
+  /// Indicates whether last CB is present in the CBG retransmission ( 0 -> not included; 1 -> included )
+  uint8_t isLastCbPresent;
+  /// Indicates whether TB CRC is part of data payload or control message ( 0 -> payload; 1 -> control message )
+  uint8_t isInlineTbCrc;
+  /// TB CRC: to be used in the last CB, applicable only if last CB is present
+  uint32_t dlTbCrc;
+
   nfapi_v3_pdsch_maintenance_parameters_t maintenance_parms_v3;
 }nfapi_nr_dl_tti_pdsch_pdu_rel15_t;
 
@@ -982,6 +995,8 @@ typedef struct
   uint16_t scramb_id;               // ScramblingID of the CSI-RS [3GPP TS 38.214, sec 5.2.2.3.1], Value: 0->1023
   uint8_t power_control_offset;     // Ratio of PDSCH EPRE to NZP CSI-RSEPRE [3GPP TS 38.214, sec 5.2.2.3.1], Value: 0->23 representing -8 to 15 dB in 1dB steps; 255: L1 is configured with ProfileSSS
   uint8_t power_control_offset_ss;  // Ratio of NZP CSI-RS EPRE to SSB/PBCH block EPRE [3GPP TS 38.214, sec 5.2.2.3.1], Values: 0: -3dB; 1: 0dB; 2: 3dB; 3: 6dB; 255: L1 is configured with ProfileSSS
+  // Beamforming
+  nfapi_nr_tx_precoding_and_beamforming_t precodingAndBeamforming;
 } nfapi_nr_dl_tti_csi_rs_pdu_rel15_t;
 
 
