@@ -86,6 +86,7 @@ unsigned short config_frames[4] = {2,9,11,13};
 #include "time_meas.h"
 #include "utils.h"
 #include "x2ap_eNB.h"
+#include "common/utils/LATSEQ/latseq.h"
 
 pthread_cond_t nfapi_sync_cond;
 pthread_mutex_t nfapi_sync_mutex;
@@ -643,6 +644,8 @@ int main( int argc, char **argv ) {
     pthread_mutex_init(&sync_mutex, NULL);
   }
 
+  init_latseq("/tmp/latseq", (uint64_t)(cpuf*1000000000LL));
+  printf("START MAIN THREADS\n");
   // start the main threads
   number_of_cards = 1;
 
@@ -731,6 +734,7 @@ int main( int argc, char **argv ) {
   printf("TYPE <CTRL-C> TO TERMINATE\n");
   itti_wait_tasks_end(NULL);
   printf("Returned from ITTI signal handler\n");
+  close_latseq(); //close before end of threads
 
   if (RC.nb_nr_L1_inst > 0 || RC.nb_RU > 0)
     stop_L1(0);
