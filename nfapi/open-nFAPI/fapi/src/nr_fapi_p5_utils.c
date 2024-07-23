@@ -20,27 +20,6 @@
  */
 #include "nr_fapi_p5_utils.h"
 
-void copy_vendor_extension_value(nfapi_vendor_extension_tlv_t *dst, const nfapi_vendor_extension_tlv_t *src)
-{
-  nfapi_tl_t *dst_tlv = (nfapi_tl_t *)dst;
-  nfapi_tl_t *src_tlv = (nfapi_tl_t *)src;
-
-  switch (dst_tlv->tag) {
-    case VENDOR_EXT_TLV_2_TAG: {
-      vendor_ext_tlv_2 *dst_ve = (vendor_ext_tlv_2 *)dst_tlv;
-      vendor_ext_tlv_2 *src_ve = (vendor_ext_tlv_2 *)src_tlv;
-
-      dst_ve->dummy = src_ve->dummy;
-    } break;
-    case VENDOR_EXT_TLV_1_TAG: {
-      vendor_ext_tlv_1 *dst_ve = (vendor_ext_tlv_1 *)dst_tlv;
-      vendor_ext_tlv_1 *src_ve = (vendor_ext_tlv_1 *)src_tlv;
-
-      dst_ve->dummy = src_ve->dummy;
-    } break;
-  }
-}
-
 bool eq_param_request(const nfapi_nr_param_request_scf_t *unpacked_req, const nfapi_nr_param_request_scf_t *req)
 {
   EQ(unpacked_req->header.message_id, req->header.message_id);

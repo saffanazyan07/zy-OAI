@@ -66,6 +66,8 @@ typedef struct {
   uint32_t message_length;
 } fapi_message_header_t;
 
+void copy_vendor_extension_value(nfapi_vendor_extension_tlv_t *dst, const nfapi_vendor_extension_tlv_t *src);
+
 bool isFAPIMessageIDValid(uint16_t id);
 
 int check_nr_fapi_unpack_length(nfapi_nr_phy_msg_type_e msgId, uint32_t unpackedBufLen);
