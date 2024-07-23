@@ -20,6 +20,29 @@
  */
 #include "nr_fapi.h"
 
+void copy_vendor_extension_value(nfapi_vendor_extension_tlv_t *dst, const nfapi_vendor_extension_tlv_t *src)
+{
+  nfapi_tl_t *dst_tlv = (nfapi_tl_t *)dst;
+  nfapi_tl_t *src_tlv = (nfapi_tl_t *)src;
+
+  switch (dst_tlv->tag) {
+    case VENDOR_EXT_TLV_2_TAG: {
+      vendor_ext_tlv_2 *dst_ve = (vendor_ext_tlv_2 *)dst_tlv;
+      vendor_ext_tlv_2 *src_ve = (vendor_ext_tlv_2 *)src_tlv;
+
+      dst_ve->dummy = src_ve->dummy;
+    } break;
+    case VENDOR_EXT_TLV_1_TAG: {
+      vendor_ext_tlv_1 *dst_ve = (vendor_ext_tlv_1 *)dst_tlv;
+      vendor_ext_tlv_1 *src_ve = (vendor_ext_tlv_1 *)src_tlv;
+
+      dst_ve->dummy = src_ve->dummy;
+    } break;
+    default:
+      NFAPI_TRACE(NFAPI_TRACE_ERROR, "Unknown Vendor Extension tag %d\n", dst_tlv->tag);
+  }
+}
+
 bool isFAPIMessageIDValid(const uint16_t id)
 {
   // SCF 222.10.04 Table 3-5 PHY API message types
