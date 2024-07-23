@@ -34,6 +34,31 @@
 #include "assertions.h"
 #include "debug.h"
 
+#define EQ_TLV(_tlv_a, _tlv_b)        \
+  do {                                \
+    EQ(_tlv_a.tl.tag, _tlv_b.tl.tag); \
+    EQ(_tlv_a.value, _tlv_b.value);   \
+  } while (0)
+
+#define EQ(_a, _b)      \
+  do {                  \
+    if ((_a) != (_b)) { \
+      return false;     \
+    }                   \
+  } while (0)
+
+#define COPY_TL(_dst_tl, _src_tl)    \
+  do {                               \
+    _dst_tl.tag = _src_tl.tag;       \
+    _dst_tl.length = _src_tl.length; \
+  } while (0)
+
+#define COPY_TLV(_dst, _src)   \
+  do {                         \
+    COPY_TL(_dst.tl, _src.tl); \
+    _dst.value = _src.value;   \
+  } while (0)
+
 typedef struct {
   uint8_t num_msg;
   uint8_t opaque_handle;
