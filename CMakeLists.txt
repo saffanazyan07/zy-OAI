@@ -503,6 +503,11 @@ add_boolean_option(ENABLE_VCD              False  "always true now, time measure
 add_boolean_option(ENABLE_VCD_FIFO         False  "time measurements of proc calls and var displays sent to FIFO (one more thread)" ON)
 
 ##########################
+#  PRECISE LATENCY MEASUREMENT LATSEQ options
+##########################
+add_boolean_option(LATSEQ                  False "Activate Latency Sequence tool (LatSeq)" ON)
+
+##########################
 # PHY options
 ##########################
 add_integer_option(MAX_NUM_CCs             1     "Carrier component data arrays size (oai doesn't support carrier aggreagtion for now)" ON)
@@ -602,6 +607,7 @@ include_directories(${OPENAIR_DIR}/common/utils/hashtable)
 add_library(UTIL
   ${OPENAIR_DIR}/common/utils/LOG/vcd_signal_dumper.c
   ${OPENAIR2_DIR}/UTIL/OPT/probe.c
+  ${OPENAIR_DIR}/common/utils/LATSEQ/latseq.c
 )
 if (ENABLE_LTTNG)
   find_package(LTTngUST 2.3.8 EXACT REQUIRED)
