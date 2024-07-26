@@ -232,8 +232,6 @@ void nr_schedule_response(NR_Sched_Rsp_t *Sched_INFO)
   bool is_dl = slot_type == NR_DOWNLINK_SLOT || slot_type == NR_MIXED_SLOT;
   bool is_ul = slot_type == NR_UPLINK_SLOT || slot_type == NR_MIXED_SLOT;
 
-  processingData_L1tx_t *msgTx = gNB->msgDataTx;
-
   DevAssert(Sched_INFO->DL_req.SFN == frame);
   DevAssert(Sched_INFO->DL_req.Slot == slot);
 
