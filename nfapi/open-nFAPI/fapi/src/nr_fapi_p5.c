@@ -1232,8 +1232,7 @@ uint8_t unpack_nr_config_request(uint8_t **ppReadPackedMsg, uint8_t *end, void *
             pNfapiMsg->prach_config.num_prach_fd_occasions.tl.tag = generic_tl.tag;
             pNfapiMsg->prach_config.num_prach_fd_occasions.tl.length = generic_tl.length;
             result = (*unpack_fns[idx].unpack_func)(&pNfapiMsg->prach_config.num_prach_fd_occasions, ppReadPackedMsg, end);
-            pNfapiMsg->prach_config.num_prach_fd_occasions_list = (nfapi_nr_num_prach_fd_occasions_t *)malloc(
-                pNfapiMsg->prach_config.num_prach_fd_occasions.value * sizeof(nfapi_nr_num_prach_fd_occasions_t));
+            pNfapiMsg->prach_config.num_prach_fd_occasions_list = calloc(pNfapiMsg->prach_config.num_prach_fd_occasions.value, sizeof(nfapi_nr_num_prach_fd_occasions_t));
             prach_root_seq_idx = 0;
             break;
           case NFAPI_NR_CONFIG_SCS_COMMON_TAG:
