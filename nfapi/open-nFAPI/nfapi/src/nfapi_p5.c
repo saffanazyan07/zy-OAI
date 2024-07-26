@@ -2343,8 +2343,6 @@ int nfapi_nr_p5_message_unpack(void *pMessageBuf,
     return -1;
   }
 
-  uint8_t *ptr = pReadPackedMessage;
-
   // clean the supplied buffer for - tag value blanking
   (void)memset(pUnpackedBuf, 0, unpackedBufLen);
 
