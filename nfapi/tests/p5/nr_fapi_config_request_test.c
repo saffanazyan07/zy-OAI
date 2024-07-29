@@ -88,8 +88,7 @@ void fill_config_request_tlv(nfapi_nr_config_request_scf_t *nfapi_resp)
   FILL_TLV(nfapi_resp->ssb_config.bch_payload, NFAPI_NR_CONFIG_BCH_PAYLOAD_TAG, rand8());
   nfapi_resp->num_tlv++;
 
-  // NOTE: MUST be between 0 & 4 ( inclusive ) , since this value is used as index to obtain slots per frame
-  FILL_TLV(nfapi_resp->ssb_config.scs_common, NFAPI_NR_CONFIG_SCS_COMMON_TAG, rand8_range(0, 4));
+  FILL_TLV(nfapi_resp->ssb_config.scs_common, NFAPI_NR_CONFIG_SCS_COMMON_TAG, 1 /* 30 kHz */);
   nfapi_resp->num_tlv++;
 
   FILL_TLV(nfapi_resp->prach_config.prach_sequence_length, NFAPI_NR_CONFIG_PRACH_SEQUENCE_LENGTH_TAG, rand8());
@@ -185,30 +184,31 @@ void fill_config_request_tlv(nfapi_nr_config_request_scf_t *nfapi_resp)
     nfapi_resp->num_tlv++;
   }
 
-  FILL_TLV(nfapi_resp->tdd_table.tdd_period, NFAPI_NR_CONFIG_TDD_PERIOD_TAG, rand8());
+  FILL_TLV(nfapi_resp->tdd_table.tdd_period, NFAPI_NR_CONFIG_TDD_PERIOD_TAG, 6 /* ms5 */);
   nfapi_resp->num_tlv++;
-  const uint8_t slotsperframe[5] = {10, 20, 40, 80, 160};
-  // Assuming always CP_Normal, because Cyclic prefix is not included in CONFIG.request 10.02, but is present in 10.04
-  uint8_t cyclicprefix = 1;
-  bool normal_CP = cyclicprefix ? false : true;
-  // 3GPP 38.211 Table 4.3.2.1 & Table 4.3.2.2
-  uint8_t number_of_symbols_per_slot = normal_CP ? 14 : 12;
 
-  nfapi_resp->tdd_table.max_tdd_periodicity_list = (nfapi_nr_max_tdd_periodicity_t *)malloc(
-      slotsperframe[nfapi_resp->ssb_config.scs_common.value] * sizeof(nfapi_nr_max_tdd_periodicity_t));
-
-  for (int i = 0; i < slotsperframe[nfapi_resp->ssb_config.scs_common.value]; i++) {
-    nfapi_resp->tdd_table.max_tdd_periodicity_list[i].max_num_of_symbol_per_slot_list =
-        (nfapi_nr_max_num_of_symbol_per_slot_t *)malloc(number_of_symbols_per_slot * sizeof(nfapi_nr_max_num_of_symbol_per_slot_t));
+#define SET_SYMBOL_TYPE(TDD_PERIOD_LIST, START, END, TYPE) \
+  for (int SyM = (START); SyM < (END); SyM++) { \
+    FILL_TLV((TDD_PERIOD_LIST)[SyM].slot_config, NFAPI_NR_CONFIG_SLOT_CONFIG_TAG, (TYPE)); \
   }
 
-  for (int i = 0; i < slotsperframe[nfapi_resp->ssb_config.scs_common.value]; i++) { // TODO check right number of slots
-    for (int k = 0; k < number_of_symbols_per_slot; k++) { // TODO can change?
-      FILL_TLV(nfapi_resp->tdd_table.max_tdd_periodicity_list[i].max_num_of_symbol_per_slot_list[k].slot_config,
-               NFAPI_NR_CONFIG_SLOT_CONFIG_TAG,
-               rand8());
-      nfapi_resp->num_tlv++;
+  int slots = 20;
+  int sym = 14;
+  nfapi_resp->tdd_table.max_tdd_periodicity_list = calloc(slots, sizeof(*nfapi_resp->tdd_table.max_tdd_periodicity_list));
+  for (int i = 0; i < slots; i++) {
+    nfapi_nr_max_tdd_periodicity_t* list = &nfapi_resp->tdd_table.max_tdd_periodicity_list[i];
+    list->max_num_of_symbol_per_slot_list = calloc(sym, sizeof(*list->max_num_of_symbol_per_slot_list));
+    // DDDDDDMUUU
+    if ((i >= 0 && i <= 5) || (i >= 10 && i <= 15)) {
+      SET_SYMBOL_TYPE(list->max_num_of_symbol_per_slot_list, 0, sym, 0 /* DL */);
+    } else if (i == 6 || i == 16) {
+      SET_SYMBOL_TYPE(list->max_num_of_symbol_per_slot_list, 0, 4, 0 /* DL */);
+      SET_SYMBOL_TYPE(list->max_num_of_symbol_per_slot_list, 4, 10, 2 /* guard */);
+      SET_SYMBOL_TYPE(list->max_num_of_symbol_per_slot_list, 10, sym, 1 /* UL */);
+    } else {
+      SET_SYMBOL_TYPE(list->max_num_of_symbol_per_slot_list, 0, sym, 1 /* UL */);
     }
+    nfapi_resp->num_tlv += sym;
   }
 
   FILL_TLV(nfapi_resp->measurement_config.rssi_measurement, NFAPI_NR_CONFIG_RSSI_MEASUREMENT_TAG, rand8());
