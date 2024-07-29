@@ -40,6 +40,7 @@
 #include "common/utils/nr/nr_common.h"
 #include "executables/softmodem-common.h"
 #include "SCHED_NR/sched_nr.h"
+#include "common/utils/LATSEQ/latseq.h"
 
 //#define DEBUG_DLSCH
 //#define DEBUG_DLSCH_MAPPING
@@ -124,6 +125,7 @@ void nr_generate_pdsch(processingData_L1tx_t *msgTx, int frame, int slot)
                         dlsch_segmentation_stats) == -1) {
     return;
   }
+  LATSEQ_P("D phy.ldpc--phy.scrambled", "::fm%u.sl%u", frame, slot);
   stop_meas(dlsch_encoding_stats);
 
   for (int dlsch_id=0; dlsch_id<msgTx->num_pdsch_slot; dlsch_id++) {
@@ -198,10 +200,12 @@ void nr_generate_pdsch(processingData_L1tx_t *msgTx, int frame, int slot)
       }
 #endif
 
+      LATSEQ_P("D phy.scrambled--phy.modulated", "::fm%u.sl%u.codeword%u.rnti%u", frame, slot, codeWord, rel15->rnti);
       stop_meas(dlsch_scrambling_stats);
       /// Modulation
       start_meas(dlsch_modulation_stats);
       nr_modulation(scrambled_output, encoded_length, Qm, (int16_t *)mod_symbs[codeWord]);
+      LATSEQ_P("D phy.modulated--phy.resourcemapped", "::fm%u.sl%u.codeword%u.qm%u.rnti%u", frame, slot, codeWord, Qm, rel15->rnti);
       VCD_SIGNAL_DUMPER_DUMP_FUNCTION_BY_NAME(VCD_SIGNAL_DUMPER_FUNCTIONS_gNB_PDSCH_MODULATION, 0);
       stop_meas(dlsch_modulation_stats);
 #ifdef DEBUG_DLSCH
@@ -505,6 +509,7 @@ void nr_generate_pdsch(processingData_L1tx_t *msgTx, int frame, int slot)
         } // no DMRS/PTRS in symbol
       } // symbol loop
     } // layer loop
+    LATSEQ_P("D phy.resourcemapped--phy.antennamapped", "::fm%u.sl%u.rnti%u", frame, slot, rel15->rnti);
     stop_meas(&gNB->dlsch_resource_mapping_stats);
 
     ///Layer Precoding and Antenna port mapping
@@ -627,7 +632,7 @@ void nr_generate_pdsch(processingData_L1tx_t *msgTx, int frame, int slot)
         } // RB loop: while(rb < rel15->rbSize)
       } // symbol loop
     } // port loop
-
+    LATSEQ_P("D phy.antennamapped--phy.rotated", "::fm%u.sl%u.nbant%u.rnti%u", frame, slot, frame_parms->nb_antennas_tx, rel15->rnti);
     stop_meas(&gNB->dlsch_precoding_stats);
 
   }// dlsch loop

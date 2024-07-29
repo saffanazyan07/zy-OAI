@@ -48,6 +48,7 @@
 
 #include "common/utils/LOG/log.h"
 #include "common/utils/LOG/vcd_signal_dumper.h"
+#include "common/utils/LATSEQ/latseq.h"
 
 #include <executables/softmodem-common.h>
 /* these variables have to be defined before including ENB_APP/enb_paramdef.h and GNB_APP/gnb_paramdef.h */
@@ -700,6 +701,7 @@ static void rx_rf(RU_t *ru, int *frame, int *slot)
   }
 
   stop_meas(&ru->rx_fhaul);
+  LATSEQ_P("U phy.SOUTHend--phy.dft","::fm%u.sl%u", *frame, *slot);
 }
 
 static radio_tx_gpio_flag_t get_gpio_flags(RU_t *ru, int slot)
@@ -824,12 +826,14 @@ void tx_rf(RU_t *ru, int frame,int slot, uint64_t timestamp)
 
   VCD_SIGNAL_DUMPER_DUMP_VARIABLE_BY_NAME(VCD_SIGNAL_DUMPER_VARIABLES_TRX_TST, (timestamp + ru->ts_offset) & 0xffffffff);
   VCD_SIGNAL_DUMPER_DUMP_FUNCTION_BY_NAME(VCD_SIGNAL_DUMPER_FUNCTIONS_TRX_WRITE, 1);
+  LATSEQ_P("D phy.ant--phy.SOUTHout", "::fm%u.sl%u", frame, slot);
   // prepare tx buffer pointers
   uint32_t txs = ru->rfdevice.trx_write_func(&ru->rfdevice,
                                              timestamp + ru->ts_offset - sf_extension,
                                              txp,
                                              siglen + sf_extension,
                                              ru->nb_tx, flags);
+  LATSEQ_P("D phy.SOUTHout--phy.out", "::fm%u.sl%u", frame, slot);
   LOG_D(PHY,
         "[TXPATH] RU %d aa %d tx_rf, writing to TS %llu, %d.%d, unwrapped_frame %d, slot %d, flags %d, siglen+sf_extension %d, "
         "returned %d, E %f\n",
@@ -1043,6 +1047,8 @@ void ru_tx_func(void *param)
   // do OFDM with/without TX front-end processing  if needed
   if ((ru->fh_north_asynch_in == NULL) && (ru->feptx_ofdm))
     ru->feptx_ofdm(ru, frame_tx, slot_tx);
+  
+  LATSEQ_P("D phy.ofdmidft--phy.ant", "::fm%u.sl%u", frame_tx, slot_tx);
 
   if(!emulate_rf) {
     // do outgoing fronthaul (south) if needed
@@ -1211,6 +1217,7 @@ void *ru_thread(void *param)
 
     // synchronization on input FH interface, acquire signals/data and block
     LOG_D(PHY,"[RU_thread] read data: frame_rx = %d, tti_rx = %d\n", frame, slot);
+    LATSEQ_P("U phy.SOUTHstart--phy.SOUTHend","::fm%u.sl%u", frame, slot);
 
     if (ru->fh_south_in) ru->fh_south_in(ru,&frame,&slot);
     else AssertFatal(1==0, "No fronthaul interface at south port");
@@ -1279,6 +1286,7 @@ void *ru_thread(void *param)
         // set the tti that was generated to busy
         rx_tti_busy[proc->tti_rx % RU_RX_SLOT_DEPTH] = true;
         ru->feprx(ru,proc->tti_rx);
+        LATSEQ_P("U phy.dft--phy.prachpucch","::fm%u.sl%u", frame, slot);
         LOG_D(NR_PHY, "Setting %d.%d (%d) to busy\n", proc->frame_rx, proc->tti_rx, proc->tti_rx % RU_RX_SLOT_DEPTH);
         //LOG_M("rxdata.m","rxs",ru->common.rxdata[0],1228800,1,1);
         LOG_D(PHY,"RU proc: frame_rx = %d, tti_rx = %d\n", proc->frame_rx, proc->tti_rx);

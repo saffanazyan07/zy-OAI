@@ -32,6 +32,7 @@
 #include "nr_pdcp_sdu.h"
 
 #include "LOG/log.h"
+#include "common/utils/LATSEQ/latseq.h"
 
 /**
  * @brief returns the maximum PDCP PDU size
@@ -160,6 +161,7 @@ static void nr_pdcp_entity_recv_pdu(nr_pdcp_entity_t *entity,
     LOG_W(PDCP, "discard NR PDU rcvd_count=%d, entity->rx_deliv %d,sdu_in_list %d\n", rcvd_count,entity->rx_deliv,nr_pdcp_sdu_in_list(entity->rx_list,rcvd_count));
     entity->stats.rxpdu_dd_pkts++;
     entity->stats.rxpdu_dd_bytes += size;
+    LATSEQ_P("U pdcp.decoded--pdcp.discarded.rcvdsmallerdeliv", "::sn%u.pdcpsdusize%u", rcvd_sn, size-header_size-integrity_size);
 
     return;
   }
@@ -182,6 +184,7 @@ static void nr_pdcp_entity_recv_pdu(nr_pdcp_entity_t *entity,
     uint32_t count = entity->rx_deliv;
     while (entity->rx_list != NULL && count == entity->rx_list->count) {
       nr_pdcp_sdu_t *cur = entity->rx_list;
+      LATSEQ_P("U pdcp.decoded--sdap.sdu", "::sn%u.PSbuf%u.pdcpsdusize%u", rcvd_sn, cur->buffer, sdu->size);
       entity->deliver_sdu(entity->deliver_sdu_data, entity,
                           cur->buffer, cur->size,
                           &cur->msg_integrity);
@@ -294,6 +297,7 @@ static int nr_pdcp_entity_process_sdu(nr_pdcp_entity_t *entity,
                    entity->rb_id, count, entity->is_gnb ? 1 : 0);
   }
 
+  LATSEQ_P("D pdcp.hdr--rlc.seg", "::SPbuf%u.sn%u.Pbuf%u", buffer, sn, buf);
   entity->tx_next++;
 
   entity->stats.txpdu_pkts++;
@@ -418,6 +422,8 @@ static void check_t_reordering(nr_pdcp_entity_t *entity)
   /* deliver all SDUs with count < rx_reord */
   while (entity->rx_list != NULL && entity->rx_list->count < entity->rx_reord) {
     nr_pdcp_sdu_t *cur = entity->rx_list;
+    LATSEQ_P("U pdcp.decoded--pdcp.outoforderdeliv", "::sn%u.pdcpsdusize%u", cur->count, cur->size);
+    LATSEQ_P("U pdcp.outoforderdeliv--sdap.sdu", "::sn%u.PSbuf%u", cur->count, cur->buffer);
     entity->deliver_sdu(entity->deliver_sdu_data, entity,
                         cur->buffer, cur->size,
                         &cur->msg_integrity);
@@ -432,6 +438,8 @@ static void check_t_reordering(nr_pdcp_entity_t *entity)
   count = entity->rx_reord;
   while (entity->rx_list != NULL && count == entity->rx_list->count) {
     nr_pdcp_sdu_t *cur = entity->rx_list;
+    LATSEQ_P("U pdcp.decoded--pdcp.reorderdeliv", "::sn%u.pdcpsdusize%u", cur->count, cur->size);
+    LATSEQ_P("U pdcp.reorderdeliv--sdap.sdu", "::sn%u.PSbuf%u", cur->count, cur->buffer);
     entity->deliver_sdu(entity->deliver_sdu_data, entity,
                         cur->buffer, cur->size,
                         &cur->msg_integrity);

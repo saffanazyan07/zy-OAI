@@ -38,6 +38,7 @@
 #include "common/utils/nr/nr_common.h"
 #include <syscall.h>
 #include <openair2/UTIL/OPT/opt.h>
+#include "common/utils/LATSEQ/latseq.h"
 
 //#define DEBUG_DLSCH_CODING
 //#define DEBUG_DLSCH_FREE 1
@@ -209,6 +210,7 @@ int nr_dlsch_encoding(PHY_VARS_gNB *gNB,
                   max_bytes);
       memcpy(harq->b, a, (A / 8) + 3); // using 3 bytes to mimic the case of 24 bit crc
     }
+    LATSEQ_P("D phy.crc--phy.cbseg", "::fm%u.sl%u.rnti%u", frame, slot, rel15->rnti);
 
     nrLDPC_TB_encoding_parameters_t *TB_parameters = &TBs[dlsch_id];
 
@@ -226,6 +228,7 @@ int nr_dlsch_encoding(PHY_VARS_gNB *gNB,
                                         &TB_parameters->Z,
                                         &TB_parameters->F,
                                         TB_parameters->BG);
+    LATSEQ_P("D phy.cbseg--phy.ldpc", "::fm%u.sl%u.nbseg%u.CBbits%u.Fbits%u.rnti%u", frame, slot, TB_parameters->C, TB_parameters->K, TB_parameters->F, rel15->rnti);
     stop_meas(dlsch_segmentation_stats);
 
     if (TB_parameters->C>MAX_NUM_NR_DLSCH_SEGMENTS_PER_LAYER*rel15->nrOfLayers) {

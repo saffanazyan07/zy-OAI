@@ -66,6 +66,7 @@
 #include "pdcp_messages_types.h"
 #include "rlc.h"
 #include "utils.h"
+#include "common/utils/LATSEQ/latseq.h"
 
 #define TODO do { \
     printf("%s:%d:%s: todo\n", __FILE__, __LINE__, __FUNCTION__); \

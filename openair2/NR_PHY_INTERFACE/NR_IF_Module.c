@@ -45,6 +45,7 @@
 #include "openair2/NR_PHY_INTERFACE/nr_sched_response.h"
 #include "openair2/PHY_INTERFACE/queue_t.h"
 #include "utils.h"
+#include "common/utils/LATSEQ/latseq.h"
 
 #define MAX_IF_MODULES 100
 
@@ -494,6 +495,7 @@ void NR_UL_indication(NR_UL_IND_t *UL_info) {
   if (UL_info->rach_ind.number_of_pdus > 0)
     handle_nr_rach(UL_info);
   handle_nr_uci(UL_info);
+  LATSEQ_P("U phy.rachuci--mac.demuxed", "::fm%u.sl%u", UL_info->frame, UL_info->slot);
   handle_nr_ulsch(UL_info);
   handle_nr_srs(UL_info);
 

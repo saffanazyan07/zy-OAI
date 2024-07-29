@@ -40,6 +40,7 @@
 #include "assertions.h"
 #include <time.h>
 #include <stdint.h>
+#include "common/utils/LATSEQ/latseq.h"
 
 //#define DEBUG_RXDATA
 //#define SRS_IND_DEBUG
@@ -248,6 +249,7 @@ void phy_procedures_gNB_TX(processingData_L1tx_t *msgTx,
   if (msgTx->num_pdsch_slot > 0) {
     VCD_SIGNAL_DUMPER_DUMP_FUNCTION_BY_NAME(VCD_SIGNAL_DUMPER_FUNCTIONS_GENERATE_DLSCH,1);
     LOG_D(PHY, "PDSCH generation started (%d) in frame %d.%d\n", msgTx->num_pdsch_slot,frame,slot);
+    LATSEQ_P("D mac.dci--phy.crc", "::fm%u.sl%u", frame, slot);
     nr_generate_pdsch(msgTx, frame, slot);
     VCD_SIGNAL_DUMPER_DUMP_FUNCTION_BY_NAME(VCD_SIGNAL_DUMPER_FUNCTIONS_GENERATE_DLSCH,0);
   }
@@ -306,6 +308,7 @@ void phy_procedures_gNB_TX(processingData_L1tx_t *msgTx,
   }
 
   VCD_SIGNAL_DUMPER_DUMP_FUNCTION_BY_NAME(VCD_SIGNAL_DUMPER_FUNCTIONS_PHY_PROCEDURES_gNB_TX + gNB->CC_id, 0);
+  LATSEQ_P("D phy.rotated--phy.ofdmidft", "::fm%u.sl%u", frame, slot);
 }
 
 static int nr_ulsch_procedures(PHY_VARS_gNB *gNB, int frame_rx, int slot_rx, bool *ulsch_to_decode, NR_UL_IND_t *UL_INFO)
@@ -417,6 +420,7 @@ static int nr_ulsch_procedures(PHY_VARS_gNB *gNB, int frame_rx, int slot_rx, boo
             ulsch_harq->round,
             ulsch_harq->TBS,
             ulsch->max_ldpc_iterations);
+      LATSEQ_P("U phy.TBdec--phy.srs", "::fm%u.sl%u.hqpid%u.hqround%u.rnti%u.CBbits%u.Fbits%u.TBS%u", ulsch->frame, ulsch->slot, ulsch->harq_pid, ulsch_harq->round, pusch_pdu->rnti, ulsch_harq->K, ulsch_harq->F, ulsch_harq->TBS);
       nr_fill_indication(gNB, ulsch->frame, ulsch->slot, ULSCH_id, ulsch->harq_pid, 0, 0, crc, pdu);
       LOG_D(PHY, "ULSCH received ok \n");
       ulsch->active = false;
@@ -1122,6 +1126,7 @@ int phy_procedures_gNB_uespec_RX(PHY_VARS_gNB *gNB, int frame_rx, int slot_rx, N
     }
   }
 
+  LATSEQ_P("U phy.srs--phy.rachuci", "::fm%u.sl%u", frame_rx, slot_rx);
   stop_meas(&gNB->phy_proc_rx);
 
   if (pucch_decode_done || pusch_decode_done) {

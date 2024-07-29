@@ -44,6 +44,9 @@
 #include "executables/softmodem-common.h"
 #include "../../../nfapi/oai_integration/vendor_ext.h"
 
+#include "common/utils/LATSEQ/latseq.h"
+
+
 ////////////////////////////////////////////////////////
 /////* DLSCH MAC PDU generation (6.1.2 TS 38.321) */////
 ////////////////////////////////////////////////////////
@@ -1267,6 +1270,7 @@ void nr_schedule_ue_spec(module_id_t module_id,
       /* we do not have to do anything, since we do not require to get data
        * from RLC or encode MAC CEs. The TX_req structure is filled below
        * or copy data to FAPI structures */
+      LATSEQ_P("D mac.retx--mac.dci", "::fm%u.sl%u.hqpid%u.hqround%u", frame, slot, current_harq_pid, harq->round);
       LOG_D(NR_MAC,
             "%d.%2d DL retransmission RNTI %04x HARQ PID %d round %d NDI %d\n",
             frame,
@@ -1330,6 +1334,7 @@ void nr_schedule_ue_spec(module_id_t module_id,
                                               (char *)buf+sizeof(NR_MAC_SUBHEADER_LONG),
                                               0,
                                               0);
+            LATSEQ_P("D mac.rlcreceived--mac.hdr", "::RMbuf%u.fm%u.sl%u.hqpid%u.rnti%u", (char *)buf+sizeof(NR_MAC_SUBHEADER_LONG), frame, slot, current_harq_pid, rnti);
             LOG_D(NR_MAC,
                   "%4d.%2d RNTI %04x: %d bytes from %s %d (ndata %d, remaining size %ld)\n",
                   frame,
@@ -1352,6 +1357,8 @@ void nr_schedule_ue_spec(module_id_t module_id,
             dlsch_total_bytes += len;
             lcid_bytes += len;
             sdus += 1;
+            LATSEQ_P("D mac.hdr--mac.dci", "::RMbuf%u.fm%u.sl%u.hqpid%u.hqround%u.mcs%u.TBS%u.rnti%u.macpdusize%u", buf-len, frame, slot, current_harq_pid, harq->round, sched_pdsch->mcs, sched_pdsch->tb_size, rnti, len+sizeof(NR_MAC_SUBHEADER_LONG));
+            LATSEQ_P("D mac.hdr--mac.retx", "::RMbuf%u.hqpid%u.mcs%u.TBS%u.rnti%u.macpdusize%u", buf-len, current_harq_pid, sched_pdsch->mcs, sched_pdsch->tb_size, rnti, len+sizeof(NR_MAC_SUBHEADER_LONG));
           }
 
           UE->mac_stats.dl.lc_bytes[lcid] += lcid_bytes;
