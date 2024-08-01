@@ -46,9 +46,6 @@ uint8_t unpack_nr_srs_indication(uint8_t **ppReadPackedMsg,
                                  nfapi_nr_srs_indication_t *pNfapiMsg,
                                  nfapi_p7_codec_config_t *config);
 
-uint8_t pack_dl_tti_request(void *msg, uint8_t **ppWritePackedMsg, uint8_t *end, nfapi_p7_codec_config_t *config);
-
-uint8_t unpack_dl_tti_request(uint8_t **ppReadPackedMsg, uint8_t *end, void *msg, nfapi_p7_codec_config_t *config);
 
 uint8_t pack_ul_tti_request(void *msg, uint8_t **ppWritePackedMsg, uint8_t *end, nfapi_p7_codec_config_t *config);
 
