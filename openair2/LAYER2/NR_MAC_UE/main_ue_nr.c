@@ -252,14 +252,14 @@ void release_mac_configuration(NR_UE_MAC_INST_t *mac, NR_UE_MAC_reset_cause_t ca
   asn1cFreeStruc(asn_DEF_NR_CSI_AperiodicTriggerStateList, sc->aperiodicTriggerStateList);
   asn1cFreeStruc(asn_DEF_NR_NTN_Config_r17, sc->ntn_Config_r17);
   asn1cFreeStruc(asn_DEF_NR_DownlinkHARQ_FeedbackDisabled_r17, sc->downlinkHARQ_FeedbackDisabled_r17);
-  free(sc->xOverhead_PDSCH);
-  free(sc->nrofHARQ_ProcessesForPDSCH);
-  free(sc->nrofHARQ_ProcessesForPDSCH_v1700);
-  free(sc->nrofHARQ_ProcessesForPUSCH_r17);
-  free(sc->rateMatching_PUSCH);
-  free(sc->xOverhead_PUSCH);
-  free(sc->maxMIMO_Layers_PDSCH);
-  free(sc->maxMIMO_Layers_PUSCH);
+  free_and_zero(sc->xOverhead_PDSCH);
+  free_and_zero(sc->nrofHARQ_ProcessesForPDSCH);
+  free_and_zero(sc->nrofHARQ_ProcessesForPDSCH_v1700);
+  free_and_zero(sc->nrofHARQ_ProcessesForPUSCH_r17);
+  free_and_zero(sc->rateMatching_PUSCH);
+  free_and_zero(sc->xOverhead_PUSCH);
+  free_and_zero(sc->maxMIMO_Layers_PDSCH);
+  free_and_zero(sc->maxMIMO_Layers_PUSCH);
   memset(&mac->sc_info, 0, sizeof(mac->sc_info));
 
   mac->current_DL_BWP = NULL;

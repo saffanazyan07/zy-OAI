@@ -2109,7 +2109,7 @@ static void configure_maccellgroup(NR_UE_MAC_INST_t *mac, const NR_MAC_CellGroup
       nr_timer_setup(si->sr_DelayTimer, dt_sf * subframes_per_slot, 1); // 1 slot update rate
     }
     else
-      free(si->sr_DelayTimer);
+      free_and_zero(si->sr_DelayTimer);
   }
   if (mcg->tag_Config) {
     if (mcg->tag_Config->tag_ToReleaseList) {
@@ -2159,7 +2159,7 @@ static void configure_maccellgroup(NR_UE_MAC_INST_t *mac, const NR_MAC_CellGroup
   if (mcg->ext1 && mcg->ext1->dataInactivityTimer) {
     struct NR_SetupRelease_DataInactivityTimer *setup_release = mcg->ext1->dataInactivityTimer;
     if (setup_release->present == NR_SetupRelease_DataInactivityTimer_PR_release)
-      free(mac->data_inactivity_timer);
+      free_and_zero(mac->data_inactivity_timer);
     if (setup_release->present == NR_SetupRelease_DataInactivityTimer_PR_setup) {
       if (!mac->data_inactivity_timer)
         mac->data_inactivity_timer = calloc(1, sizeof(*mac->data_inactivity_timer));
@@ -2485,10 +2485,10 @@ void release_dl_BWP(NR_UE_MAC_INST_t *mac, int index)
   int bwp_id = bwp->bwp_id;
   asn_sequence_del(&mac->dl_BWPs, index, 0);
 
-  free(bwp->cyclicprefix);
+  free_and_zero(bwp->cyclicprefix);
   asn1cFreeStruc(asn_DEF_NR_PDSCH_TimeDomainResourceAllocationList, bwp->tdaList_Common);
   asn1cFreeStruc(asn_DEF_NR_PDSCH_Config, bwp->pdsch_Config);
-  free(bwp);
+  free_and_zero(bwp);
 
   NR_BWP_PDCCH_t *pdcch = &mac->config_BWP_PDCCH[bwp_id];
   release_common_ss_cset(pdcch);
@@ -2503,7 +2503,7 @@ void release_ul_BWP(NR_UE_MAC_INST_t *mac, int index)
   NR_UE_UL_BWP_t *bwp = mac->ul_BWPs.array[index];
   asn_sequence_del(&mac->ul_BWPs, index, 0);
 
-  free(bwp->cyclicprefix);
+  free_and_zero(bwp->cyclicprefix);
   asn1cFreeStruc(asn_DEF_NR_RACH_ConfigCommon, bwp->rach_ConfigCommon);
   asn1cFreeStruc(asn_DEF_NR_PUSCH_TimeDomainResourceAllocationList, bwp->tdaList_Common);
   asn1cFreeStruc(asn_DEF_NR_ConfiguredGrantConfig, bwp->configuredGrantConfig);
