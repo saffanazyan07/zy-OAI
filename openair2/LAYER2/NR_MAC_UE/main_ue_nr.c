@@ -74,9 +74,6 @@ void nr_ue_init_mac(NR_UE_MAC_INST_t *mac)
   pthread_mutex_init(&mac->if_mutex, NULL);
   reset_mac_inst(mac);
 
-  // need to inizialize because might not been setup (optional timer)
-  nr_timer_stop(&mac->scheduling_info.sr_DelayTimer);
-
   memset(&mac->ssb_measurements, 0, sizeof(mac->ssb_measurements));
   memset(&mac->ul_time_alignment, 0, sizeof(mac->ul_time_alignment));
   memset(mac->ssb_list, 0, sizeof(mac->ssb_list));
@@ -182,7 +179,8 @@ void reset_mac_inst(NR_UE_MAC_INST_t *nr_mac)
     nr_timer_stop(nr_mac->data_inactivity_timer);
   nr_timer_stop(&nr_mac->time_alignment_timer);
   nr_timer_stop(&nr_mac->ra.contention_resolution_timer);
-  nr_timer_stop(&nr_mac->scheduling_info.sr_DelayTimer);
+  if (nr_mac->scheduling_info.sr_DelayTimer)
+    nr_timer_stop(nr_mac->scheduling_info.sr_DelayTimer);
   nr_timer_stop(&nr_mac->scheduling_info.retxBSR_Timer);
   for (int i = 0; i < NR_MAX_SR_ID; i++)
     nr_timer_stop(&nr_mac->scheduling_info.sr_info[i].prohibitTimer);

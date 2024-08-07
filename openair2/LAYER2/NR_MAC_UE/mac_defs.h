@@ -250,7 +250,7 @@ typedef struct {
   // LCID triggering BSR
   NR_LogicalChannelIdentity_t regularBSR_trigger_lcid;
   // logicalChannelSR-DelayTimer
-  NR_timer_t sr_DelayTimer;
+  NR_timer_t *sr_DelayTimer;
   /// retxBSR-Timer
   NR_timer_t retxBSR_Timer;
   /// periodicBSR-Timer

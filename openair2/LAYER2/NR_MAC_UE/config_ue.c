@@ -2103,9 +2103,13 @@ static void configure_maccellgroup(NR_UE_MAC_INST_t *mac, const NR_MAC_CellGroup
     uint32_t retx_sf = nr_get_sf_retxBSRTimer(mcg->bsr_Config->retxBSR_Timer);
     nr_timer_setup(&si->retxBSR_Timer, retx_sf * subframes_per_slot, 1); // 1 slot update rate
     if (mcg->bsr_Config->logicalChannelSR_DelayTimer) {
+      if (!si->sr_DelayTimer)
+        si->sr_DelayTimer = calloc(1, sizeof(*si->sr_DelayTimer));
       uint32_t dt_sf = get_sr_DelayTimer(*mcg->bsr_Config->logicalChannelSR_DelayTimer);
-      nr_timer_setup(&si->sr_DelayTimer, dt_sf * subframes_per_slot, 1); // 1 slot update rate
+      nr_timer_setup(si->sr_DelayTimer, dt_sf * subframes_per_slot, 1); // 1 slot update rate
     }
+    else
+      free(si->sr_DelayTimer);
   }
   if (mcg->tag_Config) {
     if (mcg->tag_Config->tag_ToReleaseList) {
