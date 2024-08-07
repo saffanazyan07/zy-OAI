@@ -86,20 +86,24 @@ void nr_ue_init_mac(NR_UE_MAC_INST_t *mac)
   mac->pusch_power_control_initialized = false;
 }
 
+void set_default_phr(NR_UE_MAC_INST_t *mac, int slots_per_subframe)
+{
+  mac->scheduling_info.phr_info.PathlossChange_db = 1;
+  nr_timer_setup(&mac->scheduling_info.phr_info.periodicPHR_Timer, 10 * slots_per_subframe, 1);
+  nr_timer_setup(&mac->scheduling_info.phr_info.prohibitPHR_Timer, 10 * slots_per_subframe, 1);
+}
+
 void nr_ue_mac_default_configs(NR_UE_MAC_INST_t *mac)
 {
   // default values as defined in 38.331 sec 9.2.2
 
   // sf80 default for retxBSR_Timer sf10 for periodicBSR_Timer
   int mu = mac->current_UL_BWP ? mac->current_UL_BWP->scs : get_softmodem_params()->numerology;
-  int subframes_per_slot = nr_slots_per_frame[mu] / 10;
-  nr_timer_setup(&mac->scheduling_info.retxBSR_Timer, 80 * subframes_per_slot, 1); // 1 slot update rate
-  nr_timer_setup(&mac->scheduling_info.periodicBSR_Timer, 10 * subframes_per_slot, 1); // 1 slot update rate
+  int slots_per_subframe = nr_slots_per_frame[mu] / 10;
+  nr_timer_setup(&mac->scheduling_info.retxBSR_Timer, 80 * slots_per_subframe, 1); // 1 slot update rate
+  nr_timer_setup(&mac->scheduling_info.periodicBSR_Timer, 10 * slots_per_subframe, 1); // 1 slot update rate
 
-  mac->scheduling_info.phr_info.is_configured = true;
-  mac->scheduling_info.phr_info.PathlossChange_db = 1;
-  nr_timer_setup(&mac->scheduling_info.phr_info.periodicPHR_Timer, 10 * subframes_per_slot, 1);
-  nr_timer_setup(&mac->scheduling_info.phr_info.prohibitPHR_Timer, 10 * subframes_per_slot, 1);
+  set_default_phr(mac, slots_per_subframe);
 }
 
 void nr_ue_send_synch_request(NR_UE_MAC_INST_t *mac, module_id_t module_id, int cc_id, const fapi_nr_synch_request_t *sync_req)

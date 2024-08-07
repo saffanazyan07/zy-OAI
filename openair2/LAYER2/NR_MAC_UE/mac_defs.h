@@ -222,7 +222,6 @@ typedef struct {
 } nr_sr_info_t;
 
 typedef struct {
-  bool is_configured;
   ///timer before triggering a periodic PHR
   NR_timer_t periodicPHR_Timer;
   ///timer before triggering a prohibit PHR
