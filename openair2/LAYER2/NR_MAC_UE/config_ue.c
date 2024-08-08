@@ -34,9 +34,7 @@
 #define SPEED_OF_LIGHT 299792458
 
 #include "mac_defs.h"
-#include <NR_MAC_gNB/mac_proto.h>
 #include "NR_MAC_UE/mac_proto.h"
-#include "NR_MAC-CellGroupConfig.h"
 #include "LAYER2/NR_MAC_COMMON/nr_mac_common.h"
 #include "common/utils/nr/nr_common.h"
 #include "executables/softmodem-common.h"
@@ -1623,7 +1621,8 @@ void nr_rrc_mac_config_req_reset(module_id_t module_id, NR_UE_MAC_reset_cause_t 
     case GO_TO_IDLE:
       reset_ra(mac, true);
       nr_ue_init_mac(mac);
-      release_mac_configuration(mac, cause);
+      release_mac_config(mac);
+      release_mac_asn_structures(mac, cause);  // TODO verify if we actually need to do this
       nr_ue_mac_default_configs(mac);
       // new sync but no target cell id -> -1
       nr_ue_send_synch_request(mac, module_id, 0, &sync_req);
@@ -1633,19 +1632,20 @@ void nr_rrc_mac_config_req_reset(module_id_t module_id, NR_UE_MAC_reset_cause_t 
       reset_ra(mac, true);
       reset_mac_inst(mac);
       nr_ue_reset_sync_state(mac);
-      release_mac_configuration(mac, cause);
+      release_mac_asn_structures(mac, cause);
       mac->state = UE_DETACHING;
       break;
     case T300_EXPIRY:
       reset_ra(mac, false);
       reset_mac_inst(mac);
+      release_mac_config(mac);
       mac->state = UE_SYNC; // still in sync but need to restart RA
       break;
     case RE_ESTABLISHMENT:
       reset_mac_inst(mac);
       nr_ue_mac_default_configs(mac);
       nr_ue_reset_sync_state(mac);
-      release_mac_configuration(mac, cause);
+      release_mac_asn_structures(mac, cause);
       // apply the timeAlignmentTimerCommon included in SIB1
       configure_timeAlignmentTimer(&mac->time_alignment_timer, mac->timeAlignmentTimerCommon, mac->current_UL_BWP->scs);
       // new sync with old cell ID (re-establishment on the same cell)

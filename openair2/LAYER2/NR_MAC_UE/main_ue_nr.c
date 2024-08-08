@@ -233,7 +233,28 @@ void reset_mac_inst(NR_UE_MAC_INST_t *nr_mac)
   // TODO beam failure procedure not implemented
 }
 
-void release_mac_configuration(NR_UE_MAC_INST_t *mac, NR_UE_MAC_reset_cause_t cause)
+void release_mac_config(NR_UE_MAC_INST_t *mac)
+{
+  // release schedulingRequestConfig
+  for (int i = 0; i < NR_MAX_SR_ID; i++)
+    memset(&mac->scheduling_info.sr_info[i], 0, sizeof(mac->scheduling_info.sr_info[i]));
+
+  // reset BSR and PHR values to default
+  nr_ue_mac_default_configs(mac);
+  // release SR Delay Timer (BSR-Config)
+  free_and_zero(mac->scheduling_info.sr_DelayTimer);
+
+  // TODO release tag-Config
+
+  // release dataInactivityTimer
+  free_and_zero(mac->data_inactivity_timer);
+
+  memset(&mac->ssb_measurements, 0, sizeof(mac->ssb_measurements));
+  memset(&mac->csirs_measurements, 0, sizeof(mac->csirs_measurements));
+  memset(&mac->ul_time_alignment, 0, sizeof(mac->ul_time_alignment));
+}
+
+void release_mac_asn_structures(NR_UE_MAC_INST_t *mac, NR_UE_MAC_reset_cause_t cause)
 {
   NR_UE_ServingCell_Info_t *sc = &mac->sc_info;
   // if cause is Re-establishment, release spCellConfig only
@@ -298,9 +319,6 @@ void release_mac_configuration(NR_UE_MAC_INST_t *mac, NR_UE_MAC_reset_cause_t ca
   for (int i = first_bwp_rel; i < mac->ul_BWPs.count; i++)
     release_ul_BWP(mac, i);
 
-  memset(&mac->ssb_measurements, 0, sizeof(mac->ssb_measurements));
-  memset(&mac->csirs_measurements, 0, sizeof(mac->csirs_measurements));
-  memset(&mac->ul_time_alignment, 0, sizeof(mac->ul_time_alignment));
   for (int i = mac->TAG_list.count; i > 0 ; i--)
     asn_sequence_del(&mac->TAG_list, i - 1, 1);
 }
