@@ -42,6 +42,7 @@
 #include "SCHED_NR/fapi_nr_l1.h"
 #include "PHY/NR_REFSIG/ul_ref_seq_nr.h"
 #include <string.h>
+#include "nfapi/open-nFAPI/fapi/inc/nr_fapi_p5_utils.h"
 
 int l1_north_init_gNB()
 {
@@ -373,7 +374,7 @@ void nr_phy_config_request(NR_PHY_Config_t *phy_config)
   NR_DL_FRAME_PARMS *fp = &RC.gNB[Mod_id]->frame_parms;
   nfapi_nr_config_request_scf_t *gNB_config = &RC.gNB[Mod_id]->gNB_config;
 
-  memcpy((void*)gNB_config,phy_config->cfg,sizeof(*phy_config->cfg));
+  copy_config_request(phy_config->cfg, gNB_config);
 
   uint64_t dl_bw_khz = (12*gNB_config->carrier_config.dl_grid_size[gNB_config->ssb_config.scs_common.value].value)*(15<<gNB_config->ssb_config.scs_common.value);
   fp->dl_CarrierFreq = ((dl_bw_khz>>1) + gNB_config->carrier_config.dl_frequency.value)*1000 ;
