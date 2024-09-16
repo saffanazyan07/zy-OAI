@@ -1359,7 +1359,7 @@ typedef struct
   uint8_t  dmrs_cyclic_shift;
 
   uint8_t  sr_flag;
-  uint8_t  bit_len_harq;
+  uint16_t bit_len_harq;
   uint16_t bit_len_csi_part1;
   uint16_t bit_len_csi_part2;
 
@@ -1375,7 +1375,7 @@ typedef struct {
 
 typedef struct {
   uint16_t srs_bandwidth_size;                    // mSRS,b: Number of PRB’s that are sounded for each SRS symbol, per 3GPP TS 38.211, section 6.4.1.4.3. Value: 4->272
-  nfapi_v4_srs_parameters_symbols_t *symbol_list;
+  nfapi_v4_srs_parameters_symbols_t symbol_list[4];
   uint32_t usage;                                 // Bitmap indicating the type of report(s) expected at L2 from the SRS signaled by this PDU. Bit positions: 0 – beamManagement; 1 – codebook; 2 – nonCodebook; 3 – antennaSwitching; 4 – 255: reserved. For each of this bit positions: 1 = requested; 0 = not requested. nUsage = sum(all bits in usage)
   uint8_t report_type[4];                         // Interpretation of each Report Type depends on usage: beamManagement (1 = PRG SNR, 2-255 reserved); codebook (1 = PRG I and Q channel estimate, per srs Tx port and gNB antenna element, 2-255 reserved); nonCodebook (1 = PRG I and Q channel estimate, per SRI and gNB antenna element, 2-255 reserved); antennaSwitching (1 = SVD representation UE Rx and gNB sets of antenna element, 2-255 reserved); all (0 – no report required).
   uint8_t singular_Value_representation;          // 0 – 8-bit dB; 1 – 16-bit linear; 255 – not applicable
