@@ -565,9 +565,8 @@ static void config_csiim(int do_csirs,
 void set_dl_maxmimolayers(NR_PDSCH_ServingCellConfig_t *pdsch_servingcellconfig,
                           const NR_ServingCellConfigCommon_t *scc,
                           const NR_UE_NR_Capability_t *uecap,
-			  int maxMIMO_layers)
+                          int maxMIMO_layers)
 {
-
   if(!pdsch_servingcellconfig->ext1)
     pdsch_servingcellconfig->ext1=calloc(1,sizeof(*pdsch_servingcellconfig->ext1));
   if(!pdsch_servingcellconfig->ext1->maxMIMO_Layers)
@@ -873,6 +872,8 @@ void prepare_sim_uecap(NR_UE_NR_Capability_t *cap,
       fs_cc->supportedBandwidthDL.present = NR_SupportedBandwidth_PR_fr1;
       fs_cc->supportedBandwidthDL.choice.fr1 = bw;
     }
+    fs_cc->maxNumberMIMO_LayersPDSCH = calloc(1, sizeof(*fs_cc->maxNumberMIMO_LayersPDSCH));
+    *fs_cc->maxNumberMIMO_LayersPDSCH = NR_MIMO_LayersDL_fourLayers;
     fs_cc->supportedModulationOrderDL = calloc(1, sizeof(*fs_cc->supportedModulationOrderDL));
     *fs_cc->supportedModulationOrderDL = NR_ModulationOrder_qam256;
     asn1cSeqAdd(&fs->featureSetsDownlinkPerCC->list, fs_cc);

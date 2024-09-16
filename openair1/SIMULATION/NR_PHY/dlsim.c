@@ -659,6 +659,7 @@ int main(int argc, char **argv)
                                 .minRXTXTIME = 6,
                                 .do_CSIRS = 0,
                                 .do_SRS = 0,
+                                .maxMIMO_layers = g_nrOfLayers,
                                 .force_256qam_off = false,
                                 .timer_config.sr_ProhibitTimer = 0,
                                 .timer_config.sr_TransMax = 64,
