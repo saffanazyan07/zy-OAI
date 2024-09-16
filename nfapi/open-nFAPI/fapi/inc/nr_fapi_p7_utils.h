@@ -36,9 +36,12 @@
 #include "nr_fapi.h"
 
 bool eq_dl_tti_request(const nfapi_nr_dl_tti_request_t *a, const nfapi_nr_dl_tti_request_t *b);
+bool eq_ul_tti_request(const nfapi_nr_ul_tti_request_t *a, const nfapi_nr_ul_tti_request_t *b);
 
 void free_dl_tti_request(nfapi_nr_dl_tti_request_t *msg);
+void free_ul_tti_request(nfapi_nr_ul_tti_request_t *msg);
 
 void copy_dl_tti_request(const nfapi_nr_dl_tti_request_t *src, nfapi_nr_dl_tti_request_t *dst);
+void copy_ul_tti_request(const nfapi_nr_ul_tti_request_t *src, nfapi_nr_ul_tti_request_t *dst);
 
 #endif // OPENAIRINTERFACE_NR_FAPI_P7_UTILS_H
