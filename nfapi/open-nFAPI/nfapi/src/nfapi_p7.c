@@ -2642,7 +2642,7 @@ uint8_t pack_nr_slot_indication(void *msg, uint8_t **ppWritePackedMsg, uint8_t *
 {
   nfapi_nr_slot_indication_scf_t *pNfapiMsg = (nfapi_nr_slot_indication_scf_t *)msg;
 
-  if (!(push16((uint16_t)pNfapiMsg->sfn, ppWritePackedMsg, end) && push16((uint16_t)pNfapiMsg->slot, ppWritePackedMsg, end)))
+  if (!(push16(pNfapiMsg->sfn, ppWritePackedMsg, end) && push16(pNfapiMsg->slot, ppWritePackedMsg, end)))
     return 0;
 
   return 1;
