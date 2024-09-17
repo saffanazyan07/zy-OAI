@@ -487,6 +487,16 @@ bool eq_ul_tti_request(const nfapi_nr_ul_tti_request_t *a, const nfapi_nr_ul_tti
   return true;
 }
 
+bool eq_slot_indication(const nfapi_nr_slot_indication_scf_t *a, const nfapi_nr_slot_indication_scf_t *b)
+{
+  EQ(a->header.message_id, b->header.message_id);
+  EQ(a->header.message_length, b->header.message_length);
+
+  EQ(a->sfn, b->sfn);
+  EQ(a->slot, b->slot);
+  return true;
+}
+
 void free_dl_tti_request(nfapi_nr_dl_tti_request_t *msg)
 {
   if (msg->vendor_extension) {
@@ -506,6 +516,11 @@ void free_ul_tti_request(nfapi_nr_ul_tti_request_t *msg)
         break;
     }
   }
+}
+
+void free_slot_indication(nfapi_nr_slot_indication_scf_t *msg)
+{
+  // Nothing to free
 }
 
 static void copy_dl_tti_beamforming(const nfapi_nr_tx_precoding_and_beamforming_t *src,
@@ -966,4 +981,13 @@ void copy_ul_tti_request(const nfapi_nr_ul_tti_request_t *src, nfapi_nr_ul_tti_r
       dst->groups_list[nGroup].ue_list[UE].pdu_idx = src->groups_list[nGroup].ue_list[UE].pdu_idx;
     }
   }
+}
+
+void copy_slot_indication(const nfapi_nr_slot_indication_scf_t *src, nfapi_nr_slot_indication_scf_t *dst)
+{
+  dst->header.message_id = src->header.message_id;
+  dst->header.message_length = src->header.message_length;
+
+  dst->sfn = src->sfn;
+  dst->slot = src->slot;
 }
