@@ -497,6 +497,29 @@ bool eq_slot_indication(const nfapi_nr_slot_indication_scf_t *a, const nfapi_nr_
   return true;
 }
 
+bool eq_ul_dci_request_PDU(const nfapi_nr_ul_dci_request_pdus_t *a, const nfapi_nr_ul_dci_request_pdus_t *b)
+{
+  EQ(a->PDUType, b->PDUType);
+  EQ(a->PDUSize, b->PDUSize);
+  // Is the same PDU as the DL_TTI.request PDCCH PDU, reuse comparison function
+  EQ(eq_dl_tti_request_pdcch_pdu(&a->pdcch_pdu.pdcch_pdu_rel15, &b->pdcch_pdu.pdcch_pdu_rel15), true);
+  return true;
+}
+
+bool eq_ul_dci_request(const nfapi_nr_ul_dci_request_t *a, const nfapi_nr_ul_dci_request_t *b)
+{
+  EQ(a->header.message_id, b->header.message_id);
+  EQ(a->header.message_length, b->header.message_length);
+
+  EQ(a->SFN, b->SFN);
+  EQ(a->Slot, b->Slot);
+  EQ(a->numPdus, b->numPdus);
+  for (int pdu_idx = 0; pdu_idx < a->numPdus; ++pdu_idx) {
+    EQ(eq_ul_dci_request_PDU(&a->ul_dci_pdu_list[pdu_idx], &b->ul_dci_pdu_list[pdu_idx]), true);
+  }
+  return true;
+}
+
 void free_dl_tti_request(nfapi_nr_dl_tti_request_t *msg)
 {
   if (msg->vendor_extension) {
@@ -519,6 +542,11 @@ void free_ul_tti_request(nfapi_nr_ul_tti_request_t *msg)
 }
 
 void free_slot_indication(nfapi_nr_slot_indication_scf_t *msg)
+{
+  // Nothing to free
+}
+
+void free_ul_dci_request(nfapi_nr_ul_dci_request_t *msg)
 {
   // Nothing to free
 }
@@ -990,4 +1018,27 @@ void copy_slot_indication(const nfapi_nr_slot_indication_scf_t *src, nfapi_nr_sl
 
   dst->sfn = src->sfn;
   dst->slot = src->slot;
+}
+
+void copy_ul_dci_request_pdu(const nfapi_nr_ul_dci_request_pdus_t *src, nfapi_nr_ul_dci_request_pdus_t *dst)
+{
+  dst->PDUType = src->PDUType;
+  dst->PDUSize = src->PDUSize;
+
+  // Is the same PDU as the DL_TTI.request PDCCH PDU, reuse copy function
+  copy_dl_tti_request_pdcch_pdu(&src->pdcch_pdu.pdcch_pdu_rel15, &dst->pdcch_pdu.pdcch_pdu_rel15);
+}
+
+void copy_ul_dci_request(const nfapi_nr_ul_dci_request_t *src, nfapi_nr_ul_dci_request_t *dst)
+{
+  dst->header.message_id = src->header.message_id;
+  dst->header.message_length = src->header.message_length;
+
+  dst->SFN = src->SFN;
+  dst->Slot = src->Slot;
+  dst->numPdus = src->numPdus;
+
+  for (int pdu_idx = 0; pdu_idx < src->numPdus; ++pdu_idx) {
+    copy_ul_dci_request_pdu(&src->ul_dci_pdu_list[pdu_idx], &dst->ul_dci_pdu_list[pdu_idx]);
+  }
 }

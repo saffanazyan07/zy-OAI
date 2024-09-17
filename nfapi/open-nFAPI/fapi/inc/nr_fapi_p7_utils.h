@@ -38,13 +38,16 @@
 bool eq_dl_tti_request(const nfapi_nr_dl_tti_request_t *a, const nfapi_nr_dl_tti_request_t *b);
 bool eq_ul_tti_request(const nfapi_nr_ul_tti_request_t *a, const nfapi_nr_ul_tti_request_t *b);
 bool eq_slot_indication(const nfapi_nr_slot_indication_scf_t *a, const nfapi_nr_slot_indication_scf_t *b);
+bool eq_ul_dci_request(const nfapi_nr_ul_dci_request_t *a, const nfapi_nr_ul_dci_request_t *b);
 
 void free_dl_tti_request(nfapi_nr_dl_tti_request_t *msg);
 void free_ul_tti_request(nfapi_nr_ul_tti_request_t *msg);
 void free_slot_indication(nfapi_nr_slot_indication_scf_t *msg);
+void free_ul_dci_request(nfapi_nr_ul_dci_request_t *msg);
 
 void copy_dl_tti_request(const nfapi_nr_dl_tti_request_t *src, nfapi_nr_dl_tti_request_t *dst);
 void copy_ul_tti_request(const nfapi_nr_ul_tti_request_t *src, nfapi_nr_ul_tti_request_t *dst);
 void copy_slot_indication(const nfapi_nr_slot_indication_scf_t *src, nfapi_nr_slot_indication_scf_t *dst);
+void copy_ul_dci_request(const nfapi_nr_ul_dci_request_t *src, nfapi_nr_ul_dci_request_t *dst);
 
 #endif // OPENAIRINTERFACE_NR_FAPI_P7_UTILS_H
