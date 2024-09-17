@@ -37,6 +37,9 @@ uint8_t fapi_nr_p7_message_body_pack(nfapi_nr_p7_message_header_t *header,
     case NFAPI_NR_PHY_MSG_TYPE_UL_TTI_REQUEST:
       result = pack_ul_tti_request(header, ppWritePackedMsg, end, config);
     break;
+    case NFAPI_NR_PHY_MSG_TYPE_SLOT_INDICATION:
+      result = pack_nr_slot_indication(header, ppWritePackedMsg, end, config);
+    break;
     default: {
       if (header->message_id >= NFAPI_VENDOR_EXT_MSG_MIN && header->message_id <= NFAPI_VENDOR_EXT_MSG_MAX) {
         if (config && config->pack_p7_vendor_extension) {
@@ -144,6 +147,12 @@ int fapi_nr_p7_message_unpack(void *pMessageBuf,
     case NFAPI_NR_PHY_MSG_TYPE_UL_TTI_REQUEST:
       if (check_nr_fapi_unpack_length(NFAPI_NR_PHY_MSG_TYPE_UL_TTI_REQUEST, unpackedBufLen))
         result = unpack_ul_tti_request(&pReadPackedMessage, end, pMessageHeader, config);
+    break;
+    case NFAPI_NR_PHY_MSG_TYPE_SLOT_INDICATION:
+      if (check_nr_fapi_unpack_length(NFAPI_NR_PHY_MSG_TYPE_SLOT_INDICATION, unpackedBufLen)) {
+        nfapi_nr_slot_indication_scf_t *msg = (nfapi_nr_slot_indication_scf_t *)pMessageHeader;
+        result = unpack_nr_slot_indication(&pReadPackedMessage, end, msg, config);
+      }
     break;
     default:
 
@@ -1262,6 +1271,29 @@ uint8_t unpack_ul_tti_request(uint8_t **ppReadPackedMsg, uint8_t *end, void *msg
     if (!unpack_ul_tti_groups_list_value(ppReadPackedMsg, end, &pNfapiMsg->groups_list[i]))
       return 0;
   }
+
+  return 1;
+}
+
+uint8_t pack_nr_slot_indication(void *msg, uint8_t **ppWritePackedMsg, uint8_t *end, nfapi_p7_codec_config_t *config)
+{
+  nfapi_nr_slot_indication_scf_t *pNfapiMsg = (nfapi_nr_slot_indication_scf_t *)msg;
+
+  if (!(push16(pNfapiMsg->sfn, ppWritePackedMsg, end) && push16(pNfapiMsg->slot, ppWritePackedMsg, end)))
+    return 0;
+
+  return 1;
+}
+
+uint8_t unpack_nr_slot_indication(uint8_t **ppReadPackedMsg,
+                                  uint8_t *end,
+                                  nfapi_nr_slot_indication_scf_t *msg,
+                                  nfapi_p7_codec_config_t *config)
+{
+  nfapi_nr_slot_indication_scf_t *pNfapiMsg = (nfapi_nr_slot_indication_scf_t *)msg;
+
+  if (!(pull16(ppReadPackedMsg, &pNfapiMsg->sfn, end) && pull16(ppReadPackedMsg, &pNfapiMsg->slot, end)))
+    return 0;
 
   return 1;
 }

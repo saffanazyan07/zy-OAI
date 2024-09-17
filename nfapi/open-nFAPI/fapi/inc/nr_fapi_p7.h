@@ -33,5 +33,10 @@ uint8_t pack_dl_tti_request(void *msg, uint8_t **ppWritePackedMsg, uint8_t *end,
 uint8_t unpack_dl_tti_request(uint8_t **ppReadPackedMsg, uint8_t *end, void *msg, nfapi_p7_codec_config_t *config);
 uint8_t pack_ul_tti_request(void *msg, uint8_t **ppWritePackedMsg, uint8_t *end, nfapi_p7_codec_config_t *config);
 uint8_t unpack_ul_tti_request(uint8_t **ppReadPackedMsg, uint8_t *end, void *msg, nfapi_p7_codec_config_t *config);
+uint8_t unpack_nr_slot_indication(uint8_t **ppReadPackedMsg,
+                                  uint8_t *end,
+                                  nfapi_nr_slot_indication_scf_t *msg,
+                                  nfapi_p7_codec_config_t *config);
+uint8_t pack_nr_slot_indication(void *msg, uint8_t **ppWritePackedMsg, uint8_t *end, nfapi_p7_codec_config_t *config);
 
 #endif // OPENAIRINTERFACE_NR_FAPI_P7_H

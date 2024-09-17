@@ -2641,17 +2641,6 @@ uint8_t pack_nr_timing_info(void *msg, uint8_t **ppWritePackedMsg, uint8_t *end,
 
 //NR UPLINK indication function packing
 
-//SLOT INDICATION
-
-uint8_t pack_nr_slot_indication(void *msg, uint8_t **ppWritePackedMsg, uint8_t *end, nfapi_p7_codec_config_t *config)
-{
-  nfapi_nr_slot_indication_scf_t *pNfapiMsg = (nfapi_nr_slot_indication_scf_t *)msg;
-
-  if (!(push16(pNfapiMsg->sfn, ppWritePackedMsg, end) && push16(pNfapiMsg->slot, ppWritePackedMsg, end)))
-    return 0;
-
-  return 1;
-}
 
 //RX DATA INDICATION
 
@@ -5009,21 +4998,6 @@ static uint8_t unpack_tx_request(uint8_t **ppReadPackedMsg, uint8_t *end, void *
 }
 
 //UNPACK NR UPLINK INDICATION FUNCTIONS
-
-//SLOT INDICATION
-
-uint8_t unpack_nr_slot_indication(uint8_t **ppReadPackedMsg,
-                                  uint8_t *end,
-                                  nfapi_nr_slot_indication_scf_t *msg,
-                                  nfapi_p7_codec_config_t *config)
-{
-  nfapi_nr_slot_indication_scf_t *pNfapiMsg = (nfapi_nr_slot_indication_scf_t *)msg;
-
-  if (!(pull16(ppReadPackedMsg, &pNfapiMsg->sfn, end) && pull16(ppReadPackedMsg, &pNfapiMsg->slot, end)))
-    return 0;
-
-  return 1;
-}
 
 //RX DATA INDICATION
 
