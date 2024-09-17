@@ -380,24 +380,22 @@ int nr_rate_matching_ldpc(uint32_t Tbslbrm,
                           uint8_t rvidx,
                           uint32_t E)
 {
-  uint32_t Ncb, ind, k = 0, Nref, N;
-
   if (C == 0) {
-    LOG_E(PHY, "nr_rate_matching: invalid parameters (C %d\n", C);
+    LOG_E(PHY, "nr_rate_matching: invalid parameter C %d\n", C);
     return -1;
   }
 
-  // Bit selection
-  N = (BG == 1) ? (66 * Z) : (50 * Z);
-
+  //Bit selection
+  uint32_t N = (BG == 1) ? (66 * Z) : (50 * Z);
+  uint32_t Ncb;
   if (Tbslbrm == 0)
     Ncb = N;
   else {
-    Nref = 3 * Tbslbrm / (2 * C); // R_LBRM = 2/3
+    uint32_t Nref = 3 * Tbslbrm / (2 * C); //R_LBRM = 2/3
     Ncb = min(N, Nref);
   }
 
-  ind = (index_k0[BG - 1][rvidx] * Ncb / N) * Z;
+  uint32_t ind = (index_k0[BG - 1][rvidx] * Ncb / N) * Z;
 
 #ifdef RM_DEBUG
   printf("nr_rate_matching_ldpc: E %u, F %u, Foffset %u, k0 %u, Ncb %u, rvidx %d, Tbslbrm %u\n",
@@ -430,6 +428,7 @@ int nr_rate_matching_ldpc(uint32_t Tbslbrm,
   if (ind >= Foffset && ind < (F + Foffset))
     ind = F + Foffset;
 
+  uint32_t k = 0;
   if (ind < Foffset) { // case where we have some bits before the filler and the rest after
     memcpy((void *)e, (void *)(d + ind), Foffset - ind);
 
@@ -476,28 +475,22 @@ int nr_rate_matching_ldpc_rx(uint32_t Tbslbrm,
                              uint32_t F,
                              uint32_t Foffset)
 {
-  uint32_t Ncb, ind, k, Nref, N;
-
-#ifdef RM_DEBUG
-  int nulled = 0;
-#endif
-
   if (C == 0) {
-    LOG_E(PHY, "nr_rate_matching: invalid parameters (C %d\n", C);
+    LOG_E(PHY, "nr_rate_matching: invalid parameter C %d\n", C);
     return -1;
   }
 
-  // Bit selection
-  N = (BG == 1) ? (66 * Z) : (50 * Z);
-
+  //Bit selection
+  uint32_t N = (BG == 1) ? (66 * Z) : (50 * Z);
+  uint32_t Ncb;
   if (Tbslbrm == 0)
     Ncb = N;
   else {
-    Nref = (3 * Tbslbrm / (2 * C)); // R_LBRM = 2/3
+    uint32_t Nref = (3 * Tbslbrm / (2 * C)); //R_LBRM = 2/3
     Ncb = min(N, Nref);
   }
 
-  ind = (index_k0[BG - 1][rvidx] * Ncb / N) * Z;
+  uint32_t ind = (index_k0[BG - 1][rvidx] * Ncb / N) * Z;
   if (Foffset > E) {
     LOG_E(PHY, "nr_rate_matching: invalid parameters (Foffset %d > E %d)\n", Foffset, E);
     return -1;
@@ -521,8 +514,7 @@ int nr_rate_matching_ldpc_rx(uint32_t Tbslbrm,
   if (clear == 1)
     memset(d, 0, Ncb * sizeof(int16_t));
 
-  k = 0;
-
+  uint32_t k = 0;
   if (ind < Foffset)
     for (; (ind < Foffset) && (k < E); ind++) {
 #ifdef RM_DEBUG
@@ -566,6 +558,5 @@ int nr_rate_matching_ldpc_rx(uint32_t Tbslbrm,
 #endif
     }
   }
-
   return 0;
 }
