@@ -20,6 +20,8 @@
  */
 #include "nr_fapi_p7_utils.h"
 
+#include <malloc.h>
+
 static bool eq_dl_tti_beamforming(const nfapi_nr_tx_precoding_and_beamforming_t *a,
                                   const nfapi_nr_tx_precoding_and_beamforming_t *b)
 {
@@ -520,6 +522,48 @@ bool eq_ul_dci_request(const nfapi_nr_ul_dci_request_t *a, const nfapi_nr_ul_dci
   return true;
 }
 
+bool eq_tx_data_request_PDU(const nfapi_nr_pdu_t *a, const nfapi_nr_pdu_t *b)
+{
+  EQ(a->PDU_length, b->PDU_length);
+  EQ(a->PDU_index, b->PDU_index);
+  EQ(a->num_TLV, b->num_TLV);
+  for (int tlv_idx = 0; tlv_idx < a->num_TLV; ++tlv_idx) {
+    const nfapi_nr_tx_data_request_tlv_t *a_tlv = &a->TLVs[tlv_idx];
+    const nfapi_nr_tx_data_request_tlv_t *b_tlv = &b->TLVs[tlv_idx];
+    EQ(a_tlv->tag, b_tlv->tag);
+    EQ(a_tlv->length, b_tlv->length);
+    switch (a_tlv->tag) {
+      case 0:
+        for (int payload_idx = 0; payload_idx < (a_tlv->length + 3) / 4; ++payload_idx) {
+          // value.direct
+          EQ(a_tlv->value.direct[payload_idx], b_tlv->value.direct[payload_idx]);
+        }
+        break;
+      case 1:
+        for (int payload_idx = 0; payload_idx < (a_tlv->length + 3) / 4; ++payload_idx) {
+          // value.ptr
+          EQ(a_tlv->value.ptr[payload_idx], b_tlv->value.ptr[payload_idx]);
+        }
+        break;
+    }
+  }
+  return true;
+}
+
+bool eq_tx_data_request(const nfapi_nr_tx_data_request_t *a, const nfapi_nr_tx_data_request_t *b)
+{
+  EQ(a->header.message_id, b->header.message_id);
+  EQ(a->header.message_length, b->header.message_length);
+
+  EQ(a->SFN, b->SFN);
+  EQ(a->Slot, b->Slot);
+  EQ(a->Number_of_PDUs, b->Number_of_PDUs);
+  for (int pdu_idx = 0; pdu_idx < a->Number_of_PDUs; ++pdu_idx) {
+    EQ(eq_tx_data_request_PDU(&a->pdu_list[pdu_idx], &b->pdu_list[pdu_idx]), true);
+  }
+  return true;
+}
+
 void free_dl_tti_request(nfapi_nr_dl_tti_request_t *msg)
 {
   if (msg->vendor_extension) {
@@ -549,6 +593,20 @@ void free_slot_indication(nfapi_nr_slot_indication_scf_t *msg)
 void free_ul_dci_request(nfapi_nr_ul_dci_request_t *msg)
 {
   // Nothing to free
+}
+
+void free_tx_data_request(nfapi_nr_tx_data_request_t *msg)
+{
+  for (int pdu_idx = 0; pdu_idx < msg->Number_of_PDUs; ++pdu_idx) {
+    nfapi_nr_pdu_t *pdu = &msg->pdu_list[pdu_idx];
+    for (int tlv_idx = 0; tlv_idx < pdu->num_TLV; ++tlv_idx) {
+      nfapi_nr_tx_data_request_tlv_t *tlv = &pdu->TLVs[tlv_idx];
+      if (tlv->tag == 1) {
+        // value.ptr
+        free(tlv->value.ptr);
+      }
+    }
+  }
 }
 
 static void copy_dl_tti_beamforming(const nfapi_nr_tx_precoding_and_beamforming_t *src,
@@ -1041,4 +1099,70 @@ void copy_ul_dci_request(const nfapi_nr_ul_dci_request_t *src, nfapi_nr_ul_dci_r
   for (int pdu_idx = 0; pdu_idx < src->numPdus; ++pdu_idx) {
     copy_ul_dci_request_pdu(&src->ul_dci_pdu_list[pdu_idx], &dst->ul_dci_pdu_list[pdu_idx]);
   }
+}
+
+void copy_tx_data_request_PDU(const nfapi_nr_pdu_t *src, nfapi_nr_pdu_t *dst)
+{
+  dst->PDU_length = src->PDU_length;
+  dst->PDU_index = src->PDU_index;
+  dst->num_TLV = src->num_TLV;
+  for (int tlv_idx = 0; tlv_idx < src->num_TLV; ++tlv_idx) {
+    const nfapi_nr_tx_data_request_tlv_t *src_tlv = &src->TLVs[tlv_idx];
+    nfapi_nr_tx_data_request_tlv_t *dst_tlv = &dst->TLVs[tlv_idx];
+    dst_tlv->tag = src_tlv->tag;
+    dst_tlv->length = src_tlv->length;
+    switch (src_tlv->tag) {
+      case 0:
+        // value.direct
+        memcpy(dst_tlv->value.direct, src_tlv->value.direct, sizeof(src_tlv->value.direct));
+        break;
+      case 1:
+        // value.ptr
+        dst_tlv->value.ptr = calloc((src_tlv->length + 3) / 4, sizeof(uint32_t));
+        memcpy(dst_tlv->value.ptr, src_tlv->value.ptr, src_tlv->length);
+        break;
+      default:
+        AssertFatal(1 == 0, "TX_DATA request TLV tag value unsupported");
+        break;
+    }
+  }
+}
+
+void copy_tx_data_request(const nfapi_nr_tx_data_request_t *src, nfapi_nr_tx_data_request_t *dst)
+{
+  dst->header.message_id = src->header.message_id;
+  dst->header.message_length = src->header.message_length;
+
+  dst->SFN = src->SFN;
+  dst->Slot = src->Slot;
+  dst->Number_of_PDUs = src->Number_of_PDUs;
+  for (int pdu_idx = 0; pdu_idx < src->Number_of_PDUs; ++pdu_idx) {
+    copy_tx_data_request_PDU(&src->pdu_list[pdu_idx], &dst->pdu_list[pdu_idx]);
+  }
+}
+
+size_t get_tx_data_request_size(const nfapi_nr_tx_data_request_t *msg)
+{
+  // Get size of the whole message ( allocated pointer included )
+  size_t total_size = sizeof(msg->header);
+  total_size += sizeof(msg->SFN);
+  total_size += sizeof(msg->Slot);
+  total_size += sizeof(msg->Number_of_PDUs);
+  for (int pdu_idx = 0; pdu_idx < msg->Number_of_PDUs; ++pdu_idx) {
+    const nfapi_nr_pdu_t *pdu = &msg->pdu_list[pdu_idx];
+    total_size += sizeof(pdu->PDU_length);
+    total_size += sizeof(pdu->PDU_index);
+    total_size += sizeof(pdu->num_TLV);
+    for (int tlv_idx = 0; tlv_idx < pdu->num_TLV; ++tlv_idx) {
+      const nfapi_nr_tx_data_request_tlv_t *tlv = &pdu->TLVs[tlv_idx];
+      total_size += sizeof(tlv->tag);
+      total_size += sizeof(tlv->length);
+      if (tlv->tag == 0) {
+        total_size += sizeof(tlv->value.direct);
+      } else {
+        total_size += malloc_usable_size(tlv->value.ptr);
+      }
+    }
+  }
+  return total_size;
 }

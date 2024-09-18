@@ -1397,10 +1397,7 @@ static uint8_t pack_tx_data_pdu_list_value(void *tlv, uint8_t **ppWritePackedMsg
         && push32(value->num_TLV, ppWritePackedMsg, end)))
     return 0;
 
-  uint16_t i = 0;
-  uint16_t total_number_of_tlvs = value->num_TLV;
-
-  for (; i < total_number_of_tlvs; ++i) {
+  for (int i = 0; i < value->num_TLV; ++i) {
     if (!(push16(value->TLVs[i].tag, ppWritePackedMsg, end) && push32(value->TLVs[i].length, ppWritePackedMsg, end)))
       return 0;
 
@@ -4665,13 +4662,12 @@ static uint8_t unpack_tx_data_pdu_list_value(uint8_t **ppReadPackedMsg, uint8_t 
         && pull32(ppReadPackedMsg, &pNfapiMsg->num_TLV, end)))
     return 0;
 
-  uint16_t i = 0;
-  uint16_t total_number_of_tlvs = pNfapiMsg->num_TLV;
-
-  for(; i < total_number_of_tlvs; ++i) {
+  for (int i = 0; i < pNfapiMsg->num_TLV; ++i) {
     if (!(pull16(ppReadPackedMsg, &pNfapiMsg->TLVs[i].tag, end) && pull32(ppReadPackedMsg, &pNfapiMsg->TLVs[i].length, end)))
       return 0;
-
+    if (pNfapiMsg->TLVs[i].tag == 1) {
+      pNfapiMsg->TLVs[i].value.ptr = calloc((pNfapiMsg->TLVs[i].length + 3) / 4, sizeof(uint32_t));
+    }
     switch(pNfapiMsg->TLVs[i].tag) {
       case 0: {
         if (!pullarray32(ppReadPackedMsg, pNfapiMsg->TLVs[i].value.direct,
