@@ -40,6 +40,9 @@ uint8_t fapi_nr_p7_message_body_pack(nfapi_nr_p7_message_header_t *header,
     case NFAPI_NR_PHY_MSG_TYPE_SLOT_INDICATION:
       result = pack_nr_slot_indication(header, ppWritePackedMsg, end, config);
     break;
+    case NFAPI_NR_PHY_MSG_TYPE_UL_DCI_REQUEST:
+      result = pack_ul_dci_request(header, ppWritePackedMsg, end, config);
+    break;
     default: {
       if (header->message_id >= NFAPI_VENDOR_EXT_MSG_MIN && header->message_id <= NFAPI_VENDOR_EXT_MSG_MAX) {
         if (config && config->pack_p7_vendor_extension) {
@@ -153,6 +156,10 @@ int fapi_nr_p7_message_unpack(void *pMessageBuf,
         nfapi_nr_slot_indication_scf_t *msg = (nfapi_nr_slot_indication_scf_t *)pMessageHeader;
         result = unpack_nr_slot_indication(&pReadPackedMessage, end, msg, config);
       }
+    break;
+    case NFAPI_NR_PHY_MSG_TYPE_UL_DCI_REQUEST:
+      if (check_nr_fapi_unpack_length(NFAPI_NR_PHY_MSG_TYPE_UL_DCI_REQUEST, unpackedBufLen))
+        result = unpack_ul_dci_request(&pReadPackedMessage, end, pMessageHeader, config);
     break;
     default:
 
@@ -1294,6 +1301,156 @@ uint8_t unpack_nr_slot_indication(uint8_t **ppReadPackedMsg,
 
   if (!(pull16(ppReadPackedMsg, &pNfapiMsg->sfn, end) && pull16(ppReadPackedMsg, &pNfapiMsg->slot, end)))
     return 0;
+
+  return 1;
+}
+
+static uint8_t pack_ul_dci_pdu_list_value(void *tlv, uint8_t **ppWritePackedMsg, uint8_t *end)
+{
+  nfapi_nr_ul_dci_request_pdus_t *value = (nfapi_nr_ul_dci_request_pdus_t *)tlv;
+  uintptr_t msgHead = (uintptr_t)*ppWritePackedMsg;
+  if (!push16(value->PDUType, ppWritePackedMsg, end)) {
+    return 0;
+  }
+  uint8_t *pPackedLengthField = *ppWritePackedMsg;
+  if (!(push16(value->PDUSize, ppWritePackedMsg, end) && push16(value->pdcch_pdu.pdcch_pdu_rel15.BWPSize, ppWritePackedMsg, end)
+        && push16(value->pdcch_pdu.pdcch_pdu_rel15.BWPStart, ppWritePackedMsg, end)
+        && push8(value->pdcch_pdu.pdcch_pdu_rel15.SubcarrierSpacing, ppWritePackedMsg, end)
+        && push8(value->pdcch_pdu.pdcch_pdu_rel15.CyclicPrefix, ppWritePackedMsg, end)
+        && push8(value->pdcch_pdu.pdcch_pdu_rel15.StartSymbolIndex, ppWritePackedMsg, end)
+        && push8(value->pdcch_pdu.pdcch_pdu_rel15.DurationSymbols, ppWritePackedMsg, end)
+        && pusharray8(value->pdcch_pdu.pdcch_pdu_rel15.FreqDomainResource, 6, 6, ppWritePackedMsg, end)
+        && push8(value->pdcch_pdu.pdcch_pdu_rel15.CceRegMappingType, ppWritePackedMsg, end)
+        && push8(value->pdcch_pdu.pdcch_pdu_rel15.RegBundleSize, ppWritePackedMsg, end)
+        && push8(value->pdcch_pdu.pdcch_pdu_rel15.InterleaverSize, ppWritePackedMsg, end)
+        && push8(value->pdcch_pdu.pdcch_pdu_rel15.CoreSetType, ppWritePackedMsg, end)
+        && push16(value->pdcch_pdu.pdcch_pdu_rel15.ShiftIndex, ppWritePackedMsg, end)
+        && push8(value->pdcch_pdu.pdcch_pdu_rel15.precoderGranularity, ppWritePackedMsg, end)
+        && push16(value->pdcch_pdu.pdcch_pdu_rel15.numDlDci, ppWritePackedMsg, end))) {
+    return 0;
+  }
+  for (int i = 0; i < value->pdcch_pdu.pdcch_pdu_rel15.numDlDci; ++i) {
+    nfapi_nr_dl_dci_pdu_t *dci_pdu = &value->pdcch_pdu.pdcch_pdu_rel15.dci_pdu[i];
+    if (!(push16(dci_pdu->RNTI, ppWritePackedMsg, end) && push16(dci_pdu->ScramblingId, ppWritePackedMsg, end)
+          && push16(dci_pdu->ScramblingRNTI, ppWritePackedMsg, end) && push8(dci_pdu->CceIndex, ppWritePackedMsg, end)
+          && push8(dci_pdu->AggregationLevel, ppWritePackedMsg, end))) {
+      return 0;
+    }
+    // Precoding and Beamforming
+    nfapi_nr_tx_precoding_and_beamforming_t *beamforming = &dci_pdu->precodingAndBeamforming;
+    if (!(push16(beamforming->num_prgs, ppWritePackedMsg, end) && push16(beamforming->prg_size, ppWritePackedMsg, end)
+          && push8(beamforming->dig_bf_interfaces, ppWritePackedMsg, end))) {
+      return 0;
+    }
+    for (int prg = 0; prg < beamforming->num_prgs; prg++) {
+      if (!push16(beamforming->prgs_list[prg].pm_idx, ppWritePackedMsg, end)) {
+        return 0;
+      }
+      for (int digInt = 0; digInt < beamforming->dig_bf_interfaces; digInt++) {
+        if (!push16(beamforming->prgs_list[prg].dig_bf_interface_list[digInt].beam_idx, ppWritePackedMsg, end)) {
+          return 0;
+        }
+      }
+    }
+    if (!(push8(dci_pdu->beta_PDCCH_1_0, ppWritePackedMsg, end) && push8(dci_pdu->powerControlOffsetSS, ppWritePackedMsg, end) &&
+          // DCI Payload fields
+          push16(dci_pdu->PayloadSizeBits, ppWritePackedMsg, end) &&
+          // Pack DCI Payload
+          pack_dci_payload(dci_pdu->Payload, dci_pdu->PayloadSizeBits, ppWritePackedMsg, end))) {
+      return 0;
+    }
+  }
+
+  // pack proper size
+  uintptr_t msgEnd = (uintptr_t)*ppWritePackedMsg;
+  uint16_t packedMsgLen = msgEnd - msgHead;
+  value->PDUSize = packedMsgLen;
+  return push16(value->PDUSize, &pPackedLengthField, end);
+}
+
+uint8_t pack_ul_dci_request(void *msg, uint8_t **ppWritePackedMsg, uint8_t *end, nfapi_p7_codec_config_t *config)
+{
+  nfapi_nr_ul_dci_request_t *pNfapiMsg = (nfapi_nr_ul_dci_request_t *)msg;
+
+  if (!(push16(pNfapiMsg->SFN, ppWritePackedMsg, end) && push16(pNfapiMsg->Slot, ppWritePackedMsg, end)
+        && push8(pNfapiMsg->numPdus, ppWritePackedMsg, end)))
+    return 0;
+
+  for (int i = 0; i < pNfapiMsg->numPdus; i++) {
+    if (!pack_ul_dci_pdu_list_value(&pNfapiMsg->ul_dci_pdu_list[i], ppWritePackedMsg, end))
+      return 0;
+  }
+
+  return 1;
+}
+
+static uint8_t unpack_ul_dci_pdu_list_value(uint8_t **ppReadPackedMsg, uint8_t *end, void *msg)
+{
+  nfapi_nr_ul_dci_request_pdus_t *value = (nfapi_nr_ul_dci_request_pdus_t *)msg;
+
+  if (!(pull16(ppReadPackedMsg, &value->PDUType, end) && pull16(ppReadPackedMsg, &value->PDUSize, end)
+        && pull16(ppReadPackedMsg, &value->pdcch_pdu.pdcch_pdu_rel15.BWPSize, end)
+        && pull16(ppReadPackedMsg, &value->pdcch_pdu.pdcch_pdu_rel15.BWPStart, end)
+        && pull8(ppReadPackedMsg, &value->pdcch_pdu.pdcch_pdu_rel15.SubcarrierSpacing, end)
+        && pull8(ppReadPackedMsg, &value->pdcch_pdu.pdcch_pdu_rel15.CyclicPrefix, end)
+        && pull8(ppReadPackedMsg, &value->pdcch_pdu.pdcch_pdu_rel15.StartSymbolIndex, end)
+        && pull8(ppReadPackedMsg, &value->pdcch_pdu.pdcch_pdu_rel15.DurationSymbols, end)
+        && pullarray8(ppReadPackedMsg, value->pdcch_pdu.pdcch_pdu_rel15.FreqDomainResource, 6, 6, end)
+        && pull8(ppReadPackedMsg, &value->pdcch_pdu.pdcch_pdu_rel15.CceRegMappingType, end)
+        && pull8(ppReadPackedMsg, &value->pdcch_pdu.pdcch_pdu_rel15.RegBundleSize, end)
+        && pull8(ppReadPackedMsg, &value->pdcch_pdu.pdcch_pdu_rel15.InterleaverSize, end)
+        && pull8(ppReadPackedMsg, &value->pdcch_pdu.pdcch_pdu_rel15.CoreSetType, end)
+        && pull16(ppReadPackedMsg, &value->pdcch_pdu.pdcch_pdu_rel15.ShiftIndex, end)
+        && pull8(ppReadPackedMsg, &value->pdcch_pdu.pdcch_pdu_rel15.precoderGranularity, end)
+        && pull16(ppReadPackedMsg, &value->pdcch_pdu.pdcch_pdu_rel15.numDlDci, end))) {
+    return 0;
+  }
+
+  for (uint16_t i = 0; i < value->pdcch_pdu.pdcch_pdu_rel15.numDlDci; ++i) {
+    nfapi_nr_dl_dci_pdu_t *dci_pdu = &value->pdcch_pdu.pdcch_pdu_rel15.dci_pdu[i];
+    if (!(pull16(ppReadPackedMsg, &dci_pdu->RNTI, end) && pull16(ppReadPackedMsg, &dci_pdu->ScramblingId, end)
+          && pull16(ppReadPackedMsg, &dci_pdu->ScramblingRNTI, end) && pull8(ppReadPackedMsg, &dci_pdu->CceIndex, end)
+          && pull8(ppReadPackedMsg, &dci_pdu->AggregationLevel, end))) {
+      return 0;
+    }
+    // Precoding and Beamforming
+    nfapi_nr_tx_precoding_and_beamforming_t *beamforming = &dci_pdu->precodingAndBeamforming;
+    if (!(pull16(ppReadPackedMsg, &beamforming->num_prgs, end) && pull16(ppReadPackedMsg, &beamforming->prg_size, end)
+          && pull8(ppReadPackedMsg, &beamforming->dig_bf_interfaces, end))) {
+      return 0;
+    }
+
+    for (int prg = 0; prg < beamforming->num_prgs; prg++) {
+      if (!pull16(ppReadPackedMsg, &beamforming->prgs_list[prg].pm_idx, end)) {
+        return 0;
+      }
+      for (int digInt = 0; digInt < beamforming->dig_bf_interfaces; digInt++) {
+        if (!pull16(ppReadPackedMsg, &beamforming->prgs_list[prg].dig_bf_interface_list[digInt].beam_idx, end)) {
+          return 0;
+        }
+      }
+    }
+    if (!(pull8(ppReadPackedMsg, &dci_pdu->beta_PDCCH_1_0, end) && pull8(ppReadPackedMsg, &dci_pdu->powerControlOffsetSS, end)
+          && pull16(ppReadPackedMsg, &dci_pdu->PayloadSizeBits, end)
+          && unpack_dci_payload(dci_pdu->Payload, dci_pdu->PayloadSizeBits, ppReadPackedMsg, end))) {
+      return 0;
+    }
+  }
+  return 1;
+}
+
+uint8_t unpack_ul_dci_request(uint8_t **ppReadPackedMsg, uint8_t *end, void *msg, nfapi_p7_codec_config_t *config)
+{
+  nfapi_nr_ul_dci_request_t *pNfapiMsg = (nfapi_nr_ul_dci_request_t *)msg;
+
+  if (!(pull16(ppReadPackedMsg, &pNfapiMsg->SFN, end) && pull16(ppReadPackedMsg, &pNfapiMsg->Slot, end)
+        && pull8(ppReadPackedMsg, &pNfapiMsg->numPdus, end)))
+    return 0;
+
+  for (int i = 0; i < pNfapiMsg->numPdus; i++) {
+    if (!unpack_ul_dci_pdu_list_value(ppReadPackedMsg, end, &pNfapiMsg->ul_dci_pdu_list[i]))
+      return 0;
+  }
 
   return 1;
 }
