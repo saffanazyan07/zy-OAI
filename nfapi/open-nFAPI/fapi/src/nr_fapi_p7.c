@@ -43,6 +43,9 @@ uint8_t fapi_nr_p7_message_body_pack(nfapi_nr_p7_message_header_t *header,
     case NFAPI_NR_PHY_MSG_TYPE_UL_DCI_REQUEST:
       result = pack_ul_dci_request(header, ppWritePackedMsg, end, config);
     break;
+    case NFAPI_NR_PHY_MSG_TYPE_TX_DATA_REQUEST:
+      result = pack_tx_data_request(header, ppWritePackedMsg, end, config);
+    break;
     default: {
       if (header->message_id >= NFAPI_VENDOR_EXT_MSG_MIN && header->message_id <= NFAPI_VENDOR_EXT_MSG_MAX) {
         if (config && config->pack_p7_vendor_extension) {
@@ -160,6 +163,10 @@ int fapi_nr_p7_message_unpack(void *pMessageBuf,
     case NFAPI_NR_PHY_MSG_TYPE_UL_DCI_REQUEST:
       if (check_nr_fapi_unpack_length(NFAPI_NR_PHY_MSG_TYPE_UL_DCI_REQUEST, unpackedBufLen))
         result = unpack_ul_dci_request(&pReadPackedMessage, end, pMessageHeader, config);
+    break;
+    case NFAPI_NR_PHY_MSG_TYPE_TX_DATA_REQUEST:
+      if (check_nr_fapi_unpack_length(NFAPI_NR_PHY_MSG_TYPE_TX_DATA_REQUEST, unpackedBufLen))
+        result = unpack_tx_data_request(&pReadPackedMessage, end, pMessageHeader, config);
     break;
     default:
 
@@ -1450,6 +1457,130 @@ uint8_t unpack_ul_dci_request(uint8_t **ppReadPackedMsg, uint8_t *end, void *msg
   for (int i = 0; i < pNfapiMsg->numPdus; i++) {
     if (!unpack_ul_dci_pdu_list_value(ppReadPackedMsg, end, &pNfapiMsg->ul_dci_pdu_list[i]))
       return 0;
+  }
+
+  return 1;
+}
+
+static uint8_t pack_tx_data_pdu_list_value(void *tlv, uint8_t **ppWritePackedMsg, uint8_t *end)
+{
+  nfapi_nr_pdu_t *value = (nfapi_nr_pdu_t *)tlv;
+  if (!(push32(value->PDU_length, ppWritePackedMsg, end) && push16(value->PDU_index, ppWritePackedMsg, end)
+        && push32(value->num_TLV, ppWritePackedMsg, end)))
+    return 0;
+
+  for (int i = 0; i < value->num_TLV; ++i) {
+    if (!(push16(value->TLVs[i].tag, ppWritePackedMsg, end) && push32(value->TLVs[i].length, ppWritePackedMsg, end)))
+      return 0;
+    const uint32_t byte_len = (value->TLVs[i].length + 3) / 4;
+    switch (value->TLVs[i].tag) {
+      case 0: {
+        if (!pusharray32(value->TLVs[i].value.direct, byte_len, byte_len, ppWritePackedMsg, end)) {
+          NFAPI_TRACE(NFAPI_TRACE_ERROR, "%s():%d. value->TLVs[i].length %d \n", __FUNCTION__, __LINE__, value->TLVs[i].length);
+          return 0;
+        }
+        break;
+      }
+
+      case 1: {
+        if (!pusharray32(value->TLVs[i].value.ptr, byte_len, byte_len, ppWritePackedMsg, end)) {
+          NFAPI_TRACE(NFAPI_TRACE_ERROR, "%s():%d. value->TLVs[i].length %d \n", __FUNCTION__, __LINE__, value->TLVs[i].length);
+          return 0;
+        }
+
+        break;
+      }
+
+      default: {
+        NFAPI_TRACE(NFAPI_TRACE_ERROR, "FIXME : Invalid tag value %d \n", value->TLVs[i].tag);
+        break;
+      }
+    }
+  }
+
+  return 1;
+}
+
+uint8_t pack_tx_data_request(void *msg, uint8_t **ppWritePackedMsg, uint8_t *end, nfapi_p7_codec_config_t *config)
+{
+  nfapi_nr_tx_data_request_t *pNfapiMsg = (nfapi_nr_tx_data_request_t *)msg;
+
+  if (!(push16(pNfapiMsg->SFN, ppWritePackedMsg, end) && push16(pNfapiMsg->Slot, ppWritePackedMsg, end)
+        && push16(pNfapiMsg->Number_of_PDUs, ppWritePackedMsg, end)))
+    return 0;
+
+  for (int i = 0; i < pNfapiMsg->Number_of_PDUs; i++) {
+    if (!pack_tx_data_pdu_list_value(&pNfapiMsg->pdu_list[i], ppWritePackedMsg, end)) {
+      NFAPI_TRACE(NFAPI_TRACE_ERROR,
+                  "%s():%d. Error packing TX_DATA.request PDU #%d, PDU length = %d PDU IDX = %d\n",
+                  __FUNCTION__,
+                  __LINE__,
+                  i,
+                  pNfapiMsg->pdu_list[i].PDU_length,
+                  pNfapiMsg->pdu_list[i].PDU_index);
+      return 0;
+    }
+  }
+
+  return 1;
+}
+
+static uint8_t unpack_tx_data_pdu_list_value(uint8_t **ppReadPackedMsg, uint8_t *end, void *msg)
+{
+  nfapi_nr_pdu_t *pNfapiMsg = (nfapi_nr_pdu_t *)msg;
+
+  if (!(pull32(ppReadPackedMsg, &pNfapiMsg->PDU_length, end) && pull16(ppReadPackedMsg, &pNfapiMsg->PDU_index, end)
+        && pull32(ppReadPackedMsg, &pNfapiMsg->num_TLV, end)))
+    return 0;
+
+  for (int i = 0; i < pNfapiMsg->num_TLV; ++i) {
+    if (!(pull16(ppReadPackedMsg, &pNfapiMsg->TLVs[i].tag, end) && pull32(ppReadPackedMsg, &pNfapiMsg->TLVs[i].length, end)))
+      return 0;
+    const uint32_t byte_len = (pNfapiMsg->TLVs[i].length + 3) / 4;
+    if (pNfapiMsg->TLVs[i].tag == 1) {
+      pNfapiMsg->TLVs[i].value.ptr = calloc(byte_len, sizeof(uint32_t));
+    }
+    switch (pNfapiMsg->TLVs[i].tag) {
+      case 0: {
+        if (!pullarray32(ppReadPackedMsg,
+                         pNfapiMsg->TLVs[i].value.direct,
+                         sizeof(pNfapiMsg->TLVs[i].value.direct) / sizeof(uint32_t),
+                         byte_len,
+                         end))
+          return 0;
+
+        break;
+      }
+
+      case 1: {
+        if (!pullarray32(ppReadPackedMsg, pNfapiMsg->TLVs[i].value.ptr, byte_len, byte_len, end))
+          return 0;
+
+        break;
+      }
+
+      default: {
+        NFAPI_TRACE(NFAPI_TRACE_ERROR, "FIXME : Invalid tag value %d \n", pNfapiMsg->TLVs[i].tag);
+        return 0;
+      }
+    }
+  }
+
+  return 1;
+}
+
+uint8_t unpack_tx_data_request(uint8_t **ppReadPackedMsg, uint8_t *end, void *msg, nfapi_p7_codec_config_t *config)
+{
+  nfapi_nr_tx_data_request_t *pNfapiMsg = (nfapi_nr_tx_data_request_t *)msg;
+
+  if (!(pull16(ppReadPackedMsg, &pNfapiMsg->SFN, end) && pull16(ppReadPackedMsg, &pNfapiMsg->Slot, end)
+        && pull16(ppReadPackedMsg, &pNfapiMsg->Number_of_PDUs, end)))
+    return 0;
+
+  for (int i = 0; i < pNfapiMsg->Number_of_PDUs; i++) {
+    if (!unpack_tx_data_pdu_list_value(ppReadPackedMsg, end, &pNfapiMsg->pdu_list[i])) {
+      return 0;
+    }
   }
 
   return 1;
