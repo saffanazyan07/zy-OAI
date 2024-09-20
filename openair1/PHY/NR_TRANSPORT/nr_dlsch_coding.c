@@ -253,7 +253,7 @@ int nr_dlsch_encoding(PHY_VARS_gNB *gNB,
   impp.Zc = harq->Z;
   VCD_SIGNAL_DUMPER_DUMP_FUNCTION_BY_NAME(VCD_SIGNAL_DUMPER_FUNCTIONS_gNB_DLSCH_ENCODING, VCD_FUNCTION_IN);
   uint32_t A = rel15->TBSize[0]<<3;
-  AssertError(A == harq->pdu_len * 8, return -1, "A %d bits pdu_len %d bytes %d bits\n", A, harq->pdu_len, harq->pdu_len * 8);
+  AssertError(A == harq->pdu_len * 8, return -1, "A %d bits TBsize %d pdu_len %d bytes %d bits\n", A, rel15->TBSize[0], harq->pdu_len, harq->pdu_len * 8);
   unsigned char *a=harq->pdu;
   if (rel15->rnti != SI_RNTI) {
     ws_trace_t tmp = {.nr = true,
