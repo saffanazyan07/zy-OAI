@@ -148,10 +148,9 @@ extern void fix_scd(NR_ServingCellConfig_t *scd);// forward declaration
 
 /* specific dlsim DL preprocessor: uses rbStart/rbSize/mcs/nrOfLayers from command line of dlsim */
 int g_mcsIndex = -1, g_mcsTableIdx = 0, g_rbStart = -1, g_rbSize = -1, g_nrOfLayers = 1, g_pmi = 0;
-void nr_dlsim_preprocessor(module_id_t module_id,
-                           frame_t frame,
-                           sub_frame_t slot) {
 
+void nr_dlsim_preprocessor(module_id_t module_id, frame_t frame, sub_frame_t slot)
+{
   NR_UE_info_t *UE_info = RC.nrmac[module_id]->UE_info.list[0];
   AssertFatal(RC.nrmac[module_id]->UE_info.list[1]==NULL, "can have only a single UE\n");
   NR_UE_sched_ctrl_t *sched_ctrl = &UE_info->UE_sched_ctrl;

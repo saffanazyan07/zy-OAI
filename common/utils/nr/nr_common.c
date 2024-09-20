@@ -395,9 +395,7 @@ int get_supported_bw_mhz(frequency_range_t frequency_range, int bw_index)
 {
   if (frequency_range == FR1) {
     int bandwidth_index_to_mhz[] = {5, 10, 15, 20, 25, 30, 40, 50, 60, 80, 90, 100};
-    AssertFatal(bw_index >= 0 && bw_index <= sizeofArray(bandwidth_index_to_mhz),
-                "Bandwidth index %d is invalid\n",
-                bw_index);
+    AssertFatal(bw_index >= 0 && bw_index <= sizeofArray(bandwidth_index_to_mhz), "Bandwidth index %d is invalid\n", bw_index);
     return bandwidth_index_to_mhz[bw_index];
   } else {
     int bandwidth_index_to_mhz[] = {50, 100, 200, 400};

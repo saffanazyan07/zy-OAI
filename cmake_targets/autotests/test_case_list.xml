@@ -168,7 +168,8 @@
                                  (Test4: HARQ test 25% TP 4 rounds),
                                  (Test5: HARQ test 33% TP 3 rounds),
                                  (Test6: HARQ test 50% TP 2 rounds),
-                                 (Test7: 25 PRBs, 15 kHz SCS)</desc>
+                                 (Test7: 25 PRBs, 15 kHz SCS),
+                                 (Test8: 32 PRBs, 120 kHz SCS)</desc>
       <main_exec>nr_dlsim</main_exec>
       <main_exec_args>-n100 -R106 -b106 -s5
                       -n100 -R217 -b217 -s5
@@ -176,8 +177,9 @@
                       -n100 -s1 -S2 -t25
                       -n100 -s1 -S2 -t33
                       -n100 -s5 -S7 -t50
-                      -n100 -m0 -e0 -R25 -b25 -i 2 1 0</main_exec_args>
-      <tags>test1 test2 test3 test4 test5 test6 test7</tags>
+                      -n100 -m0 -e0 -R25 -b25 -i 2 1 0
+                      -n100 -s5 -m3 -R32 -b32</main_exec_args>
+      <tags>test1 test2 test3 test4 test5 test6 test7 test8</tags>
       <search_expr_true>PDSCH test OK</search_expr_true>
       <search_expr_false>segmentation fault|assertion|exiting|fatal</search_expr_false>
       <nruns>3</nruns>
