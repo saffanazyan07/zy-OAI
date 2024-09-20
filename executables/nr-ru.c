@@ -1214,13 +1214,6 @@ void *ru_thread(void *param)
   struct timespec slot_start;
 	clock_gettime(CLOCK_MONOTONIC, &slot_start);
   
-  struct timespec slot_duration; 
-	slot_duration.tv_sec = 0;
-	//slot_duration.tv_nsec = 0.5e6;
-	slot_duration.tv_nsec = 0.5e6;
-
-  
-
   while (!oai_exit) {
     if (slot==(fp->slots_per_frame-1)) {
       slot=0;
