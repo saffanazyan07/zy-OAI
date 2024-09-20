@@ -192,8 +192,9 @@ void nr_schedule_tx_req(PHY_VARS_gNB *gNB, nfapi_nr_tx_data_request_t *TX_req)
   processingData_L1tx_t *msgTx = gNB->msgDataTx;
 
   for (int idx = 0; idx < TX_req->Number_of_PDUs; ++idx) {
-    uint8_t *sdu = (uint8_t *)TX_req->pdu_list[idx].TLVs[0].value.direct;
-    nr_fill_dlsch_tx_req(msgTx, idx, sdu);
+    uint16_t len = TX_req->pdu_list[idx].TLVs[0].length;
+    uint8_t *pdu = (uint8_t *)TX_req->pdu_list[idx].TLVs[0].value.direct;
+    nr_fill_dlsch_tx_req(msgTx, idx, pdu, len);
   }
 }
 
