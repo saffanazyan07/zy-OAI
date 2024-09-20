@@ -72,7 +72,6 @@ void free_gNB_dlsch(NR_gNB_DLSCH_t *dlsch, uint16_t N_RB, const NR_DL_FRAME_PARM
     harq->c[r] = NULL;
   }
   free(harq->c);
-  free(harq->pdu);
 }
 
 NR_gNB_DLSCH_t new_gNB_dlsch(NR_DL_FRAME_PARMS *frame_parms, uint16_t N_RB)
@@ -93,9 +92,8 @@ NR_gNB_DLSCH_t new_gNB_dlsch(NR_DL_FRAME_PARMS *frame_parms, uint16_t N_RB)
   bzero(harq, sizeof(NR_DL_gNB_HARQ_t));
   harq->b = malloc16(dlsch_bytes);
   AssertFatal(harq->b, "cannot allocate memory for harq->b\n");
-  harq->pdu = malloc16(dlsch_bytes);
-  AssertFatal(harq->pdu, "cannot allocate memory for harq->pdu\n");
   bzero(harq->pdu, dlsch_bytes);
+  harq->pdu_len = dlsch_bytes;
   nr_emulate_dlsch_payload(harq->pdu, (dlsch_bytes) >> 3);
   bzero(harq->b, dlsch_bytes);
 
@@ -255,6 +253,7 @@ int nr_dlsch_encoding(PHY_VARS_gNB *gNB,
   impp.Zc = harq->Z;
   VCD_SIGNAL_DUMPER_DUMP_FUNCTION_BY_NAME(VCD_SIGNAL_DUMPER_FUNCTIONS_gNB_DLSCH_ENCODING, VCD_FUNCTION_IN);
   uint32_t A = rel15->TBSize[0]<<3;
+  AssertFatal(A == harq->pdu_len * 8, "A %d bits pdu_len %d bytes %d bits\n", A, harq->pdu_len, harq->pdu_len * 8);
   unsigned char *a=harq->pdu;
   if (rel15->rnti != SI_RNTI) {
     ws_trace_t tmp = {.nr = true,

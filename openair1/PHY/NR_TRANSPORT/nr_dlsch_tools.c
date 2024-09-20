@@ -55,12 +55,12 @@ void nr_fill_dlsch_dl_tti_req(processingData_L1tx_t *msgTx, nfapi_nr_dl_tti_pdsc
               pdsch_pdu->pdsch_pdu_rel15.pduIndex,
               msgTx->num_pdsch_slot);
   msgTx->num_pdsch_slot++;
-  harq->pdu = NULL;
+  harq->pdu_len = 0;
 }
 
-void nr_fill_dlsch_tx_req(processingData_L1tx_t *msgTx, int idx, uint8_t *sdu)
+void nr_fill_dlsch_tx_req(processingData_L1tx_t *msgTx, int idx, uint8_t *pdu, uint16_t pdu_len)
 {
-  AssertFatal(sdu != NULL, "sdu is null\n");
+  AssertFatal(pdu != NULL, "pdu is null\n");
 
   /* not sure if FAPI could transmit DL_TTI_req and TX_req in different orders.
    * for the moment, assume they are in the same order (and check!) */
@@ -68,5 +68,6 @@ void nr_fill_dlsch_tx_req(processingData_L1tx_t *msgTx, int idx, uint8_t *sdu)
   NR_DL_gNB_HARQ_t *harq = &dlsch->harq_process;
   nfapi_nr_dl_tti_pdsch_pdu *pdsch = &harq->pdsch_pdu;
   AssertFatal(pdsch->pdsch_pdu_rel15.pduIndex == idx, "PDSCH PDU index %d does not match %d\n", pdsch->pdsch_pdu_rel15.pduIndex, idx);
-  harq->pdu = sdu;
+  harq->pdu_len = pdu_len;
+  memcpy(harq->pdu, pdu, pdu_len);
 }
