@@ -4660,6 +4660,7 @@ uint8_t unpack_nr_crc_indication_body(nfapi_nr_crc_t *value, uint8_t **ppReadPac
     return 0;
   }
   if (value->num_cb != 0) {
+    value->cb_crc_status = calloc((value->num_cb / 8) + 1, sizeof(uint8_t));
     if (!pullarray8(ppReadPackedMsg,
                     value->cb_crc_status,
                     (int)(value->num_cb / 8) + 1,
