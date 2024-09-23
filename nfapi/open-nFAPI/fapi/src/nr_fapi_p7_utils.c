@@ -623,6 +623,170 @@ bool eq_crc_indication(const nfapi_nr_crc_indication_t *a, const nfapi_nr_crc_in
   return true;
 }
 
+bool eq_uci_indication_sr_pdu_0_1(const nfapi_nr_sr_pdu_0_1_t *a, const nfapi_nr_sr_pdu_0_1_t *b)
+{
+  EQ(a->sr_indication, b->sr_indication);
+  EQ(a->sr_confidence_level, b->sr_confidence_level);
+  return true;
+}
+
+bool eq_uci_indication_sr_pdu_2_3_4(const nfapi_nr_sr_pdu_2_3_4_t *a, const nfapi_nr_sr_pdu_2_3_4_t *b)
+{
+  EQ(a->sr_bit_len, b->sr_bit_len);
+  for (int i = 0; i < (a->sr_bit_len / 8) + 1; ++i) {
+    EQ(a->sr_payload[i], b->sr_payload[i]);
+  }
+  return true;
+}
+
+bool eq_uci_indication_harq_pdu_0_1(const nfapi_nr_harq_pdu_0_1_t *a, const nfapi_nr_harq_pdu_0_1_t *b)
+{
+  EQ(a->num_harq, b->num_harq);
+  EQ(a->harq_confidence_level, b->harq_confidence_level);
+  for (int i = 0; i < a->num_harq; ++i) {
+    EQ(a->harq_list[i].harq_value, b->harq_list[i].harq_value);
+  }
+  return true;
+}
+
+bool eq_uci_indication_harq_pdu_2_3_4(const nfapi_nr_harq_pdu_2_3_4_t *a, const nfapi_nr_harq_pdu_2_3_4_t *b)
+{
+  EQ(a->harq_crc, b->harq_crc);
+  EQ(a->harq_bit_len, b->harq_bit_len);
+  for (int i = 0; i < (a->harq_bit_len / 8) + 1; ++i) {
+    EQ(a->harq_payload[i], b->harq_payload[i]);
+  }
+  return true;
+}
+
+bool eq_uci_indication_csi_part1(const nfapi_nr_csi_part1_pdu_t *a, const nfapi_nr_csi_part1_pdu_t *b)
+{
+  EQ(a->csi_part1_crc, b->csi_part1_crc);
+  EQ(a->csi_part1_bit_len, b->csi_part1_bit_len);
+  for (int i = 0; i < (a->csi_part1_bit_len / 8) + 1; ++i) {
+    EQ(a->csi_part1_payload[i], b->csi_part1_payload[i]);
+  }
+  return true;
+}
+
+bool eq_uci_indication_csi_part2(const nfapi_nr_csi_part2_pdu_t *a, const nfapi_nr_csi_part2_pdu_t *b)
+{
+  EQ(a->csi_part2_crc, b->csi_part2_crc);
+  EQ(a->csi_part2_bit_len, b->csi_part2_bit_len);
+  for (int i = 0; i < (a->csi_part2_bit_len / 8) + 1; ++i) {
+    EQ(a->csi_part2_payload[i], b->csi_part2_payload[i]);
+  }
+  return true;
+}
+
+bool eq_uci_indication_PUSCH(const nfapi_nr_uci_pusch_pdu_t *a, const nfapi_nr_uci_pusch_pdu_t *b)
+{
+  EQ(a->pduBitmap, b->pduBitmap);
+  EQ(a->handle, b->handle);
+  EQ(a->rnti, b->rnti);
+  EQ(a->ul_cqi, b->ul_cqi);
+  EQ(a->timing_advance, b->timing_advance);
+  EQ(a->rssi, b->rssi);
+
+  // Bit 0 not used in PUSCH PDU
+  // HARQ
+  if ((a->pduBitmap >> 1) & 0x01) {
+    EQ(eq_uci_indication_harq_pdu_2_3_4(&a->harq, &b->harq), true);
+  }
+  // CSI Part 1
+  if ((a->pduBitmap >> 2) & 0x01) {
+    EQ(eq_uci_indication_csi_part1(&a->csi_part1, &b->csi_part1), true);
+  }
+  // CSI Part 2
+  if ((a->pduBitmap >> 3) & 0x01) {
+    EQ(eq_uci_indication_csi_part2(&a->csi_part2, &b->csi_part2), true);
+  }
+  return true;
+}
+
+bool eq_uci_indication_PUCCH_0_1(const nfapi_nr_uci_pucch_pdu_format_0_1_t *a, const nfapi_nr_uci_pucch_pdu_format_0_1_t *b)
+{
+  EQ(a->pduBitmap, b->pduBitmap);
+  EQ(a->handle, b->handle);
+  EQ(a->rnti, b->rnti);
+  EQ(a->pucch_format, b->pucch_format);
+  EQ(a->ul_cqi, b->ul_cqi);
+  EQ(a->timing_advance, b->timing_advance);
+  EQ(a->rssi, b->rssi);
+
+  // SR
+  if (a->pduBitmap & 0x01) {
+    EQ(eq_uci_indication_sr_pdu_0_1(&a->sr, &b->sr), true);
+  }
+  // HARQ
+  if ((a->pduBitmap >> 1) & 0x01) {
+    EQ(eq_uci_indication_harq_pdu_0_1(&a->harq, &b->harq), true);
+  }
+  return true;
+}
+
+bool eq_uci_indication_PUCCH_2_3_4(const nfapi_nr_uci_pucch_pdu_format_2_3_4_t *a, const nfapi_nr_uci_pucch_pdu_format_2_3_4_t *b)
+{
+  EQ(a->pduBitmap, b->pduBitmap);
+  EQ(a->handle, b->handle);
+  EQ(a->rnti, b->rnti);
+  EQ(a->pucch_format, b->pucch_format);
+  EQ(a->ul_cqi, b->ul_cqi);
+  EQ(a->timing_advance, b->timing_advance);
+  EQ(a->rssi, b->rssi);
+  // SR
+  if (a->pduBitmap & 0x01) {
+    EQ(eq_uci_indication_sr_pdu_2_3_4(&a->sr, &b->sr), true);
+  }
+  // HARQ
+  if ((a->pduBitmap >> 1) & 0x01) {
+    EQ(eq_uci_indication_harq_pdu_2_3_4(&a->harq, &b->harq), true);
+  }
+  // CSI Part 1
+  if ((a->pduBitmap >> 2) & 0x01) {
+    EQ(eq_uci_indication_csi_part1(&a->csi_part1, &b->csi_part1), true);
+  }
+  // CSI Part 2
+  if ((a->pduBitmap >> 3) & 0x01) {
+    EQ(eq_uci_indication_csi_part2(&a->csi_part2, &b->csi_part2), true);
+  }
+  return true;
+}
+
+bool eq_uci_indication_UCI(const nfapi_nr_uci_t *a, const nfapi_nr_uci_t *b)
+{
+  EQ(a->pdu_type, b->pdu_type);
+  EQ(a->pdu_size, b->pdu_size);
+  switch (a->pdu_type) {
+    case NFAPI_NR_UCI_PUSCH_PDU_TYPE:
+      EQ(eq_uci_indication_PUSCH(&a->pusch_pdu, &b->pusch_pdu), true);
+      break;
+    case NFAPI_NR_UCI_FORMAT_0_1_PDU_TYPE:
+      EQ(eq_uci_indication_PUCCH_0_1(&a->pucch_pdu_format_0_1, &b->pucch_pdu_format_0_1), true);
+      break;
+    case NFAPI_NR_UCI_FORMAT_2_3_4_PDU_TYPE:
+      EQ(eq_uci_indication_PUCCH_2_3_4(&a->pucch_pdu_format_2_3_4, &b->pucch_pdu_format_2_3_4), true);
+      break;
+    default:
+      AssertFatal(1 == 0, "Unknown UCI.indication PDU Type %d\n", a->pdu_type);
+      break;
+  }
+  return true;
+}
+
+bool eq_uci_indication(const nfapi_nr_uci_indication_t *a, const nfapi_nr_uci_indication_t *b)
+{
+  EQ(a->header.message_id, b->header.message_id);
+  EQ(a->header.message_length, b->header.message_length);
+  EQ(a->sfn, b->sfn);
+  EQ(a->slot, b->slot);
+  EQ(a->num_ucis, b->num_ucis);
+  for (int crc_idx = 0; crc_idx < a->num_ucis; ++crc_idx) {
+    EQ(eq_uci_indication_UCI(&a->uci_list[crc_idx], &b->uci_list[crc_idx]), true);
+  }
+  return true;
+}
+
 void free_dl_tti_request(nfapi_nr_dl_tti_request_t *msg)
 {
   if (msg->vendor_extension) {
@@ -691,6 +855,76 @@ void free_crc_indication(nfapi_nr_crc_indication_t *msg)
       }
     }
     free(msg->crc_list);
+  }
+}
+
+void free_uci_indication(nfapi_nr_uci_indication_t *msg)
+{
+  if (msg->uci_list) {
+    for (int pdu_idx = 0; pdu_idx < msg->num_ucis; ++pdu_idx) {
+      nfapi_nr_uci_t *uci_pdu = &msg->uci_list[pdu_idx];
+      switch (uci_pdu->pdu_type) {
+        case NFAPI_NR_UCI_PUSCH_PDU_TYPE: {
+          nfapi_nr_uci_pusch_pdu_t *pdu = &uci_pdu->pusch_pdu;
+          // Bit 0 not used in PUSCH PDU
+          // HARQ
+          if ((pdu->pduBitmap >> 1) & 0x01) {
+            if (pdu->harq.harq_payload) {
+              free(pdu->harq.harq_payload);
+            }
+          }
+          // CSI Part 1
+          if ((pdu->pduBitmap >> 2) & 0x01) {
+            if (pdu->csi_part1.csi_part1_payload) {
+              free(pdu->csi_part1.csi_part1_payload);
+            }
+          }
+          // CSI Part 2
+          if ((pdu->pduBitmap >> 3) & 0x01) {
+            if (pdu->csi_part2.csi_part2_payload) {
+              free(pdu->csi_part2.csi_part2_payload);
+            }
+          }
+          break;
+        }
+        case NFAPI_NR_UCI_FORMAT_0_1_PDU_TYPE: {
+          // Nothing to free
+          break;
+        }
+        case NFAPI_NR_UCI_FORMAT_2_3_4_PDU_TYPE: {
+          nfapi_nr_uci_pucch_pdu_format_2_3_4_t *pdu = &uci_pdu->pucch_pdu_format_2_3_4;
+          // SR
+          if (pdu->pduBitmap & 0x01) {
+            if (pdu->sr.sr_payload) {
+              free(pdu->sr.sr_payload);
+            }
+          }
+          // HARQ
+          if ((pdu->pduBitmap >> 1) & 0x01) {
+            if (pdu->harq.harq_payload) {
+              free(pdu->harq.harq_payload);
+            }
+          }
+          // CSI Part 1
+          if ((pdu->pduBitmap >> 2) & 0x01) {
+            if (pdu->csi_part1.csi_part1_payload) {
+              free(pdu->csi_part1.csi_part1_payload);
+            }
+          }
+          // CSI Part 2
+          if ((pdu->pduBitmap >> 3) & 0x01) {
+            if (pdu->csi_part2.csi_part2_payload) {
+              free(pdu->csi_part2.csi_part2_payload);
+            }
+          }
+          break;
+        }
+        default:
+          AssertFatal(1 == 0, "Unknown UCI.indication PDU Type %d\n", uci_pdu->pdu_type);
+          break;
+      }
+    }
+    free(msg->uci_list);
   }
 }
 
@@ -1353,5 +1587,232 @@ size_t get_crc_indication_size(const nfapi_nr_crc_indication_t *msg)
     total_size += sizeof(crc->timing_advance);
     total_size += sizeof(crc->rssi);
   }
+  return total_size;
+}
+
+void copy_uci_indication_sr_pdu_0_1(const nfapi_nr_sr_pdu_0_1_t *src, nfapi_nr_sr_pdu_0_1_t *dst)
+{
+  dst->sr_indication = src->sr_indication;
+  dst->sr_confidence_level = src->sr_confidence_level;
+}
+
+void copy_uci_indication_sr_pdu_2_3_4(const nfapi_nr_sr_pdu_2_3_4_t *src, nfapi_nr_sr_pdu_2_3_4_t *dst)
+{
+  dst->sr_bit_len = src->sr_bit_len;
+  dst->sr_payload = calloc(((dst->sr_bit_len / 8) + 1), sizeof(*dst->sr_payload));
+  for (int i = 0; i < (dst->sr_bit_len / 8) + 1; ++i) {
+    dst->sr_payload[i] = src->sr_payload[i];
+  }
+}
+
+void copy_uci_indication_harq_pdu_0_1(const nfapi_nr_harq_pdu_0_1_t *src, nfapi_nr_harq_pdu_0_1_t *dst)
+{
+  dst->num_harq = src->num_harq;
+  dst->harq_confidence_level = src->harq_confidence_level;
+  for (int i = 0; i < dst->num_harq; ++i) {
+    dst->harq_list[i].harq_value = src->harq_list[i].harq_value;
+  }
+}
+
+void copy_uci_indication_harq_pdu_2_3_4(const nfapi_nr_harq_pdu_2_3_4_t *src, nfapi_nr_harq_pdu_2_3_4_t *dst)
+{
+  dst->harq_crc = src->harq_crc;
+  dst->harq_bit_len = src->harq_bit_len;
+  dst->harq_payload = calloc(((dst->harq_bit_len / 8) + 1), sizeof(*dst->harq_payload));
+  for (int i = 0; i < (dst->harq_bit_len / 8) + 1; ++i) {
+    dst->harq_payload[i] = src->harq_payload[i];
+  }
+}
+
+void copy_uci_indication_csi_part1(const nfapi_nr_csi_part1_pdu_t *src, nfapi_nr_csi_part1_pdu_t *dst)
+{
+  dst->csi_part1_crc = src->csi_part1_crc;
+  dst->csi_part1_bit_len = src->csi_part1_bit_len;
+  dst->csi_part1_payload = calloc(((dst->csi_part1_bit_len / 8) + 1), sizeof(*dst->csi_part1_payload));
+  for (int i = 0; i < (dst->csi_part1_bit_len / 8) + 1; ++i) {
+    dst->csi_part1_payload[i] = src->csi_part1_payload[i];
+  }
+}
+
+void copy_uci_indication_csi_part2(const nfapi_nr_csi_part2_pdu_t *src, nfapi_nr_csi_part2_pdu_t *dst)
+{
+  dst->csi_part2_crc = src->csi_part2_crc;
+  dst->csi_part2_bit_len = src->csi_part2_bit_len;
+  dst->csi_part2_payload = calloc(((dst->csi_part2_bit_len / 8) + 1), sizeof(*dst->csi_part2_payload));
+  for (int i = 0; i < (dst->csi_part2_bit_len / 8) + 1; ++i) {
+    dst->csi_part2_payload[i] = src->csi_part2_payload[i];
+  }
+}
+
+void copy_uci_indication_PUSCH(const nfapi_nr_uci_pusch_pdu_t *src, nfapi_nr_uci_pusch_pdu_t *dst)
+{
+  dst->pduBitmap = src->pduBitmap;
+  dst->handle = src->handle;
+  dst->rnti = src->rnti;
+  dst->ul_cqi = src->ul_cqi;
+  dst->timing_advance = src->timing_advance;
+  dst->rssi = src->rssi;
+
+  // Bit 0 not used in PUSCH PDU
+  // HARQ
+  if ((dst->pduBitmap >> 1) & 0x01) {
+    copy_uci_indication_harq_pdu_2_3_4(&src->harq, &dst->harq);
+  }
+  // CSI Part 1
+  if ((dst->pduBitmap >> 2) & 0x01) {
+    copy_uci_indication_csi_part1(&src->csi_part1, &dst->csi_part1);
+  }
+  // CSI Part 2
+  if ((dst->pduBitmap >> 3) & 0x01) {
+    copy_uci_indication_csi_part2(&src->csi_part2, &dst->csi_part2);
+  }
+}
+
+void copy_uci_indication_PUCCH_0_1(const nfapi_nr_uci_pucch_pdu_format_0_1_t *src, nfapi_nr_uci_pucch_pdu_format_0_1_t *dst)
+{
+  dst->pduBitmap = src->pduBitmap;
+  dst->handle = src->handle;
+  dst->rnti = src->rnti;
+  dst->pucch_format = src->pucch_format;
+  dst->ul_cqi = src->ul_cqi;
+  dst->timing_advance = src->timing_advance;
+  dst->rssi = src->rssi;
+
+  // SR
+  if (dst->pduBitmap & 0x01) {
+    copy_uci_indication_sr_pdu_0_1(&src->sr, &dst->sr);
+  }
+  // HARQ
+  if ((dst->pduBitmap >> 1) & 0x01) {
+    copy_uci_indication_harq_pdu_0_1(&src->harq, &dst->harq);
+  }
+}
+
+void copy_uci_indication_PUCCH_2_3_4(const nfapi_nr_uci_pucch_pdu_format_2_3_4_t *src, nfapi_nr_uci_pucch_pdu_format_2_3_4_t *dst)
+{
+  dst->pduBitmap = src->pduBitmap;
+  dst->handle = src->handle;
+  dst->rnti = src->rnti;
+  dst->pucch_format = src->pucch_format;
+  dst->ul_cqi = src->ul_cqi;
+  dst->timing_advance = src->timing_advance;
+  dst->rssi = src->rssi;
+  // SR
+  if (dst->pduBitmap & 0x01) {
+    copy_uci_indication_sr_pdu_2_3_4(&src->sr, &dst->sr);
+  }
+  // HARQ
+  if ((dst->pduBitmap >> 1) & 0x01) {
+    copy_uci_indication_harq_pdu_2_3_4(&src->harq, &dst->harq);
+  }
+  // CSI Part 1
+  if ((dst->pduBitmap >> 2) & 0x01) {
+    copy_uci_indication_csi_part1(&src->csi_part1, &dst->csi_part1);
+  }
+  // CSI Part 2
+  if ((dst->pduBitmap >> 3) & 0x01) {
+    copy_uci_indication_csi_part2(&src->csi_part2, &dst->csi_part2);
+  }
+}
+
+void copy_uci_indication_UCI(const nfapi_nr_uci_t *src, nfapi_nr_uci_t *dst)
+{
+  dst->pdu_type = src->pdu_type;
+  dst->pdu_size = src->pdu_size;
+  switch (dst->pdu_type) {
+    case NFAPI_NR_UCI_PUSCH_PDU_TYPE:
+      copy_uci_indication_PUSCH(&src->pusch_pdu, &dst->pusch_pdu);
+      break;
+    case NFAPI_NR_UCI_FORMAT_0_1_PDU_TYPE:
+      copy_uci_indication_PUCCH_0_1(&src->pucch_pdu_format_0_1, &dst->pucch_pdu_format_0_1);
+      break;
+    case NFAPI_NR_UCI_FORMAT_2_3_4_PDU_TYPE:
+      copy_uci_indication_PUCCH_2_3_4(&src->pucch_pdu_format_2_3_4, &dst->pucch_pdu_format_2_3_4);
+      break;
+    default:
+      AssertFatal(1 == 0, "Unknown UCI.indication PDU Type %d\n", src->pdu_type);
+      break;
+  }
+}
+
+void copy_uci_indication(const nfapi_nr_uci_indication_t *src, nfapi_nr_uci_indication_t *dst)
+{
+  dst->header.message_id = src->header.message_id;
+  dst->header.message_length = src->header.message_length;
+  dst->sfn = src->sfn;
+  dst->slot = src->slot;
+  dst->num_ucis = src->num_ucis;
+  dst->uci_list = calloc(dst->num_ucis, sizeof(*dst->uci_list));
+  for (int crc_idx = 0; crc_idx < src->num_ucis; ++crc_idx) {
+    copy_uci_indication_UCI(&src->uci_list[crc_idx], &dst->uci_list[crc_idx]);
+  }
+}
+
+size_t get_uci_indication_size(const nfapi_nr_uci_indication_t *msg)
+{
+  // Get size of the message (allocated pointer included)
+  size_t total_size = 0;
+
+  // Header and fixed-size fields
+  total_size += sizeof(msg->header);
+  total_size += sizeof(msg->sfn);
+  total_size += sizeof(msg->slot);
+  total_size += sizeof(msg->num_ucis);
+
+  // Loop through each UCI in the uci_list
+  for (int uci_idx = 0; uci_idx < msg->num_ucis; ++uci_idx) {
+    const nfapi_nr_uci_t *uci_pdu = &msg->uci_list[uci_idx];
+
+    total_size += sizeof(uci_pdu->pdu_type);
+    total_size += sizeof(uci_pdu->pdu_size);
+
+    switch (uci_pdu->pdu_type) {
+      case NFAPI_NR_UCI_PUSCH_PDU_TYPE:
+        total_size += sizeof(uci_pdu->pusch_pdu);
+
+        // HARQ payload, CSI Part 1 and 2 are conditionally allocated
+        if ((uci_pdu->pusch_pdu.pduBitmap >> 1) & 0x01) {
+          total_size += malloc_usable_size(uci_pdu->pusch_pdu.harq.harq_payload);
+        }
+        if ((uci_pdu->pusch_pdu.pduBitmap >> 2) & 0x01) {
+          total_size += malloc_usable_size(uci_pdu->pusch_pdu.csi_part1.csi_part1_payload);
+        }
+        if ((uci_pdu->pusch_pdu.pduBitmap >> 3) & 0x01) {
+          total_size += malloc_usable_size(uci_pdu->pusch_pdu.csi_part2.csi_part2_payload);
+        }
+        break;
+
+      case NFAPI_NR_UCI_FORMAT_0_1_PDU_TYPE:
+        total_size += sizeof(uci_pdu->pucch_pdu_format_0_1);
+        // SR and HARQ are conditionally filled, but neither require calloc inside
+        break;
+
+      case NFAPI_NR_UCI_FORMAT_2_3_4_PDU_TYPE:
+        total_size += sizeof(uci_pdu->pucch_pdu_format_2_3_4);
+
+        // SR, HARQ, CSI Part 1, and CSI Part 2 are conditionally allocated
+        if (uci_pdu->pucch_pdu_format_2_3_4.pduBitmap & 0x01) {
+          total_size += malloc_usable_size(uci_pdu->pucch_pdu_format_2_3_4.sr.sr_payload);
+        }
+        if ((uci_pdu->pucch_pdu_format_2_3_4.pduBitmap >> 1) & 0x01) {
+          total_size += malloc_usable_size(uci_pdu->pucch_pdu_format_2_3_4.harq.harq_payload);
+        }
+        if ((uci_pdu->pucch_pdu_format_2_3_4.pduBitmap >> 2) & 0x01) {
+          total_size += malloc_usable_size(uci_pdu->pucch_pdu_format_2_3_4.csi_part1.csi_part1_payload);
+        }
+        if ((uci_pdu->pucch_pdu_format_2_3_4.pduBitmap >> 3) & 0x01) {
+          total_size += malloc_usable_size(uci_pdu->pucch_pdu_format_2_3_4.csi_part2.csi_part2_payload);
+        }
+        break;
+
+      default:
+        AssertFatal(1 == 0, "Unknown UCI.indication PDU Type %d\n", uci_pdu->pdu_type);
+        break;
+    }
+  }
+
+  // Finally, add the size of the uci_list pointer itself
+  total_size += malloc_usable_size(msg->uci_list);
+
   return total_size;
 }

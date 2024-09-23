@@ -2686,7 +2686,7 @@ static uint8_t pack_nr_uci_pucch_2_3_4(void* tlv, uint8_t **ppWritePackedMsg, ui
     return 0;
   if (!push16(value->rnti, ppWritePackedMsg, end))
     return 0;
-  if (!push8(value->pucch_format-2, ppWritePackedMsg, end))
+  if (!push8(value->pucch_format, ppWritePackedMsg, end))
     return 0;
   if (!push8(value->ul_cqi, ppWritePackedMsg, end))
     return 0;
@@ -4827,7 +4827,6 @@ static uint8_t unpack_nr_uci_pucch_2_3_4(nfapi_nr_uci_pucch_pdu_format_2_3_4_t* 
 	if (!pull16(ppReadPackedMsg, &value->rssi, end))
                 return 0;
 
-  value->pucch_format += 2;
 	if (value->pduBitmap & 0x01) { //SR
 		if (!pull16(ppReadPackedMsg, &value->sr.sr_bit_len, end))
 			return 0;
