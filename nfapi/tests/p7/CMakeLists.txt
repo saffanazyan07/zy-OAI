@@ -1,5 +1,5 @@
 set(Test_Labels fapi p7)
-set(_fapi_p7_messages "dci_inversion;dl_tti_request;ul_tti_request;slot_indication;ul_dci_request;tx_data_request")
+set(_fapi_p7_messages "dci_inversion;dl_tti_request;ul_tti_request;slot_indication;ul_dci_request;tx_data_request;rx_data_indication")
 foreach (fapi_p7_message IN LISTS _fapi_p7_messages)
     add_executable(nr_fapi_${fapi_p7_message}_test nr_fapi_${fapi_p7_message}_test.c)
     target_link_libraries(nr_fapi_${fapi_p7_message}_test PUBLIC nr_fapi_p7)

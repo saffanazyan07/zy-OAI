@@ -2468,42 +2468,6 @@ uint8_t pack_nr_timing_info(void *msg, uint8_t **ppWritePackedMsg, uint8_t *end,
 //NR UPLINK indication function packing
 
 
-//RX DATA INDICATION
-
-static uint8_t pack_nr_rx_data_indication_body(nfapi_nr_rx_data_pdu_t *value, uint8_t **ppWritePackedMsg, uint8_t *end)
-{
-  if(!(push32(value->handle, ppWritePackedMsg, end)
-        && push16(value->rnti, ppWritePackedMsg, end)
-        && push8(value->harq_id, ppWritePackedMsg, end)
-        && push32(value->pdu_length, ppWritePackedMsg, end)
-        && push8(value->ul_cqi, ppWritePackedMsg, end)
-        && push16(value->timing_advance, ppWritePackedMsg, end)
-        && push16(value->rssi, ppWritePackedMsg, end)
-  ))
-    return 0;
-
-  if (pusharray8(value->pdu, value->pdu_length, value->pdu_length, ppWritePackedMsg, end) == 0)
-    return 0;
-
-  return 1;
-}
-
-uint8_t pack_nr_rx_data_indication(void *msg, uint8_t **ppWritePackedMsg, uint8_t *end, nfapi_p7_codec_config_t *config)
-{
-  nfapi_nr_rx_data_indication_t *pNfapiMsg = (nfapi_nr_rx_data_indication_t *)msg;
-
-  if (!(push16(pNfapiMsg->sfn, ppWritePackedMsg, end) && push16(pNfapiMsg->slot, ppWritePackedMsg, end)
-        && push16(pNfapiMsg->number_of_pdus, ppWritePackedMsg, end)))
-    return 0;
-
-  for (int i = 0; i < pNfapiMsg->number_of_pdus; i++) {
-    if (!pack_nr_rx_data_indication_body(&(pNfapiMsg->pdu_list[i]), ppWritePackedMsg, end))
-      return 0;
-  }
-
-  return 1;
-}
-
 //NR CRC INDICATION
 
 static uint8_t pack_nr_crc_indication_body(nfapi_nr_crc_t *value, uint8_t **ppWritePackedMsg, uint8_t *end)
@@ -4680,57 +4644,6 @@ static uint8_t unpack_tx_request(uint8_t **ppReadPackedMsg, uint8_t *end, void *
 }
 
 //UNPACK NR UPLINK INDICATION FUNCTIONS
-
-//RX DATA INDICATION
-
-static uint8_t unpack_nr_rx_data_indication_body(nfapi_nr_rx_data_pdu_t *value,
-                                                 uint8_t **ppReadPackedMsg,
-                                                 uint8_t *end,
-                                                 nfapi_p7_codec_config_t *config)
-{
-  if (!(pull32(ppReadPackedMsg, &value->handle, end)
-        && pull16(ppReadPackedMsg, &value->rnti, end)
-        && pull8(ppReadPackedMsg, &value->harq_id, end)
-        && pull32(ppReadPackedMsg, &value->pdu_length, end)
-        && pull8(ppReadPackedMsg, &value->ul_cqi, end)
-        && pull16(ppReadPackedMsg, &value->timing_advance, end)
-        && pull16(ppReadPackedMsg, &value->rssi, end)))
-    return 0;
-
-  value->pdu = nfapi_p7_allocate(sizeof(*value->pdu) * value->pdu_length, config);
-  if (pullarray8(ppReadPackedMsg, value->pdu, value->pdu_length, value->pdu_length, end) == 0) {
-    NFAPI_TRACE(NFAPI_TRACE_ERROR, "%s pullarray8 failure\n", __FUNCTION__);
-    return 0;
-  }
-  return 1;
-}
-
-uint8_t unpack_nr_rx_data_indication(uint8_t **ppReadPackedMsg,
-                                     uint8_t *end,
-                                     nfapi_nr_rx_data_indication_t *msg,
-                                     nfapi_p7_codec_config_t *config)
-{
-  nfapi_nr_rx_data_indication_t *pNfapiMsg = (nfapi_nr_rx_data_indication_t*)msg;
-
-  if (!(pull16(ppReadPackedMsg, &pNfapiMsg->sfn , end) &&
-        pull16(ppReadPackedMsg, &pNfapiMsg->slot , end) &&
-        pull16(ppReadPackedMsg, &pNfapiMsg->number_of_pdus, end)
-  ))
-    return 0;
-
-  if (pNfapiMsg->number_of_pdus > 0)
-  {
-    pNfapiMsg->pdu_list = nfapi_p7_allocate(sizeof(*pNfapiMsg->pdu_list) * pNfapiMsg->number_of_pdus, config);
-  }
-
-  for (int i = 0; i < pNfapiMsg->number_of_pdus; i++)
-  {
-    if(!unpack_nr_rx_data_indication_body(&pNfapiMsg->pdu_list[i], ppReadPackedMsg, end, config))
-      return 0;
-  }
-
-  return 1;
-}
 
 //NR CRC INDICATION
 
