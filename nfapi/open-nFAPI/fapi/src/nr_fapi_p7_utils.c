@@ -592,6 +592,37 @@ bool eq_rx_data_indication(const nfapi_nr_rx_data_indication_t *a, const nfapi_n
   return true;
 }
 
+bool eq_crc_indication_CRC(const nfapi_nr_crc_t *a, const nfapi_nr_crc_t *b)
+{
+  EQ(a->handle, b->handle);
+  EQ(a->rnti, b->rnti);
+  EQ(a->harq_id, b->harq_id);
+  EQ(a->tb_crc_status, b->tb_crc_status);
+  EQ(a->num_cb, b->num_cb);
+  if (a->num_cb > 0) {
+    for (int cb = 0; cb < (a->num_cb / 8) + 1; ++cb) {
+      EQ(a->cb_crc_status[cb], b->cb_crc_status[cb]);
+    }
+  }
+  EQ(a->ul_cqi, b->ul_cqi);
+  EQ(a->timing_advance, b->timing_advance);
+  EQ(a->rssi, b->rssi);
+  return true;
+}
+
+bool eq_crc_indication(const nfapi_nr_crc_indication_t *a, const nfapi_nr_crc_indication_t *b)
+{
+  EQ(a->header.message_id, b->header.message_id);
+  EQ(a->header.message_length, b->header.message_length);
+  EQ(a->sfn, b->sfn);
+  EQ(a->slot, b->slot);
+  EQ(a->number_crcs, b->number_crcs);
+  for (int crc_idx = 0; crc_idx < a->number_crcs; ++crc_idx) {
+    EQ(eq_crc_indication_CRC(&a->crc_list[crc_idx], &b->crc_list[crc_idx]), true);
+  }
+  return true;
+}
+
 void free_dl_tti_request(nfapi_nr_dl_tti_request_t *msg)
 {
   if (msg->vendor_extension) {
@@ -647,6 +678,19 @@ void free_rx_data_indication(nfapi_nr_rx_data_indication_t *msg)
       }
     }
     free(msg->pdu_list);
+  }
+}
+
+void free_crc_indication(nfapi_nr_crc_indication_t *msg)
+{
+  if (msg->crc_list) {
+    for (int crc_idx = 0; crc_idx < msg->number_crcs; ++crc_idx) {
+      nfapi_nr_crc_t *crc = &msg->crc_list[crc_idx];
+      if (crc->cb_crc_status) {
+        free(crc->cb_crc_status);
+      }
+    }
+    free(msg->crc_list);
   }
 }
 
@@ -1252,6 +1296,62 @@ size_t get_rx_data_indication_size(const nfapi_nr_rx_data_indication_t *msg)
     total_size += sizeof(pdu->timing_advance);
     total_size += sizeof(pdu->rssi);
     total_size += malloc_usable_size(pdu->pdu);
+  }
+  return total_size;
+}
+
+void copy_crc_indication_CRC(const nfapi_nr_crc_t *src, nfapi_nr_crc_t *dst)
+{
+  dst->handle = src->handle;
+  dst->rnti = src->rnti;
+  dst->harq_id = src->harq_id;
+  dst->tb_crc_status = src->tb_crc_status;
+  dst->num_cb = src->num_cb;
+  if (dst->num_cb > 0) {
+    dst->cb_crc_status = calloc((dst->num_cb / 8) + 1, sizeof(uint8_t));
+    for (int cb = 0; cb < (dst->num_cb / 8) + 1; ++cb) {
+      dst->cb_crc_status[cb] = src->cb_crc_status[cb];
+    }
+  }
+  dst->ul_cqi = src->ul_cqi;
+  dst->timing_advance = src->timing_advance;
+  dst->rssi = src->rssi;
+}
+
+void copy_crc_indication(const nfapi_nr_crc_indication_t *src, nfapi_nr_crc_indication_t *dst)
+{
+  dst->header.message_id = src->header.message_id;
+  dst->header.message_length = src->header.message_length;
+
+  dst->sfn = src->sfn;
+  dst->slot = src->slot;
+  dst->number_crcs = src->number_crcs;
+  dst->crc_list = calloc(dst->number_crcs, sizeof(*dst->crc_list));
+  for (int crc_idx = 0; crc_idx < src->number_crcs; ++crc_idx) {
+    copy_crc_indication_CRC(&src->crc_list[crc_idx], &dst->crc_list[crc_idx]);
+  }
+}
+
+size_t get_crc_indication_size(const nfapi_nr_crc_indication_t *msg)
+{
+  // Get size of the whole message ( allocated pointer included )
+  size_t total_size = sizeof(msg->header);
+  total_size += sizeof(msg->sfn);
+  total_size += sizeof(msg->slot);
+  total_size += sizeof(msg->number_crcs);
+  for (int crc_idx = 0; crc_idx < msg->number_crcs; ++crc_idx) {
+    const nfapi_nr_crc_t *crc = &msg->crc_list[crc_idx];
+    total_size += sizeof(crc->handle);
+    total_size += sizeof(crc->rnti);
+    total_size += sizeof(crc->harq_id);
+    total_size += sizeof(crc->tb_crc_status);
+    total_size += sizeof(crc->num_cb);
+    if (crc->num_cb > 0) {
+      total_size += malloc_usable_size(crc->cb_crc_status);
+    }
+    total_size += sizeof(crc->ul_cqi);
+    total_size += sizeof(crc->timing_advance);
+    total_size += sizeof(crc->rssi);
   }
   return total_size;
 }

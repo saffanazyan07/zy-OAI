@@ -41,6 +41,7 @@ bool eq_slot_indication(const nfapi_nr_slot_indication_scf_t *a, const nfapi_nr_
 bool eq_ul_dci_request(const nfapi_nr_ul_dci_request_t *a, const nfapi_nr_ul_dci_request_t *b);
 bool eq_tx_data_request(const nfapi_nr_tx_data_request_t *a, const nfapi_nr_tx_data_request_t *b);
 bool eq_rx_data_indication(const nfapi_nr_rx_data_indication_t *a, const nfapi_nr_rx_data_indication_t *b);
+bool eq_crc_indication(const nfapi_nr_crc_indication_t *a, const nfapi_nr_crc_indication_t *b);
 
 void free_dl_tti_request(nfapi_nr_dl_tti_request_t *msg);
 void free_ul_tti_request(nfapi_nr_ul_tti_request_t *msg);
@@ -48,6 +49,7 @@ void free_slot_indication(nfapi_nr_slot_indication_scf_t *msg);
 void free_ul_dci_request(nfapi_nr_ul_dci_request_t *msg);
 void free_tx_data_request(nfapi_nr_tx_data_request_t *msg);
 void free_rx_data_indication(nfapi_nr_rx_data_indication_t *msg);
+void free_crc_indication(nfapi_nr_crc_indication_t *msg);
 
 void copy_dl_tti_request(const nfapi_nr_dl_tti_request_t *src, nfapi_nr_dl_tti_request_t *dst);
 void copy_ul_tti_request(const nfapi_nr_ul_tti_request_t *src, nfapi_nr_ul_tti_request_t *dst);
@@ -55,8 +57,10 @@ void copy_slot_indication(const nfapi_nr_slot_indication_scf_t *src, nfapi_nr_sl
 void copy_ul_dci_request(const nfapi_nr_ul_dci_request_t *src, nfapi_nr_ul_dci_request_t *dst);
 void copy_tx_data_request(const nfapi_nr_tx_data_request_t *src, nfapi_nr_tx_data_request_t *dst);
 void copy_rx_data_indication(const nfapi_nr_rx_data_indication_t *src, nfapi_nr_rx_data_indication_t *dst);
+void copy_crc_indication(const nfapi_nr_crc_indication_t *src, nfapi_nr_crc_indication_t *dst);
 
 
 size_t get_tx_data_request_size(const nfapi_nr_tx_data_request_t *msg);
 size_t get_rx_data_indication_size(const nfapi_nr_rx_data_indication_t *msg);
+size_t get_crc_indication_size(const nfapi_nr_crc_indication_t *msg);
 #endif // OPENAIRINTERFACE_NR_FAPI_P7_UTILS_H
