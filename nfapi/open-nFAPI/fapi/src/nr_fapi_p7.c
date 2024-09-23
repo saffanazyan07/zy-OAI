@@ -49,6 +49,9 @@ uint8_t fapi_nr_p7_message_body_pack(nfapi_nr_p7_message_header_t *header,
     case NFAPI_NR_PHY_MSG_TYPE_RX_DATA_INDICATION:
       result = pack_nr_rx_data_indication(header, ppWritePackedMsg, end, config);
     break;
+    case NFAPI_NR_PHY_MSG_TYPE_CRC_INDICATION:
+      result = pack_nr_crc_indication(header, ppWritePackedMsg, end, config);
+    break;
     default: {
       if (header->message_id >= NFAPI_VENDOR_EXT_MSG_MIN && header->message_id <= NFAPI_VENDOR_EXT_MSG_MAX) {
         if (config && config->pack_p7_vendor_extension) {
@@ -174,6 +177,11 @@ int fapi_nr_p7_message_unpack(void *pMessageBuf,
     case NFAPI_NR_PHY_MSG_TYPE_RX_DATA_INDICATION:
       if (check_nr_fapi_unpack_length(NFAPI_NR_PHY_MSG_TYPE_RX_DATA_INDICATION, unpackedBufLen)) {
         result = unpack_nr_rx_data_indication(&pReadPackedMessage, end, pMessageHeader, config);
+      }
+    break;
+    case NFAPI_NR_PHY_MSG_TYPE_CRC_INDICATION:
+      if (check_nr_fapi_unpack_length(NFAPI_NR_PHY_MSG_TYPE_CRC_INDICATION, unpackedBufLen)) {
+        result = unpack_nr_crc_indication(&pReadPackedMessage, end, pMessageHeader, config);
       }
     break;
     default:
@@ -1658,6 +1666,85 @@ uint8_t unpack_nr_rx_data_indication(uint8_t **ppReadPackedMsg, uint8_t *end, vo
 
   for (int i = 0; i < pNfapiMsg->number_of_pdus; i++) {
     if (!unpack_nr_rx_data_indication_body(&pNfapiMsg->pdu_list[i], ppReadPackedMsg, end, config))
+      return 0;
+  }
+
+  return 1;
+}
+
+static uint8_t pack_nr_crc_indication_body(const nfapi_nr_crc_t *value, uint8_t **ppWritePackedMsg, uint8_t *end)
+{
+  if (!(push32(value->handle, ppWritePackedMsg, end) && push16(value->rnti, ppWritePackedMsg, end)
+        && push8(value->harq_id, ppWritePackedMsg, end) && push8(value->tb_crc_status, ppWritePackedMsg, end)
+        && push16(value->num_cb, ppWritePackedMsg, end))) {
+    return 0;
+  }
+  if (value->num_cb != 0) {
+    const uint16_t cb_len = (value->num_cb / 8) + 1; // length is ceil(NumCb/8)
+    if (!pusharray8(value->cb_crc_status, cb_len, cb_len, ppWritePackedMsg,
+                    end)) {
+      return 0;
+    }
+  }
+  if (!(push8(value->ul_cqi, ppWritePackedMsg, end) && push16(value->timing_advance, ppWritePackedMsg, end)
+        && push16(value->rssi, ppWritePackedMsg, end))) {
+    return 0;
+  }
+  return 1;
+}
+
+uint8_t pack_nr_crc_indication(void *msg, uint8_t **ppWritePackedMsg, uint8_t *end, nfapi_p7_codec_config_t *config)
+{
+  nfapi_nr_crc_indication_t *pNfapiMsg = (nfapi_nr_crc_indication_t *)msg;
+
+  if (!(push16(pNfapiMsg->sfn, ppWritePackedMsg, end) && push16(pNfapiMsg->slot, ppWritePackedMsg, end)
+        && push16(pNfapiMsg->number_crcs, ppWritePackedMsg, end)))
+    return 0;
+
+  for (int i = 0; i < pNfapiMsg->number_crcs; i++) {
+    if (!pack_nr_crc_indication_body(&pNfapiMsg->crc_list[i], ppWritePackedMsg, end))
+      return 0;
+  }
+
+  return 1;
+}
+
+uint8_t unpack_nr_crc_indication_body(nfapi_nr_crc_t *value, uint8_t **ppReadPackedMsg, uint8_t *end)
+{
+  if (!(pull32(ppReadPackedMsg, &value->handle, end) && pull16(ppReadPackedMsg, &value->rnti, end)
+        && pull8(ppReadPackedMsg, &value->harq_id, end) && pull8(ppReadPackedMsg, &value->tb_crc_status, end)
+        && pull16(ppReadPackedMsg, &value->num_cb, end))) {
+    return 0;
+  }
+  if (value->num_cb != 0) {
+    const uint16_t cb_len = (value->num_cb / 8) + 1; // length is ceil(NumCb/8)
+    value->cb_crc_status = calloc(cb_len, sizeof(uint8_t));
+    if (!pullarray8(ppReadPackedMsg, value->cb_crc_status, cb_len, cb_len, end)) {
+      return 0;
+    }
+  }
+  if (!(pull8(ppReadPackedMsg, &value->ul_cqi, end) && pull16(ppReadPackedMsg, &value->timing_advance, end)
+        && pull16(ppReadPackedMsg, &value->rssi, end))) {
+    return 0;
+  }
+
+  return 1;
+}
+
+uint8_t unpack_nr_crc_indication(uint8_t **ppReadPackedMsg, uint8_t *end, void *msg, nfapi_p7_codec_config_t *config)
+{
+  nfapi_nr_crc_indication_t *pNfapiMsg = (nfapi_nr_crc_indication_t *)msg;
+
+  if (!(pull16(ppReadPackedMsg, &pNfapiMsg->sfn, end) && pull16(ppReadPackedMsg, &pNfapiMsg->slot, end)
+        && pull16(ppReadPackedMsg, &pNfapiMsg->number_crcs, end)))
+    return 0;
+
+  if (pNfapiMsg->number_crcs > 0) {
+    pNfapiMsg->crc_list = calloc(pNfapiMsg->number_crcs, sizeof(*pNfapiMsg->crc_list));
+  }
+
+  for (int i = 0; i < pNfapiMsg->number_crcs; i++) {
+    if (!unpack_nr_crc_indication_body(&pNfapiMsg->crc_list[i], ppReadPackedMsg, end))
       return 0;
   }
 
