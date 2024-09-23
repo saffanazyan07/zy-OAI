@@ -564,6 +564,34 @@ bool eq_tx_data_request(const nfapi_nr_tx_data_request_t *a, const nfapi_nr_tx_d
   return true;
 }
 
+bool eq_rx_data_indication_PDU(const nfapi_nr_rx_data_pdu_t *a, const nfapi_nr_rx_data_pdu_t *b)
+{
+  EQ(a->handle, b->handle);
+  EQ(a->rnti, b->rnti);
+  EQ(a->harq_id, b->harq_id);
+  EQ(a->pdu_length, b->pdu_length);
+  EQ(a->ul_cqi, b->ul_cqi);
+  EQ(a->timing_advance, b->timing_advance);
+  EQ(a->rssi, b->rssi);
+  for (int i = 0; i < a->pdu_length; ++i) {
+    EQ(a->pdu[i], b->pdu[i]);
+  }
+  return true;
+}
+
+bool eq_rx_data_indication(const nfapi_nr_rx_data_indication_t *a, const nfapi_nr_rx_data_indication_t *b)
+{
+  EQ(a->header.message_id, b->header.message_id);
+  EQ(a->header.message_length, b->header.message_length);
+  EQ(a->sfn, b->sfn);
+  EQ(a->slot, b->slot);
+  EQ(a->number_of_pdus, b->number_of_pdus);
+  for (int pdu_idx = 0; pdu_idx < a->number_of_pdus; ++pdu_idx) {
+    EQ(eq_rx_data_indication_PDU(&a->pdu_list[pdu_idx], &b->pdu_list[pdu_idx]), true);
+  }
+  return true;
+}
+
 void free_dl_tti_request(nfapi_nr_dl_tti_request_t *msg)
 {
   if (msg->vendor_extension) {
@@ -606,6 +634,19 @@ void free_tx_data_request(nfapi_nr_tx_data_request_t *msg)
         free(tlv->value.ptr);
       }
     }
+  }
+}
+
+void free_rx_data_indication(nfapi_nr_rx_data_indication_t *msg)
+{
+  if (msg->number_of_pdus > 0) {
+    for (int pdu_idx = 0; pdu_idx < msg->number_of_pdus; ++pdu_idx) {
+      nfapi_nr_rx_data_pdu_t *rx_pdu = &msg->pdu_list[pdu_idx];
+      if (rx_pdu->pdu) {
+        free(rx_pdu->pdu);
+      }
+    }
+    free(msg->pdu_list);
   }
 }
 
@@ -1163,6 +1204,54 @@ size_t get_tx_data_request_size(const nfapi_nr_tx_data_request_t *msg)
         total_size += malloc_usable_size(tlv->value.ptr);
       }
     }
+  }
+  return total_size;
+}
+
+void copy_rx_data_indication_PDU(const nfapi_nr_rx_data_pdu_t *src, nfapi_nr_rx_data_pdu_t *dst)
+{
+  dst->handle = src->handle;
+  dst->rnti = src->rnti;
+  dst->harq_id = src->harq_id;
+  dst->pdu_length = src->pdu_length;
+  dst->ul_cqi = src->ul_cqi;
+  dst->timing_advance = src->timing_advance;
+  dst->rssi = src->rssi;
+  dst->pdu = calloc(dst->pdu_length, sizeof(uint8_t));
+  memcpy(dst->pdu, src->pdu, src->pdu_length);
+}
+
+void copy_rx_data_indication(const nfapi_nr_rx_data_indication_t *src, nfapi_nr_rx_data_indication_t *dst)
+{
+  dst->header.message_id = src->header.message_id;
+  dst->header.message_length = src->header.message_length;
+
+  dst->sfn = src->sfn;
+  dst->slot = src->slot;
+  dst->number_of_pdus = src->number_of_pdus;
+  dst->pdu_list = calloc(dst->number_of_pdus, sizeof(*dst->pdu_list));
+  for (int pdu_idx = 0; pdu_idx < src->number_of_pdus; ++pdu_idx) {
+    copy_rx_data_indication_PDU(&src->pdu_list[pdu_idx], &dst->pdu_list[pdu_idx]);
+  }
+}
+
+size_t get_rx_data_indication_size(const nfapi_nr_rx_data_indication_t *msg)
+{
+  // Get size of the whole message ( allocated pointer included )
+  size_t total_size = sizeof(msg->header);
+  total_size += sizeof(msg->sfn);
+  total_size += sizeof(msg->slot);
+  total_size += sizeof(msg->number_of_pdus);
+  for (int pdu_idx = 0; pdu_idx < msg->number_of_pdus; ++pdu_idx) {
+    const nfapi_nr_rx_data_pdu_t *pdu = &msg->pdu_list[pdu_idx];
+    total_size += sizeof(pdu->handle);
+    total_size += sizeof(pdu->rnti);
+    total_size += sizeof(pdu->harq_id);
+    total_size += sizeof(pdu->pdu_length);
+    total_size += sizeof(pdu->ul_cqi);
+    total_size += sizeof(pdu->timing_advance);
+    total_size += sizeof(pdu->rssi);
+    total_size += malloc_usable_size(pdu->pdu);
   }
   return total_size;
 }
