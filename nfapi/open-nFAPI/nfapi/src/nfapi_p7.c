@@ -2467,48 +2467,6 @@ uint8_t pack_nr_timing_info(void *msg, uint8_t **ppWritePackedMsg, uint8_t *end,
 
 //NR UPLINK indication function packing
 
-
-//NR CRC INDICATION
-
-static uint8_t pack_nr_crc_indication_body(nfapi_nr_crc_t *value, uint8_t **ppWritePackedMsg, uint8_t *end)
-{
-  if (!(push32(value->handle, ppWritePackedMsg, end) && push16(value->rnti, ppWritePackedMsg, end)
-        && push8(value->harq_id, ppWritePackedMsg, end) && push8(value->tb_crc_status, ppWritePackedMsg, end)
-        && push16(value->num_cb, ppWritePackedMsg, end))) {
-    return 0;
-  }
-  if (value->num_cb != 0) {
-    if (!pusharray8(value->cb_crc_status,
-                    (int)(value->num_cb / 8) + 1,
-                    (int)(value->num_cb / 8) + 1,
-                    ppWritePackedMsg,
-                    end)) { // length is ceil(NumCb/8)
-      return 0;
-    }
-  }
-  if (!(push8(value->ul_cqi, ppWritePackedMsg, end) && push16(value->timing_advance, ppWritePackedMsg, end)
-        && push16(value->rssi, ppWritePackedMsg, end))) {
-    return 0;
-  }
-  return 1;
-}
-
-uint8_t pack_nr_crc_indication(void *msg, uint8_t **ppWritePackedMsg, uint8_t *end, nfapi_p7_codec_config_t *config)
-{
-  nfapi_nr_crc_indication_t *pNfapiMsg = (nfapi_nr_crc_indication_t *)msg;
-
-  if (!(push16(pNfapiMsg->sfn, ppWritePackedMsg, end) && push16(pNfapiMsg->slot, ppWritePackedMsg, end)
-        && push16(pNfapiMsg->number_crcs, ppWritePackedMsg, end)))
-    return 0;
-
-  for (int i = 0; i < pNfapiMsg->number_crcs; i++) {
-    if (!pack_nr_crc_indication_body(&pNfapiMsg->crc_list[i], ppWritePackedMsg, end))
-      return 0;
-  }
-
-  return 1;
-}
-
 //SRS INDICATION
 
 int pack_nr_srs_normalized_channel_iq_matrix(void *pMessageBuf, void *pPackedBuf, uint32_t packedBufLen) {
@@ -4645,57 +4603,6 @@ static uint8_t unpack_tx_request(uint8_t **ppReadPackedMsg, uint8_t *end, void *
 
 //UNPACK NR UPLINK INDICATION FUNCTIONS
 
-//NR CRC INDICATION
-
-uint8_t unpack_nr_crc_indication_body(nfapi_nr_crc_t *value, uint8_t **ppReadPackedMsg, uint8_t *end)
-{
-  if (!(pull32(ppReadPackedMsg, &value->handle, end) && pull16(ppReadPackedMsg, &value->rnti, end)
-        && pull8(ppReadPackedMsg, &value->harq_id, end) && pull8(ppReadPackedMsg, &value->tb_crc_status, end)
-        && pull16(ppReadPackedMsg, &value->num_cb, end))) {
-    return 0;
-  }
-  if (value->num_cb != 0) {
-    value->cb_crc_status = calloc((value->num_cb / 8) + 1, sizeof(uint8_t));
-    if (!pullarray8(ppReadPackedMsg,
-                    value->cb_crc_status,
-                    (int)(value->num_cb / 8) + 1,
-                    (int)(value->num_cb / 8) + 1,
-                    end)) { // length is ceil(NumCb/8)
-      return 0;
-    }
-  }
-  if (!(pull8(ppReadPackedMsg, &value->ul_cqi, end) && pull16(ppReadPackedMsg, &value->timing_advance, end)
-        && pull16(ppReadPackedMsg, &value->rssi, end))) {
-    return 0;
-  }
-
-  // memcpy((nfapi_nr_crc_t *)tlv,value,sizeof(nfapi_nr_crc_t));
-
-  return 1;
-}
-
-uint8_t unpack_nr_crc_indication(uint8_t **ppReadPackedMsg,
-                                 uint8_t *end,
-                                 nfapi_nr_crc_indication_t *msg,
-                                 nfapi_p7_codec_config_t *config)
-{
-  nfapi_nr_crc_indication_t *pNfapiMsg = (nfapi_nr_crc_indication_t *)msg;
-
-  if (!(pull16(ppReadPackedMsg, &pNfapiMsg->sfn, end) && pull16(ppReadPackedMsg, &pNfapiMsg->slot, end)
-        && pull16(ppReadPackedMsg, &pNfapiMsg->number_crcs, end)))
-    return 0;
-
-  if (pNfapiMsg->number_crcs > 0) {
-    pNfapiMsg->crc_list = nfapi_p7_allocate(sizeof(*pNfapiMsg->crc_list) * pNfapiMsg->number_crcs, config);
-  }
-
-  for (int i = 0; i < pNfapiMsg->number_crcs; i++) {
-    if (!unpack_nr_crc_indication_body(&pNfapiMsg->crc_list[i], ppReadPackedMsg, end))
-      return 0;
-  }
-
-  return 1;
-}
 
 //SRS INDICATION
 
