@@ -440,14 +440,8 @@ int rrc_gNB_process_NGAP_INITIAL_CONTEXT_SETUP_REQ(MessageDef *msg_p, instance_t
   gNB_RRC_INST *rrc = RC.nrrrc[instance];
   UE->amf_ue_ngap_id = req->amf_ue_ngap_id;
 
-  /* store guami in gNB_RRC_UE_t context;
-   * we copy individual members because the guami types are different (nr_rrc_guami_t and ngap_guami_t) */
-  UE->ue_guami.mcc = req->guami.mcc;
-  UE->ue_guami.mnc = req->guami.mnc;
-  UE->ue_guami.mnc_len = req->guami.mnc_len;
-  UE->ue_guami.amf_region_id = req->guami.amf_region_id;
-  UE->ue_guami.amf_set_id = req->guami.amf_set_id;
-  UE->ue_guami.amf_pointer = req->guami.amf_pointer;
+  // Directly copy the entire guami structure
+  UE->ue_guami = req->guami;
 
   /* NAS PDU */
   // this is malloced pointers, we pass it for later free()

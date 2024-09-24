@@ -49,13 +49,10 @@ ngap_gNB_nnsf_select_amf_by_amf_setid(ngap_gNB_instance_t       *instance_p,
                                      int                        selected_plmn_identity,
                                      uint8_t                    amf_setid);
 
-struct ngap_gNB_amf_data_s*
-ngap_gNB_nnsf_select_amf_by_guami(ngap_gNB_instance_t       *instance_p,
-                                   ngap_rrc_establishment_cause_t  cause,
-                                   ngap_guami_t                   guami);
+struct ngap_gNB_amf_data_s *ngap_gNB_nnsf_select_amf_by_guami(ngap_gNB_instance_t *instance_p,
+                                                              ngap_rrc_establishment_cause_t cause,
+                                                              nr_guami_t guami);
 
-struct ngap_gNB_amf_data_s*
-ngap_gNB_nnsf_select_amf_by_guami_no_cause(ngap_gNB_instance_t       *instance_p,
-                                   ngap_guami_t                   guami);
+struct ngap_gNB_amf_data_s *ngap_gNB_nnsf_select_amf_by_guami_no_cause(ngap_gNB_instance_t *instance_p, nr_guami_t guami);
 
 #endif /* NGAP_GNB_NNSF_H_ */
