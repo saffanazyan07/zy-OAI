@@ -703,51 +703,33 @@ uint16_t get_NCS(uint8_t index, uint16_t format0, uint8_t restricted_set_config)
   }
 }
 
-//from 38.211 Table 6.3.3.2-1
-static const int16_t N_RA_RB[16] = {6, 3, 2, 24, 12, 6, 12, 6, 3, 24, 12, 6, 12, 6, 24, 12};
-
+//from 38.211 Table 6.3.3.2-1            // 15  30 60 120 240 480
+static const unsigned int N_RA_RB[6][6] = {{12,  6, 3, -1, -1, -1},
+                                           {24, 12, 6, -1, -1, -1},
+                                           {-1, -1, 12, 6, -1, -1},
+                                           {-1, -1, 24, 12, 3, 2},
+                                           // L839
+                                           {6,   3, 2, -1, -1, -1},
+                                           {24, 12, 6, -1, -1, -1}};
 /* Function to get number of RBs required for prach occasion based on
  * 38.211 Table 6.3.3.2-1 */
-int16_t get_N_RA_RB (int delta_f_RA_PRACH, int delta_f_PUSCH)
+unsigned int get_N_RA_RB(const unsigned int delta_f_RA_PRACH, const unsigned int delta_f_PUSCH)
 {
-  int8_t index = 0;
-  switch(delta_f_RA_PRACH) {
-    case 0 :
-      index = 6;
-      if (delta_f_PUSCH == 0)
-        index += 0;
-      else if(delta_f_PUSCH == 1)
-        index += 1;
-      else
-        index += 2;
-      break;
-    case 1 :
-      index = 9;
-      if (delta_f_PUSCH == 0)
-        index += 0;
-      else if(delta_f_PUSCH == 1)
-        index += 1;
-      else
-        index += 2;
-      break;
-    case 2 :
-      index = 11;
-      if (delta_f_PUSCH == 2)
-        index += 0;
-      else
-        index += 1;
-      break;		
-    case 3:
-      index = 13;
-      if (delta_f_PUSCH == 2)
-        index += 0;
-      else
-        index += 1;
-      break;
-    default : index = 10;/*30khz prach scs and 30khz pusch scs*/
-  }
-  return N_RA_RB[index];
-}	
+  DevAssert(delta_f_PUSCH < 6);
+  DevAssert(delta_f_RA_PRACH < 6);
+  unsigned int n_rb;
+  n_rb = N_RA_RB[delta_f_RA_PRACH][delta_f_PUSCH];
+  DevAssert(n_rb != -1);
+  return n_rb;
+}
+
+// frome Table 6.3.3.1-1
+unsigned int get_delta_f_RA_long(const unsigned int format)
+{
+  DevAssert(format < 4);
+  return (format == 3) ? 5 : 4;
+}
+
 // Table 6.3.3.2-2: Random access configurations for FR1 and paired spectrum/supplementary uplink
 // the column 5, (SFN_nbr is a bitmap where we set bit to '1' in the position of the subframe where the RACH can be sent.
 // E.g. in row 4, and column 5 we have set value 512 ('1000000000') which means RACH can be sent at subframe 9.

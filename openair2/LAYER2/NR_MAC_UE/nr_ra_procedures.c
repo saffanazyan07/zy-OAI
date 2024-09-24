@@ -76,9 +76,18 @@ void init_RA(NR_UE_MAC_INST_t *mac,
   fapi_nr_config_request_t *cfg = &mac->phy_config.config_req;
 
   prach_resources->RA_PREAMBLE_BACKOFF = 0;
-  AssertFatal(nr_rach_ConfigCommon && nr_rach_ConfigCommon->msg1_SubcarrierSpacing,
-              "Cannot handle yet the scenario without msg1_SubcarrierSpacing (L839)\n");
-  NR_SubcarrierSpacing_t prach_scs = *nr_rach_ConfigCommon->msg1_SubcarrierSpacing;
+  NR_SubcarrierSpacing_t prach_scs;
+  int scs_for_pcmax; // for long prach the UL BWP SCS is used for calculating RA_PCMAX
+  if (nr_rach_ConfigCommon && nr_rach_ConfigCommon->msg1_SubcarrierSpacing) {
+    prach_scs = *nr_rach_ConfigCommon->msg1_SubcarrierSpacing;
+    scs_for_pcmax = prach_scs;
+  } else {
+    const unsigned int index = rach_ConfigGeneric->prach_ConfigurationIndex;
+    const unsigned int unpaired = mac->phy_config.config_req.cell_config.frame_duplex_type;
+    const unsigned int format = get_format0(index, unpaired, mac->frequency_range);
+    prach_scs = get_delta_f_RA_long(format);
+    scs_for_pcmax = mac->current_UL_BWP->scs;
+  }
   int n_prbs = get_N_RA_RB(prach_scs, mac->current_UL_BWP->scs);
   int start_prb = rach_ConfigGeneric->msg1_FrequencyStart + mac->current_UL_BWP->BWPStart;
   // PRACH shall be as specified for QPSK modulated DFT-s-OFDM of equivalent RB allocation (38.101-1)
@@ -89,8 +98,8 @@ void init_RA(NR_UE_MAC_INST_t *mac,
                                            mac->current_UL_BWP->channel_bandwidth,
                                            2,
                                            false,
-                                           prach_scs,
-                                           cfg->carrier_config.dl_grid_size[prach_scs],
+                                           scs_for_pcmax,
+                                           cfg->carrier_config.dl_grid_size[scs_for_pcmax],
                                            true,
                                            n_prbs,
                                            start_prb);
