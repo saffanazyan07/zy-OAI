@@ -651,22 +651,21 @@ static void fill_ul_rb_mask(PHY_VARS_gNB *gNB, int frame_rx, int slot_rx, uint32
   }
 }
 
-int fill_srs_reported_symbol_list(nfapi_nr_srs_reported_symbol_t *prgs,
-                                  const nfapi_nr_srs_pdu_t *srs_pdu,
+int fill_srs_reported_symbol(nfapi_nr_srs_reported_symbol_t *reported_symbol,
+                             const nfapi_nr_srs_pdu_t *srs_pdu,
                                   const int N_RB_UL,
                                   const int8_t *snr_per_rb,
                                   const int srs_est) {
-
-  prgs->num_prgs = srs_pdu->beamforming.num_prgs;
-  for(int prg_idx = 0; prg_idx < prgs->num_prgs; prg_idx++) {
+  reported_symbol->num_prgs = srs_pdu->beamforming.num_prgs;
+  for (int prg_idx = 0; prg_idx < reported_symbol->num_prgs; prg_idx++) {
     if (srs_est<0) {
-      prgs->prg_list[prg_idx].rb_snr = 0xFF;
+      reported_symbol->prg_list[prg_idx].rb_snr = 0xFF;
     } else if (snr_per_rb[prg_idx] < -64) {
-      prgs->prg_list[prg_idx].rb_snr = 0;
+      reported_symbol->prg_list[prg_idx].rb_snr = 0;
     } else if (snr_per_rb[prg_idx] > 63) {
-      prgs->prg_list[prg_idx].rb_snr = 0xFE;
+      reported_symbol->prg_list[prg_idx].rb_snr = 0xFE;
     } else {
-      prgs->prg_list[prg_idx].rb_snr = (snr_per_rb[prg_idx] + 64) << 1;
+      reported_symbol->prg_list[prg_idx].rb_snr = (snr_per_rb[prg_idx] + 64) << 1;
     }
   }
 
@@ -1054,7 +1053,7 @@ int phy_procedures_gNB_uespec_RX(PHY_VARS_gNB *gNB, int frame_rx, int slot_rx)
             nr_srs_bf_report.num_symbols = 1 << srs_pdu->num_symbols;
             nr_srs_bf_report.wide_band_snr = srs_est >= 0 ? (gNB->srs->snr + 64) << 1 : 0xFF; // 0xFF will be set if this field is invalid
             nr_srs_bf_report.num_reported_symbols = 1 << srs_pdu->num_symbols;
-            fill_srs_reported_symbol_list(&nr_srs_bf_report.prgs, srs_pdu, frame_parms->N_RB_UL, snr_per_rb, srs_est);
+            fill_srs_reported_symbol(&nr_srs_bf_report.reported_symbol_list[0], srs_pdu, frame_parms->N_RB_UL, snr_per_rb, srs_est);
 
 #ifdef SRS_IND_DEBUG
             LOG_I(NR_PHY, "nr_srs_bf_report.prg_size = %i\n", nr_srs_bf_report.prg_size);
