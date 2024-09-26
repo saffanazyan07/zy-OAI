@@ -1407,10 +1407,10 @@ void handle_nr_srs_measurements(const module_id_t module_id,
       const int ul_prbblack_SNR_threshold = nr_mac->ul_prbblack_SNR_threshold;
       uint16_t *ulprbbl = nr_mac->ulprbbl;
 
-      uint16_t num_rbs = nr_srs_bf_report.prg_size * nr_srs_bf_report.prgs.num_prgs;
+      uint16_t num_rbs = nr_srs_bf_report.prg_size * nr_srs_bf_report.reported_symbol_list[0].num_prgs;
       memset(ulprbbl, 0, num_rbs * sizeof(uint16_t));
       for (int rb = 0; rb < num_rbs; rb++) {
-        int snr = (nr_srs_bf_report.prgs.prg_list[rb / nr_srs_bf_report.prg_size].rb_snr >> 1) - 64;
+        int snr = (nr_srs_bf_report.reported_symbol_list[0].prg_list[rb / nr_srs_bf_report.prg_size].rb_snr >> 1) - 64;
         if (snr < wide_band_snr_dB - ul_prbblack_SNR_threshold) {
           ulprbbl[rb] = 0x3FFF; // all symbols taken
         }

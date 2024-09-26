@@ -1787,7 +1787,7 @@ typedef struct {
   uint8_t num_symbols;                  // Number of symbols for SRS. Value: 1 -> 4. If a PHY does not report for individual symbols then this parameter should be set to 1.
   uint8_t wide_band_snr;                // SNR value in dB measured within configured SRS bandwidth on each symbol. Value: 0 -> 255 representing -64 dB to 63 dB with a step size 0.5 dB. 0xff will be set if this field is invalid.
   uint8_t num_reported_symbols;         // Number of symbols reported in this message. This allows PHY to report individual symbols or aggregated symbols where this field will be set to 1. Value: 1 -> 4.
-  nfapi_nr_srs_reported_symbol_t prgs;
+  nfapi_nr_srs_reported_symbol_t* reported_symbol_list;
 } nfapi_nr_srs_beamforming_report_t;
 
 // SRS indication

@@ -2537,7 +2537,7 @@ int pack_nr_srs_beamforming_report(void *pMessageBuf, void *pPackedBuf, uint32_t
     return 0;
   }
 
-  if (!pack_nr_srs_reported_symbol(&nr_srs_beamforming_report->prgs, &pWritePackedMessage, end)) {
+  if (!pack_nr_srs_reported_symbol(&nr_srs_beamforming_report->reported_symbol_list[0], &pWritePackedMessage, end)) {
     return 0;
   }
 
@@ -4448,8 +4448,9 @@ int unpack_nr_srs_beamforming_report(void *pMessageBuf, uint32_t messageBufLen, 
        pull8(&pReadPackedMessage, &nr_srs_beamforming_report->num_reported_symbols, end))) {
     return -1;
   }
-
-  if (!unpack_nr_srs_reported_symbol(&nr_srs_beamforming_report->prgs, &pReadPackedMessage, end)) {
+  nr_srs_beamforming_report->reported_symbol_list =
+      calloc(nr_srs_beamforming_report->num_reported_symbols, sizeof(*nr_srs_beamforming_report->reported_symbol_list));
+  if (!unpack_nr_srs_reported_symbol(&nr_srs_beamforming_report->reported_symbol_list[0], &pReadPackedMessage, end)) {
     return -1;
   }
 
