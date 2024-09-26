@@ -1760,6 +1760,44 @@ typedef struct
 
 /// 5G PHY FAPI Specification: SRS indication - Section 3.4.10
 
+// Table 3–133 Channel SVD Representation
+
+typedef struct {
+  // Array of (Nu*Nu) entries of the type denoted by ‘iq Representation’
+  // U[ueAntenna uI, left eigenvector leI] = array[uI*Nu + leI]
+  uint8_t* left_eigenvectors_matrix_u;
+
+  // Array of (Nu) entries of the type denoted by ‘singular
+  // Values Representation’
+  // Σ[left eigenvector leI, right eigenvector reI] =
+  // • 0 if leI ≠ reI
+  // • 0 if min(leI, reI) ≥ Nu
+  // • array[leI] if leI = reI
+  uint8_t* diagonal_entries_of_singular_matrix_sum_f;
+
+  // Array of (Nu*Ng) entries of the type denoted by ‘iq
+  // Representation’
+  //  H
+  // VF[right eigenvector reI, gNB antenna gI] =
+  // array[reI*Ng + gI],
+  //- reI: 0…Nu-1
+  //- gI: 0…Ng-1
+  uint8_t* complex_conjugate_of_matrix_of_right_eigenvectors_v_hf;
+} nfapi_nr_srs_channel_svd_representation_prg_t;
+
+typedef struct {
+  uint8_t normalized_iq_representation; // 0: 16-bit normalized complex number (iqSize = 2); 1: 32-bit normalized complex number
+                                        // (iqSize = 4)
+  uint8_t normalized_singular_value_representation; // 0: 8-bit linear representation (sSize = 1); 1:16-bit linear representation
+                                                    // (sSize = 2)
+  int8_t singular_value_scaling; // dB-domain representation of singular value scaling
+  uint16_t num_gnb_antenna_elements; // Ng: Number of gNB antenna elements
+  uint8_t num_ue_srs_ports; // Nu: Number of sampled UE SRS ports
+  uint16_t prg_size; // Size in RBs of a precoding resource block group (PRG)
+  uint16_t num_prgs; // Number of PRGs to be reported for this SRS PDU
+  nfapi_nr_srs_channel_svd_representation_prg_t* prg_list;
+} nfapi_nr_srs_channel_svd_representation_t;
+
 // Normalized channel I/Q matrix
 
 typedef struct {
