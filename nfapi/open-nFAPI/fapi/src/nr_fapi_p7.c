@@ -58,6 +58,9 @@ uint8_t fapi_nr_p7_message_body_pack(nfapi_nr_p7_message_header_t *header,
     case NFAPI_NR_PHY_MSG_TYPE_SRS_INDICATION:
       result = pack_nr_srs_indication(header, ppWritePackedMsg, end, config);
     break;
+    case NFAPI_NR_PHY_MSG_TYPE_RACH_INDICATION:
+      result = pack_nr_rach_indication(header, ppWritePackedMsg, end, config);
+    break;
     default: {
       if (header->message_id >= NFAPI_VENDOR_EXT_MSG_MIN && header->message_id <= NFAPI_VENDOR_EXT_MSG_MAX) {
         if (config && config->pack_p7_vendor_extension) {
@@ -198,6 +201,11 @@ int fapi_nr_p7_message_unpack(void *pMessageBuf,
     case NFAPI_NR_PHY_MSG_TYPE_SRS_INDICATION:
       if (check_nr_fapi_unpack_length(NFAPI_NR_PHY_MSG_TYPE_SRS_INDICATION, unpackedBufLen)) {
         result = unpack_nr_srs_indication(&pReadPackedMessage, end, pMessageHeader, config);
+      }
+    break;
+    case NFAPI_NR_PHY_MSG_TYPE_RACH_INDICATION:
+      if (check_nr_fapi_unpack_length(NFAPI_NR_PHY_MSG_TYPE_RACH_INDICATION, unpackedBufLen)) {
+        result = unpack_nr_rach_indication(&pReadPackedMessage, end, pMessageHeader, config);
       }
     break;
     default:
@@ -2319,5 +2327,80 @@ uint8_t unpack_nr_srs_indication(uint8_t **ppReadPackedMsg, uint8_t *end, void *
     }
   }
 
+  return 1;
+}
+
+static uint8_t pack_nr_rach_indication_body(void *tlv, uint8_t **ppWritePackedMsg, uint8_t *end)
+{
+  nfapi_nr_prach_indication_pdu_t *value = (nfapi_nr_prach_indication_pdu_t *)tlv;
+
+  if (!(push16(value->phy_cell_id, ppWritePackedMsg, end) && push8(value->symbol_index, ppWritePackedMsg, end)
+        && push8(value->slot_index, ppWritePackedMsg, end) && push8(value->freq_index, ppWritePackedMsg, end)
+        && push8(value->avg_rssi, ppWritePackedMsg, end) && push8(value->avg_snr, ppWritePackedMsg, end)
+        && push8(value->num_preamble, ppWritePackedMsg, end)))
+    return 0;
+  for (int i = 0; i < value->num_preamble; i++) {
+    if (!(push8(value->preamble_list[i].preamble_index, ppWritePackedMsg, end)
+          && push16(value->preamble_list[i].timing_advance, ppWritePackedMsg, end)
+          && push32(value->preamble_list[i].preamble_pwr, ppWritePackedMsg, end)))
+      return 0;
+  }
+  return 1;
+}
+
+uint8_t pack_nr_rach_indication(void *msg, uint8_t **ppWritePackedMsg, uint8_t *end, nfapi_p7_codec_config_t *config)
+{
+  nfapi_nr_rach_indication_t *pNfapiMsg = (nfapi_nr_rach_indication_t *)msg;
+
+  if (!(push16(pNfapiMsg->sfn, ppWritePackedMsg, end) && push16(pNfapiMsg->slot, ppWritePackedMsg, end)
+        && push8(pNfapiMsg->number_of_pdus, ppWritePackedMsg, end)))
+    return 0;
+
+  for (int i = 0; i < pNfapiMsg->number_of_pdus; i++) {
+    if (!pack_nr_rach_indication_body(&(pNfapiMsg->pdu_list[i]), ppWritePackedMsg, end))
+      return 0;
+  }
+
+  return 1;
+}
+
+static uint8_t unpack_nr_rach_indication_body(nfapi_nr_prach_indication_pdu_t *value,
+                                              uint8_t **ppReadPackedMsg,
+                                              uint8_t *end,
+                                              nfapi_p7_codec_config_t *config)
+{
+  if (!(pull16(ppReadPackedMsg, &value->phy_cell_id, end) && pull8(ppReadPackedMsg, &value->symbol_index, end)
+        && pull8(ppReadPackedMsg, &value->slot_index, end) && pull8(ppReadPackedMsg, &value->freq_index, end)
+        && pull8(ppReadPackedMsg, &value->avg_rssi, end) && pull8(ppReadPackedMsg, &value->avg_snr, end)
+        && pull8(ppReadPackedMsg, &value->num_preamble, end))) {
+    return 0;
+  }
+
+  for (int i = 0; i < value->num_preamble; i++) {
+    nfapi_nr_prach_indication_preamble_t *preamble = &(value->preamble_list[i]);
+    if (!(pull8(ppReadPackedMsg, &preamble->preamble_index, end) && pull16(ppReadPackedMsg, &preamble->timing_advance, end)
+          && pull32(ppReadPackedMsg, &preamble->preamble_pwr, end))) {
+      return 0;
+    }
+  }
+  return 1;
+}
+
+uint8_t unpack_nr_rach_indication(uint8_t **ppReadPackedMsg, uint8_t *end, void *msg, nfapi_p7_codec_config_t *config)
+{
+  nfapi_nr_rach_indication_t *pNfapiMsg = (nfapi_nr_rach_indication_t *)msg;
+
+  if (!(pull16(ppReadPackedMsg, &pNfapiMsg->sfn, end) && pull16(ppReadPackedMsg, &pNfapiMsg->slot, end)
+        && pull8(ppReadPackedMsg, &pNfapiMsg->number_of_pdus, end))) {
+    return 0;
+  }
+
+  if (pNfapiMsg->number_of_pdus > 0) {
+    pNfapiMsg->pdu_list = calloc(pNfapiMsg->number_of_pdus, sizeof(*pNfapiMsg->pdu_list));
+    for (int i = 0; i < pNfapiMsg->number_of_pdus; i++) {
+      if (!unpack_nr_rach_indication_body(&(pNfapiMsg->pdu_list[i]), ppReadPackedMsg, end, config))
+        return 0;
+    }
+  }
   return 1;
 }
