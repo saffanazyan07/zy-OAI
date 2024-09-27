@@ -2594,48 +2594,6 @@ int pack_nr_srs_beamforming_report(void *pMessageBuf, void *pPackedBuf, uint32_t
   return (msgEnd - msgHead);
 }
 
-//RACH INDICATION
-
-static uint8_t pack_nr_rach_indication_body(void* tlv, uint8_t **ppWritePackedMsg, uint8_t *end)
-{
-	nfapi_nr_prach_indication_pdu_t* value = (nfapi_nr_prach_indication_pdu_t*)tlv;
-
-	if(!(push16(value->phy_cell_id, ppWritePackedMsg, end) &&
-	 	 push8(value->symbol_index, ppWritePackedMsg, end) &&
-		 push8(value->slot_index, ppWritePackedMsg, end) &&
-		 push8(value->freq_index, ppWritePackedMsg, end) &&
-		 push8(value->avg_rssi, ppWritePackedMsg, end) &&
-		 push8(value->avg_snr, ppWritePackedMsg, end) &&
-		 push8(value->num_preamble, ppWritePackedMsg, end)
-		 ))
-		  return 0;
-	for(int i = 0; i < value->num_preamble; i++)
-	{
-		if(!(push8(value->preamble_list[i].preamble_index, ppWritePackedMsg, end) &&
-			push16(value->preamble_list[i].timing_advance, ppWritePackedMsg, end) &&
-			push32(value->preamble_list[i].preamble_pwr, ppWritePackedMsg, end)
-			))
-			return 0;
-	}
-	return 1;
-}
-
-uint8_t pack_nr_rach_indication(void *msg, uint8_t **ppWritePackedMsg, uint8_t *end, nfapi_p7_codec_config_t *config)
-{
-  nfapi_nr_rach_indication_t *pNfapiMsg = (nfapi_nr_rach_indication_t *)msg;
-
-  if (!(push16(pNfapiMsg->sfn, ppWritePackedMsg, end) && push16(pNfapiMsg->slot, ppWritePackedMsg, end)
-        && push8(pNfapiMsg->number_of_pdus, ppWritePackedMsg, end)))
-    return 0;
-
-  for (int i = 0; i < pNfapiMsg->number_of_pdus; i++) {
-    if (!pack_nr_rach_indication_body(&(pNfapiMsg->pdu_list[i]), ppWritePackedMsg, end))
-      return 0;
-  }
-
-  return 1;
-}
-
 // Main pack function - public
 
 int nfapi_nr_p7_message_pack(void *pMessageBuf, void *pPackedBuf, uint32_t packedBufLen, nfapi_p7_codec_config_t *config)
@@ -4506,52 +4464,6 @@ int unpack_nr_srs_beamforming_report(void *pMessageBuf, uint32_t messageBufLen, 
   }
 
   return 0;
-}
-
-//NR RACH
-
-static uint8_t unpack_nr_rach_indication_body(nfapi_nr_prach_indication_pdu_t *value,
-                                              uint8_t **ppReadPackedMsg,
-                                              uint8_t *end,
-                                              nfapi_p7_codec_config_t *config)
-{
-  if (!(pull16(ppReadPackedMsg, &value->phy_cell_id, end) && pull8(ppReadPackedMsg, &value->symbol_index, end)
-        && pull8(ppReadPackedMsg, &value->slot_index, end) && pull8(ppReadPackedMsg, &value->freq_index, end)
-        && pull8(ppReadPackedMsg, &value->avg_rssi, end) && pull8(ppReadPackedMsg, &value->avg_snr, end)
-        && pull8(ppReadPackedMsg, &value->num_preamble, end))) {
-    return 0;
-  }
-
-  for (int i = 0; i < value->num_preamble; i++) {
-    nfapi_nr_prach_indication_preamble_t *preamble = &(value->preamble_list[i]);
-    if (!(pull8(ppReadPackedMsg, &preamble->preamble_index, end) && pull16(ppReadPackedMsg, &preamble->timing_advance, end)
-          && pull32(ppReadPackedMsg, &preamble->preamble_pwr, end))) {
-      return 0;
-    }
-  }
-  return 1;
-}
-
-uint8_t unpack_nr_rach_indication(uint8_t **ppReadPackedMsg,
-                                  uint8_t *end,
-                                  nfapi_nr_rach_indication_t *msg,
-                                  nfapi_p7_codec_config_t *config)
-{
-  nfapi_nr_rach_indication_t *pNfapiMsg = (nfapi_nr_rach_indication_t *)msg;
-
-  if (!(pull16(ppReadPackedMsg, &pNfapiMsg->sfn, end) && pull16(ppReadPackedMsg, &pNfapiMsg->slot, end)
-        && pull8(ppReadPackedMsg, &pNfapiMsg->number_of_pdus, end))) {
-    return 0;
-  }
-
-  if (pNfapiMsg->number_of_pdus > 0) {
-    pNfapiMsg->pdu_list = nfapi_p7_allocate(sizeof(*pNfapiMsg->pdu_list) * pNfapiMsg->number_of_pdus, config);
-    for (int i = 0; i < pNfapiMsg->number_of_pdus; i++) {
-      if (!unpack_nr_rach_indication_body(&(pNfapiMsg->pdu_list[i]), ppReadPackedMsg, end, config))
-        return 0;
-    }
-  }
-  return 1;
 }
 
 static uint8_t unpack_ue_release_request(uint8_t **ppReadPackedMsg, uint8_t *end, void *msg, nfapi_p7_codec_config_t *config) {
