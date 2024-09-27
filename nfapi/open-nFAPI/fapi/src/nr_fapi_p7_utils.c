@@ -823,6 +823,38 @@ bool eq_srs_indication(const nfapi_nr_srs_indication_t *a, const nfapi_nr_srs_in
   return true;
 }
 
+static bool eq_rach_indication_PDU(const nfapi_nr_prach_indication_pdu_t *a, const nfapi_nr_prach_indication_pdu_t *b)
+{
+  EQ(a->phy_cell_id, b->phy_cell_id);
+  EQ(a->symbol_index, b->symbol_index);
+  EQ(a->slot_index, b->slot_index);
+  EQ(a->freq_index, b->freq_index);
+  EQ(a->avg_rssi, b->avg_rssi);
+  EQ(a->avg_snr, b->avg_snr);
+  EQ(a->num_preamble, b->num_preamble);
+  for (int preamble_idx = 0; preamble_idx < a->num_preamble; ++preamble_idx) {
+    const nfapi_nr_prach_indication_preamble_t *a_pr = &a->preamble_list[preamble_idx];
+    const nfapi_nr_prach_indication_preamble_t *b_pr = &b->preamble_list[preamble_idx];
+    EQ(a_pr->preamble_index, b_pr->preamble_index);
+    EQ(a_pr->timing_advance, b_pr->timing_advance);
+    EQ(a_pr->preamble_pwr, b_pr->preamble_pwr);
+  }
+  return true;
+}
+
+bool eq_rach_indication(const nfapi_nr_rach_indication_t *a, const nfapi_nr_rach_indication_t *b)
+{
+  EQ(a->header.message_id, b->header.message_id);
+  EQ(a->header.message_length, b->header.message_length);
+  EQ(a->sfn, b->sfn);
+  EQ(a->slot, b->slot);
+  EQ(a->number_of_pdus, b->number_of_pdus);
+  for (int pdu_idx = 0; pdu_idx < a->number_of_pdus; ++pdu_idx) {
+    EQ(eq_rach_indication_PDU(&a->pdu_list[pdu_idx], &b->pdu_list[pdu_idx]), true);
+  }
+  return true;
+}
+
 void free_dl_tti_request(nfapi_nr_dl_tti_request_t *msg)
 {
   if (msg->vendor_extension) {
@@ -965,6 +997,13 @@ void free_uci_indication(nfapi_nr_uci_indication_t *msg)
 }
 
 void free_srs_indication(nfapi_nr_srs_indication_t *msg)
+{
+  if (msg->pdu_list) {
+    free(msg->pdu_list);
+  }
+}
+
+void free_rach_indication(nfapi_nr_rach_indication_t *msg)
 {
   if (msg->pdu_list) {
     free(msg->pdu_list);
@@ -1908,4 +1947,35 @@ size_t get_srs_indication_size(const nfapi_nr_srs_indication_t *msg)
   total_size += malloc_usable_size(msg->pdu_list);
 
   return total_size;
+}
+
+static void copy_rach_indication_PDU(const nfapi_nr_prach_indication_pdu_t *src, nfapi_nr_prach_indication_pdu_t *dst)
+{
+  dst->phy_cell_id = src->phy_cell_id;
+  dst->symbol_index = src->symbol_index;
+  dst->slot_index = src->slot_index;
+  dst->freq_index = src->freq_index;
+  dst->avg_rssi = src->avg_rssi;
+  dst->avg_snr = src->avg_snr;
+  dst->num_preamble = src->num_preamble;
+  for (int preamble_idx = 0; preamble_idx < dst->num_preamble; ++preamble_idx) {
+    nfapi_nr_prach_indication_preamble_t *dst_pr = &dst->preamble_list[preamble_idx];
+    const nfapi_nr_prach_indication_preamble_t *src_pr = &src->preamble_list[preamble_idx];
+    dst_pr->preamble_index = src_pr->preamble_index;
+    dst_pr->timing_advance = src_pr->timing_advance;
+    dst_pr->preamble_pwr = src_pr->preamble_pwr;
+  }
+}
+
+void copy_rach_indication(const nfapi_nr_rach_indication_t *src, nfapi_nr_rach_indication_t *dst)
+{
+  dst->header.message_id = src->header.message_id;
+  dst->header.message_length = src->header.message_length;
+  dst->sfn = src->sfn;
+  dst->slot = src->slot;
+  dst->number_of_pdus = src->number_of_pdus;
+  dst->pdu_list = calloc(dst->number_of_pdus, sizeof(*dst->pdu_list));
+  for (int pdu_idx = 0; pdu_idx < dst->number_of_pdus; ++pdu_idx) {
+    copy_rach_indication_PDU(&src->pdu_list[pdu_idx], &dst->pdu_list[pdu_idx]);
+  }
 }
