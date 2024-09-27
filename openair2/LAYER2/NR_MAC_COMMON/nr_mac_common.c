@@ -1845,10 +1845,13 @@ int get_nr_prach_info_from_index(uint8_t index,
         }
         if ((s_map >> subframe) & 0x01 ) {
          *N_RA_slot = table_6_3_3_2_3_prachConfig_Index[index][6]; // Number of RACH slots within a subframe
-          if (mu == 1 && index >= 67) {
-            if ((*N_RA_slot <= 1) && (slot % 2 == 0))
+          if (index >= 67) {
+            if ((mu == 1) && (*N_RA_slot <= 1) && (slot % 2 == 0))
               return 0; // no prach in even slots @ 30kHz for 1 prach per subframe 
-          } 
+          } else {
+            if (slot % 2)
+              return 0; // slot does not contain start symbol of this prach time resource
+          }
           if (start_symbol != NULL && N_t_slot != NULL && N_dur != NULL && format != NULL) {
             *config_period = x;
             *start_symbol = table_6_3_3_2_3_prachConfig_Index[index][5];
