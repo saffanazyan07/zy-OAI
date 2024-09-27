@@ -2469,6 +2469,49 @@ uint8_t pack_nr_timing_info(void *msg, uint8_t **ppWritePackedMsg, uint8_t *end,
 
 //SRS INDICATION
 
+int pack_nr_srs_channel_svd_representation(void *pMessageBuf, void *pPackedBuf, uint32_t packedBufLen)
+{
+  nfapi_nr_srs_channel_svd_representation_t *value = (nfapi_nr_srs_channel_svd_representation_t *)pMessageBuf;
+
+  const uint16_t iq_size = value->normalized_iq_representation == 0 ? 2 : 4;
+  const uint16_t ng = value->num_gnb_antenna_elements;
+  const uint8_t nu = value->num_ue_srs_ports;
+
+  uint8_t *pWritePackedMessage = pPackedBuf;
+  uint8_t *end = pPackedBuf + packedBufLen;
+
+  if (!(push8(value->normalized_iq_representation, &pWritePackedMessage, end)
+        && push8(value->normalized_singular_value_representation, &pWritePackedMessage, end)
+        && pushs8(value->singular_value_scaling, &pWritePackedMessage, end)
+        && push16(value->num_gnb_antenna_elements, &pWritePackedMessage, end)
+        && push8(value->num_ue_srs_ports, &pWritePackedMessage, end) && push16(value->prg_size, &pWritePackedMessage, end)
+        && push16(value->num_prgs, &pWritePackedMessage, end))) {
+    return 0;
+  }
+
+  for (int prg_idx = 0; prg_idx < value->num_prgs; ++prg_idx) {
+    const nfapi_nr_srs_channel_svd_representation_prg_t *prg = &value->prg_list[prg_idx];
+    if (!(pusharray8(prg->left_eigenvectors_matrix_u, nu * nu * iq_size, nu * nu * iq_size, &pWritePackedMessage, end))) {
+      return 0;
+    }
+    if (!(pusharray8(prg->diagonal_entries_of_singular_matrix_sum_f, nu * iq_size, nu * iq_size, &pWritePackedMessage, end))) {
+      return 0;
+    }
+    if (!(pusharray8(prg->complex_conjugate_of_matrix_of_right_eigenvectors_v_hf,
+                     nu * ng * iq_size,
+                     nu * ng * iq_size,
+                     &pWritePackedMessage,
+                     end))) {
+      return 0;
+    }
+  }
+
+  // Message length
+  uintptr_t msgHead = (uintptr_t)pPackedBuf;
+  uintptr_t msgEnd = (uintptr_t)pWritePackedMessage;
+  return (msgEnd - msgHead);
+}
+
 int pack_nr_srs_normalized_channel_iq_matrix(void *pMessageBuf, void *pPackedBuf, uint32_t packedBufLen) {
 
   nfapi_nr_srs_normalized_channel_iq_matrix_t *nr_srs_normalized_channel_iq_matrix = (nfapi_nr_srs_normalized_channel_iq_matrix_t*)pMessageBuf;
@@ -4381,6 +4424,50 @@ static uint8_t unpack_tx_request(uint8_t **ppReadPackedMsg, uint8_t *end, void *
 
 
 //SRS INDICATION
+
+int unpack_nr_srs_channel_svd_representation(void *pMessageBuf, uint32_t messageBufLen, void *pUnpackedBuf, uint32_t unpackedBufLen)
+{
+  nfapi_nr_srs_channel_svd_representation_t *value = (nfapi_nr_srs_channel_svd_representation_t *)pUnpackedBuf;
+  uint8_t *pReadPackedMessage = pMessageBuf;
+  uint8_t *end = pMessageBuf + messageBufLen;
+
+  memset(pUnpackedBuf, 0, unpackedBufLen);
+  if (!(pull8(&pReadPackedMessage, &value->normalized_iq_representation, end)
+        && pull8(&pReadPackedMessage, &value->normalized_singular_value_representation, end)
+        && pulls8(&pReadPackedMessage, &value->singular_value_scaling, end)
+        && pull16(&pReadPackedMessage, &value->num_gnb_antenna_elements, end)
+        && pull8(&pReadPackedMessage, &value->num_ue_srs_ports, end) && pull16(&pReadPackedMessage, &value->prg_size, end)
+        && pull16(&pReadPackedMessage, &value->num_prgs, end))) {
+    return -1;
+  }
+  const uint16_t iq_size = value->normalized_iq_representation == 0 ? 2 : 4;
+  const uint16_t ng = value->num_gnb_antenna_elements;
+  const uint8_t nu = value->num_ue_srs_ports;
+
+  value->prg_list = calloc(value->num_prgs, sizeof(*value->prg_list));
+
+  for (int prg_idx = 0; prg_idx < value->num_prgs; ++prg_idx) {
+    nfapi_nr_srs_channel_svd_representation_prg_t *prg = &value->prg_list[prg_idx];
+    prg->left_eigenvectors_matrix_u = calloc(nu * nu * iq_size, sizeof(*prg->left_eigenvectors_matrix_u));
+    if (!(pullarray8(&pReadPackedMessage, prg->left_eigenvectors_matrix_u, nu * nu * iq_size, nu * nu * iq_size, end))) {
+      return 0;
+    }
+    prg->diagonal_entries_of_singular_matrix_sum_f = calloc(nu * iq_size, sizeof(*prg->diagonal_entries_of_singular_matrix_sum_f));
+    if (!(pullarray8(&pReadPackedMessage, prg->diagonal_entries_of_singular_matrix_sum_f, nu * iq_size, nu * iq_size, end))) {
+      return 0;
+    }
+    prg->complex_conjugate_of_matrix_of_right_eigenvectors_v_hf =
+        calloc(nu * ng * iq_size, sizeof(*prg->complex_conjugate_of_matrix_of_right_eigenvectors_v_hf));
+    if (!(pullarray8(&pReadPackedMessage,
+                     prg->complex_conjugate_of_matrix_of_right_eigenvectors_v_hf,
+                     nu * ng * iq_size,
+                     nu * ng * iq_size,
+                     end))) {
+      return 0;
+    }
+  }
+  return 1;
+}
 
 int unpack_nr_srs_normalized_channel_iq_matrix(void *pMessageBuf, uint32_t messageBufLen, void *pUnpackedBuf, uint32_t unpackedBufLen) {
 
