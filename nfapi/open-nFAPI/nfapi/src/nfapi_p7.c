@@ -2512,29 +2512,34 @@ int pack_nr_srs_channel_svd_representation(void *pMessageBuf, void *pPackedBuf, 
   return (msgEnd - msgHead);
 }
 
-int pack_nr_srs_normalized_channel_iq_matrix(void *pMessageBuf, void *pPackedBuf, uint32_t packedBufLen) {
-
-  nfapi_nr_srs_normalized_channel_iq_matrix_t *nr_srs_normalized_channel_iq_matrix = (nfapi_nr_srs_normalized_channel_iq_matrix_t*)pMessageBuf;
+int pack_nr_srs_normalized_channel_iq_matrix(void *pMessageBuf, void *pPackedBuf, uint32_t packedBufLen)
+{
+  nfapi_nr_srs_normalized_channel_iq_matrix_t *nr_srs_normalized_channel_iq_matrix =
+      (nfapi_nr_srs_normalized_channel_iq_matrix_t *)pMessageBuf;
 
   uint8_t *pWritePackedMessage = pPackedBuf;
   uint8_t *end = pPackedBuf + packedBufLen;
 
-  if(!(push8(nr_srs_normalized_channel_iq_matrix->normalized_iq_representation, &pWritePackedMessage, end) &&
-       push16(nr_srs_normalized_channel_iq_matrix->num_gnb_antenna_elements, &pWritePackedMessage, end) &&
-       push16(nr_srs_normalized_channel_iq_matrix->num_ue_srs_ports, &pWritePackedMessage, end) &&
-       push16(nr_srs_normalized_channel_iq_matrix->prg_size, &pWritePackedMessage, end) &&
-       push16(nr_srs_normalized_channel_iq_matrix->num_prgs, &pWritePackedMessage, end))) {
+  if (!(push8(nr_srs_normalized_channel_iq_matrix->normalized_iq_representation, &pWritePackedMessage, end)
+        && push16(nr_srs_normalized_channel_iq_matrix->num_gnb_antenna_elements, &pWritePackedMessage, end)
+        && push16(nr_srs_normalized_channel_iq_matrix->num_ue_srs_ports, &pWritePackedMessage, end)
+        && push16(nr_srs_normalized_channel_iq_matrix->prg_size, &pWritePackedMessage, end)
+        && push16(nr_srs_normalized_channel_iq_matrix->num_prgs, &pWritePackedMessage, end))) {
     return 0;
   }
 
-  uint16_t channel_matrix_size = nr_srs_normalized_channel_iq_matrix->num_prgs*nr_srs_normalized_channel_iq_matrix->num_ue_srs_ports*nr_srs_normalized_channel_iq_matrix->num_gnb_antenna_elements;
+  uint16_t channel_matrix_size = nr_srs_normalized_channel_iq_matrix->num_prgs
+                                 * nr_srs_normalized_channel_iq_matrix->num_ue_srs_ports
+                                 * nr_srs_normalized_channel_iq_matrix->num_gnb_antenna_elements;
   if (nr_srs_normalized_channel_iq_matrix->normalized_iq_representation == 0) {
+    // 0: 16-bit normalized complex number (iqSize = 2)
     channel_matrix_size <<= 1;
   } else {
+    // 1: 32-bit normalized complex number (iqSize = 4)
     channel_matrix_size <<= 2;
   }
 
-  for(int i = 0; i < channel_matrix_size; i++) {
+  for (int i = 0; i < channel_matrix_size; i++) {
     if (!push8(nr_srs_normalized_channel_iq_matrix->channel_matrix[i], &pWritePackedMessage, end)) {
       return 0;
     }
@@ -2543,7 +2548,7 @@ int pack_nr_srs_normalized_channel_iq_matrix(void *pMessageBuf, void *pPackedBuf
   // Message length
   uintptr_t msgHead = (uintptr_t)pPackedBuf;
   uintptr_t msgEnd = (uintptr_t)pWritePackedMessage;
-  return (msgEnd-msgHead);
+  return (msgEnd - msgHead);
 }
 
 static uint8_t pack_nr_srs_reported_symbol(nfapi_nr_srs_reported_symbol_t *prgs, uint8_t **ppWritePackedMsg, uint8_t *end) {
@@ -4469,36 +4474,44 @@ int unpack_nr_srs_channel_svd_representation(void *pMessageBuf, uint32_t message
   return 1;
 }
 
-int unpack_nr_srs_normalized_channel_iq_matrix(void *pMessageBuf, uint32_t messageBufLen, void *pUnpackedBuf, uint32_t unpackedBufLen) {
-
-  nfapi_nr_srs_normalized_channel_iq_matrix_t *nr_srs_normalized_channel_iq_matrix = (nfapi_nr_srs_normalized_channel_iq_matrix_t*)pUnpackedBuf;
+int unpack_nr_srs_normalized_channel_iq_matrix(void *pMessageBuf,
+                                               uint32_t messageBufLen,
+                                               void *pUnpackedBuf,
+                                               uint32_t unpackedBufLen)
+{
+  nfapi_nr_srs_normalized_channel_iq_matrix_t *nr_srs_normalized_channel_iq_matrix =
+      (nfapi_nr_srs_normalized_channel_iq_matrix_t *)pUnpackedBuf;
   uint8_t *pReadPackedMessage = pMessageBuf;
   uint8_t *end = pMessageBuf + messageBufLen;
 
   memset(pUnpackedBuf, 0, unpackedBufLen);
 
-  if(!(pull8(&pReadPackedMessage, &nr_srs_normalized_channel_iq_matrix->normalized_iq_representation, end) &&
-       pull16(&pReadPackedMessage, &nr_srs_normalized_channel_iq_matrix->num_gnb_antenna_elements, end) &&
-       pull16(&pReadPackedMessage, &nr_srs_normalized_channel_iq_matrix->num_ue_srs_ports, end) &&
-       pull16(&pReadPackedMessage, &nr_srs_normalized_channel_iq_matrix->prg_size, end) &&
-       pull16(&pReadPackedMessage, &nr_srs_normalized_channel_iq_matrix->num_prgs, end))) {
+  if (!(pull8(&pReadPackedMessage, &nr_srs_normalized_channel_iq_matrix->normalized_iq_representation, end)
+        && pull16(&pReadPackedMessage, &nr_srs_normalized_channel_iq_matrix->num_gnb_antenna_elements, end)
+        && pull16(&pReadPackedMessage, &nr_srs_normalized_channel_iq_matrix->num_ue_srs_ports, end)
+        && pull16(&pReadPackedMessage, &nr_srs_normalized_channel_iq_matrix->prg_size, end)
+        && pull16(&pReadPackedMessage, &nr_srs_normalized_channel_iq_matrix->num_prgs, end))) {
     return -1;
   }
 
-  uint16_t channel_matrix_size = nr_srs_normalized_channel_iq_matrix->num_prgs*nr_srs_normalized_channel_iq_matrix->num_ue_srs_ports*nr_srs_normalized_channel_iq_matrix->num_gnb_antenna_elements;
+  uint16_t channel_matrix_size = nr_srs_normalized_channel_iq_matrix->num_prgs
+                                 * nr_srs_normalized_channel_iq_matrix->num_ue_srs_ports
+                                 * nr_srs_normalized_channel_iq_matrix->num_gnb_antenna_elements;
   if (nr_srs_normalized_channel_iq_matrix->normalized_iq_representation == 0) {
+    // 0: 16-bit normalized complex number (iqSize = 2)
     channel_matrix_size <<= 1;
   } else {
+    // 1: 32-bit normalized complex number (iqSize = 4)
     channel_matrix_size <<= 2;
   }
 
-  for(int i = 0; i < channel_matrix_size; i++) {
+  for (int i = 0; i < channel_matrix_size; i++) {
     if (!pull8(&pReadPackedMessage, &nr_srs_normalized_channel_iq_matrix->channel_matrix[i], end)) {
       return 0;
     }
   }
 
-  return 0;
+  return 1;
 }
 
 static uint8_t unpack_nr_srs_reported_symbol(nfapi_nr_srs_reported_symbol_t *prgs, uint8_t **ppReadPackedMsg, uint8_t *end) {
