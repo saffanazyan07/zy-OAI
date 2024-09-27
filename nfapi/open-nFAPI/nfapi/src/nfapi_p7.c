@@ -2571,28 +2571,32 @@ static uint8_t pack_nr_srs_reported_symbol(nfapi_nr_srs_reported_symbol_t *prgs,
   return 1;
 }
 
-int pack_nr_srs_beamforming_report(void *pMessageBuf, void *pPackedBuf, uint32_t packedBufLen) {
-
-  nfapi_nr_srs_beamforming_report_t *nr_srs_beamforming_report = (nfapi_nr_srs_beamforming_report_t*)pMessageBuf;
+int pack_nr_srs_beamforming_report(void *pMessageBuf, void *pPackedBuf, uint32_t packedBufLen)
+{
+  nfapi_nr_srs_beamforming_report_t *nr_srs_beamforming_report = (nfapi_nr_srs_beamforming_report_t *)pMessageBuf;
 
   uint8_t *pWritePackedMessage = pPackedBuf;
   uint8_t *end = pPackedBuf + packedBufLen;
 
-  if(!(push16(nr_srs_beamforming_report->prg_size, &pWritePackedMessage, end) &&
-       push8(nr_srs_beamforming_report->num_symbols, &pWritePackedMessage, end) &&
-       push8(nr_srs_beamforming_report->wide_band_snr, &pWritePackedMessage, end) &&
-       push8(nr_srs_beamforming_report->num_reported_symbols, &pWritePackedMessage, end))) {
+  if (!(push16(nr_srs_beamforming_report->prg_size, &pWritePackedMessage, end)
+        && push8(nr_srs_beamforming_report->num_symbols, &pWritePackedMessage, end)
+        && push8(nr_srs_beamforming_report->wide_band_snr, &pWritePackedMessage, end)
+        && push8(nr_srs_beamforming_report->num_reported_symbols, &pWritePackedMessage, end))) {
     return 0;
   }
 
-  if (!pack_nr_srs_reported_symbol(&nr_srs_beamforming_report->reported_symbol_list[0], &pWritePackedMessage, end)) {
-    return 0;
+  for (int reported_symbol = 0; reported_symbol < nr_srs_beamforming_report->num_reported_symbols; ++reported_symbol) {
+    if (!pack_nr_srs_reported_symbol(&nr_srs_beamforming_report->reported_symbol_list[reported_symbol],
+                                     &pWritePackedMessage,
+                                     end)) {
+      return 0;
+    }
   }
 
   // Message length
   uintptr_t msgHead = (uintptr_t)pPackedBuf;
   uintptr_t msgEnd = (uintptr_t)pWritePackedMessage;
-  return (msgEnd-msgHead);
+  return (msgEnd - msgHead);
 }
 
 static uint8_t pack_nr_srs_report_tlv(nfapi_srs_report_tlv_t *report_tlv, uint8_t **ppWritePackedMsg, uint8_t *end) {
@@ -4534,24 +4538,28 @@ static uint8_t unpack_nr_srs_reported_symbol(nfapi_nr_srs_reported_symbol_t *prg
   return 1;
 }
 
-int unpack_nr_srs_beamforming_report(void *pMessageBuf, uint32_t messageBufLen, void *pUnpackedBuf, uint32_t unpackedBufLen) {
-
-  nfapi_nr_srs_beamforming_report_t *nr_srs_beamforming_report = (nfapi_nr_srs_beamforming_report_t*)pUnpackedBuf;
+int unpack_nr_srs_beamforming_report(void *pMessageBuf, uint32_t messageBufLen, void *pUnpackedBuf, uint32_t unpackedBufLen)
+{
+  nfapi_nr_srs_beamforming_report_t *nr_srs_beamforming_report = (nfapi_nr_srs_beamforming_report_t *)pUnpackedBuf;
   uint8_t *pReadPackedMessage = pMessageBuf;
   uint8_t *end = pMessageBuf + messageBufLen;
 
   memset(pUnpackedBuf, 0, unpackedBufLen);
 
-  if(!(pull16(&pReadPackedMessage, &nr_srs_beamforming_report->prg_size, end) &&
-       pull8(&pReadPackedMessage, &nr_srs_beamforming_report->num_symbols, end) &&
-       pull8(&pReadPackedMessage, &nr_srs_beamforming_report->wide_band_snr, end) &&
-       pull8(&pReadPackedMessage, &nr_srs_beamforming_report->num_reported_symbols, end))) {
+  if (!(pull16(&pReadPackedMessage, &nr_srs_beamforming_report->prg_size, end)
+        && pull8(&pReadPackedMessage, &nr_srs_beamforming_report->num_symbols, end)
+        && pull8(&pReadPackedMessage, &nr_srs_beamforming_report->wide_band_snr, end)
+        && pull8(&pReadPackedMessage, &nr_srs_beamforming_report->num_reported_symbols, end))) {
     return -1;
   }
   nr_srs_beamforming_report->reported_symbol_list =
       calloc(nr_srs_beamforming_report->num_reported_symbols, sizeof(*nr_srs_beamforming_report->reported_symbol_list));
-  if (!unpack_nr_srs_reported_symbol(&nr_srs_beamforming_report->reported_symbol_list[0], &pReadPackedMessage, end)) {
-    return -1;
+  for (int reported_symbol = 0; reported_symbol < nr_srs_beamforming_report->num_reported_symbols; ++reported_symbol) {
+    if (!unpack_nr_srs_reported_symbol(&nr_srs_beamforming_report->reported_symbol_list[reported_symbol],
+                                       &pReadPackedMessage,
+                                       end)) {
+      return -1;
+    }
   }
 
   return 0;
