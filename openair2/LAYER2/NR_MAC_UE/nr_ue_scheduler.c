@@ -1901,7 +1901,7 @@ static void build_ro_list(NR_UE_MAC_INST_t *mac)
     format = ((uint8_t) prach_config_info_p[0]) | (format2<<8);
 
     slot_shift_for_map = mu;
-    if ( (mu == 1) && (prach_config_info_p[6] <= 1) )
+    if ( (mu == 1) && (prach_config_info_p[6] == 1) && (format > 3) )
       // no prach in even slots @ 30kHz for 1 prach per subframe
       even_slot_invalid = true;
     else
