@@ -55,6 +55,9 @@ uint8_t fapi_nr_p7_message_body_pack(nfapi_nr_p7_message_header_t *header,
     case NFAPI_NR_PHY_MSG_TYPE_UCI_INDICATION:
       result = pack_nr_uci_indication(header, ppWritePackedMsg, end, config);
     break;
+    case NFAPI_NR_PHY_MSG_TYPE_SRS_INDICATION:
+      result = pack_nr_srs_indication(header, ppWritePackedMsg, end, config);
+    break;
     default: {
       if (header->message_id >= NFAPI_VENDOR_EXT_MSG_MIN && header->message_id <= NFAPI_VENDOR_EXT_MSG_MAX) {
         if (config && config->pack_p7_vendor_extension) {
@@ -190,6 +193,11 @@ int fapi_nr_p7_message_unpack(void *pMessageBuf,
     case NFAPI_NR_PHY_MSG_TYPE_UCI_INDICATION:
       if (check_nr_fapi_unpack_length(NFAPI_NR_PHY_MSG_TYPE_UCI_INDICATION, unpackedBufLen)) {
         result = unpack_nr_uci_indication(&pReadPackedMessage, end, pMessageHeader, config);
+      }
+    break;
+    case NFAPI_NR_PHY_MSG_TYPE_SRS_INDICATION:
+      if (check_nr_fapi_unpack_length(NFAPI_NR_PHY_MSG_TYPE_SRS_INDICATION, unpackedBufLen)) {
+        result = unpack_nr_srs_indication(&pReadPackedMessage, end, pMessageHeader, config);
       }
     break;
     default:
@@ -2206,6 +2214,109 @@ uint8_t unpack_nr_uci_indication(uint8_t **ppReadPackedMsg, uint8_t *end, void *
   for (int i = 0; i < pNfapiMsg->num_ucis; i++) {
     if (!unpack_nr_uci_indication_body(&pNfapiMsg->uci_list[i], ppReadPackedMsg, end, config))
       return 0;
+  }
+
+  return 1;
+}
+
+static uint8_t pack_nr_srs_report_tlv(const nfapi_srs_report_tlv_t *report_tlv, uint8_t **ppWritePackedMsg, uint8_t *end) {
+
+  if(!(push16(report_tlv->tag, ppWritePackedMsg, end) &&
+        push32(report_tlv->length, ppWritePackedMsg, end))) {
+    return 0;
+  }
+
+  for (int i = 0; i < (report_tlv->length + 3) / 4; i++) {
+    if (!push32(report_tlv->value[i], ppWritePackedMsg, end)) {
+      return 0;
+    }
+  }
+
+  return 1;
+}
+
+static uint8_t pack_nr_srs_indication_body(const nfapi_nr_srs_indication_pdu_t *value, uint8_t **ppWritePackedMsg, uint8_t *end) {
+
+  if(!(push32(value->handle, ppWritePackedMsg, end) &&
+        push16(value->rnti, ppWritePackedMsg, end) &&
+        push16(value->timing_advance_offset, ppWritePackedMsg, end) &&
+        pushs16(value->timing_advance_offset_nsec, ppWritePackedMsg, end) &&
+        push8(value->srs_usage, ppWritePackedMsg, end) &&
+        push8(value->report_type, ppWritePackedMsg, end))) {
+    return 0;
+  }
+
+  if (!pack_nr_srs_report_tlv(&value->report_tlv, ppWritePackedMsg, end)) {
+    return 0;
+  }
+
+  return 1;
+}
+
+uint8_t pack_nr_srs_indication(void *msg, uint8_t **ppWritePackedMsg, uint8_t *end, nfapi_p7_codec_config_t *config)
+{
+  nfapi_nr_srs_indication_t *pNfapiMsg = (nfapi_nr_srs_indication_t *)msg;
+
+  if (!(push16(pNfapiMsg->sfn, ppWritePackedMsg, end) && push16(pNfapiMsg->slot, ppWritePackedMsg, end)
+        && push16(pNfapiMsg->control_length, ppWritePackedMsg, end) && push8(pNfapiMsg->number_of_pdus, ppWritePackedMsg, end))) {
+    return 0;
+  }
+
+  for (int i = 0; i < pNfapiMsg->number_of_pdus; i++) {
+    if (!pack_nr_srs_indication_body(&(pNfapiMsg->pdu_list[i]), ppWritePackedMsg, end)) {
+      return 0;
+    }
+  }
+
+  return 1;
+}
+
+static uint8_t unpack_nr_srs_report_tlv(nfapi_srs_report_tlv_t *report_tlv, uint8_t **ppReadPackedMsg, uint8_t *end) {
+
+  if(!(pull16(ppReadPackedMsg, &report_tlv->tag, end) &&
+        pull32(ppReadPackedMsg, &report_tlv->length, end))) {
+    return 0;
+  }
+#ifndef ENABLE_AERIAL
+  for (int i = 0; i < (report_tlv->length + 3) / 4; i++) {
+    if (!pull32(ppReadPackedMsg, &report_tlv->value[i], end)) {
+      return 0;
+    }
+  }
+#endif
+  return 1;
+}
+
+static uint8_t unpack_nr_srs_indication_body(nfapi_nr_srs_indication_pdu_t *value, uint8_t **ppReadPackedMsg, uint8_t *end) {
+
+  if(!(pull32(ppReadPackedMsg, &value->handle, end) &&
+        pull16(ppReadPackedMsg, &value->rnti, end) &&
+        pull16(ppReadPackedMsg, &value->timing_advance_offset, end) &&
+        pulls16(ppReadPackedMsg, &value->timing_advance_offset_nsec, end) &&
+        pull8(ppReadPackedMsg, &value->srs_usage, end) &&
+        pull8(ppReadPackedMsg, &value->report_type, end))) {
+    return 0;
+  }
+
+  if (!unpack_nr_srs_report_tlv(&value->report_tlv, ppReadPackedMsg, end)) {
+    return 0;
+  }
+
+  return 1;
+}
+
+uint8_t unpack_nr_srs_indication(uint8_t **ppReadPackedMsg, uint8_t *end, void *msg, nfapi_p7_codec_config_t *config)
+{
+  nfapi_nr_srs_indication_t *pNfapiMsg = (nfapi_nr_srs_indication_t *)msg;
+  if (!(pull16(ppReadPackedMsg, &pNfapiMsg->sfn, end) && pull16(ppReadPackedMsg, &pNfapiMsg->slot, end)
+        && pull16(ppReadPackedMsg, &pNfapiMsg->control_length, end) && pull8(ppReadPackedMsg, &pNfapiMsg->number_of_pdus, end))) {
+    return 0;
+  }
+  pNfapiMsg->pdu_list = calloc(pNfapiMsg->number_of_pdus, sizeof(*pNfapiMsg->pdu_list));
+  for (int i = 0; i < pNfapiMsg->number_of_pdus; i++) {
+    if (!unpack_nr_srs_indication_body(&pNfapiMsg->pdu_list[i], ppReadPackedMsg, end)) {
+      return 0;
+    }
   }
 
   return 1;

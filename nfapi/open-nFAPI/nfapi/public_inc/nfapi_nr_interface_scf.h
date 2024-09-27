@@ -1829,7 +1829,7 @@ typedef struct {
 } nfapi_nr_srs_beamforming_report_t;
 
 // SRS indication
-
+#define NFAPI_NR_SRS_IND_MAX_PDU 100
 typedef struct {
   uint16_t tag;                         // 0: Report is carried directly in the value field; 3: The offset from the end of the control portion of the message to the beginning of the report. Other values are reserved.
   uint32_t length;                      // Length of the actual report in bytes, without the padding bytes.

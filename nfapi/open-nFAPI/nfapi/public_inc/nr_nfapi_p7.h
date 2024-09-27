@@ -36,16 +36,9 @@
 
 void *nfapi_p7_allocate(size_t size, nfapi_p7_codec_config_t *config);
 
-uint8_t unpack_nr_srs_indication(uint8_t **ppReadPackedMsg,
-                                 uint8_t *end,
-                                 nfapi_nr_srs_indication_t *pNfapiMsg,
-                                 nfapi_p7_codec_config_t *config);
-
 uint8_t pack_ue_release_request(void *msg, uint8_t **ppWritePackedMsg, uint8_t *end, nfapi_p7_codec_config_t *config);
 
 uint8_t pack_ue_release_response(void *msg, uint8_t **ppWritePackedMsg, uint8_t *end, nfapi_p7_codec_config_t *config);
-
-uint8_t pack_nr_srs_indication(void *msg, uint8_t **ppWritePackedMsg, uint8_t *end, nfapi_p7_codec_config_t *config);
 
 uint8_t pack_nr_rach_indication(void *msg, uint8_t **ppWritePackedMsg, uint8_t *end, nfapi_p7_codec_config_t *config);
 
