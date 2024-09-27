@@ -43,6 +43,7 @@ bool eq_tx_data_request(const nfapi_nr_tx_data_request_t *a, const nfapi_nr_tx_d
 bool eq_rx_data_indication(const nfapi_nr_rx_data_indication_t *a, const nfapi_nr_rx_data_indication_t *b);
 bool eq_crc_indication(const nfapi_nr_crc_indication_t *a, const nfapi_nr_crc_indication_t *b);
 bool eq_uci_indication(const nfapi_nr_uci_indication_t *a, const nfapi_nr_uci_indication_t *b);
+bool eq_srs_indication(const nfapi_nr_srs_indication_t *a, const nfapi_nr_srs_indication_t *b);
 
 void free_dl_tti_request(nfapi_nr_dl_tti_request_t *msg);
 void free_ul_tti_request(nfapi_nr_ul_tti_request_t *msg);
@@ -52,6 +53,7 @@ void free_tx_data_request(nfapi_nr_tx_data_request_t *msg);
 void free_rx_data_indication(nfapi_nr_rx_data_indication_t *msg);
 void free_crc_indication(nfapi_nr_crc_indication_t *msg);
 void free_uci_indication(nfapi_nr_uci_indication_t *msg);
+void free_srs_indication(nfapi_nr_srs_indication_t *msg);
 
 void copy_dl_tti_request(const nfapi_nr_dl_tti_request_t *src, nfapi_nr_dl_tti_request_t *dst);
 void copy_ul_tti_request(const nfapi_nr_ul_tti_request_t *src, nfapi_nr_ul_tti_request_t *dst);
@@ -61,10 +63,12 @@ void copy_tx_data_request(const nfapi_nr_tx_data_request_t *src, nfapi_nr_tx_dat
 void copy_rx_data_indication(const nfapi_nr_rx_data_indication_t *src, nfapi_nr_rx_data_indication_t *dst);
 void copy_crc_indication(const nfapi_nr_crc_indication_t *src, nfapi_nr_crc_indication_t *dst);
 void copy_uci_indication(const nfapi_nr_uci_indication_t *src, nfapi_nr_uci_indication_t *dst);
+void copy_srs_indication(const nfapi_nr_srs_indication_t *src, nfapi_nr_srs_indication_t *dst);
 
 
 size_t get_tx_data_request_size(const nfapi_nr_tx_data_request_t *msg);
 size_t get_rx_data_indication_size(const nfapi_nr_rx_data_indication_t *msg);
 size_t get_crc_indication_size(const nfapi_nr_crc_indication_t *msg);
 size_t get_uci_indication_size(const nfapi_nr_uci_indication_t *msg);
+size_t get_srs_indication_size(const nfapi_nr_srs_indication_t *msg);
 #endif // OPENAIRINTERFACE_NR_FAPI_P7_UTILS_H

@@ -787,6 +787,42 @@ bool eq_uci_indication(const nfapi_nr_uci_indication_t *a, const nfapi_nr_uci_in
   return true;
 }
 
+static bool eq_srs_indication_report_tlv(const nfapi_srs_report_tlv_t *a, const nfapi_srs_report_tlv_t *b)
+{
+  EQ(a->tag, b->tag);
+  EQ(a->length, b->length);
+  for (int i = 0; i < (a->length + 3) / 4; ++i) {
+    EQ(a->value[i], b->value[i]);
+  }
+  return true;
+}
+
+static bool eq_srs_indication_PDU(const nfapi_nr_srs_indication_pdu_t *a, const nfapi_nr_srs_indication_pdu_t *b)
+{
+  EQ(a->handle, b->handle);
+  EQ(a->rnti, b->rnti);
+  EQ(a->timing_advance_offset, b->timing_advance_offset);
+  EQ(a->timing_advance_offset_nsec, b->timing_advance_offset_nsec);
+  EQ(a->srs_usage, b->srs_usage);
+  EQ(a->report_type, b->report_type);
+  EQ(eq_srs_indication_report_tlv(&a->report_tlv, &b->report_tlv), true);
+  return true;
+}
+
+bool eq_srs_indication(const nfapi_nr_srs_indication_t *a, const nfapi_nr_srs_indication_t *b)
+{
+  EQ(a->header.message_id, b->header.message_id);
+  EQ(a->header.message_length, b->header.message_length);
+  EQ(a->sfn, b->sfn);
+  EQ(a->slot, b->slot);
+  EQ(a->control_length, b->control_length);
+  EQ(a->number_of_pdus, b->number_of_pdus);
+  for (int pdu_idx = 0; pdu_idx < a->number_of_pdus; ++pdu_idx) {
+    EQ(eq_srs_indication_PDU(&a->pdu_list[pdu_idx], &b->pdu_list[pdu_idx]), true);
+  }
+  return true;
+}
+
 void free_dl_tti_request(nfapi_nr_dl_tti_request_t *msg)
 {
   if (msg->vendor_extension) {
@@ -925,6 +961,13 @@ void free_uci_indication(nfapi_nr_uci_indication_t *msg)
       }
     }
     free(msg->uci_list);
+  }
+}
+
+void free_srs_indication(nfapi_nr_srs_indication_t *msg)
+{
+  if (msg->pdu_list) {
+    free(msg->pdu_list);
   }
 }
 
@@ -1813,6 +1856,56 @@ size_t get_uci_indication_size(const nfapi_nr_uci_indication_t *msg)
 
   // Finally, add the size of the uci_list pointer itself
   total_size += malloc_usable_size(msg->uci_list);
+
+  return total_size;
+}
+
+void copy_srs_indication_report_tlv(const nfapi_srs_report_tlv_t *src, nfapi_srs_report_tlv_t *dst)
+{
+  dst->tag = src->tag;
+  dst->length = src->length;
+  for (int i = 0; i < (dst->length + 3) / 4; ++i) {
+    dst->value[i] = src->value[i];
+  }
+}
+
+void copy_srs_indication_PDU(const nfapi_nr_srs_indication_pdu_t *src, nfapi_nr_srs_indication_pdu_t *dst)
+{
+  dst->handle = src->handle;
+  dst->rnti = src->rnti;
+  dst->timing_advance_offset = src->timing_advance_offset;
+  dst->timing_advance_offset_nsec = src->timing_advance_offset_nsec;
+  dst->srs_usage = src->srs_usage;
+  dst->report_type = src->report_type;
+  copy_srs_indication_report_tlv(&src->report_tlv, &dst->report_tlv);
+}
+
+void copy_srs_indication(const nfapi_nr_srs_indication_t *src, nfapi_nr_srs_indication_t *dst)
+{
+  dst->header.message_id = src->header.message_id;
+  dst->header.message_length = src->header.message_length;
+  dst->sfn = src->sfn;
+  dst->slot = src->slot;
+  dst->control_length = src->control_length;
+  dst->number_of_pdus = src->number_of_pdus;
+  dst->pdu_list = calloc(dst->number_of_pdus, sizeof(*dst->pdu_list));
+  for (int pdu_idx = 0; pdu_idx < src->number_of_pdus; ++pdu_idx) {
+    copy_srs_indication_PDU(&src->pdu_list[pdu_idx], &dst->pdu_list[pdu_idx]);
+  }
+}
+
+size_t get_srs_indication_size(const nfapi_nr_srs_indication_t *msg)
+{
+  // Get size of the message (allocated pointer included)
+  size_t total_size = 0;
+
+  // Header and fixed-size fields
+  total_size += sizeof(msg->header);
+  total_size += sizeof(msg->sfn);
+  total_size += sizeof(msg->slot);
+  total_size += sizeof(msg->control_length);
+  total_size += sizeof(msg->number_of_pdus);
+  total_size += malloc_usable_size(msg->pdu_list);
 
   return total_size;
 }
