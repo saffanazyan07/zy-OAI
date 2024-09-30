@@ -195,7 +195,29 @@ int vnf_pack_vendor_extension_tlv(void *ve, uint8_t **ppWritePackedMsg, uint8_t 
   return -1;
 }
 
+int vnf_nr_pack_vendor_extension_tlv(void *ve, uint8_t **ppWritePackedMsg, uint8_t *end, nfapi_p4_p5_codec_config_t *codec) {
+  //NFAPI_TRACE(NFAPI_TRACE_INFO, "vnf_pack_vendor_extension_tlv\n");
+  nfapi_tl_t *tlv = (nfapi_tl_t *)ve;
+
+  switch(tlv->tag) {
+    case VENDOR_EXT_TLV_2_TAG: {
+      //NFAPI_TRACE(NFAPI_TRACE_INFO, "Packing VENDOR_EXT_TLV_2\n");
+      vendor_ext_tlv_2 *ve = (vendor_ext_tlv_2 *)tlv;
+
+      if(!push32(ve->dummy, ppWritePackedMsg, end))
+        return 0;
+
+      return 1;
+    }
+    break;
+  }
+
+  return -1;
+}
 int vnf_unpack_vendor_extension_tlv(nfapi_tl_t *tl, uint8_t **ppReadPackedMessage, uint8_t *end, void **ve, nfapi_p4_p5_codec_config_t *codec) {
+  return -1;
+}
+int vnf_nr_unpack_vendor_extension_tlv(nfapi_tl_t *tl, uint8_t **ppReadPackedMessage, uint8_t *end, void **ve, nfapi_p4_p5_codec_config_t *codec) {
   return -1;
 }
 void install_nr_schedule_handlers(NR_IF_Module_t *if_inst);
@@ -1279,6 +1301,15 @@ void vnf_deallocate(void *ptr) {
   free(ptr);
 }
 
+void *vnf_nr_allocate(size_t size) {
+  //return (void*)memory_pool::allocate(size);
+  return (void *)malloc(size);
+}
+
+void vnf_nr_deallocate(void *ptr) {
+  //memory_pool::deallocate((uint8_t*)ptr);
+  free(ptr);
+}
 
 void vnf_trace(nfapi_trace_level_t nfapi_level, const char *message, ...) {
   va_list args;
@@ -1287,18 +1318,29 @@ void vnf_trace(nfapi_trace_level_t nfapi_level, const char *message, ...) {
   va_end(args);
 }
 
-int phy_vendor_ext(struct nfapi_vnf_p7_config *config, nfapi_p7_message_header_t *msg) {
-  if(msg->message_id == P7_VENDOR_EXT_IND) {
+int phy_vendor_ext(struct nfapi_vnf_p7_config *config, void *msg) {
+  if(((nfapi_p7_message_header_t*)msg)->message_id == P7_VENDOR_EXT_IND) {
     //vendor_ext_p7_ind* ind = (vendor_ext_p7_ind*)msg;
     //NFAPI_TRACE(NFAPI_TRACE_INFO, "[VNF] vendor_ext (error_code:%d)\n", ind->error_code);
   } else {
-    NFAPI_TRACE(NFAPI_TRACE_INFO, "[VNF] unknown %02x\n", msg->message_id);
+    NFAPI_TRACE(NFAPI_TRACE_INFO, "[VNF] unknown %02x\n", ((nfapi_p7_message_header_t*)msg)->message_id);
   }
 
   return 0;
 }
 
-nfapi_p7_message_header_t *phy_allocate_p7_vendor_ext(uint16_t message_id, uint16_t *msg_size) {
+int phy_nr_vendor_ext(struct nfapi_vnf_p7_config *config, void *msg) {
+  if(((nfapi_nr_p7_message_header_t*)msg)->message_id == P7_VENDOR_EXT_IND) {
+    //vendor_ext_p7_ind* ind = (vendor_ext_p7_ind*)msg;
+    //NFAPI_TRACE(NFAPI_TRACE_INFO, "[VNF] vendor_ext (error_code:%d)\n", ind->error_code);
+  } else {
+    NFAPI_TRACE(NFAPI_TRACE_INFO, "[VNF] unknown %02x\n", ((nfapi_nr_p7_message_header_t*)msg)->message_id);
+  }
+
+  return 0;
+}
+
+void *phy_allocate_p7_vendor_ext(uint16_t message_id, uint16_t *msg_size) {
   if(message_id == P7_VENDOR_EXT_IND) {
     *msg_size = sizeof(vendor_ext_p7_ind);
     return (nfapi_p7_message_header_t *)malloc(sizeof(vendor_ext_p7_ind));
@@ -1307,11 +1349,31 @@ nfapi_p7_message_header_t *phy_allocate_p7_vendor_ext(uint16_t message_id, uint1
   return 0;
 }
 
-void phy_deallocate_p7_vendor_ext(nfapi_p7_message_header_t *header) {
+void phy_deallocate_p7_vendor_ext(void *header) {
+  free(header);
+}
+
+void *phy_nr_allocate_p7_vendor_ext(uint16_t message_id, uint16_t *msg_size) {
+  if(message_id == P7_VENDOR_EXT_IND) {
+    *msg_size = sizeof(vendor_ext_p7_ind);
+    return (nfapi_p7_message_header_t *)malloc(sizeof(vendor_ext_p7_ind));
+  }
+
+  return 0;
+}
+
+void phy_nr_deallocate_p7_vendor_ext(void *header) {
   free(header);
 }
 
 int phy_unpack_vendor_extension_tlv(nfapi_tl_t *tl, uint8_t **ppReadPackedMessage, uint8_t *end, void **ve, nfapi_p7_codec_config_t *codec) {
+  (void)tl;
+  (void)ppReadPackedMessage;
+  (void)ve;
+  return -1;
+}
+
+int phy_nr_unpack_vendor_extension_tlv(nfapi_tl_t *tl, uint8_t **ppReadPackedMessage, uint8_t *end, void **ve, nfapi_p7_codec_config_t *codec) {
   (void)tl;
   (void)ppReadPackedMessage;
   (void)ve;
@@ -1340,9 +1402,30 @@ int phy_pack_vendor_extension_tlv(void *ve, uint8_t **ppWritePackedMsg, uint8_t 
   }
 }
 
-int phy_unpack_p7_vendor_extension(nfapi_p7_message_header_t *header, uint8_t **ppReadPackedMessage, uint8_t *end, nfapi_p7_codec_config_t *config) {
+int phy_nr_pack_vendor_extension_tlv(void *ve, uint8_t **ppWritePackedMsg, uint8_t *end, nfapi_p7_codec_config_t *codec) {
+  //NFAPI_TRACE(NFAPI_TRACE_INFO, "phy_pack_vendor_extension_tlv\n");
+  nfapi_tl_t *tlv = (nfapi_tl_t *)ve;
+
+  switch(tlv->tag) {
+    case VENDOR_EXT_TLV_1_TAG: {
+      //NFAPI_TRACE(NFAPI_TRACE_INFO, "Packing VENDOR_EXT_TLV_1\n");
+      vendor_ext_tlv_1 *ve = (vendor_ext_tlv_1 *)tlv;
+
+      if(!push32(ve->dummy, ppWritePackedMsg, end))
+        return 0;
+
+      return 1;
+    }
+    break;
+
+    default:
+      return -1;
+    break;
+  }
+}
+int phy_unpack_p7_vendor_extension(void *header, uint8_t **ppReadPackedMessage, uint8_t *end, nfapi_p7_codec_config_t *config) {
   //NFAPI_TRACE(NFAPI_TRACE_INFO, "%s\n", __FUNCTION__);
-  if(header->message_id == P7_VENDOR_EXT_IND) {
+  if(((nfapi_p7_message_header_t*)header)->message_id == P7_VENDOR_EXT_IND) {
     vendor_ext_p7_ind *req = (vendor_ext_p7_ind *)(header);
 
     if(!pull16(ppReadPackedMessage, &req->error_code, end))
@@ -1352,9 +1435,21 @@ int phy_unpack_p7_vendor_extension(nfapi_p7_message_header_t *header, uint8_t **
   return 1;
 }
 
-int phy_pack_p7_vendor_extension(nfapi_p7_message_header_t *header, uint8_t **ppWritePackedMsg, uint8_t *end, nfapi_p7_codec_config_t *config) {
+int phy_nr_unpack_p7_vendor_extension(void *header, uint8_t **ppReadPackedMessage, uint8_t *end, nfapi_p7_codec_config_t *config) {
   //NFAPI_TRACE(NFAPI_TRACE_INFO, "%s\n", __FUNCTION__);
-  if(header->message_id == P7_VENDOR_EXT_REQ) {
+  if(((nfapi_nr_p7_message_header_t *)header)->message_id == P7_VENDOR_EXT_IND) {
+    vendor_ext_p7_ind *req = (vendor_ext_p7_ind *)(header);
+
+    if(!pull16(ppReadPackedMessage, &req->error_code, end))
+      return 0;
+  }
+
+  return 1;
+}
+
+int phy_pack_p7_vendor_extension(void *header, uint8_t **ppWritePackedMsg, uint8_t *end, nfapi_p7_codec_config_t *config) {
+  //NFAPI_TRACE(NFAPI_TRACE_INFO, "%s\n", __FUNCTION__);
+  if(((nfapi_p7_message_header_t*)header)->message_id == P7_VENDOR_EXT_REQ) {
     //NFAPI_TRACE(NFAPI_TRACE_INFO, "%s\n", __FUNCTION__);
     vendor_ext_p7_req *req = (vendor_ext_p7_req *)(header);
 
@@ -1366,9 +1461,35 @@ int phy_pack_p7_vendor_extension(nfapi_p7_message_header_t *header, uint8_t **pp
   return 1;
 }
 
-int vnf_pack_p4_p5_vendor_extension(nfapi_p4_p5_message_header_t *header, uint8_t **ppWritePackedMsg, uint8_t *end, nfapi_p4_p5_codec_config_t *codec) {
+int phy_nr_pack_p7_vendor_extension(void *header, uint8_t **ppWritePackedMsg, uint8_t *end, nfapi_p7_codec_config_t *config) {
   //NFAPI_TRACE(NFAPI_TRACE_INFO, "%s\n", __FUNCTION__);
-  if(header->message_id == P5_VENDOR_EXT_REQ) {
+  if(((nfapi_nr_p7_message_header_t*)header)->message_id == P7_VENDOR_EXT_REQ) {
+    //NFAPI_TRACE(NFAPI_TRACE_INFO, "%s\n", __FUNCTION__);
+    vendor_ext_p7_req *req = (vendor_ext_p7_req *)(header);
+
+    if(!(push16(req->dummy1, ppWritePackedMsg, end) &&
+         push16(req->dummy2, ppWritePackedMsg, end)))
+      return 0;
+  }
+
+  return 1;
+}
+
+int vnf_pack_p4_p5_vendor_extension(void *header, uint8_t **ppWritePackedMsg, uint8_t *end, nfapi_p4_p5_codec_config_t *codec) {
+  //NFAPI_TRACE(NFAPI_TRACE_INFO, "%s\n", __FUNCTION__);
+  if(((nfapi_p4_p5_message_header_t*)header)->message_id == P5_VENDOR_EXT_REQ) {
+    vendor_ext_p5_req *req = (vendor_ext_p5_req *)(header);
+    //NFAPI_TRACE(NFAPI_TRACE_INFO, "%s %d %d\n", __FUNCTION__, req->dummy1, req->dummy2);
+    return (!(push16(req->dummy1, ppWritePackedMsg, end) &&
+              push16(req->dummy2, ppWritePackedMsg, end)));
+  }
+
+  return 0;
+}
+
+int vnf_nr_pack_p4_p5_vendor_extension(void *header, uint8_t **ppWritePackedMsg, uint8_t *end, nfapi_p4_p5_codec_config_t *codec) {
+  //NFAPI_TRACE(NFAPI_TRACE_INFO, "%s\n", __FUNCTION__);
+  if(((nfapi_nr_p4_p5_message_header_t*)header)->message_id == P5_VENDOR_EXT_REQ) {
     vendor_ext_p5_req *req = (vendor_ext_p5_req *)(header);
     //NFAPI_TRACE(NFAPI_TRACE_INFO, "%s %d %d\n", __FUNCTION__, req->dummy1, req->dummy2);
     return (!(push16(req->dummy1, ppWritePackedMsg, end) &&
@@ -1423,17 +1544,17 @@ void *vnf_nr_p7_thread_start(void *ptr) {
   p7_vnf->config->nr_srs_indication = &phy_nr_srs_indication;
   p7_vnf->config->malloc = &vnf_allocate;
   p7_vnf->config->free = &vnf_deallocate;
-  p7_vnf->config->vendor_ext = &phy_vendor_ext;
+  p7_vnf->config->vendor_ext = &phy_nr_vendor_ext;
   p7_vnf->config->user_data = p7_vnf;
   p7_vnf->mac->user_data = p7_vnf;
-  p7_vnf->config->codec_config.unpack_p7_vendor_extension = &phy_unpack_p7_vendor_extension;
-  p7_vnf->config->codec_config.pack_p7_vendor_extension = &phy_pack_p7_vendor_extension;
-  p7_vnf->config->codec_config.unpack_vendor_extension_tlv = &phy_unpack_vendor_extension_tlv;
-  p7_vnf->config->codec_config.pack_vendor_extension_tlv = &phy_pack_vendor_extension_tlv;
+  p7_vnf->config->codec_config.unpack_p7_vendor_extension = &phy_nr_unpack_p7_vendor_extension;
+  p7_vnf->config->codec_config.pack_p7_vendor_extension = &phy_nr_pack_p7_vendor_extension;
+  p7_vnf->config->codec_config.unpack_vendor_extension_tlv = &phy_nr_unpack_vendor_extension_tlv;
+  p7_vnf->config->codec_config.pack_vendor_extension_tlv = &phy_nr_pack_vendor_extension_tlv;
   p7_vnf->config->codec_config.allocate = &vnf_allocate;
   p7_vnf->config->codec_config.deallocate = &vnf_deallocate;
-  p7_vnf->config->allocate_p7_vendor_ext = &phy_allocate_p7_vendor_ext;
-  p7_vnf->config->deallocate_p7_vendor_ext = &phy_deallocate_p7_vendor_ext;
+  p7_vnf->config->allocate_p7_vendor_ext = &phy_nr_allocate_p7_vendor_ext;
+  p7_vnf->config->deallocate_p7_vendor_ext = &phy_nr_deallocate_p7_vendor_ext;
   NFAPI_TRACE(NFAPI_TRACE_INFO, "[VNF] Creating VNF NFAPI P7 start thread %s\n", __FUNCTION__);
   pthread_create(&vnf_p7_start_pthread, NULL, &vnf_nr_p7_start_thread, p7_vnf->config);
   return 0;
@@ -1688,10 +1809,10 @@ int nr_start_resp_cb(nfapi_vnf_config_t *config, int p5_idx, nfapi_nr_start_resp
   return 0;
 }
 
-int vendor_ext_cb(nfapi_vnf_config_t *config, int p5_idx, nfapi_p4_p5_message_header_t *msg) {
+int vendor_ext_cb(nfapi_vnf_config_t *config, int p5_idx, void *msg) {
   NFAPI_TRACE(NFAPI_TRACE_INFO, "[VNF] %s\n", __FUNCTION__);
 
-  switch(msg->message_id) {
+  switch(((nfapi_p4_p5_message_header_t*)msg)->message_id) {
     case P5_VENDOR_EXT_RSP: {
       vendor_ext_p5_rsp *rsp = (vendor_ext_p5_rsp *)msg;
       NFAPI_TRACE(NFAPI_TRACE_INFO, "[VNF] P5_VENDOR_EXT_RSP error_code:%d\n", rsp->error_code);
@@ -1707,9 +1828,28 @@ int vendor_ext_cb(nfapi_vnf_config_t *config, int p5_idx, nfapi_p4_p5_message_he
   return 0;
 }
 
-int vnf_unpack_p4_p5_vendor_extension(nfapi_p4_p5_message_header_t *header, uint8_t **ppReadPackedMessage, uint8_t *end, nfapi_p4_p5_codec_config_t *codec) {
+int vendor_nr_ext_cb(nfapi_vnf_config_t *config, int p5_idx, void *msg) {
+  NFAPI_TRACE(NFAPI_TRACE_INFO, "[VNF] %s\n", __FUNCTION__);
+
+  switch(((nfapi_nr_p4_p5_message_header_t*)msg)->message_id) {
+    case P5_VENDOR_EXT_RSP: {
+      vendor_ext_p5_rsp *rsp = (vendor_ext_p5_rsp *)msg;
+      NFAPI_TRACE(NFAPI_TRACE_INFO, "[VNF] P5_VENDOR_EXT_RSP error_code:%d\n", rsp->error_code);
+      // send the start request
+      nfapi_nr_pnf_start_request_t req;
+      memset(&req, 0, sizeof(req));
+      req.header.message_id = NFAPI_PNF_START_REQUEST;
+      nfapi_nr_vnf_pnf_start_req(config, p5_idx, &req);
+    }
+    break;
+  }
+
+  return 0;
+}
+
+int vnf_unpack_p4_p5_vendor_extension(void *header, uint8_t **ppReadPackedMessage, uint8_t *end, nfapi_p4_p5_codec_config_t *codec) {
   //NFAPI_TRACE(NFAPI_TRACE_INFO, "%s\n", __FUNCTION__);
-  if(header->message_id == P5_VENDOR_EXT_RSP) {
+  if(((nfapi_p4_p5_message_header_t*)header)->message_id == P5_VENDOR_EXT_RSP) {
     vendor_ext_p5_rsp *req = (vendor_ext_p5_rsp *)(header);
     return(!pull16(ppReadPackedMessage, &req->error_code, end));
   }
@@ -1717,7 +1857,17 @@ int vnf_unpack_p4_p5_vendor_extension(nfapi_p4_p5_message_header_t *header, uint
   return 0;
 }
 
-nfapi_p4_p5_message_header_t *vnf_allocate_p4_p5_vendor_ext(uint16_t message_id, uint16_t *msg_size) {
+int vnf_nr_unpack_p4_p5_vendor_extension(void *header, uint8_t **ppReadPackedMessage, uint8_t *end, nfapi_p4_p5_codec_config_t *codec) {
+  //NFAPI_TRACE(NFAPI_TRACE_INFO, "%s\n", __FUNCTION__);
+  if(((nfapi_nr_p4_p5_message_header_t*)header)->message_id == P5_VENDOR_EXT_RSP) {
+    vendor_ext_p5_rsp *req = (vendor_ext_p5_rsp *)(header);
+    return(!pull16(ppReadPackedMessage, &req->error_code, end));
+  }
+
+  return 0;
+}
+
+void *vnf_allocate_p4_p5_vendor_ext(uint16_t message_id, uint16_t *msg_size) {
   if(message_id == P5_VENDOR_EXT_RSP) {
     *msg_size = sizeof(vendor_ext_p5_rsp);
     return (nfapi_p4_p5_message_header_t *)malloc(sizeof(vendor_ext_p5_rsp));
@@ -1726,9 +1876,24 @@ nfapi_p4_p5_message_header_t *vnf_allocate_p4_p5_vendor_ext(uint16_t message_id,
   return 0;
 }
 
-void vnf_deallocate_p4_p5_vendor_ext(nfapi_p4_p5_message_header_t *header) {
+void vnf_deallocate_p4_p5_vendor_ext(void *header) {
   free(header);
 }
+
+
+void *vnf_nr_allocate_p4_p5_vendor_ext(uint16_t message_id, uint16_t *msg_size) {
+  if(message_id == P5_VENDOR_EXT_RSP) {
+    *msg_size = sizeof(vendor_ext_p5_rsp);
+    return (nfapi_p4_p5_message_header_t *)malloc(sizeof(vendor_ext_p5_rsp));
+  }
+
+  return 0;
+}
+
+void vnf_nr_deallocate_p4_p5_vendor_ext(void *header) {
+  free(header);
+}
+
 
 nfapi_vnf_config_t *config = 0;
 
@@ -1779,17 +1944,17 @@ void configure_nr_nfapi_vnf(char *vnf_addr, int vnf_p5_port, char *pnf_ip_addr, 
   config->nr_param_resp = &nr_param_resp_cb;
   config->nr_config_resp = &nr_config_resp_cb;
   config->nr_start_resp = &nr_start_resp_cb;
-  config->vendor_ext = &vendor_ext_cb;
+  config->vendor_ext = &vendor_nr_ext_cb;
   config->user_data = &vnf;
   // To allow custom vendor extentions to be added to nfapi
-  config->codec_config.unpack_vendor_extension_tlv = &vnf_unpack_vendor_extension_tlv;
-  config->codec_config.pack_vendor_extension_tlv = &vnf_pack_vendor_extension_tlv;
-  config->codec_config.unpack_p4_p5_vendor_extension = &vnf_unpack_p4_p5_vendor_extension;
-  config->codec_config.pack_p4_p5_vendor_extension = &vnf_pack_p4_p5_vendor_extension;
-  config->allocate_p4_p5_vendor_ext = &vnf_allocate_p4_p5_vendor_ext;
-  config->deallocate_p4_p5_vendor_ext = &vnf_deallocate_p4_p5_vendor_ext;
-  config->codec_config.allocate = &vnf_allocate;
-  config->codec_config.deallocate = &vnf_deallocate;
+  config->codec_config.unpack_vendor_extension_tlv = &vnf_nr_unpack_vendor_extension_tlv;
+  config->codec_config.pack_vendor_extension_tlv = &vnf_nr_pack_vendor_extension_tlv;
+  config->codec_config.unpack_p4_p5_vendor_extension = &vnf_nr_unpack_p4_p5_vendor_extension;
+  config->codec_config.pack_p4_p5_vendor_extension = &vnf_nr_pack_p4_p5_vendor_extension;
+  config->allocate_p4_p5_vendor_ext = &vnf_nr_allocate_p4_p5_vendor_ext;
+  config->deallocate_p4_p5_vendor_ext = &vnf_nr_deallocate_p4_p5_vendor_ext;
+  config->codec_config.allocate = &vnf_nr_allocate;
+  config->codec_config.deallocate = &vnf_nr_deallocate;
   memset(&UL_RCC_INFO,0,sizeof(UL_RCC_IND_t));
   NFAPI_TRACE(NFAPI_TRACE_INFO, "[VNF] Creating VNF NFAPI start thread %s\n", __FUNCTION__);
   pthread_create(&vnf_start_pthread, NULL, (void *)&vnf_nr_start_thread, config);

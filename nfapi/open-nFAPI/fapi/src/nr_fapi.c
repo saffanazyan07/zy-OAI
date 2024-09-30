@@ -35,7 +35,7 @@ int fapi_nr_message_header_unpack(uint8_t **pMessageBuf,
                                   nfapi_p4_p5_codec_config_t *config)
 {
   uint8_t **pReadPackedMessage = pMessageBuf;
-  nfapi_p4_p5_message_header_t *header = pUnpackedBuf;
+  nfapi_nr_p4_p5_message_header_t *header = pUnpackedBuf;
   fapi_message_header_t fapi_msg = {0};
 
   if (pMessageBuf == NULL || pUnpackedBuf == NULL || messageBufLen < NFAPI_HEADER_LENGTH
@@ -46,7 +46,6 @@ int fapi_nr_message_header_unpack(uint8_t **pMessageBuf,
   // process the header
   int result =
       (pull8(pReadPackedMessage, &fapi_msg.num_msg, end) && pull8(pReadPackedMessage, &fapi_msg.opaque_handle, end)
-       && pull16(pReadPackedMessage, &header->message_id, end) && pull32(pReadPackedMessage, &fapi_msg.message_length, end));
-  header->message_length = fapi_msg.message_length;
+       && pull16(pReadPackedMessage, &header->message_id, end) && pull32(pReadPackedMessage, &header->message_length, end));
   return (result);
 }

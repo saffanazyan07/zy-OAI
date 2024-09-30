@@ -288,7 +288,7 @@ int8_t buf[1024];
 
 nv_ipc_config_t nv_ipc_config;
 
-int aerial_send_P5_msg(void *packedBuf, uint32_t packedMsgLength, nfapi_p4_p5_message_header_t *header)
+int aerial_send_P5_msg(void *packedBuf, uint32_t packedMsgLength, nfapi_nr_p4_p5_message_header_t *header)
 {
   if (ipc == NULL) {
     return -1;
@@ -352,7 +352,7 @@ int aerial_send_P5_msg(void *packedBuf, uint32_t packedMsgLength, nfapi_p4_p5_me
   return 0;
 }
 
-int aerial_send_P7_msg(void *packedBuf, uint32_t packedMsgLength, nfapi_p7_message_header_t *header)
+int aerial_send_P7_msg(void *packedBuf, uint32_t packedMsgLength, nfapi_nr_p7_message_header_t *header)
 {
   if (ipc == NULL) {
     return -1;
@@ -443,7 +443,7 @@ int aerial_send_P7_msg_with_data(void *packedBuf,
                                       uint32_t packedMsgLength,
                                       void *dataBuf,
                                       uint32_t dataLength,
-                                      nfapi_p7_message_header_t *header)
+                                      nfapi_nr_p7_message_header_t *header)
 {
   if (ipc == NULL) {
     return -1;

@@ -139,7 +139,7 @@ void handle_nr_uci(NR_UL_IND_t *UL_info)
 
 static bool crc_sfn_slot_matcher(void *wanted, void *candidate)
 {
-  nfapi_p7_message_header_t *msg = candidate;
+  nfapi_nr_p7_message_header_t *msg = candidate;
   int sfn_sf = *(int*)wanted;
 
   switch (msg->message_id)

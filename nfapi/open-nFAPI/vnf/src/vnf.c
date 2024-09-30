@@ -1075,7 +1075,7 @@ void vnf_handle_vendor_extension(void* pRecvMsg, int recvMsgLen, nfapi_vnf_confi
 
 void vnf_nr_handle_p4_p5_message(void *pRecvMsg, int recvMsgLen, int p5_idx, nfapi_vnf_config_t* config)
 {
-	nfapi_p4_p5_message_header_t messageHeader;
+	nfapi_nr_p4_p5_message_header_t messageHeader;
 
 	// validate the input params
 	if(pRecvMsg == NULL || recvMsgLen < NFAPI_HEADER_LENGTH || config == NULL)
@@ -1085,7 +1085,7 @@ void vnf_nr_handle_p4_p5_message(void *pRecvMsg, int recvMsgLen, int p5_idx, nfa
 	}
 
 	// unpack the message header
-	if (nfapi_p5_message_header_unpack(pRecvMsg, recvMsgLen, &messageHeader, sizeof(nfapi_p4_p5_message_header_t), &config->codec_config) < 0)
+	if (nfapi_nr_p5_message_header_unpack(pRecvMsg, recvMsgLen, &messageHeader, sizeof(nfapi_nr_p4_p5_message_header_t), &config->codec_config) < 0)
 	{
 		NFAPI_TRACE(NFAPI_TRACE_ERROR, "Unpack message header failed, ignoring\n");
 		return;
@@ -1267,7 +1267,7 @@ int vnf_nr_read_dispatch_message(nfapi_vnf_config_t* config, nfapi_vnf_pnf_info_
       // 3. Read the buffer
       // 4. Handle the p5 message
 
-      uint32_t header_buffer_size = NFAPI_HEADER_LENGTH;
+      uint32_t header_buffer_size = NFAPI_NR_P5_HEADER_LENGTH;
       uint8_t header_buffer[header_buffer_size];
 
       uint32_t stack_buffer_size = 32; // should it be the size of then sctp_notificatoin structure
@@ -1294,8 +1294,8 @@ int vnf_nr_read_dispatch_message(nfapi_vnf_config_t* config, nfapi_vnf_pnf_info_
           return 0;
         }
 
-        nfapi_p4_p5_message_header_t header;
-        int unpack_result = nfapi_p5_message_header_unpack(header_buffer, header_buffer_size, &header, sizeof(header), 0);
+        nfapi_nr_p4_p5_message_header_t header;
+        int unpack_result = nfapi_nr_p5_message_header_unpack(header_buffer, header_buffer_size, &header, sizeof(header), 0);
         if (unpack_result < 0) {
           NFAPI_TRACE(NFAPI_TRACE_INFO, "VNF Failed to decode message header %d\n", unpack_result);
           return 0;
@@ -1530,7 +1530,7 @@ static int vnf_send_p5_msg(nfapi_vnf_pnf_info_t* pnf, const void *msg, int len, 
 	return 0;
 }
 
-int vnf_nr_pack_and_send_p5_message(vnf_t* vnf, uint16_t p5_idx, nfapi_p4_p5_message_header_t* msg, uint16_t msg_len)
+int vnf_nr_pack_and_send_p5_message(vnf_t* vnf, uint16_t p5_idx, nfapi_nr_p4_p5_message_header_t* msg, uint16_t msg_len)
 {
 	nfapi_vnf_pnf_info_t* pnf = nfapi_vnf_pnf_list_find(&(vnf->_public), p5_idx);
 	
@@ -1559,7 +1559,7 @@ int vnf_nr_pack_and_send_p5_message(vnf_t* vnf, uint16_t p5_idx, nfapi_p4_p5_mes
                                                      &vnf->_public.codec_config);
 
       if (packedMessageLength < 0) {
-        NFAPI_TRACE(NFAPI_TRACE_ERROR, "nfapi_p5_message_pack failed with return %d\n", packedMessageLength);
+        NFAPI_TRACE(NFAPI_TRACE_ERROR, "nfapi_nr_p5_message_pack failed with return %d\n", packedMessageLength);
         return -1;
       }
       // printf("msg id = 0x%02x, entire message length: %d\n", msg->message_id, packedMessageLength);

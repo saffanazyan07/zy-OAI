@@ -1521,7 +1521,7 @@ void pnf_handle_vendor_extension(void* pRecvMsg, int recvMsgLen, pnf_t* pnf, uin
 
 void pnf_nr_handle_p5_message(pnf_t* pnf, void *pRecvMsg, int recvMsgLen)
 {
-	nfapi_p4_p5_message_header_t messageHeader;
+	nfapi_nr_p4_p5_message_header_t messageHeader;
 
 	// validate the input params
 	if(pRecvMsg == NULL || recvMsgLen < NFAPI_HEADER_LENGTH)
@@ -1531,7 +1531,7 @@ void pnf_nr_handle_p5_message(pnf_t* pnf, void *pRecvMsg, int recvMsgLen)
 	}
 
 	// unpack the message header
-	if (nfapi_p5_message_header_unpack(pRecvMsg, recvMsgLen, &messageHeader, sizeof(nfapi_p4_p5_message_header_t), &pnf->_public.codec_config) < 0)
+	if (nfapi_nr_p5_message_header_unpack(pRecvMsg, recvMsgLen, &messageHeader, sizeof(nfapi_nr_p4_p5_message_header_t), &pnf->_public.codec_config) < 0)
 	{
 		NFAPI_TRACE(NFAPI_TRACE_ERROR, "Unpack message header failed, ignoring\n");
 		return;
@@ -1712,7 +1712,7 @@ void pnf_handle_p5_message(pnf_t* pnf, void *pRecvMsg, int recvMsgLen)
 }
 
 
-int pnf_nr_pack_and_send_p5_message(pnf_t* pnf, nfapi_p4_p5_message_header_t* msg, uint32_t msg_len)
+int pnf_nr_pack_and_send_p5_message(pnf_t* pnf, nfapi_nr_p4_p5_message_header_t* msg, uint32_t msg_len)
 {
 	int packed_len = nfapi_nr_p5_message_pack(msg, msg_len,
 										   pnf->tx_message_buffer,
@@ -1721,7 +1721,7 @@ int pnf_nr_pack_and_send_p5_message(pnf_t* pnf, nfapi_p4_p5_message_header_t* ms
 
 	if (packed_len < 0)
 	{
-		NFAPI_TRACE(NFAPI_TRACE_ERROR, "nfapi_p5_message_pack failed (%d)\n", packed_len);
+		NFAPI_TRACE(NFAPI_TRACE_ERROR, "nfapi_nr_p5_message_pack failed (%d)\n", packed_len);
 		return -1;
 	}
 
@@ -2123,7 +2123,7 @@ int pnf_nr_read_dispatch_message(pnf_t* pnf)
   // 3. Read the buffer
   // 4. Handle the p5 message
 
-  uint32_t header_buffer_size = NFAPI_HEADER_LENGTH;
+  uint32_t header_buffer_size = NFAPI_NR_P5_HEADER_LENGTH;
   uint8_t header_buffer[header_buffer_size];
 
   uint32_t stack_buffer_size = 32; // should it be the size of then sctp_notificatoin structure
@@ -2155,8 +2155,8 @@ int pnf_nr_read_dispatch_message(pnf_t* pnf)
       return 0;
     }
 
-    nfapi_p4_p5_message_header_t header;
-    int unpack_result = nfapi_p5_message_header_unpack(header_buffer, header_buffer_size, &header, sizeof(header), 0);
+    nfapi_nr_p4_p5_message_header_t header;
+    int unpack_result = nfapi_nr_p5_message_header_unpack(header_buffer, header_buffer_size, &header, sizeof(header), 0);
     if (unpack_result < 0) {
       NFAPI_TRACE(NFAPI_TRACE_INFO, "PNF Failed to unpack p5 message header\n");
       return 0;

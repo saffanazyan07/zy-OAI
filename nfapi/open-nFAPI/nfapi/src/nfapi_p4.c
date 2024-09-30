@@ -1631,14 +1631,12 @@ int nfapi_p4_message_header_unpack(void *pMessageBuf, uint32_t messageBufLen, vo
     NFAPI_TRACE(NFAPI_TRACE_ERROR, "P5 header unpack supplied message buffer is too small %d, %d\n", messageBufLen, unpackedBufLen);
     return -1;
   }
-
-  // process the headei
-  if (pull16(&pReadPackedMessage, &pMessageHeader->phy_id, end) &&
-      pull16(&pReadPackedMessage, &pMessageHeader->message_id, end) &&
-      pull16(&pReadPackedMessage, &pMessageHeader->message_length, end) &&
-      pull16(&pReadPackedMessage, &pMessageHeader->spare, end))
+  uint16_t msg_length = 0;
+  // process the header
+  if (pull16(&pReadPackedMessage, &pMessageHeader->phy_id, end) && pull16(&pReadPackedMessage, &pMessageHeader->message_id, end)
+      && pull16(&pReadPackedMessage, &msg_length, end) && pull16(&pReadPackedMessage, &pMessageHeader->spare, end))
     return -1;
-
+  pMessageHeader->message_length = msg_length;
   return 0;
 }
 
@@ -1661,14 +1659,12 @@ int nfapi_p4_message_unpack(void *pMessageBuf, uint32_t messageBufLen, void *pUn
 
   // clean the supplied buffer for - tag value blanking
   (void)memset(pUnpackedBuf, 0, unpackedBufLen);
-
+  uint16_t msg_length = 0;
   // process the header
-  if(!(pull16(&pReadPackedMessage, &pMessageHeader->phy_id, end) &&
-       pull16(&pReadPackedMessage, &pMessageHeader->message_id, end) &&
-       pull16(&pReadPackedMessage, &pMessageHeader->message_length, end) &&
-       pull16(&pReadPackedMessage, &pMessageHeader->spare, end)))
+  if (!(pull16(&pReadPackedMessage, &pMessageHeader->phy_id, end) && pull16(&pReadPackedMessage, &pMessageHeader->message_id, end)
+        && pull16(&pReadPackedMessage, &msg_length, end) && pull16(&pReadPackedMessage, &pMessageHeader->spare, end)))
     return -1;
-
+  pMessageHeader->message_length = msg_length;
   // look for the specific message
   switch (pMessageHeader->message_id) {
     case NFAPI_RSSI_REQUEST:
