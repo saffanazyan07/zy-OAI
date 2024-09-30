@@ -260,7 +260,7 @@ int nfapi_pnf_p7_nr_slot_ind(nfapi_pnf_p7_config_t* config, nfapi_nr_slot_indica
   }
 
   pnf_p7_t* _this = (pnf_p7_t*)(config);
-  return pnf_nr_p7_pack_and_send_p7_message(_this, (nfapi_p7_message_header_t*)ind, sizeof(nfapi_nr_slot_indication_scf_t));
+  return pnf_nr_p7_pack_and_send_p7_message(_this, (nfapi_nr_p7_message_header_t*)ind, sizeof(nfapi_nr_slot_indication_scf_t));
 }
 
 int nfapi_pnf_p7_nr_rx_data_ind(nfapi_pnf_p7_config_t* config, nfapi_nr_rx_data_indication_t* ind)
@@ -272,7 +272,7 @@ int nfapi_pnf_p7_nr_rx_data_ind(nfapi_pnf_p7_config_t* config, nfapi_nr_rx_data_
 	}
 
 	pnf_p7_t* _this = (pnf_p7_t*)(config);
-	return pnf_nr_p7_pack_and_send_p7_message(_this, (nfapi_p7_message_header_t*)ind, sizeof(nfapi_nr_rx_data_indication_t));
+	return pnf_nr_p7_pack_and_send_p7_message(_this, (nfapi_nr_p7_message_header_t*)ind, sizeof(nfapi_nr_rx_data_indication_t));
 }
 
 int nfapi_pnf_p7_nr_crc_ind(nfapi_pnf_p7_config_t* config, nfapi_nr_crc_indication_t* ind)
@@ -284,7 +284,7 @@ int nfapi_pnf_p7_nr_crc_ind(nfapi_pnf_p7_config_t* config, nfapi_nr_crc_indicati
 	}
 
 	pnf_p7_t* _this = (pnf_p7_t*)(config);
-	return pnf_nr_p7_pack_and_send_p7_message(_this, (nfapi_p7_message_header_t*)ind, sizeof(nfapi_nr_crc_indication_t));
+	return pnf_nr_p7_pack_and_send_p7_message(_this, (nfapi_nr_p7_message_header_t*)ind, sizeof(nfapi_nr_crc_indication_t));
 }
 
 int nfapi_pnf_p7_nr_srs_ind(nfapi_pnf_p7_config_t* config, nfapi_nr_srs_indication_t* ind)
@@ -296,7 +296,7 @@ int nfapi_pnf_p7_nr_srs_ind(nfapi_pnf_p7_config_t* config, nfapi_nr_srs_indicati
 	}
 
 	pnf_p7_t* _this = (pnf_p7_t*)(config);
-	return pnf_nr_p7_pack_and_send_p7_message(_this, (nfapi_p7_message_header_t*)ind, sizeof(nfapi_nr_srs_indication_t));
+	return pnf_nr_p7_pack_and_send_p7_message(_this, (nfapi_nr_p7_message_header_t*)ind, sizeof(nfapi_nr_srs_indication_t));
 }
 
 int nfapi_pnf_p7_nr_uci_ind(nfapi_pnf_p7_config_t* config, nfapi_nr_uci_indication_t* ind)
@@ -308,7 +308,7 @@ int nfapi_pnf_p7_nr_uci_ind(nfapi_pnf_p7_config_t* config, nfapi_nr_uci_indicati
 	}
 
 	pnf_p7_t* _this = (pnf_p7_t*)(config);
-	return pnf_nr_p7_pack_and_send_p7_message(_this, (nfapi_p7_message_header_t*)ind, sizeof(nfapi_nr_uci_indication_t));
+	return pnf_nr_p7_pack_and_send_p7_message(_this, (nfapi_nr_p7_message_header_t*)ind, sizeof(nfapi_nr_uci_indication_t));
 }
 
 int nfapi_pnf_p7_nr_rach_ind(nfapi_pnf_p7_config_t* config, nfapi_nr_rach_indication_t* ind)
@@ -320,5 +320,5 @@ int nfapi_pnf_p7_nr_rach_ind(nfapi_pnf_p7_config_t* config, nfapi_nr_rach_indica
 	}
 
 	pnf_p7_t* _this = (pnf_p7_t*)(config);
-	return pnf_nr_p7_pack_and_send_p7_message(_this, (nfapi_p7_message_header_t*)ind, sizeof(nfapi_nr_rach_indication_t));
+	return pnf_nr_p7_pack_and_send_p7_message(_this, (nfapi_nr_p7_message_header_t*)ind, sizeof(nfapi_nr_rach_indication_t));
 }

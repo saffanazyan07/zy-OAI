@@ -22,7 +22,7 @@
 #include "nr_fapi_p5.h"
 #include "debug.h"
 
-uint8_t fapi_nr_p5_message_body_pack(nfapi_p4_p5_message_header_t *header,
+uint8_t fapi_nr_p5_message_body_pack(nfapi_nr_p4_p5_message_header_t *header,
                                      uint8_t **ppWritePackedMsg,
                                      uint8_t *end,
                                      nfapi_p4_p5_codec_config_t *config)
@@ -83,7 +83,7 @@ int fapi_nr_p5_message_pack(void *pMessageBuf,
                             const uint32_t packedBufLen,
                             nfapi_p4_p5_codec_config_t *config)
 {
-  nfapi_p4_p5_message_header_t *pMessageHeader = pMessageBuf;
+  nfapi_nr_p4_p5_message_header_t *pMessageHeader = pMessageBuf;
   uint8_t *pWritePackedMessage = pPackedBuf;
   AssertFatal(isFAPIMessageIDValid(pMessageHeader->message_id),
               "FAPI message IDs are defined between 0x00 and 0xFF the message provided 0x%02x, which is not a FAPI message",

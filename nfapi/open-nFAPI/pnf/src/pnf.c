@@ -1519,100 +1519,96 @@ void pnf_handle_vendor_extension(void* pRecvMsg, int recvMsgLen, pnf_t* pnf, uin
 	}
 }
 
-void pnf_nr_handle_p5_message(pnf_t* pnf, void *pRecvMsg, int recvMsgLen)
+void pnf_nr_handle_p5_message(pnf_t* pnf, void* pRecvMsg, int recvMsgLen)
 {
-	nfapi_p4_p5_message_header_t messageHeader;
+  nfapi_nr_p4_p5_message_header_t messageHeader;
 
-	// validate the input params
-	if(pRecvMsg == NULL || recvMsgLen < NFAPI_HEADER_LENGTH)
-	{
-		NFAPI_TRACE(NFAPI_TRACE_ERROR, "%s: invalid input params\n", __FUNCTION__);
-		return;
-	}
+  // validate the input params
+  if (pRecvMsg == NULL || recvMsgLen < NFAPI_HEADER_LENGTH) {
+    NFAPI_TRACE(NFAPI_TRACE_ERROR, "%s: invalid input params\n", __FUNCTION__);
+    return;
+  }
 
-	// unpack the message header
-	if (nfapi_p5_message_header_unpack(pRecvMsg, recvMsgLen, &messageHeader, sizeof(nfapi_p4_p5_message_header_t), &pnf->_public.codec_config) < 0)
-	{
-		NFAPI_TRACE(NFAPI_TRACE_ERROR, "Unpack message header failed, ignoring\n");
-		return;
-	}
+  // unpack the message header
+  if (nfapi_nr_p5_message_header_unpack(pRecvMsg,
+                                        recvMsgLen,
+                                        &messageHeader,
+                                        sizeof(nfapi_nr_p4_p5_message_header_t),
+                                        &pnf->_public.codec_config)
+      < 0) {
+    NFAPI_TRACE(NFAPI_TRACE_ERROR, "Unpack message header failed, ignoring\n");
+    return;
+  }
 
-	switch (messageHeader.message_id)
-	{
-		case NFAPI_NR_PHY_MSG_TYPE_PNF_PARAM_REQUEST:
-			pnf_nr_handle_pnf_param_request(pnf, pRecvMsg, recvMsgLen);
-			break;
+  switch (messageHeader.message_id) {
+    case NFAPI_NR_PHY_MSG_TYPE_PNF_PARAM_REQUEST:
+      pnf_nr_handle_pnf_param_request(pnf, pRecvMsg, recvMsgLen);
+      break;
 
-		case NFAPI_NR_PHY_MSG_TYPE_PNF_CONFIG_REQUEST:
-			pnf_nr_handle_pnf_config_request(pnf, pRecvMsg, recvMsgLen);
-			break;
+    case NFAPI_NR_PHY_MSG_TYPE_PNF_CONFIG_REQUEST:
+      pnf_nr_handle_pnf_config_request(pnf, pRecvMsg, recvMsgLen);
+      break;
 
-		case NFAPI_NR_PHY_MSG_TYPE_PNF_START_REQUEST:
-			pnf_nr_handle_pnf_start_request(pnf, pRecvMsg, recvMsgLen);
-			break;
+    case NFAPI_NR_PHY_MSG_TYPE_PNF_START_REQUEST:
+      pnf_nr_handle_pnf_start_request(pnf, pRecvMsg, recvMsgLen);
+      break;
 
-		case NFAPI_PNF_STOP_REQUEST:
-			pnf_handle_pnf_stop_request(pnf, pRecvMsg, recvMsgLen);
-			break;
+    case NFAPI_PNF_STOP_REQUEST:
+      pnf_handle_pnf_stop_request(pnf, pRecvMsg, recvMsgLen);
+      break;
 
-		case NFAPI_NR_PHY_MSG_TYPE_PARAM_REQUEST:
-			pnf_nr_handle_param_request(pnf, pRecvMsg, recvMsgLen);
-			break;
+    case NFAPI_NR_PHY_MSG_TYPE_PARAM_REQUEST:
+      pnf_nr_handle_param_request(pnf, pRecvMsg, recvMsgLen);
+      break;
 
-		case NFAPI_NR_PHY_MSG_TYPE_CONFIG_REQUEST:
-			pnf_nr_handle_config_request(pnf, pRecvMsg, recvMsgLen);
-			break;
+    case NFAPI_NR_PHY_MSG_TYPE_CONFIG_REQUEST:
+      pnf_nr_handle_config_request(pnf, pRecvMsg, recvMsgLen);
+      break;
 
-		case NFAPI_NR_PHY_MSG_TYPE_START_REQUEST:
-			pnf_nr_handle_start_request(pnf, pRecvMsg, recvMsgLen);
-			break;
+    case NFAPI_NR_PHY_MSG_TYPE_START_REQUEST:
+      pnf_nr_handle_start_request(pnf, pRecvMsg, recvMsgLen);
+      break;
 
-		case NFAPI_NR_PHY_MSG_TYPE_STOP_REQUEST:
-			pnf_nr_handle_stop_request(pnf, pRecvMsg, recvMsgLen);
-			break;
+    case NFAPI_NR_PHY_MSG_TYPE_STOP_REQUEST:
+      pnf_nr_handle_stop_request(pnf, pRecvMsg, recvMsgLen);
+      break;
 
-		case NFAPI_MEASUREMENT_REQUEST:
-			pnf_handle_measurement_request(pnf, pRecvMsg, recvMsgLen);
-			break;
+    case NFAPI_MEASUREMENT_REQUEST:
+      pnf_handle_measurement_request(pnf, pRecvMsg, recvMsgLen);
+      break;
 
-		case NFAPI_RSSI_REQUEST:
-			pnf_handle_rssi_request(pnf, pRecvMsg, recvMsgLen);
-			break;
+    case NFAPI_RSSI_REQUEST:
+      pnf_handle_rssi_request(pnf, pRecvMsg, recvMsgLen);
+      break;
 
-		case NFAPI_CELL_SEARCH_REQUEST:
-			pnf_handle_cell_search_request(pnf, pRecvMsg, recvMsgLen);
-			break;
+    case NFAPI_CELL_SEARCH_REQUEST:
+      pnf_handle_cell_search_request(pnf, pRecvMsg, recvMsgLen);
+      break;
 
-		case NFAPI_BROADCAST_DETECT_REQUEST:
-			pnf_handle_broadcast_detect_request(pnf, pRecvMsg, recvMsgLen);
-			break;
+    case NFAPI_BROADCAST_DETECT_REQUEST:
+      pnf_handle_broadcast_detect_request(pnf, pRecvMsg, recvMsgLen);
+      break;
 
-		case NFAPI_SYSTEM_INFORMATION_SCHEDULE_REQUEST:
-			pnf_handle_system_information_schedule_request(pnf, pRecvMsg, recvMsgLen);
-			break;
+    case NFAPI_SYSTEM_INFORMATION_SCHEDULE_REQUEST:
+      pnf_handle_system_information_schedule_request(pnf, pRecvMsg, recvMsgLen);
+      break;
 
-		case NFAPI_SYSTEM_INFORMATION_REQUEST:
-			pnf_handle_system_information_request(pnf, pRecvMsg, recvMsgLen);
-			break;
+    case NFAPI_SYSTEM_INFORMATION_REQUEST:
+      pnf_handle_system_information_request(pnf, pRecvMsg, recvMsgLen);
+      break;
 
-		case NFAPI_NMM_STOP_REQUEST:
-			pnf_handle_nmm_stop_request(pnf, pRecvMsg, recvMsgLen);
-			break;
+    case NFAPI_NMM_STOP_REQUEST:
+      pnf_handle_nmm_stop_request(pnf, pRecvMsg, recvMsgLen);
+      break;
 
-		default:
-			{
-				if(messageHeader.message_id >= NFAPI_VENDOR_EXT_MSG_MIN &&
-				   messageHeader.message_id <= NFAPI_VENDOR_EXT_MSG_MAX)
-				{
-					pnf_handle_vendor_extension(pRecvMsg, recvMsgLen, pnf, messageHeader.message_id);
-				}
-				else
-				{
-					NFAPI_TRACE(NFAPI_TRACE_ERROR, "%s P5 Unknown message ID %d\n", __FUNCTION__, messageHeader.message_id);
-				}
-			}
-			break;
-	}
+    default: {
+      if (messageHeader.message_id >= NFAPI_VENDOR_EXT_MSG_MIN && messageHeader.message_id <= NFAPI_VENDOR_EXT_MSG_MAX) {
+        pnf_handle_vendor_extension(pRecvMsg, recvMsgLen, pnf, messageHeader.message_id);
+      } else {
+        NFAPI_TRACE(NFAPI_TRACE_ERROR, "%s P5 Unknown message ID %d\n", __FUNCTION__, messageHeader.message_id);
+      }
+    } break;
+  }
 }
 
 void pnf_handle_p5_message(pnf_t* pnf, void *pRecvMsg, int recvMsgLen)
@@ -1711,21 +1707,17 @@ void pnf_handle_p5_message(pnf_t* pnf, void *pRecvMsg, int recvMsgLen)
 	}
 }
 
-
-int pnf_nr_pack_and_send_p5_message(pnf_t* pnf, nfapi_p4_p5_message_header_t* msg, uint32_t msg_len)
+int pnf_nr_pack_and_send_p5_message(pnf_t* pnf, nfapi_nr_p4_p5_message_header_t* msg, uint32_t msg_len)
 {
-	int packed_len = nfapi_nr_p5_message_pack(msg, msg_len,
-										   pnf->tx_message_buffer,
-										   sizeof(pnf->tx_message_buffer),
-										   &pnf->_public.codec_config);
+  int packed_len =
+      nfapi_nr_p5_message_pack(msg, msg_len, pnf->tx_message_buffer, sizeof(pnf->tx_message_buffer), &pnf->_public.codec_config);
 
-	if (packed_len < 0)
-	{
-		NFAPI_TRACE(NFAPI_TRACE_ERROR, "nfapi_p5_message_pack failed (%d)\n", packed_len);
-		return -1;
-	}
+  if (packed_len < 0) {
+    NFAPI_TRACE(NFAPI_TRACE_ERROR, "nfapi_nr_p5_message_pack failed (%d)\n", packed_len);
+    return -1;
+  }
 
-	return pnf_send_message(pnf, pnf->tx_message_buffer, packed_len, 0/*msg->stream_id*/);
+  return pnf_send_message(pnf, pnf->tx_message_buffer, packed_len, 0 /*msg->stream_id*/);
 }
 
 
@@ -2123,7 +2115,7 @@ int pnf_nr_read_dispatch_message(pnf_t* pnf)
   // 3. Read the buffer
   // 4. Handle the p5 message
 
-  uint32_t header_buffer_size = NFAPI_HEADER_LENGTH;
+  uint32_t header_buffer_size = NFAPI_NR_P5_HEADER_LENGTH;
   uint8_t header_buffer[header_buffer_size];
 
   uint32_t stack_buffer_size = 32; // should it be the size of then sctp_notificatoin structure
@@ -2155,8 +2147,8 @@ int pnf_nr_read_dispatch_message(pnf_t* pnf)
       return 0;
     }
 
-    nfapi_p4_p5_message_header_t header;
-    int unpack_result = nfapi_p5_message_header_unpack(header_buffer, header_buffer_size, &header, sizeof(header), 0);
+    nfapi_nr_p4_p5_message_header_t header;
+    int unpack_result = nfapi_nr_p5_message_header_unpack(header_buffer, header_buffer_size, &header, sizeof(header), 0);
     if (unpack_result < 0) {
       NFAPI_TRACE(NFAPI_TRACE_INFO, "PNF Failed to unpack p5 message header\n");
       return 0;

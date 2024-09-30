@@ -187,23 +187,20 @@ int aerial_phy_nr_slot_indication(nfapi_nr_slot_indication_scf_t *ind);
 int aerial_phy_nr_srs_indication(nfapi_nr_srs_indication_t *ind);
 void *aerial_vnf_allocate(size_t size);
 void aerial_vnf_deallocate(void *ptr);
-int aerial_phy_vendor_ext(struct nfapi_vnf_p7_config *config, nfapi_p7_message_header_t *msg);
-int aerial_phy_unpack_p7_vendor_extension(nfapi_p7_message_header_t *header,
+int aerial_phy_vendor_ext(struct nfapi_vnf_p7_config *config, void *msg);
+int aerial_phy_unpack_p7_vendor_extension(void *header,
                                           uint8_t **ppReadPackedMessage,
                                           uint8_t *end,
                                           nfapi_p7_codec_config_t *config);
-int aerial_phy_pack_p7_vendor_extension(nfapi_p7_message_header_t *header,
-                                        uint8_t **ppWritePackedMsg,
-                                        uint8_t *end,
-                                        nfapi_p7_codec_config_t *config);
+int aerial_phy_pack_p7_vendor_extension(void *header, uint8_t **ppWritePackedMsg, uint8_t *end, nfapi_p7_codec_config_t *config);
 int aerial_phy_unpack_vendor_extension_tlv(nfapi_tl_t *tl,
                                            uint8_t **ppReadPackedMessage,
                                            uint8_t *end,
                                            void **ve,
                                            nfapi_p7_codec_config_t *codec);
 int aerial_phy_pack_vendor_extension_tlv(void *ve, uint8_t **ppWritePackedMsg, uint8_t *end, nfapi_p7_codec_config_t *codec);
-nfapi_p7_message_header_t *aerial_phy_allocate_p7_vendor_ext(uint16_t message_id, uint16_t *msg_size);
-void aerial_phy_deallocate_p7_vendor_ext(nfapi_p7_message_header_t *header);
+void *aerial_phy_allocate_p7_vendor_ext(uint16_t message_id, uint16_t *msg_size);
+void aerial_phy_deallocate_p7_vendor_ext(void *header);
 
 uint8_t aerial_unpack_nr_slot_indication(uint8_t **ppReadPackedMsg,
                                          uint8_t *end,
@@ -227,5 +224,5 @@ uint8_t aerial_unpack_nr_rach_indication(uint8_t **ppReadPackedMsg,
                                          nfapi_p7_codec_config_t *config);
 
 // int fapi_nr_p7_message_pack(void *pMessageBuf, void *pPackedBuf, uint32_t packedBufLen, nfapi_p7_codec_config_t* config);
-int fapi_nr_pack_and_send_p7_message(vnf_p7_t *vnf_p7, nfapi_p7_message_header_t *header);
+int fapi_nr_pack_and_send_p7_message(vnf_p7_t *vnf_p7, nfapi_nr_p7_message_header_t *header);
 #endif // OPENAIRINTERFACE_FAPI_VNF_P7_H

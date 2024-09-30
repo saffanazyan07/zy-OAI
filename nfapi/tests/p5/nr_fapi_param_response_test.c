@@ -226,7 +226,7 @@ void test_pack_unpack(nfapi_nr_param_response_scf_t *req)
   req->header.message_length = pack_result - NFAPI_HEADER_LENGTH;
   // test the unpacking of the header
   // copy first NFAPI_HEADER_LENGTH bytes into a new buffer, to simulate SCTP PEEK
-  nfapi_p4_p5_message_header_t header;
+  nfapi_nr_p4_p5_message_header_t header;
   uint32_t header_buffer_size = NFAPI_HEADER_LENGTH;
   uint8_t header_buffer[header_buffer_size];
   for (int idx = 0; idx < header_buffer_size; idx++) {

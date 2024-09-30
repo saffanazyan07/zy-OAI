@@ -305,19 +305,19 @@ typedef struct nfapi_pnf_config
 	 *  \param msg A pointer to the decode P4/P5 message
 	 *  \return not current used
 	 */
-	int (*vendor_ext)(nfapi_pnf_config_t* config, nfapi_p4_p5_message_header_t* msg);
+	int (*vendor_ext)(nfapi_pnf_config_t* config, void* msg);
 	
 	/*! A callback to allocate vendor extension message
 	 * \param message_id The message id from the decode P4/P5 message header
 	 * \param msg_size A pointer a the size of the allocated message structure. The callee should set this
 	 * \return A pointer to a allocated P4/P5 message structure
 	 */
-	nfapi_p4_p5_message_header_t* (*allocate_p4_p5_vendor_ext)(uint16_t message_id, uint16_t* msg_size);
+	void* (*allocate_p4_p5_vendor_ext)(uint16_t message_id, uint16_t* msg_size);
 	
 	/*! A callback to deallocate vendor extension message 
 	 * \param header A pointer to an P4/P5 message structure
 	 */
-	void (*deallocate_p4_p5_vendor_ext)(nfapi_p4_p5_message_header_t* header);
+	void (*deallocate_p4_p5_vendor_ext)(void* header);
 
 
 
@@ -709,7 +709,7 @@ typedef struct nfapi_pnf_p7_config
 	 * \param msg A pointer to a decode vendor extention message
 	 * \return not currently used
 	 */
-	int (*vendor_ext)(nfapi_pnf_p7_config_t* config, nfapi_p7_message_header_t* msg);
+	int (*vendor_ext)(nfapi_pnf_p7_config_t* config, void* msg);
 
 	/*! A callback to allocate vendor extension message
 	 * \param message_id The vendor extention message id from the decode message header
@@ -718,12 +718,12 @@ typedef struct nfapi_pnf_p7_config
 	 * 
 	 * 
 	 */
-	nfapi_p7_message_header_t* (*allocate_p7_vendor_ext)(uint16_t message_id, uint16_t* msg_size);
+	void* (*allocate_p7_vendor_ext)(uint16_t message_id, uint16_t* msg_size);
 	
 	/*! A callback to deallocate vendor extension message
 	 * \param header A pointer to a p7 vendor extention message
 	 */
-	void (*deallocate_p7_vendor_ext)(nfapi_p7_message_header_t* header);
+	void (*deallocate_p7_vendor_ext)(void* header);
 
 
 

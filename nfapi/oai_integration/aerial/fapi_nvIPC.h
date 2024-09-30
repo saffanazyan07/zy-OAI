@@ -47,13 +47,13 @@ typedef struct {
   uint32_t message_length;
 } fapi_phy_api_msg;
 
-int aerial_send_P5_msg(void *packedBuf, uint32_t packedMsgLength, nfapi_p4_p5_message_header_t *header);
-int aerial_send_P7_msg(void *packedBuf, uint32_t packedMsgLength, nfapi_p7_message_header_t *header);
+int aerial_send_P5_msg(void *packedBuf, uint32_t packedMsgLength, nfapi_nr_p4_p5_message_header_t *header);
+int aerial_send_P7_msg(void *packedBuf, uint32_t packedMsgLength, nfapi_nr_p7_message_header_t *header);
 int aerial_send_P7_msg_with_data(void *packedBuf,
-                                      uint32_t packedMsgLength,
-                                      void *dataBuf,
-                                      uint32_t dataLength,
-                                      nfapi_p7_message_header_t *header);
+                                 uint32_t packedMsgLength,
+                                 void *dataBuf,
+                                 uint32_t dataLength,
+                                 nfapi_nr_p7_message_header_t *header);
 void set_config(nfapi_vnf_config_t *conf);
 int nvIPC_Init(nvipc_params_t nvipc_params_s);
 

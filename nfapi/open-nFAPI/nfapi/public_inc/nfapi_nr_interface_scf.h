@@ -11,6 +11,7 @@
 
 #include "stddef.h"
 #include "nfapi_interface.h"
+#include "nfapi_nr_interface.h"
 
 #define NFAPI_NR_MAX_NB_CCE_AGGREGATION_LEVELS 5
 #define NFAPI_NR_MAX_NB_TCI_STATES_PDCCH 64
@@ -510,12 +511,12 @@ typedef enum {    // Table 2-27
 
 //PNF P5 NR 
 typedef struct {
-	nfapi_p4_p5_message_header_t header;
+	nfapi_nr_p4_p5_message_header_t header;
 	nfapi_vendor_extension_tlv_t vendor_extension;
 } nfapi_nr_pnf_param_request_t;
 
 typedef struct {
-	nfapi_p4_p5_message_header_t header;
+	nfapi_nr_p4_p5_message_header_t header;
 	uint8_t error_code;
   uint8_t num_tlvs;
 	nfapi_pnf_param_general_t pnf_param_general;
@@ -524,36 +525,36 @@ typedef struct {
 } nfapi_nr_pnf_param_response_t;
 
 typedef struct {
-	nfapi_p4_p5_message_header_t header;
+	nfapi_nr_p4_p5_message_header_t header;
 	uint8_t num_tlvs;
 	nfapi_pnf_phy_rf_config_t pnf_phy_rf_config;
 	nfapi_vendor_extension_tlv_t vendor_extension;
 } nfapi_nr_pnf_config_request_t;
 
 typedef struct {
-	nfapi_p4_p5_message_header_t header;
+	nfapi_nr_p4_p5_message_header_t header;
 	uint8_t error_code;
 	nfapi_vendor_extension_tlv_t vendor_extension;
 } nfapi_nr_pnf_config_response_t;
 
 typedef struct {
-	nfapi_p4_p5_message_header_t header;
+	nfapi_nr_p4_p5_message_header_t header;
 	nfapi_vendor_extension_tlv_t vendor_extension;
 } nfapi_nr_pnf_start_request_t;
 
 typedef struct {
-	nfapi_p4_p5_message_header_t header;
+	nfapi_nr_p4_p5_message_header_t header;
 	uint32_t error_code;
 	nfapi_vendor_extension_tlv_t vendor_extension;
 } nfapi_nr_pnf_start_response_t;
 
 typedef struct {
-	nfapi_p4_p5_message_header_t header;
+	nfapi_nr_p4_p5_message_header_t header;
 	nfapi_vendor_extension_tlv_t vendor_extension;
 } nfapi_nr_pnf_stop_request_t;
 
 typedef struct {
-	nfapi_p4_p5_message_header_t header;
+	nfapi_nr_p4_p5_message_header_t header;
 	uint32_t error_code;
 	nfapi_vendor_extension_tlv_t vendor_extension;
 } nfapi_nr_pnf_stop_response_t;
@@ -561,13 +562,13 @@ typedef struct {
 
 /* PARAM.REQUEST */
 typedef struct {
-  nfapi_p4_p5_message_header_t  header;
+  nfapi_nr_p4_p5_message_header_t  header;
 	nfapi_vendor_extension_tlv_t  vendor_extension;
 } nfapi_nr_param_request_scf_t;
 
 /* PARAM.RESPONSE */
 typedef struct {
-  nfapi_p4_p5_message_header_t  header;
+  nfapi_nr_p4_p5_message_header_t  header;
   uint8_t       error_code;
   
   uint8_t                       num_tlv;
@@ -589,7 +590,7 @@ typedef struct {
 
 /* CONFIG.REQUEST */
 typedef struct {
-  nfapi_p4_p5_message_header_t  header;
+  nfapi_nr_p4_p5_message_header_t  header;
 
   uint8_t                       num_tlv;
   nfapi_vendor_extension_tlv_t  vendor_extension;
@@ -627,7 +628,7 @@ typedef struct {
 
 /* CONFIG.RESPONSE */
 typedef struct {
-  nfapi_p4_p5_message_header_t  header;
+  nfapi_nr_p4_p5_message_header_t  header;
   uint8_t error_code;
   uint8_t num_invalid_tlvs;
   uint8_t num_invalid_tlvs_configured_in_idle;
@@ -644,12 +645,12 @@ typedef struct {
 //3.3.3 START
 
 typedef struct {
-	nfapi_p4_p5_message_header_t header;
+	nfapi_nr_p4_p5_message_header_t header;
 	nfapi_vendor_extension_tlv_t vendor_extension;
 } nfapi_nr_start_request_scf_t;
 
 typedef struct {
-  nfapi_p4_p5_message_header_t header;
+  nfapi_nr_p4_p5_message_header_t header;
   nfapi_nr_start_errors_e error_code;
   nfapi_vendor_extension_tlv_t vendor_extension;
 } nfapi_nr_start_response_scf_t;
@@ -657,17 +658,17 @@ typedef struct {
 //3.3.4 STOP
 
 typedef struct {
-  nfapi_p4_p5_message_header_t header;
+  nfapi_nr_p4_p5_message_header_t header;
   nfapi_vendor_extension_tlv_t vendor_extension;
 } nfapi_nr_stop_request_scf_t;
 
 typedef struct {
-  nfapi_p4_p5_message_header_t header;
+  nfapi_nr_p4_p5_message_header_t header;
   nfapi_vendor_extension_tlv_t vendor_extension;
 } nfapi_nr_stop_indication_scf_t;
 
 typedef struct {
-  nfapi_p4_p5_message_header_t header;
+  nfapi_nr_p4_p5_message_header_t header;
   uint16_t sfn;
   uint16_t slot;
   uint8_t message_id; // Which message received on the PNF has an error
@@ -708,7 +709,7 @@ typedef struct {
 #define NFAPI_NR_SLOT_INDICATION_PERIOD_NUMEROLOGY_3 125 //us
 
 typedef struct {
-  nfapi_p7_message_header_t header;
+  nfapi_nr_p7_message_header_t header;
   uint16_t sfn; //0->1023
   uint16_t slot;//0->319
   
@@ -1070,23 +1071,46 @@ typedef struct {
 
 
 typedef struct {
-	nfapi_p7_message_header_t header;
+	nfapi_nr_p7_message_header_t header;
 	uint32_t t1;
 	int32_t delta_sfn_slot;
 	nfapi_vendor_extension_tlv_t vendor_extension;
 } nfapi_nr_dl_node_sync_t;
 
 typedef struct {
-	nfapi_p7_message_header_t header;
+	nfapi_nr_p7_message_header_t header;
 	uint32_t t1;
 	uint32_t t2;
 	uint32_t t3;	
 	nfapi_vendor_extension_tlv_t vendor_extension;
 } nfapi_nr_ul_node_sync_t;
 
+typedef struct {
+  nfapi_nr_p7_message_header_t header;
+
+  uint32_t last_sfn;
+  uint32_t last_slot;
+  uint32_t time_since_last_timing_info;
+
+  uint32_t dl_tti_jitter;
+  uint32_t tx_data_request_jitter;
+  uint32_t ul_tti_jitter;
+  uint32_t ul_dci_jitter;
+
+  int32_t dl_tti_latest_delay;
+  int32_t tx_data_request_latest_delay;
+  int32_t ul_tti_latest_delay;
+  int32_t ul_dci_latest_delay;
+
+  int32_t dl_tti_earliest_arrival;
+  int32_t tx_data_request_earliest_arrival;
+  int32_t ul_tti_earliest_arrival;
+  int32_t ul_dci_earliest_arrival;
+  nfapi_vendor_extension_tlv_t vendor_extension;
+} nfapi_nr_timing_info_t;
 
 typedef struct {
-  nfapi_p7_message_header_t header;
+  nfapi_nr_p7_message_header_t header;
   /// System Frame Number (0-1023)
   uint16_t SFN;
   /// Slot number (0-19)
@@ -1420,7 +1444,7 @@ typedef struct
 } nfapi_nr_ul_tti_request_number_of_groups_t;
 
 typedef struct {
-  nfapi_p7_message_header_t header;
+  nfapi_nr_p7_message_header_t header;
   uint16_t SFN; //0->1023   
   uint16_t Slot;//0->319
   uint8_t n_pdus;//Number of PDUs that are included in this message. All PDUs in the message are numbered in order. Value 0 -> 255
@@ -1464,7 +1488,7 @@ typedef struct {
 } nfapi_nr_ul_dci_request_pdus_t;
 
 typedef struct {
-  nfapi_p7_message_header_t header;
+  nfapi_nr_p7_message_header_t header;
   uint16_t SFN;
   uint16_t Slot;
   uint8_t  numPdus;
@@ -1510,7 +1534,7 @@ typedef struct
 #define NFAPI_NR_MAX_TX_REQUEST_PDUS 16
 typedef struct
 {
-  nfapi_p7_message_header_t header;
+  nfapi_nr_p7_message_header_t header;
   uint16_t SFN;
   uint16_t Slot;
   uint16_t Number_of_PDUs;
@@ -1545,7 +1569,7 @@ typedef struct
 
 typedef struct
 {
-  nfapi_p7_message_header_t header;
+  nfapi_nr_p7_message_header_t header;
   uint16_t sfn;
   uint16_t slot;
   uint16_t number_of_pdus;
@@ -1573,7 +1597,7 @@ typedef struct
 
 typedef struct
 {
-  nfapi_p7_message_header_t header;
+  nfapi_nr_p7_message_header_t header;
   uint16_t sfn;
   uint16_t slot;
   uint16_t number_crcs;
@@ -1710,7 +1734,7 @@ typedef struct
 
 typedef struct
 {
-  nfapi_p7_message_header_t header;
+  nfapi_nr_p7_message_header_t header;
   uint16_t sfn;
   uint16_t slot;
   uint16_t num_ucis;
@@ -1770,7 +1794,7 @@ typedef struct {
 } nfapi_nr_srs_indication_pdu_t;
 
 typedef struct {
-  nfapi_p7_message_header_t header;
+  nfapi_nr_p7_message_header_t header;
   uint16_t sfn;                         // SFN. Value: 0 -> 1023
   uint16_t slot;                        // Slot. Value: 0 -> 159
   uint16_t control_length;              // Size of control portion of SRS indication. 0 if reports are included inline; >0 if reports are concatenated to the end of the message.
@@ -1803,7 +1827,7 @@ typedef struct{
 
 typedef struct
 {
-  nfapi_p7_message_header_t header;
+  nfapi_nr_p7_message_header_t header;
   uint16_t sfn;
   uint16_t slot;
   uint8_t number_of_pdus;
