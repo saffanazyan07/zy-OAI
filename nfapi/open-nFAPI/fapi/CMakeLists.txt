@@ -13,6 +13,7 @@ target_link_libraries(nr_fapi_p5 PUBLIC nr_fapi_common)
 
 add_library(nr_fapi_p7
         src/nr_fapi_p7.c
+        src/nr_fapi_p7_utils.c
 )
 target_include_directories(nr_fapi_p7 PUBLIC inc)
 # Note: Dependencies with NFAPI_LIB NFAPI_USER_LIB only necessary until last FAPI function is moved into new library, to be removed at a later stage

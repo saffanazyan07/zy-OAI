@@ -232,17 +232,35 @@ static uint8_t pack_tpm_value(nfapi_dl_config_dci_dl_tpm_t *value, uint8_t **ppW
 static uint8_t pack_dl_tti_csi_rs_pdu_rel15_value(void *tlv, uint8_t **ppWritePackedMsg, uint8_t *end)
 {
   nfapi_nr_dl_tti_csi_rs_pdu_rel15_t *value = (nfapi_nr_dl_tti_csi_rs_pdu_rel15_t *)tlv;
-  return (push16(value->bwp_size, ppWritePackedMsg, end) && push16(value->bwp_start, ppWritePackedMsg, end)
-          && push8(value->subcarrier_spacing, ppWritePackedMsg, end) && push8(value->cyclic_prefix, ppWritePackedMsg, end)
-          && push16(value->start_rb, ppWritePackedMsg, end) && push16(value->nr_of_rbs, ppWritePackedMsg, end)
-          && push8(value->csi_type, ppWritePackedMsg, end) && push8(value->row, ppWritePackedMsg, end)
-          && push16(value->freq_domain, ppWritePackedMsg, end) && push8(value->symb_l0, ppWritePackedMsg, end)
-          && push8(value->symb_l1, ppWritePackedMsg, end) && push8(value->cdm_type, ppWritePackedMsg, end)
-          && push8(value->freq_density, ppWritePackedMsg, end) && push16(value->scramb_id, ppWritePackedMsg, end)
-          && push8(value->power_control_offset, ppWritePackedMsg, end)
-          && push8(value->power_control_offset_ss, ppWritePackedMsg, end) &&
-          // TODO Add Precoding and Beamforming, hardcoded for now
-          push16(0, ppWritePackedMsg, end) && push16(0, ppWritePackedMsg, end) && push8(0, ppWritePackedMsg, end));
+  if (!(push16(value->bwp_size, ppWritePackedMsg, end) && push16(value->bwp_start, ppWritePackedMsg, end)
+        && push8(value->subcarrier_spacing, ppWritePackedMsg, end) && push8(value->cyclic_prefix, ppWritePackedMsg, end)
+        && push16(value->start_rb, ppWritePackedMsg, end) && push16(value->nr_of_rbs, ppWritePackedMsg, end)
+        && push8(value->csi_type, ppWritePackedMsg, end) && push8(value->row, ppWritePackedMsg, end)
+        && push16(value->freq_domain, ppWritePackedMsg, end) && push8(value->symb_l0, ppWritePackedMsg, end)
+        && push8(value->symb_l1, ppWritePackedMsg, end) && push8(value->cdm_type, ppWritePackedMsg, end)
+        && push8(value->freq_density, ppWritePackedMsg, end) && push16(value->scramb_id, ppWritePackedMsg, end)
+        && push8(value->power_control_offset, ppWritePackedMsg, end)
+        && push8(value->power_control_offset_ss, ppWritePackedMsg, end))) {
+    return 0;
+  }
+
+  // Precoding and Beamforming
+  if (!(push16(value->precodingAndBeamforming.num_prgs, ppWritePackedMsg, end)
+        && push16(value->precodingAndBeamforming.prg_size, ppWritePackedMsg, end)
+        && push8(value->precodingAndBeamforming.dig_bf_interfaces, ppWritePackedMsg, end))) {
+    return 0;
+  }
+  for (int prg = 0; prg < value->precodingAndBeamforming.num_prgs; prg++) {
+    if (!push16(value->precodingAndBeamforming.prgs_list[prg].pm_idx, ppWritePackedMsg, end)) {
+      return 0;
+    }
+    for (int digInt = 0; digInt < value->precodingAndBeamforming.dig_bf_interfaces; digInt++) {
+      if (!push16(value->precodingAndBeamforming.prgs_list[prg].dig_bf_interface_list[digInt].beam_idx, ppWritePackedMsg, end)) {
+        return 0;
+      }
+    }
+  }
+  return 1;
 }
 
 static uint8_t pack_dl_tti_pdcch_pdu_rel15_value(void *tlv, uint8_t **ppWritePackedMsg, uint8_t *end)
@@ -334,7 +352,7 @@ static uint8_t pack_dl_tti_pdsch_pdu_rel15_value(void *tlv, uint8_t **ppWritePac
     return 0;
   }
 
-  // Check pduBitMap bit 1 to add or not PTRS parameters
+  // Check pduBitMap bit 0 to add or not PTRS parameters
   if (value->pduBitmap & 0b1) {
     if (!(push8(value->PTRSPortIndex, ppWritePackedMsg, end) && push8(value->PTRSTimeDensity, ppWritePackedMsg, end)
           && push8(value->PTRSFreqDensity, ppWritePackedMsg, end) && push8(value->PTRSReOffset, ppWritePackedMsg, end)
@@ -358,11 +376,17 @@ static uint8_t pack_dl_tti_pdsch_pdu_rel15_value(void *tlv, uint8_t **ppWritePac
       }
     }
   }
-  // TODO Add TX power info
-  // Hardcoded values that represent 0db
-  if (!(push8(0, ppWritePackedMsg, end) && // powerControlOffset
-        push8(0, ppWritePackedMsg, end))) { // powerControlOffsetSS
+
+  if (!(push8(value->powerControlOffset, ppWritePackedMsg, end) && push8(value->powerControlOffsetSS, ppWritePackedMsg, end))) {
     return 0;
+  }
+
+  // Check pduBitMap bit 1 to add or not CBG parameters
+  if (value->pduBitmap & 0b10) {
+    if (!(push8(value->isLastCbPresent, ppWritePackedMsg, end) && push8(value->isInlineTbCrc, ppWritePackedMsg, end)
+          && push32(value->dlTbCrc, ppWritePackedMsg, end))) {
+      return 0;
+    }
   }
 
   if (!push8(value->maintenance_parms_v3.ldpcBaseGraph, ppWritePackedMsg, end)
@@ -4061,7 +4085,6 @@ static uint8_t unpack_dl_tti_pdsch_pdu_rel15_value(void *tlv, uint8_t **ppReadPa
 {
   nfapi_nr_dl_tti_pdsch_pdu_rel15_t *value = (nfapi_nr_dl_tti_pdsch_pdu_rel15_t *)tlv;
   // TODO: resolve the packaging of array (currently sending a single element)
-  uint8_t powerControlOffset = 0, powerControlOffsetSS = 0;
 
   if (!(pull16(ppReadPackedMsg, &value->pduBitmap, end) && pull16(ppReadPackedMsg, &value->rnti, end)
         && pull16(ppReadPackedMsg, &value->pduIndex, end) && pull16(ppReadPackedMsg, &value->BWPSize, end)
@@ -4088,7 +4111,7 @@ static uint8_t unpack_dl_tti_pdsch_pdu_rel15_value(void *tlv, uint8_t **ppReadPa
         && pull8(ppReadPackedMsg, &value->NrOfSymbols, end))) {
     return 0;
   }
-  // Check pduBitMap bit 1 to pull PTRS parameters or not
+  // Check pduBitMap bit 0 to pull PTRS parameters or not
   if (value->pduBitmap & 0b1) {
     if (!(pull8(ppReadPackedMsg, &value->PTRSPortIndex, end) && pull8(ppReadPackedMsg, &value->PTRSTimeDensity, end)
           && pull8(ppReadPackedMsg, &value->PTRSFreqDensity, end) && pull8(ppReadPackedMsg, &value->PTRSReOffset, end)
@@ -4113,12 +4136,17 @@ static uint8_t unpack_dl_tti_pdsch_pdu_rel15_value(void *tlv, uint8_t **ppReadPa
       }
     }
   }
-  // TODO Add TX power info
-  // Hardcoded values that represent 0db
-
-  if (!(pull8(ppReadPackedMsg, &powerControlOffset, end) && // powerControlOffset
-        pull8(ppReadPackedMsg, &powerControlOffsetSS, end))) { // powerControlOffsetSS
+  // Tx power info
+  if (!(pull8(ppReadPackedMsg, &value->powerControlOffset, end) && pull8(ppReadPackedMsg, &value->powerControlOffsetSS, end))) {
     return 0;
+  }
+
+  // Check pduBitMap bit 1 to pull CBG parameters or not
+  if (value->pduBitmap & 0b10) {
+    if (!(pull8(ppReadPackedMsg, &value->isLastCbPresent, end) && pull8(ppReadPackedMsg, &value->isInlineTbCrc, end)
+          && pull32(ppReadPackedMsg, &value->dlTbCrc, end))) {
+      return 0;
+    }
   }
 
   if (!pull8(ppReadPackedMsg, &value->maintenance_parms_v3.ldpcBaseGraph, end)
@@ -4565,12 +4593,6 @@ static uint8_t unpack_dl_tti_request_body_value(uint8_t **ppReadPackedMsg, uint8
 
   // first match the pdu type, then call the respective function
   switch(value->PDUType) {
-    case NFAPI_NR_DL_TTI_CSI_RS_PDU_TYPE: {
-      if(!(unpack_dl_tti_csi_rs_pdu_rel15_value(&value->csi_rs_pdu.csi_rs_pdu_rel15,ppReadPackedMsg,end)))
-        return 0;
-    }
-    break;
-
     case NFAPI_NR_DL_TTI_PDCCH_PDU_TYPE: {
       if(!(unpack_dl_tti_pdcch_pdu_rel15_value(&value->pdcch_pdu.pdcch_pdu_rel15,ppReadPackedMsg,end)))
         return 0;
@@ -4582,6 +4604,11 @@ static uint8_t unpack_dl_tti_request_body_value(uint8_t **ppReadPackedMsg, uint8
         return 0;
     }
     break;
+
+    case NFAPI_NR_DL_TTI_CSI_RS_PDU_TYPE: {
+      if (!(unpack_dl_tti_csi_rs_pdu_rel15_value(&value->csi_rs_pdu.csi_rs_pdu_rel15, ppReadPackedMsg, end)))
+        return 0;
+    } break;
 
     case NFAPI_NR_DL_TTI_SSB_PDU_TYPE: {
       if(!(unpack_dl_tti_ssb_pdu_rel15_value(&value->ssb_pdu.ssb_pdu_rel15,ppReadPackedMsg,end)))
