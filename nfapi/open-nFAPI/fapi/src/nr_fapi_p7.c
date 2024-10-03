@@ -369,11 +369,11 @@ static uint8_t pack_dl_tti_pdsch_pdu_rel15_value(void *tlv, uint8_t **ppWritePac
       return 0;
     }
   }
-
+#ifndef ENABLE_AERIAL
   if (!push8(value->maintenance_parms_v3.ldpcBaseGraph, ppWritePackedMsg, end)
       || !push32(value->maintenance_parms_v3.tbSizeLbrmBytes, ppWritePackedMsg, end))
     return 0;
-
+#endif
   return 1;
 }
 
@@ -579,11 +579,11 @@ static uint8_t unpack_dl_tti_pdsch_pdu_rel15_value(void *tlv, uint8_t **ppReadPa
       return 0;
     }
   }
-
+#ifndef ENABLE_AERIAL
   if (!pull8(ppReadPackedMsg, &value->maintenance_parms_v3.ldpcBaseGraph, end)
       || !pull32(ppReadPackedMsg, &value->maintenance_parms_v3.tbSizeLbrmBytes, end))
     return 0;
-
+#endif
   return 1;
 }
 
@@ -817,9 +817,11 @@ static uint8_t pack_ul_tti_request_pusch_pdu(nfapi_nr_pusch_pdu_t *pusch_pdu, ui
   if (!(pack_nr_rx_beamforming_pdu(&pusch_pdu->beamforming, ppWritePackedMsg, end))) {
     return 0;
   }
+#ifndef ENABLE_AERIAL
   if (!(push8(pusch_pdu->maintenance_parms_v3.ldpcBaseGraph, ppWritePackedMsg, end)
         && push32(pusch_pdu->maintenance_parms_v3.tbSizeLbrmBytes, ppWritePackedMsg, end)))
     return 0;
+#endif
   return 1;
 }
 
@@ -1137,11 +1139,11 @@ static uint8_t unpack_ul_tti_request_pusch_pdu(nfapi_nr_pusch_pdu_t *pusch_pdu, 
   if (!(unpack_nr_rx_beamforming_pdu(&pusch_pdu->beamforming, ppReadPackedMsg, end))) {
     return 0;
   }
-
+#ifndef ENABLE_AERIAL
   if (!(pull8(ppReadPackedMsg, &pusch_pdu->maintenance_parms_v3.ldpcBaseGraph, end)
         && pull32(ppReadPackedMsg, &pusch_pdu->maintenance_parms_v3.tbSizeLbrmBytes, end)))
     return 0;
-
+#endif
   return 1;
 }
 
