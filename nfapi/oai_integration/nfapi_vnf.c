@@ -47,6 +47,9 @@
 #include "common/ran_context.h"
 #include "openair2/PHY_INTERFACE/queue_t.h"
 #include "gnb_ind_vars.h"
+#include "nr_fapi_p7_utils.h"
+#include <NR_MAC_gNB/mac_proto.h>
+
 
 #define TEST
 
@@ -696,35 +699,15 @@ int phy_rach_indication(struct nfapi_vnf_p7_config *config, nfapi_rach_indicatio
 
 int phy_nr_rach_indication(nfapi_nr_rach_indication_t *ind)
 {
-  if(NFAPI_MODE == NFAPI_MODE_VNF)
-  {
+  if (NFAPI_MODE == NFAPI_MODE_VNF) {
     nfapi_nr_rach_indication_t *rach_ind = CALLOC(1, sizeof(*rach_ind));
-    rach_ind->header.message_id = ind->header.message_id;
-    rach_ind->number_of_pdus = ind->number_of_pdus;
-    rach_ind->sfn = ind->sfn;
-    rach_ind->slot = ind->slot;
-    rach_ind->pdu_list = CALLOC(rach_ind->number_of_pdus, sizeof(*rach_ind->pdu_list));
-    AssertFatal(rach_ind->pdu_list != NULL, "Memory not allocated for rach_ind->pdu_list in phy_nr_rach_indication.");
-    for (int i = 0; i < ind->number_of_pdus; i++)
-    {
-      rach_ind->pdu_list[i].num_preamble = ind->pdu_list[i].num_preamble;
-      rach_ind->pdu_list[i].freq_index = ind->pdu_list[i].freq_index;
-      rach_ind->pdu_list[i].symbol_index = ind->pdu_list[i].symbol_index;
-      AssertFatal(rach_ind->pdu_list[i].preamble_list != NULL, "Memory not allocated for rach_ind->pdu_list[i].preamble_list  in phy_nr_rach_indication.");
-      for (int j = 0; j < ind->number_of_pdus; j++)
-      {
-        rach_ind->pdu_list[i].preamble_list[j].preamble_index = ind->pdu_list[i].preamble_list[j].preamble_index;
-        rach_ind->pdu_list[i].preamble_list[j].timing_advance = ind->pdu_list[i].preamble_list[j].timing_advance;
-      }
-    }
-    if (!put_queue(&gnb_rach_ind_queue, rach_ind))
-    {
+    copy_rach_indication(ind, rach_ind);
+    if (!put_queue(&gnb_rach_ind_queue, rach_ind)) {
       LOG_E(NR_MAC, "Put_queue failed for rach_ind\n");
-      free(rach_ind->pdu_list);
+      free_rach_indication(rach_ind);
       free(rach_ind);
     }
-  }
-  else {
+  } else {
     LOG_E(NR_MAC, "NFAPI_MODE = %d not NFAPI_MODE_VNF(2)\n", nfapi_getmode());
   }
   return 1;
@@ -732,84 +715,18 @@ int phy_nr_rach_indication(nfapi_nr_rach_indication_t *ind)
 
 int phy_nr_uci_indication(nfapi_nr_uci_indication_t *ind)
 {
-
-  LOG_D(NR_MAC, "In %s() NFAPI SFN/SF: %d/%d number_of_pdus :%u\n",
-          __FUNCTION__,ind->sfn, ind->slot, ind->num_ucis);
-  if(NFAPI_MODE == NFAPI_MODE_VNF)
-  {
+  LOG_D(NR_MAC, "In %s() NFAPI SFN/SF: %d/%d number_of_pdus :%u\n", __FUNCTION__, ind->sfn, ind->slot, ind->num_ucis);
+  if (NFAPI_MODE == NFAPI_MODE_VNF) {
     nfapi_nr_uci_indication_t *uci_ind = CALLOC(1, sizeof(*uci_ind));
     AssertFatal(uci_ind, "Memory not allocated for uci_ind in phy_nr_uci_indication.");
-    *uci_ind = *ind;
-
-    uci_ind->uci_list = CALLOC(NFAPI_NR_UCI_IND_MAX_PDU, sizeof(nfapi_nr_uci_t));
-    AssertFatal(uci_ind->uci_list != NULL, "Memory not allocated for uci_ind->uci_list in phy_nr_uci_indication.");
-    for (int i = 0; i < ind->num_ucis; i++)
-    {
-      uci_ind->uci_list[i] = ind->uci_list[i];
-
-      switch (uci_ind->uci_list[i].pdu_type) {
-        case NFAPI_NR_UCI_PUSCH_PDU_TYPE:
-          LOG_E(MAC, "%s(): unhandled NFAPI_NR_UCI_PUSCH_PDU_TYPE\n", __func__);
-          break;
-
-        case NFAPI_NR_UCI_FORMAT_0_1_PDU_TYPE: {
-          //nfapi_nr_uci_pucch_pdu_format_0_1_t *uci_ind_pdu = &uci_ind->uci_list[i].pucch_pdu_format_0_1;
-          //nfapi_nr_uci_pucch_pdu_format_0_1_t *ind_pdu = &ind->uci_list[i].pucch_pdu_format_0_1;
-          //Unused
-          break;
-        }
-
-        case NFAPI_NR_UCI_FORMAT_2_3_4_PDU_TYPE: {
-          nfapi_nr_uci_pucch_pdu_format_2_3_4_t *uci_ind_pdu = &uci_ind->uci_list[i].pucch_pdu_format_2_3_4;
-          nfapi_nr_uci_pucch_pdu_format_2_3_4_t *ind_pdu = &ind->uci_list[i].pucch_pdu_format_2_3_4;
-          *uci_ind_pdu = *ind_pdu;
-          if (ind_pdu->harq.harq_payload) {
-            uci_ind_pdu->harq.harq_payload = CALLOC(1, sizeof(*uci_ind_pdu->harq.harq_payload));
-            AssertFatal(uci_ind_pdu->harq.harq_payload != NULL, "Memory not allocated for uci_ind_pdu->harq.harq_payload in phy_nr_uci_indication.");
-            *uci_ind_pdu->harq.harq_payload = *ind_pdu->harq.harq_payload;
-          }
-          if (ind_pdu->sr.sr_payload) {
-            uci_ind_pdu->sr.sr_payload = CALLOC(1, sizeof(*uci_ind_pdu->sr.sr_payload));
-            AssertFatal(uci_ind_pdu->sr.sr_payload != NULL, "Memory not allocated for uci_ind_pdu->sr.sr_payload in phy_nr_uci_indication.");
-            *uci_ind_pdu->sr.sr_payload = *ind_pdu->sr.sr_payload;
-          }
-          if (ind_pdu->csi_part1.csi_part1_payload) {
-            uci_ind_pdu->csi_part1.csi_part1_payload = CALLOC(1, sizeof(*uci_ind_pdu->csi_part1.csi_part1_payload));
-            AssertFatal(uci_ind_pdu->csi_part1.csi_part1_payload != NULL, "Memory not allocated for uci_ind_pdu->csi_part1.csi_part1_payload in phy_nr_uci_indication.");
-            *uci_ind_pdu->csi_part1.csi_part1_payload = *ind_pdu->csi_part1.csi_part1_payload;
-          }
-          if (ind_pdu->csi_part2.csi_part2_payload) {
-            uci_ind_pdu->csi_part2.csi_part2_payload = CALLOC(1, sizeof(*uci_ind_pdu->csi_part2.csi_part2_payload));
-            AssertFatal(uci_ind_pdu->csi_part2.csi_part2_payload != NULL, "Memory not allocated for uci_ind_pdu->csi_part2.csi_part2_payload in phy_nr_uci_indication.");
-            *uci_ind_pdu->csi_part2.csi_part2_payload = *ind_pdu->csi_part2.csi_part2_payload;
-          }
-          break;
-        }
-      }
-    }
-
-    if (!put_queue(&gnb_uci_ind_queue, uci_ind))
-    {
+    copy_uci_indication(ind, uci_ind);
+    if (!put_queue(&gnb_uci_ind_queue, uci_ind)) {
       LOG_E(NR_MAC, "Put_queue failed for uci_ind\n");
-      for (int i = 0; i < ind->num_ucis; i++)
-      {
-          if (uci_ind->uci_list[i].pdu_type == NFAPI_NR_UCI_FORMAT_0_1_PDU_TYPE)
-          {
-          }
-          if (uci_ind->uci_list[i].pdu_type == NFAPI_NR_UCI_FORMAT_2_3_4_PDU_TYPE)
-          {
-            free(uci_ind->uci_list[i].pucch_pdu_format_2_3_4.harq.harq_payload);
-            free(uci_ind->uci_list[i].pucch_pdu_format_2_3_4.csi_part1.csi_part1_payload);
-            free(uci_ind->uci_list[i].pucch_pdu_format_2_3_4.csi_part2.csi_part2_payload);
-          }
-      }
-      free(uci_ind->uci_list);
-      uci_ind->uci_list = NULL;
+      free_uci_indication(uci_ind);
       free(uci_ind);
       uci_ind = NULL;
     }
-  }
-  else {
+  } else {
     LOG_E(NR_MAC, "NFAPI_MODE = %d not NFAPI_MODE_VNF(2)\n", nfapi_getmode());
   }
   return 1;
@@ -900,43 +817,19 @@ int phy_crc_indication(struct nfapi_vnf_p7_config *config, nfapi_crc_indication_
   return 1;
 }
 
-int phy_nr_crc_indication(nfapi_nr_crc_indication_t *ind) {
+int phy_nr_crc_indication(nfapi_nr_crc_indication_t *ind)
+{
+  LOG_D(NR_MAC, "In %s() NFAPI SFN/SF: %d/%d number_of_pdus :%u\n", __FUNCTION__, ind->sfn, ind->slot, ind->number_crcs);
 
-  LOG_D(NR_MAC, "In %s() NFAPI SFN/SF: %d/%d number_of_pdus :%u\n",
-          __FUNCTION__,ind->sfn, ind->slot, ind->number_crcs);
-
-  if(NFAPI_MODE == NFAPI_MODE_VNF)
-  {
+  if (NFAPI_MODE == NFAPI_MODE_VNF) {
     nfapi_nr_crc_indication_t *crc_ind = CALLOC(1, sizeof(*crc_ind));
-    crc_ind->header.message_id = ind->header.message_id;
-    crc_ind->number_crcs = ind->number_crcs;
-    crc_ind->sfn = ind->sfn;
-    crc_ind->slot = ind->slot;
-    if (ind->number_crcs > 0) {
-      crc_ind->crc_list = CALLOC(NFAPI_NR_CRC_IND_MAX_PDU, sizeof(nfapi_nr_crc_t));
-      AssertFatal(crc_ind->crc_list != NULL, "Memory not allocated for crc_ind->crc_list in phy_nr_crc_indication.");
-    }
-    for (int j = 0; j < ind->number_crcs; j++)
-    {
-      crc_ind->crc_list[j].handle = ind->crc_list[j].handle;
-      crc_ind->crc_list[j].harq_id = ind->crc_list[j].harq_id;
-      crc_ind->crc_list[j].num_cb = ind->crc_list[j].num_cb;
-      crc_ind->crc_list[j].rnti = ind->crc_list[j].rnti;
-      crc_ind->crc_list[j].tb_crc_status = ind->crc_list[j].tb_crc_status;
-      crc_ind->crc_list[j].timing_advance = ind->crc_list[j].timing_advance;
-      crc_ind->crc_list[j].ul_cqi = ind->crc_list[j].ul_cqi;
-      LOG_D(NR_MAC, "Received crc_ind.harq_id = %d for %d index SFN SLot %u %u with rnti %x\n",
-                    ind->crc_list[j].harq_id, j, ind->sfn, ind->slot, ind->crc_list[j].rnti);
-    }
-    if (!put_queue(&gnb_crc_ind_queue, crc_ind))
-    {
+    copy_crc_indication(ind, crc_ind);
+    if (!put_queue(&gnb_crc_ind_queue, crc_ind)) {
       LOG_E(NR_MAC, "Put_queue failed for crc_ind\n");
-      free(crc_ind->crc_list);
+      free_crc_indication(crc_ind);
       free(crc_ind);
     }
-  }
-  else
-  {
+  } else {
     LOG_E(NR_MAC, "NFAPI_MODE = %d not NFAPI_MODE_VNF(2)\n", nfapi_getmode());
   }
   return 1;
@@ -1019,43 +912,25 @@ int phy_rx_indication(struct nfapi_vnf_p7_config *config, nfapi_rx_indication_t 
   return 1;
 }
 
-int phy_nr_rx_data_indication(nfapi_nr_rx_data_indication_t *ind) {
+int phy_nr_rx_data_indication(nfapi_nr_rx_data_indication_t *ind)
+{
+  LOG_D(NR_MAC,
+        "In %s() NFAPI SFN/SF: %d/%d number_of_pdus :%u, and pdu %p\n",
+        __FUNCTION__,
+        ind->sfn,
+        ind->slot,
+        ind->number_of_pdus,
+        ind->pdu_list[0].pdu);
 
-  LOG_D(NR_MAC, "In %s() NFAPI SFN/SF: %d/%d number_of_pdus :%u, and pdu %p\n",
-          __FUNCTION__,ind->sfn, ind->slot, ind->number_of_pdus, ind->pdu_list[0].pdu);
-
-  if(NFAPI_MODE == NFAPI_MODE_VNF)
-  {
+  if (NFAPI_MODE == NFAPI_MODE_VNF) {
     nfapi_nr_rx_data_indication_t *rx_ind = CALLOC(1, sizeof(*rx_ind));
-    rx_ind->header.message_id = ind->header.message_id;
-    rx_ind->sfn = ind->sfn;
-    rx_ind->slot = ind->slot;
-    rx_ind->number_of_pdus = ind->number_of_pdus;
-
-    if (ind->number_of_pdus > 0) {
-      rx_ind->pdu_list = CALLOC(NFAPI_NR_RX_DATA_IND_MAX_PDU, sizeof(nfapi_nr_rx_data_pdu_t));
-      AssertFatal(rx_ind->pdu_list != NULL, "Memory not allocated for rx_ind->pdu_list in phy_nr_rx_data_indication.");
-    }
-    for (int j = 0; j < ind->number_of_pdus; j++)
-    {
-      rx_ind->pdu_list[j].handle = ind->pdu_list[j].handle;
-      rx_ind->pdu_list[j].harq_id = ind->pdu_list[j].harq_id;
-      rx_ind->pdu_list[j].pdu = ind->pdu_list[j].pdu;
-      rx_ind->pdu_list[j].pdu_length = ind->pdu_list[j].pdu_length;
-      rx_ind->pdu_list[j].rnti = ind->pdu_list[j].rnti;
-      rx_ind->pdu_list[j].timing_advance = ind->pdu_list[j].timing_advance;
-      rx_ind->pdu_list[j].ul_cqi = ind->pdu_list[j].ul_cqi;
-      rx_ind->pdu_list[j].rssi = ind->pdu_list[j].rssi;
-    }
-    if (!put_queue(&gnb_rx_ind_queue, rx_ind))
-    {
+    copy_rx_data_indication(ind, rx_ind);
+    if (!put_queue(&gnb_rx_ind_queue, rx_ind)) {
       LOG_E(NR_MAC, "Put_queue failed for rx_ind\n");
-      free(rx_ind->pdu_list);
+      free_rx_data_indication(rx_ind);
       free(rx_ind);
     }
-  }
-  else
-  {
+  } else {
     LOG_E(NR_MAC, "NFAPI_MODE = %d not NFAPI_MODE_VNF(2)\n", nfapi_getmode());
   }
   return 1;
@@ -1251,24 +1126,10 @@ int phy_nr_slot_indication(nfapi_nr_slot_indication_scf_t *ind) {
   return 1;
 }
 
-
-int phy_nr_srs_indication(nfapi_nr_srs_indication_t *ind) {
-  struct PHY_VARS_gNB_s *gNB = RC.gNB[0];
-
-  gNB->UL_INFO.srs_ind = *ind;
-
-  if (ind->number_of_pdus > 0)
-    gNB->UL_INFO.srs_ind.pdu_list = malloc(sizeof(nfapi_nr_srs_indication_pdu_t)*ind->number_of_pdus);
-
-  for (int i=0; i<ind->number_of_pdus; i++) {
-    memcpy(&gNB->UL_INFO.srs_ind.pdu_list[i], &ind->pdu_list[i], sizeof(ind->pdu_list[0]));
-
-    LOG_D(MAC, "%s() NFAPI SFN/Slot:%d.%d SRS_IND:number_of_pdus:%d UL_INFO:pdus:%d\n",
-        __FUNCTION__,
-        ind->sfn,ind->slot, ind->number_of_pdus, gNB->UL_INFO.srs_ind.number_of_pdus
-        );
-  }
-
+int phy_nr_srs_indication(nfapi_nr_srs_indication_t *ind)
+{
+  for (int i = 0; i < ind->number_of_pdus; ++i)
+    handle_nr_srs_measurements(0, ind->sfn, ind->slot, &ind->pdu_list[i]);
   return 1;
 }
 //end NR phy indication

@@ -6257,41 +6257,31 @@ int nfapi_nr_p7_message_unpack(void *pMessageBuf, uint32_t messageBufLen, void *
 
 		case  NFAPI_NR_PHY_MSG_TYPE_RX_DATA_INDICATION:
       if (check_nr_fapi_unpack_length(NFAPI_NR_PHY_MSG_TYPE_RX_DATA_INDICATION, unpackedBufLen)) {
-        nfapi_nr_rx_data_indication_t* msg = (nfapi_nr_rx_data_indication_t*) pMessageHeader;
-				msg->pdu_list = (nfapi_nr_rx_data_pdu_t*) malloc(sizeof(nfapi_nr_rx_data_pdu_t));
-				msg->pdu_list->pdu = (uint8_t *) malloc(sizeof(uint8_t));
-				result = unpack_nr_rx_data_indication(&pReadPackedMessage,  end, msg, config);
+				result = unpack_nr_rx_data_indication(&pReadPackedMessage,  end, pMessageHeader, config);
 			}
 			break;
 
 		case  NFAPI_NR_PHY_MSG_TYPE_CRC_INDICATION:
       if (check_nr_fapi_unpack_length(NFAPI_NR_PHY_MSG_TYPE_CRC_INDICATION, unpackedBufLen)) {
-        nfapi_nr_crc_indication_t* msg = (nfapi_nr_crc_indication_t*) pMessageHeader;
-				msg->crc_list = (nfapi_nr_crc_t*) malloc(sizeof(nfapi_nr_crc_t));
-				result = unpack_nr_crc_indication(&pReadPackedMessage,end , msg, config);
+				result = unpack_nr_crc_indication(&pReadPackedMessage,end , pMessageHeader, config);
 			}
 			break;
 
 		case  NFAPI_NR_PHY_MSG_TYPE_UCI_INDICATION:
       if (check_nr_fapi_unpack_length(NFAPI_NR_PHY_MSG_TYPE_UCI_INDICATION, unpackedBufLen)) {
-        nfapi_nr_uci_indication_t* msg = (nfapi_nr_uci_indication_t*) pMessageHeader;
-				msg->uci_list = (nfapi_nr_uci_t*) malloc(sizeof(nfapi_nr_uci_t));
-				result = unpack_nr_uci_indication(&pReadPackedMessage,  end, msg, config);
+				result = unpack_nr_uci_indication(&pReadPackedMessage,  end, pMessageHeader, config);
 			}
 			break;
 
 		case  NFAPI_NR_PHY_MSG_TYPE_SRS_INDICATION:
       if (check_nr_fapi_unpack_length(NFAPI_NR_PHY_MSG_TYPE_SRS_INDICATION, unpackedBufLen)) {
-        nfapi_nr_srs_indication_t* msg = (nfapi_nr_srs_indication_t*) pMessageHeader;
-				msg->pdu_list = (nfapi_nr_srs_indication_pdu_t*) malloc(sizeof(nfapi_nr_srs_indication_pdu_t));
-				result = unpack_nr_srs_indication(&pReadPackedMessage,  end, msg, config);
+				result = unpack_nr_srs_indication(&pReadPackedMessage,  end, pMessageHeader, config);
 			}
 			break;
 
 		case  NFAPI_NR_PHY_MSG_TYPE_RACH_INDICATION:
       if (check_nr_fapi_unpack_length(NFAPI_NR_PHY_MSG_TYPE_RACH_INDICATION, unpackedBufLen)) {
-        nfapi_nr_rach_indication_t* msg = (nfapi_nr_rach_indication_t*) pMessageHeader;
-				result = unpack_nr_rach_indication(&pReadPackedMessage,  end, msg, config);
+				result = unpack_nr_rach_indication(&pReadPackedMessage,  end, pMessageHeader, config);
 			}
 			break;
 
