@@ -19,14 +19,28 @@
  *      contact@openairinterface.org
  */
 
-#ifndef _NR_PDCP_TIMER_THREAD_H_
-#define _NR_PDCP_TIMER_THREAD_H_
-
-#include "nr_pdcp_ue_manager.h"
+#ifndef COMMON_UTIL_TIME_MANAGER_TIME_MANAGER
+#define COMMON_UTIL_TIME_MANAGER_TIME_MANAGER
 
 #include <stdint.h>
 
-void nr_pdcp_init_timer_thread(nr_pdcp_ue_manager_t *nr_pdcp_ue_manager);
-void nr_pdcp_ms_tick(void);
+typedef enum {
+  TIME_MANAGER_GNB_MONOLITHIC,
+  TIME_MANAGER_GNB_CU,
+  TIME_MANAGER_GNB_DU,
+  TIME_MANAGER_UE,
+  TIME_MANAGER_SIMULATOR,
+} time_manager_client_t;
 
-#endif /* _NR_PDCP_TIMER_THREAD_H_ */
+typedef enum {
+  TIME_MANAGER_REALTIME,
+  TIME_MANAGER_IQ_SAMPLES
+} time_manager_mode_t;
+
+void time_manager_start(time_manager_client_t client_type,
+                        time_manager_mode_t running_mode);
+void time_manager_iq_samples(uint64_t iq_samples_count,
+                             uint64_t iq_samples_per_second);
+void time_manager_finish(void);
+
+#endif /* COMMON_UTIL_TIME_MANAGER_TIME_MANAGER */

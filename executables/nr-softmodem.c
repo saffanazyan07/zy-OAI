@@ -28,6 +28,7 @@
 #include "PHY/TOOLS/smbv.h"
 unsigned short config_frames[4] = {2,9,11,13};
 #endif
+#include "common/utils/time_manager/time_manager.h"
 #ifdef ENABLE_AERIAL
 #include "nfapi/oai_integration/aerial/fapi_nvIPC.h"
 #endif
@@ -619,6 +620,18 @@ int main( int argc, char **argv ) {
   if (!(CONFIG_ISFLAGSET(CONFIG_ABORT)))
     NRRCConfig();
 
+  // start time manager with some reasonable default for the running mode
+  // (may be overwritten in configuration file or command line)
+  time_manager_start(NODE_IS_MONOLITHIC(node_type) ? TIME_MANAGER_GNB_MONOLITHIC
+                     : NODE_IS_CU(node_type)       ? TIME_MANAGER_GNB_CU
+                                                   : TIME_MANAGER_GNB_DU,
+                     // iq_samples time source for monolithic/du with rfsim,
+                     // realtime time source for other cases
+                     IS_SOFTMODEM_RFSIM
+                     && (NODE_IS_MONOLITHIC(node_type) || NODE_IS_DU(node_type))
+                         ? TIME_MANAGER_IQ_SAMPLES
+                         : TIME_MANAGER_REALTIME);
+
   if (RC.nb_nr_L1_inst > 0) {
     // Initialize gNB structure in RAN context
     init_gNB();
@@ -739,6 +752,8 @@ int main( int argc, char **argv ) {
   pthread_mutex_destroy(&sync_mutex);
   pthread_cond_destroy(&nfapi_sync_cond);
   pthread_mutex_destroy(&nfapi_sync_mutex);
+
+  time_manager_finish();
 
   free(pckg);
   logClean();

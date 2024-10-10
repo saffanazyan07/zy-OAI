@@ -47,6 +47,7 @@
 #include "SCHED_NR/sched_nr.h"
 
 #include "common/utils/LOG/log.h"
+#include "common/utils/time_manager/time_manager.h"
 #include "common/utils/LOG/vcd_signal_dumper.h"
 
 #include <executables/softmodem-common.h>
@@ -1208,6 +1209,10 @@ void *ru_thread(void *param)
     } else {
       slot++;
     }
+
+    // pretend we have 1 iq sample per slot
+    // and so slots_per_frame * 100 iq samples per second (1 frame being 10ms)
+    time_manager_iq_samples(1, fp->slots_per_frame * 100);
 
     // synchronization on input FH interface, acquire signals/data and block
     LOG_D(PHY,"[RU_thread] read data: frame_rx = %d, tti_rx = %d\n", frame, slot);

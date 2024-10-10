@@ -132,8 +132,6 @@ bool nr_pdcp_data_req_drb(protocol_ctxt_t *ctxt_pP,
                           const uint32_t *const sourceL2Id,
                           const uint32_t *const destinationL2Id);
 
-void nr_pdcp_tick(int frame, int subframe);
-
 nr_pdcp_ue_manager_t *nr_pdcp_sdap_get_ue_manager();
 
 int nr_pdcp_get_num_ues(ue_id_t *ue_list, int len);

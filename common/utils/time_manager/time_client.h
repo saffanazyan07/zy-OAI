@@ -19,14 +19,18 @@
  *      contact@openairinterface.org
  */
 
-#ifndef _NR_PDCP_TIMER_THREAD_H_
-#define _NR_PDCP_TIMER_THREAD_H_
+#ifndef COMMON_UTIL_TIME_MANAGER_TIME_CLIENT
+#define COMMON_UTIL_TIME_MANAGER_TIME_CLIENT
 
-#include "nr_pdcp_ue_manager.h"
+/* opaque data type */
+typedef void time_client_t;
 
-#include <stdint.h>
+time_client_t *new_time_client(const char *server_ip,
+                               int server_port,
+                               void (*callback)(void *),
+                               void *callback_data);
 
-void nr_pdcp_init_timer_thread(nr_pdcp_ue_manager_t *nr_pdcp_ue_manager);
-void nr_pdcp_ms_tick(void);
+void free_time_client(time_client_t *time_client);
 
-#endif /* _NR_PDCP_TIMER_THREAD_H_ */
+
+#endif /* COMMON_UTIL_TIME_MANAGER_TIME_CLIENT */

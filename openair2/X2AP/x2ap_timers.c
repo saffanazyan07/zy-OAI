@@ -53,7 +53,8 @@ void x2ap_check_timers(instance_t instance)
   int                          x2_ongoing;
 
   instance_p = x2ap_eNB_get_instance(instance);
-  DevAssert(instance_p != NULL);
+  if (instance_p == NULL)
+    return;
 
   t = &instance_p->timers;
   m = &instance_p->id_manager;

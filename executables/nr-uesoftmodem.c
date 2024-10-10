@@ -59,6 +59,7 @@
 unsigned short config_frames[4] = {2,9,11,13};
 #endif
 #include "common/utils/LOG/log.h"
+#include "common/utils/time_manager/time_manager.h"
 #include "common/utils/LOG/vcd_signal_dumper.h"
 
 #include "UTIL/OPT/opt.h"
@@ -464,6 +465,14 @@ int main(int argc, char **argv)
     get_channel_model_mode(uniqCfg);
   }
 
+  // start time manager with some reasonable default for the running mode
+  // (may be overwritten in configuration file or command line)
+  time_manager_start(TIME_MANAGER_UE,
+                     // iq_samples time source for rfsim,
+                     // realtime time source if not
+                     IS_SOFTMODEM_RFSIM ? TIME_MANAGER_IQ_SAMPLES
+                                        : TIME_MANAGER_REALTIME);
+
   if (!get_softmodem_params()->nsa && get_softmodem_params()->emulate_l1)
     start_oai_nrue_threads();
 
@@ -573,6 +582,9 @@ int main(int argc, char **argv)
   }
 
   free_nrLDPC_coding_interface(&nrLDPC_coding_interface);
+
+  time_manager_finish();
+
   free(pckg);
   return 0;
 }

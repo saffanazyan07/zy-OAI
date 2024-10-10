@@ -53,8 +53,6 @@ static nr_rlc_ue_manager_t *nr_rlc_ue_manager;
 /* TODO: handle time a bit more properly */
 static pthread_mutex_t nr_rlc_current_time_mutex = PTHREAD_MUTEX_INITIALIZER;
 static uint64_t nr_rlc_current_time;
-static int      nr_rlc_current_time_last_frame;
-static int      nr_rlc_current_time_last_subframe;
 
 void lock_nr_rlc_current_time(void)
 {
@@ -303,16 +301,6 @@ rlc_buffer_occupancy_t mac_rlc_get_buffer_occupancy_ind(const module_id_t module
     LOG_E(RLC, "Tx mac_rlc_get_buffer_occupancy_ind function is not implemented for eNB LcId=%u\n", channel_idP);
     exit(1);
   }
-
-  /* TODO: handle time a bit more properly */
-  lock_nr_rlc_current_time();
-  if (nr_rlc_current_time_last_frame != frameP ||
-      nr_rlc_current_time_last_subframe != subframeP) {
-    nr_rlc_current_time++;
-    nr_rlc_current_time_last_frame = frameP;
-    nr_rlc_current_time_last_subframe = subframeP;
-  }
-  unlock_nr_rlc_current_time();
 
   nr_rlc_manager_lock(nr_rlc_ue_manager);
   nr_rlc_ue_t *ue = nr_rlc_manager_get_ue(nr_rlc_ue_manager, ue_id);
@@ -1115,15 +1103,10 @@ void nr_rlc_test_trigger_reestablishment(int ue_id)
   nr_rlc_manager_unlock(nr_rlc_ue_manager);
 }
 
-void nr_rlc_tick(int frame, int subframe)
+void nr_rlc_ms_tick(void)
 {
   lock_nr_rlc_current_time();
-  if (frame != nr_rlc_current_time_last_frame ||
-      subframe != nr_rlc_current_time_last_subframe) {
-    nr_rlc_current_time_last_frame = frame;
-    nr_rlc_current_time_last_subframe = subframe;
-    nr_rlc_current_time++;
-  }
+  nr_rlc_current_time++;
   unlock_nr_rlc_current_time();
 }
 
