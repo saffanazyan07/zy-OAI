@@ -355,6 +355,30 @@ void nr_256qam_llr(int32_t *rxdataF_comp, int32_t *ch_mag, int32_t *ch_mag2, int
   }
 }
 
+// compute average channel_level on each antenna
+void nr_xlsch_channel_level(int size_est,
+                            int ch_estimates_ext[][size_est],
+                            int nb_antennas_rx,
+                            int32_t avg[][nb_antennas_rx],
+                            uint8_t symbol,
+                            uint32_t len,
+                            uint8_t nrOfLayers)
+{
+  int16_t x = factor2(len);
+  int16_t y = len >> x;
+
+  for (int l = 0; l < nrOfLayers; l++) {
+    for (int aarx = 0; aarx < nb_antennas_rx; aarx++) {
+
+      simde__m128i *ch128 = (simde__m128i *)&ch_estimates_ext[l * nb_antennas_rx + aarx][symbol * len];
+
+      //compute average level
+      avg[l][aarx] = simde_mm_average(ch128, len, x, y);
+      LOG_D(PHY, "Channel level: %d\n", avg[l][aarx]);
+    }
+  }
+}
+
 void freq2time(uint16_t ofdm_symbol_size, int16_t *freq_signal, int16_t *time_signal)
 {
   const idft_size_idx_t idft_size = get_idft(ofdm_symbol_size);

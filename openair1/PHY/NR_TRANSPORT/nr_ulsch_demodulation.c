@@ -10,6 +10,7 @@
 #include "common/utils/nr/nr_common.h"
 #include <openair1/PHY/TOOLS/phy_scope_interface.h>
 #include "PHY/sse_intrin.h"
+#include "nr_phy_common.h"
 
 #define INVALID_VALUE 255
 
@@ -198,31 +199,6 @@ static int get_nb_re_pusch (NR_DL_FRAME_PARMS *frame_parms, nfapi_nr_pusch_pdu_t
     }
     else return(rel15_ul->rb_size *(12 - (rel15_ul->num_dmrs_cdm_grps_no_data*4)));
   } else return(rel15_ul->rb_size * NR_NB_SC_PER_RB);
-}
-
-// compute average channel_level on each (TX,RX) antenna pair
-static void nr_ulsch_channel_level(int size_est,
-                                   int ul_ch_estimates_ext[][size_est],
-                                   NR_DL_FRAME_PARMS *frame_parms,
-                                   int32_t *avg,
-                                   uint8_t symbol,
-                                   uint32_t len,
-                                   uint8_t nrOfLayers)
-{
-  int16_t x = factor2(len);
-  int16_t y = (len)>>x;
-
-  for (int aatx = 0; aatx < nrOfLayers; aatx++) {
-    for (int aarx = 0; aarx < frame_parms->nb_antennas_rx; aarx++) {
-
-      simde__m128i *ul_ch128 = (simde__m128i *)&ul_ch_estimates_ext[aatx * frame_parms->nb_antennas_rx + aarx][symbol * len];
-
-      //compute average level
-      avg[aatx * frame_parms->nb_antennas_rx + aarx] = simde_mm_average(ul_ch128, len, x, y);
-      //LOG_D(PHY, "Channel level: %d\n", avg[aatx * frame_parms->nb_antennas_rx + aarx]);
-    }
-  }
-
 }
 
 static void nr_ulsch_channel_compensation(c16_t *rxFext,
@@ -1425,7 +1401,7 @@ int nr_rx_pusch_tp(PHY_VARS_gNB *gNB,
                            frame_parms);
 
   int avgs = 0;
-  int avg[frame_parms->nb_antennas_rx*rel15_ul->nrOfLayers];
+  int avg[rel15_ul->nrOfLayers][frame_parms->nb_antennas_rx];
   uint8_t shift_ch_ext = rel15_ul->nrOfLayers > 1 ? log2_approx(max_ch >> 11) : 0;
 
   //----------------------------------------------------------
@@ -1441,9 +1417,9 @@ int nr_rx_pusch_tp(PHY_VARS_gNB *gNB,
                          rel15_ul->rb_size,
                          shift_ch_ext);
   
-  nr_ulsch_channel_level(size_est,
+  nr_xlsch_channel_level(size_est,
                          ul_ch_estimates_ext,
-                         frame_parms,
+                         frame_parms->nb_antennas_rx,
                          avg,
                          meas_symbol, // index of the start symbol
                          nb_re_pusch, // number of the re in pusch
@@ -1451,7 +1427,7 @@ int nr_rx_pusch_tp(PHY_VARS_gNB *gNB,
 
   for (int nl = 0; nl < rel15_ul->nrOfLayers; nl++)
     for (int aarx = 0; aarx < frame_parms->nb_antennas_rx; aarx++)
-      avgs = cmax(avgs, avg[nl * frame_parms->nb_antennas_rx + aarx]);
+      avgs = cmax(avgs, avg[nl][aarx]);
 
   if (rel15_ul->nrOfLayers == 2 && rel15_ul->qam_mod_order >= 6)
     pusch_vars->log2_maxh = (log2_approx(avgs) >> 1) - 3; // for MMSE
