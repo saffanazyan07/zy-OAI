@@ -275,7 +275,8 @@ void rx_nr_prach_ru(RU_t *ru,
                     int prach_fmt,
                     int numRA,
                     int prachStartSymbol,
-		    int prachOccasion,
+                    int prachStartSlot,
+                    int prachOccasion,
                     int frame,
                     int subframe);
 

@@ -1207,6 +1207,17 @@ int get_scan_ssb_first_sc(const double fc, const int nbRB, const int nrBand, con
   return numGscn;
 }
 
+// Table 38.211 6.3.3.1-1
+static uint8_t long_prach_dur[4] = {1, 3, 4, 1}; // 0.9, 2.28, 3.35, 0.9 ms
+
+uint8_t get_long_prach_dur(unsigned int format, unsigned int mu)
+{
+  AssertFatal(format < 4, "Invalid long PRACH format %d\n", format);
+  const int num_slots_subframe = (1 << mu);
+  const int prach_dur_subframes = long_prach_dur[format];
+  return (prach_dur_subframes * num_slots_subframe);
+}
+
 int get_delay_idx(int delay, int max_delay_comp)
 {
   int delay_idx = max_delay_comp + delay;

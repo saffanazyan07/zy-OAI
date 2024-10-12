@@ -196,6 +196,7 @@ typedef struct {
   int numRA;
   int prachStartSymbol;
   int num_prach_ocas;
+  int num_slots;
 } RU_PRACH_list_t;
 
 #define NUMBER_OF_NR_RU_PRACH_MAX 8
@@ -426,7 +427,6 @@ typedef enum {
   RU_FRAME_RESYNCH = 2,
   WAIT_RESYNCH     = 3
 } rru_cmd_t;
-
 
 typedef struct RU_t_s {
   /// ThreadPool for RU        
