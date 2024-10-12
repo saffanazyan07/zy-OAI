@@ -72,7 +72,7 @@ int32_t generate_nr_prach(PHY_VARS_NR_UE *ue, uint8_t gNB_id, int frame, uint8_t
   prach_len               = 0;
   dftlen                  = 0;
   first_nonzero_root_idx = 0;
-  int16_t amp = ue->prach_vars[gNB_id]->amp;
+  int16_t amp = prach_pdu->prach_tx_power;
   int16_t *prachF = prachF_tmp;
   Mod_id                  = ue->Mod_id;
   prach_sequence_length   = nrUE_config->prach_config.prach_sequence_length;
