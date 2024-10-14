@@ -61,6 +61,11 @@ uint8_t fapi_nr_p7_message_body_pack(nfapi_nr_p7_message_header_t *header,
     case NFAPI_NR_PHY_MSG_TYPE_RACH_INDICATION:
       result = pack_nr_rach_indication(header, ppWritePackedMsg, end, config);
     break;
+#ifdef ENABLE_AERIAL
+    case NFAPI_NR_PHY_MSG_TYPE_VENDOR_EXT_SLOT_RESPONSE:
+      result = pack_nr_slot_indication(header, ppWritePackedMsg, end, config);
+    break;
+#endif
     default: {
       if (header->message_id >= NFAPI_VENDOR_EXT_MSG_MIN && header->message_id <= NFAPI_VENDOR_EXT_MSG_MAX) {
         if (config && config->pack_p7_vendor_extension) {
