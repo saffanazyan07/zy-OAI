@@ -50,6 +50,9 @@
 #include "nr_fapi_p7_utils.h"
 #include <NR_MAC_gNB/mac_proto.h>
 
+#ifdef ENABLE_AERIAL
+#include "aerial/fapi_vnf_p5.h"
+#endif
 
 #define TEST
 
@@ -1086,6 +1089,28 @@ int trigger_scheduler(nfapi_nr_slot_indication_scf_t *slot_ind)
   // memset(sched_resp, 0, sizeof(*sched_resp));
   gNB_dlsch_ulsch_scheduler(0, slot_ind->sfn, slot_ind->slot, &g_sched_resp);
 
+#ifdef ENABLE_AERIAL
+    bool send_slt_resp = false;
+    if (g_sched_resp.DL_req.dl_tti_request_body.nPDUs> 0) {
+      oai_fapi_dl_tti_req(&g_sched_resp.DL_req);
+      send_slt_resp = true;
+    }
+    if (g_sched_resp.UL_tti_req.n_pdus > 0) {
+      oai_fapi_ul_tti_req(&g_sched_resp.UL_tti_req);
+      send_slt_resp = true;
+    }
+    if (g_sched_resp.TX_req.Number_of_PDUs > 0) {
+      oai_fapi_tx_data_req(&g_sched_resp.TX_req);
+      send_slt_resp = true;
+    }
+    if (g_sched_resp.UL_dci_req.numPdus > 0) {
+      oai_fapi_ul_dci_req(&g_sched_resp.UL_dci_req);
+      send_slt_resp = true;
+    }
+    if (send_slt_resp) {
+      oai_fapi_send_end_request(0,slot_ind->sfn, slot_ind->slot);
+    }
+#else
   if (g_sched_resp.DL_req.dl_tti_request_body.nPDUs > 0)
     oai_nfapi_dl_tti_req(&g_sched_resp.DL_req);
 
@@ -1097,6 +1122,7 @@ int trigger_scheduler(nfapi_nr_slot_indication_scf_t *slot_ind)
 
   if (g_sched_resp.UL_dci_req.numPdus > 0)
     oai_nfapi_ul_dci_req(&g_sched_resp.UL_dci_req);
+#endif
   return 1;
 }
 
