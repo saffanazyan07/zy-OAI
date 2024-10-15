@@ -759,53 +759,6 @@ int nr_rx_pdsch(PHY_VARS_NR_UE *ue,
   return (0);
 }
 
-void nr_dlsch_deinterleaving(uint8_t symbol,
-                             uint8_t start_symbol,
-                             uint16_t L,
-                             uint16_t *llr,
-                             uint16_t *llr_deint,
-                             uint16_t nb_rb_pdsch)
-{
-
-  uint32_t bundle_idx, N_bundle, R, C, r,c;
-  int32_t m,k;
-  uint8_t nb_re;
-
-  R=2;
-  N_bundle = nb_rb_pdsch/L;
-  C=N_bundle/R;
-
-  uint32_t bundle_deint[N_bundle];
-  memset(bundle_deint, 0 , sizeof(bundle_deint));
-
-  printf("N_bundle %u L %d nb_rb_pdsch %d\n",N_bundle, L,nb_rb_pdsch);
-
-  if (symbol==start_symbol)
-	  nb_re = 6;
-  else
-	  nb_re = 12;
-
-
-  AssertFatal(llr!=NULL,"nr_dlsch_deinterleaving: FATAL llr is Null\n");
-
-
-  for (c =0; c< C; c++){
-	  for (r=0; r<R;r++){
-		  bundle_idx = r*C+c;
-		  bundle_deint[bundle_idx] = c*R+r;
-		  //printf("c %u r %u bundle_idx %u bundle_deinter %u\n", c, r, bundle_idx, bundle_deint[bundle_idx]);
-	  }
-  }
-
-  for (k=0; k<N_bundle;k++)
-  {
-	  for (m=0; m<nb_re*L;m++){
-		  llr_deint[bundle_deint[k]*nb_re*L+m]= llr[k*nb_re*L+m];
-		  //printf("k %d m %d bundle_deint %d llr_deint %d\n", k, m, bundle_deint[k], llr_deint[bundle_deint[k]*nb_re*L+m]);
-	  }
-  }
-}
-
 //==============================================================================================
 // Pre-processing for LLR computation
 //==============================================================================================
