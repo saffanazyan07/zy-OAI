@@ -305,18 +305,13 @@ int16_t nr_get_RA_window_4Step(const NR_RACH_ConfigCommon_t *rach_ConfigCommon);
 
 void nr_get_RA_window(NR_UE_MAC_INST_t *mac);
 
-/* \brief Function called by PHY to retrieve information to be transmitted using the RA procedure.
-If the UE is not in PUSCH mode for a particular eNB index, this is assumed to be an Msg3 and MAC
-attempts to retrieves the CCCH message from RRC. If the UE is in PUSCH mode for a particular eNB
-index and PUCCH format 0 (Scheduling Request) is not activated, the MAC may use this resource for
-andom-access to transmit a BSR along with the C-RNTI control element (see 5.1.4 from 38.321)
-@param mod_id Index of UE instance
+/*@mac pointer to MAC instance
 @param CC_id Component Carrier Index
 @param frame
 @param gNB_id gNB index
 @param nr_slot_tx slot for PRACH transmission
 @returns indication to generate PRACH to phy */
-void nr_ue_get_rach(NR_UE_MAC_INST_t *mac, int CC_id, frame_t frame, uint8_t gNB_id, int nr_slot_tx);
+void nr_ue_manage_ra_procedure(NR_UE_MAC_INST_t *mac, int CC_id, frame_t frame, uint8_t gNB_id, int nr_slot_tx);
 
 /* \brief Function implementing the routine for the selection of Random Access resources (5.1.2 TS 38.321).
 @param mac pointer to MAC instance
@@ -342,12 +337,6 @@ void nr_ue_send_synch_request(NR_UE_MAC_INST_t *mac, module_id_t module_id, int 
  * @return      UE sync state
  */
 NR_UE_L2_STATE_t nr_ue_get_sync_state(module_id_t mod_id);
-
-void init_RA(NR_UE_MAC_INST_t *mac,
-             NR_PRACH_RESOURCES_t *prach_resources,
-             NR_RACH_ConfigCommon_t *nr_rach_ConfigCommon,
-             NR_RACH_ConfigGeneric_t *rach_ConfigGeneric,
-             NR_RACH_ConfigDedicated_t *rach_ConfigDedicated);
 
 int16_t get_prach_tx_power(NR_UE_MAC_INST_t *mac);
 void free_rach_structures(NR_UE_MAC_INST_t *nr_mac, int bwp_id);

@@ -55,14 +55,65 @@ int16_t get_prach_tx_power(NR_UE_MAC_INST_t *mac)
 // to Random Access type as specified in clause 5.1.1a (3GPP TS 38.321 version 16.2.1 Release 16)
 // todo:
 // - check if carrier to use is explicitly signalled then do (1) RA CARRIER SELECTION (SUL, NUL) (2) set PCMAX (currently hardcoded to 0)
-void init_RA(NR_UE_MAC_INST_t *mac,
-             NR_PRACH_RESOURCES_t *prach_resources,
-             NR_RACH_ConfigCommon_t *nr_rach_ConfigCommon,
-             NR_RACH_ConfigGeneric_t *rach_ConfigGeneric,
-             NR_RACH_ConfigDedicated_t *rach_ConfigDedicated)
+static bool init_RA(NR_UE_MAC_INST_t *mac,
+                    int frame,
+                    NR_RACH_ConfigCommon_t *nr_rach_ConfigCommon,
+                    NR_RACH_ConfigGeneric_t *rach_ConfigGeneric,
+                    NR_RACH_ConfigDedicated_t *rach_ConfigDedicated)
 {
-  mac->state = UE_PERFORMING_RA;
   RA_config_t *ra = &mac->ra;
+  // Delay init RA procedure to allow the convergence of the IIR filter on PRACH noise measurements at gNB side
+  LOG_D(NR_MAC,
+        "ra->ra_state %d frame %d mac->first_sync_frame %d xxx %d",
+        ra->ra_state,
+        frame,
+        mac->first_sync_frame,
+        ((MAX_FRAME_NUMBER + frame - mac->first_sync_frame) % MAX_FRAME_NUMBER) > 10);
+  if ((mac->first_sync_frame > -1 || get_softmodem_params()->do_ra || get_softmodem_params()->nsa)
+      && ((MAX_FRAME_NUMBER + frame - mac->first_sync_frame) % MAX_FRAME_NUMBER) > 150) {
+    ra->ra_state = nrRA_GENERATE_PREAMBLE;
+    LOG_D(NR_MAC, "PRACH Condition met: ra state %d, frame %d, sync_frame %d\n", ra->ra_state, frame, mac->first_sync_frame);
+  } else {
+    LOG_D(NR_MAC, "PRACH Condition not met: ra state %d, frame %d, sync_frame %d\n", ra->ra_state, frame, mac->first_sync_frame);
+    return false;
+  }
+
+  // TODO this piece of code is required to compute MSG3_size that is used by ra_preambles_config function
+  // Not a good implementation, it needs improvements
+  int size_sdu = 0;
+
+  // Concerning the C-RNTI MAC CE,
+  // it has to be included if the UL transmission (Msg3) is not being made for the CCCH logical channel.
+  // Therefore it has been assumed that this event only occurs only when RA is done and it is not SA mode.
+  if (get_softmodem_params()->nsa) {
+
+    uint8_t mac_sdus[34 * 1056];
+    uint16_t sdu_lengths[NB_RB_MAX] = {0};
+    int TBS_bytes = 848;
+    int mac_ce_len = 0;
+    unsigned short post_padding = 1;
+
+    // fill ulsch_buffer with random data
+    for (int i = 0; i < TBS_bytes; i++) {
+      mac_sdus[i] = (unsigned char)(rand()&0xff);
+    }
+    // Sending SDUs with size 1
+    // Initialize elements of sdu_lengths
+    sdu_lengths[0] = TBS_bytes - 3 - post_padding - mac_ce_len;
+    size_sdu += sdu_lengths[0];
+
+    if (size_sdu > 0) {
+      memcpy(ra->cont_res_id, mac_sdus, sizeof(uint8_t) * 6);
+      ra->Msg3_size = size_sdu + sizeof(NR_MAC_SUBHEADER_SHORT) + sizeof(NR_MAC_SUBHEADER_SHORT);
+    }
+
+  } else if (!IS_SA_MODE(get_softmodem_params())) {
+    uint8_t temp_pdu[16] = {0};
+    size_sdu = nr_write_ce_msg3_pdu(temp_pdu, mac, mac->crnti, temp_pdu + sizeof(temp_pdu));
+    ra->Msg3_size = size_sdu;
+  }
+
+  mac->state = UE_PERFORMING_RA;
   ra->RA_active = true;
   ra->ra_PreambleIndex = -1;
   ra->RA_usedGroupA = 1;
@@ -74,7 +125,7 @@ void init_RA(NR_UE_MAC_INST_t *mac,
   ra->RA_window_cnt = -1;
 
   fapi_nr_config_request_t *cfg = &mac->phy_config.config_req;
-
+  NR_PRACH_RESOURCES_t *prach_resources = &ra->prach_resources;
   prach_resources->RA_PREAMBLE_BACKOFF = 0;
   AssertFatal(nr_rach_ConfigCommon && nr_rach_ConfigCommon->msg1_SubcarrierSpacing,
               "Cannot handle yet the scenario without msg1_SubcarrierSpacing (L839)\n");
@@ -209,6 +260,7 @@ void init_RA(NR_UE_MAC_INST_t *mac,
       ra->preambleTransMax = (int)nr_rach_ConfigCommon->rach_ConfigGeneric.preambleTransMax;
     }
   }
+  return true;
 }
 
 /* TS 38.321 subclause 7.3 - return DELTA_PREAMBLE values in dB */
@@ -579,7 +631,7 @@ void nr_get_prach_resources(NR_UE_MAC_INST_t *mac,
 
   NR_RACH_ConfigCommon_t *nr_rach_ConfigCommon = mac->current_UL_BWP->rach_ConfigCommon;
 
-  LOG_D(MAC, "Getting PRACH resources frame (first_Msg3 %d)\n", ra->first_Msg3);
+  LOG_D(MAC, "Getting PRACH resources (first_Msg3 %d)\n", ra->first_Msg3);
 
   if (rach_ConfigDedicated) {
     if (rach_ConfigDedicated->cfra){
@@ -601,7 +653,6 @@ void nr_get_prach_resources(NR_UE_MAC_INST_t *mac,
   if (prach_resources->RA_PREAMBLE_TRANSMISSION_COUNTER > 1)
     prach_resources->RA_PREAMBLE_POWER_RAMPING_COUNTER++;
   prach_resources->ra_PREAMBLE_RECEIVED_TARGET_POWER = nr_get_Po_NOMINAL_PUSCH(mac, prach_resources, CC_id);
-
 }
 
 // TbD: RA_attempt_number not used
@@ -714,76 +765,23 @@ void nr_get_Msg3_MsgA_PUSCH_payload(NR_UE_MAC_INST_t *mac, uint8_t *buf, int TBS
  * @gNB_id              gNB ID
  * @nr_slot_tx          current UL TX slot
  */
-void nr_ue_get_rach(NR_UE_MAC_INST_t *mac, int CC_id, frame_t frame, uint8_t gNB_id, int nr_slot_tx)
+void nr_ue_manage_ra_procedure(NR_UE_MAC_INST_t *mac, int CC_id, frame_t frame, uint8_t gNB_id, int nr_slot_tx)
 {
   RA_config_t *ra = &mac->ra;
   NR_RACH_ConfigDedicated_t *rach_ConfigDedicated = ra->rach_ConfigDedicated;
   NR_PRACH_RESOURCES_t *prach_resources = &ra->prach_resources;
-
-  // Delay init RA procedure to allow the convergence of the IIR filter on PRACH noise measurements at gNB side
+  NR_RACH_ConfigCommon_t *setup = mac->current_UL_BWP->rach_ConfigCommon;
+  NR_RACH_ConfigGeneric_t *rach_ConfigGeneric = &setup->rach_ConfigGeneric;
   if (ra->ra_state == nrRA_UE_IDLE) {
-    LOG_D(NR_MAC,
-          "ra->ra_state %d frame %d mac->first_sync_frame %d xxx %d",
-          ra->ra_state,
-          frame,
-          mac->first_sync_frame,
-          ((MAX_FRAME_NUMBER + frame - mac->first_sync_frame) % MAX_FRAME_NUMBER) > 10);
-      if ((mac->first_sync_frame > -1 || get_softmodem_params()->do_ra || get_softmodem_params()->nsa)
-          && ((MAX_FRAME_NUMBER + frame - mac->first_sync_frame) % MAX_FRAME_NUMBER) > 150) {
-        ra->ra_state = nrRA_GENERATE_PREAMBLE;
-        LOG_D(NR_MAC, "PRACH Condition met: ra state %d, frame %d, sync_frame %d\n", ra->ra_state, frame, mac->first_sync_frame);
-      } else {
-        LOG_D(NR_MAC,
-              "PRACH Condition not met: ra state %d, frame %d, sync_frame %d\n",
-              ra->ra_state,
-              frame,
-              mac->first_sync_frame);
-        return;
-      }
+    bool init_success = init_RA(mac, frame, setup, rach_ConfigGeneric, rach_ConfigDedicated);
+    if (!init_success)
+      return;
   }
 
   LOG_D(NR_MAC, "[UE %d][%d.%d]: ra_state %d, RA_active %d\n", mac->ue_id, frame, nr_slot_tx, ra->ra_state, ra->RA_active);
 
-  if (ra->ra_state > nrRA_UE_IDLE && ra->ra_state < nrRA_SUCCEEDED) {
-    if (!ra->RA_active) {
-      NR_RACH_ConfigCommon_t *setup = mac->current_UL_BWP->rach_ConfigCommon;
-      NR_RACH_ConfigGeneric_t *rach_ConfigGeneric = &setup->rach_ConfigGeneric;
-      init_RA(mac, &ra->prach_resources, setup, rach_ConfigGeneric, ra->rach_ConfigDedicated);
-
-      // TODO this piece of code is required to compute MSG3_size that is used by ra_preambles_config function
-      // Not a good implementation, it needs improvements
-      int size_sdu = 0;
-
-      // Concerning the C-RNTI MAC CE, it has to be included if the UL transmission (Msg3) is not being made for the CCCH logical channel.
-      // Therefore it has been assumed that this event only occurs only when RA is done and it is not SA mode.
-      if (get_softmodem_params()->nsa) {
-
-        uint8_t mac_sdus[34*1056];
-        uint16_t sdu_lengths[NB_RB_MAX] = {0};
-        int TBS_bytes = 848;
-        int mac_ce_len = 0;
-        unsigned short post_padding = 1;
-
-        // fill ulsch_buffer with random data
-        for (int i = 0; i < TBS_bytes; i++){
-          mac_sdus[i] = (unsigned char) (rand()&0xff);
-        }
-        //Sending SDUs with size 1
-        //Initialize elements of sdu_lengths
-        sdu_lengths[0] = TBS_bytes - 3 - post_padding - mac_ce_len;
-        size_sdu += sdu_lengths[0];
-
-        if (size_sdu > 0) {
-          memcpy(ra->cont_res_id, mac_sdus, sizeof(uint8_t) * 6);
-          ra->Msg3_size = size_sdu + sizeof(NR_MAC_SUBHEADER_SHORT) + sizeof(NR_MAC_SUBHEADER_SHORT);
-        }
-
-      } else if (!IS_SA_MODE(get_softmodem_params())) {
-        uint8_t temp_pdu[16] = {0};
-        size_sdu = nr_write_ce_msg3_pdu(temp_pdu, mac, mac->crnti, temp_pdu + sizeof(temp_pdu));
-        ra->Msg3_size = size_sdu;
-      }
-    } else if (ra->RA_window_cnt != -1) { // RACH is active
+  if (ra->ra_state < nrRA_SUCCEEDED) {
+    if (ra->RA_window_cnt != -1) { // RACH is active
 
       LOG_D(MAC, "[%d.%d] RA is active: RA window count %d, RA backoff count %d\n", frame, nr_slot_tx, ra->RA_window_cnt, ra->RA_backoff_cnt);
 
