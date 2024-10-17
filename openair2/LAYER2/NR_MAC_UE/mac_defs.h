@@ -276,25 +276,21 @@ typedef struct {
   /// PRACH format retrieved from prach_ConfigIndex
   uint16_t prach_format;
   /// Preamble Tx Counter
-  uint8_t RA_PREAMBLE_TRANSMISSION_COUNTER;
+  uint8_t preamble_tx_counter;
   /// Preamble Power Ramping Counter
-  uint8_t RA_PREAMBLE_POWER_RAMPING_COUNTER;
+  uint8_t preamble_power_ramping_cnt;
   /// 2-step RA power offset
-  int POWER_OFFSET_2STEP_RA;
+  int power_offset_2step;
   /// Target received power at gNB. Baseline is range -202..-60 dBm. Depends on delta preamble, power ramping counter and step.
   int ra_PREAMBLE_RECEIVED_TARGET_POWER;
   /// PRACH index for TDD (0 ... 6) depending on TDD configuration and prachConfigIndex
   uint8_t ra_TDD_map_index;
   /// RA Preamble Power Ramping Step in dB
-  uint32_t RA_PREAMBLE_POWER_RAMPING_STEP;
-  ///
-  uint8_t RA_PREAMBLE_BACKOFF;
-  ///
-  uint8_t RA_SCALING_FACTOR_BI;
-  /// Indicating whether it is 2-step or 4-step RA
-  nr_ra_type_t RA_TYPE;
+  uint32_t preamble_power_ramping_step;
+  uint8_t preamble_backoff;
+  uint8_t scaling_factor_bi;
   /// UE configured maximum output power
-  int RA_PCMAX;
+  int Pc_max;
 } NR_PRACH_RESOURCES_t;
 
 typedef struct {
@@ -304,7 +300,7 @@ typedef struct {
   /// state of RA procedure
   nrRA_UE_state_t ra_state;
   /// RA contention type
-  uint8_t cfra;
+  bool cfra;
   /// RA type
   nr_ra_type_t ra_type;
   /// RA rx frame offset: compensate RA rx offset introduced by OAI gNB.
@@ -330,7 +326,8 @@ typedef struct {
   int ra_PreambleIndex;
   // When multiple SSBs per RO is configured, this indicates which one is selected in this RO -> this is used to properly compute the PRACH preamble
   uint8_t ssb_nb_in_ro;
-
+  int zeroCorrelationZoneConfig;
+  int restricted_set_config;
   /// Random-access window counter
   int16_t RA_window_cnt;
   /// Flag to monitor if matching RAPID was received in RAR

@@ -668,34 +668,33 @@ NR_tda_info_t get_dl_tda_info(const NR_UE_DL_BWP_t *dl_BWP,
   return tda_info;
 }
 
-uint16_t get_NCS(uint8_t index, uint16_t format0, uint8_t restricted_set_config) {
-
-  LOG_D(MAC,"get_NCS: indx %d,format0 %d, restriced_set_config %d\n",
-	index,format0,restricted_set_config);
+uint16_t get_NCS(uint8_t index, uint16_t format0, uint8_t restricted_set_config)
+{
+  LOG_D(NR_MAC, "get_NCS: indx %d,format0 %d, restriced_set_config %d\n", index, format0, restricted_set_config);
 
   if (format0 < 3) {
-    switch(restricted_set_config){
+    switch (restricted_set_config) {
       case 0:
         return(NCS_unrestricted_delta_f_RA_125[index]);
       case 1:
         return(NCS_restricted_TypeA_delta_f_RA_125[index]);
       case 2:
         return(NCS_restricted_TypeB_delta_f_RA_125[index]);
-    default:
-      AssertFatal(1==0,"Invalid restricted set config value %d",restricted_set_config);
+      default:
+        AssertFatal(false, "Invalid restricted set config value %d", restricted_set_config);
     }
   }
   else {
     if (format0 == 3) {
-      switch(restricted_set_config){
+      switch (restricted_set_config) {
         case 0:
           return(NCS_unrestricted_delta_f_RA_5[index]);
         case 1:
           return(NCS_restricted_TypeA_delta_f_RA_5[index]);
         case 2:
           return(NCS_restricted_TypeB_delta_f_RA_5[index]);
-      default:
-        AssertFatal(1==0,"Invalid restricted set config value %d",restricted_set_config);
+        default:
+          AssertFatal(false, "Invalid restricted set config value %d", restricted_set_config);
       }
     }
     else

@@ -48,18 +48,55 @@ int16_t get_prach_tx_power(NR_UE_MAC_INST_t *mac)
   RA_config_t *ra = &mac->ra;
   int16_t pathloss = compute_nr_SSB_PL(mac, mac->ssb_measurements.ssb_rsrp_dBm);
   int16_t ra_preamble_rx_power = (int16_t)(ra->prach_resources.ra_PREAMBLE_RECEIVED_TARGET_POWER + pathloss);
-  return min(ra->prach_resources.RA_PCMAX, ra_preamble_rx_power);
+  return min(ra->prach_resources.Pc_max, ra_preamble_rx_power);
+}
+
+static void set_preambleTransMax(RA_config_t *ra, long preambleTransMax)
+{
+  switch (preambleTransMax) {
+    case 0:
+      ra->preambleTransMax = 3;
+      break;
+    case 1:
+      ra->preambleTransMax = 4;
+      break;
+    case 2:
+      ra->preambleTransMax = 5;
+      break;
+    case 3:
+      ra->preambleTransMax = 6;
+      break;
+    case 4:
+      ra->preambleTransMax = 7;
+      break;
+    case 5:
+      ra->preambleTransMax = 8;
+      break;
+    case 6:
+      ra->preambleTransMax = 10;
+      break;
+    case 7:
+      ra->preambleTransMax = 20;
+      break;
+    case 8:
+      ra->preambleTransMax = 50;
+      break;
+    case 9:
+      ra->preambleTransMax = 100;
+      break;
+    case 10:
+      ra->preambleTransMax = 200;
+      break;
+    default:
+      AssertFatal(false, "Invalid preambleTransMax\n");
+  }
 }
 
 // Random Access procedure initialization as per 5.1.1 and initialization of variables specific
 // to Random Access type as specified in clause 5.1.1a (3GPP TS 38.321 version 16.2.1 Release 16)
 // todo:
 // - check if carrier to use is explicitly signalled then do (1) RA CARRIER SELECTION (SUL, NUL) (2) set PCMAX (currently hardcoded to 0)
-static bool init_RA(NR_UE_MAC_INST_t *mac,
-                    int frame,
-                    NR_RACH_ConfigCommon_t *nr_rach_ConfigCommon,
-                    NR_RACH_ConfigGeneric_t *rach_ConfigGeneric,
-                    NR_RACH_ConfigDedicated_t *rach_ConfigDedicated)
+bool init_RA(NR_UE_MAC_INST_t *mac, int frame)
 {
   RA_config_t *ra = &mac->ra;
   // Delay init RA procedure to allow the convergence of the IIR filter on PRACH noise measurements at gNB side
@@ -113,153 +150,154 @@ static bool init_RA(NR_UE_MAC_INST_t *mac,
     ra->Msg3_size = size_sdu;
   }
 
+  // Random acces procedure initialization
   mac->state = UE_PERFORMING_RA;
   ra->RA_active = true;
+  NR_PRACH_RESOURCES_t *prach_resources = &ra->prach_resources;
+  fapi_nr_config_request_t *cfg = &mac->phy_config.config_req;
+  // flush MSG3 buffer
+  free_and_zero(ra->Msg3_buffer);
+  // set the PREAMBLE_TRANSMISSION_COUNTER to 1
+  prach_resources->preamble_tx_counter = 1;
+  // set the PREAMBLE_POWER_RAMPING_COUNTER to 1
+  prach_resources->preamble_power_ramping_cnt = 1;
+  // set the PREAMBLE_BACKOFF to 0 ms TODO to be set as a timer?
+  prach_resources->preamble_backoff = 0;
+  // set POWER_OFFSET_2STEP_RA to 0 dB
+  prach_resources->power_offset_2step = 0;
+
+  const NR_UE_UL_BWP_t *current_UL_BWP = mac->current_UL_BWP;
+  // perform the BWP operation as specified in clause 5.15
+  // if PRACH occasions are not configured for the active UL BWP
+  if (!current_UL_BWP->rach_ConfigCommon) {
+    // switch the active UL BWP to BWP indicated by initialUplinkBWP
+    current_UL_BWP = get_ul_bwp_structure(mac, 0, false);
+    // if the Serving Cell is an SpCell
+    // switch the active DL BWP to BWP indicated by initialDownlinkBWP
+    mac->current_DL_BWP = get_dl_bwp_structure(mac, 0, false);
+  } else {
+    // if the active DL BWP does not have the same bwp-Id as the active UL BWP
+    if (current_UL_BWP->bwp_id != mac->current_DL_BWP->bwp_id) {
+      // switch the active DL BWP to the DL BWP with the same bwp-Id as the active UL BWP
+      mac->current_DL_BWP = get_dl_bwp_structure(mac, 0, false);
+    }
+  }
+
+  NR_RACH_ConfigCommon_t *nr_rach_ConfigCommon = current_UL_BWP->rach_ConfigCommon;
+  AssertFatal(nr_rach_ConfigCommon, "rach-ConfigCommon should be configured here\n");
+  // stop the bwp-InactivityTimer associated with the active DL BWP of this Serving Cell, if running
+  // TODO bwp-InactivityTimer not implemented
+
+  // if the carrier to use for the Random Access procedure is explicitly signalled (always the case for us)
+  // PRACH shall be as specified for QPSK modulated DFT-s-OFDM of equivalent RB allocation (38.101-1)
+  AssertFatal(nr_rach_ConfigCommon->msg1_SubcarrierSpacing, "Cannot handle the scenario without msg1-SubcarrierSpacing (L839)\n");
+  NR_SubcarrierSpacing_t prach_scs = *nr_rach_ConfigCommon->msg1_SubcarrierSpacing;
+  int n_prbs = get_N_RA_RB(prach_scs, current_UL_BWP->scs);
+  NR_RACH_ConfigGeneric_t *rach_ConfigGeneric = &nr_rach_ConfigCommon->rach_ConfigGeneric;
+  int start_prb = rach_ConfigGeneric->msg1_FrequencyStart + current_UL_BWP->BWPStart;
+  prach_resources->Pc_max = nr_get_Pcmax(mac->p_Max,
+                                         mac->nr_band,
+                                         mac->frame_type,
+                                         mac->frequency_range,
+                                         current_UL_BWP->channel_bandwidth,
+                                         2,
+                                         false,
+                                         prach_scs,
+                                         cfg->carrier_config.dl_grid_size[prach_scs],
+                                         true,
+                                         n_prbs,
+                                         start_prb);
+
+  // TODO if the Random Access procedure is initiated by PDCCH order
+  // and if the ra-PreambleIndex explicitly provided by PDCCH is not 0b000000
+
+  // TODO if the Random Access procedure was initiated for SI request
+  // and the Random Access Resources for SI request have been explicitly provided by RRC
+
+  // TODO if the Random Access procedure was initiated for SpCell beam failure recovery
+  // and if the contention-free Random Access Resources for beam failure recovery request for 4-step RA type
+  // have been explicitly provided by RRC for the BWP selected for Random Access procedure
+
+  NR_RACH_ConfigCommonTwoStepRA_r16_t *twostep_conf = NULL;
+  NR_RACH_ConfigDedicated_t *rach_Dedicated = ra->rach_ConfigDedicated;
+  if (rach_Dedicated && rach_Dedicated->cfra) {
+    // if the Random Access procedure was initiated for reconfiguration with sync and
+    // if the contention-free Random Access Resources for 4-step RA type have been explicitly provided
+    // in rach-ConfigDedicated for the BWP selected for Random Access procedure
+    LOG_I(MAC, "Initialization of 4-Step CFRA procedure\n");
+    ra->ra_type = RA_4_STEP;
+    ra->cfra = true;
+  } else {
+    bool twostep_cfra = (rach_Dedicated && rach_Dedicated->ext1) ? (rach_Dedicated->ext1->cfra_TwoStep_r16 ? true : false) : false;
+    if (twostep_cfra) {
+      // if the Random Access procedure was initiated for reconfiguration with sync and
+      // if the contention-free Random Access Resources for 2-step RA type have been explicitly provided in rach-ConfigDedicated
+      LOG_I(MAC, "Initialization of 2-Step CFRA procedure\n");
+      ra->ra_type = RA_2_STEP;
+      ra->cfra = true;
+    } else {
+      bool twostep = false;
+      if (current_UL_BWP->msgA_ConfigCommon_r16) {
+        twostep_conf = &current_UL_BWP->msgA_ConfigCommon_r16->rach_ConfigCommonTwoStepRA_r16;
+        if (nr_rach_ConfigCommon) {
+          // if the BWP selected for Random Access procedure is configured with both 2- and 4-step RA type Random Access Resources
+          // and the RSRP of the downlink pathloss reference is above msgA-RSRP-Threshold
+          AssertFatal(twostep_conf->msgA_RSRP_Threshold_r16,
+                      "msgA_RSRP_Threshold_r16 is mandatory present if both 2-step and 4-step random access types are configured\n");
+          // For thresholds the RSRP value is (IE value – 156) dBm except for the IE 127 in which case the actual value is infinity
+          int rsrp_msga_thr = *twostep_conf->msgA_RSRP_Threshold_r16 - 156;
+          if (*twostep_conf->msgA_RSRP_Threshold_r16 != 127 && mac->ssb_measurements.ssb_rsrp_dBm > rsrp_msga_thr)
+            twostep = true;
+        } else {
+          // if the BWP selected for Random Access procedure is only configured with 2-step RA type Random Access
+          twostep = true;
+        }
+      }
+      if (twostep) {
+        LOG_I(MAC, "Initialization of 2-Step CBRA procedure\n");
+        ra->ra_type = RA_2_STEP;
+        ra->cfra = false;
+      } else {
+        LOG_I(MAC, "Initialization of 4-Step CBRA procedure\n");
+        ra->ra_type = RA_4_STEP;
+        ra->cfra = false;
+      }
+    }
+  }
+
+  NR_RACH_ConfigGenericTwoStepRA_r16_t *twostep_generic = twostep_conf ? &twostep_conf->rach_ConfigGenericTwoStepRA_r16 : NULL;
+  if (ra->ra_type == RA_2_STEP && twostep_generic && twostep_generic->msgA_PreamblePowerRampingStep_r16)
+    prach_resources->preamble_power_ramping_step = *twostep_generic->msgA_PreamblePowerRampingStep_r16 << 1;
+  else
+    prach_resources->preamble_power_ramping_step = rach_ConfigGeneric->powerRampingStep << 1;
+
+  prach_resources->scaling_factor_bi = 1;
+
+  if (ra->ra_type == RA_2_STEP && twostep_generic && twostep_generic->preambleTransMax_r16)
+    set_preambleTransMax(ra, *twostep_generic->preambleTransMax_r16);
+  else
+    set_preambleTransMax(ra, rach_ConfigGeneric->preambleTransMax);
+
+  if (ra->ra_type == RA_2_STEP && twostep_generic && twostep_generic->msgA_ZeroCorrelationZoneConfig_r16)
+    ra->zeroCorrelationZoneConfig = *twostep_generic->msgA_ZeroCorrelationZoneConfig_r16;
+  else
+    ra->zeroCorrelationZoneConfig = rach_ConfigGeneric->zeroCorrelationZoneConfig;
+  if (ra->ra_type == RA_2_STEP && twostep_conf && twostep_conf->msgA_RestrictedSetConfig_r16)
+    ra->restricted_set_config = *twostep_conf->msgA_RestrictedSetConfig_r16;
+  else
+    ra->restricted_set_config = nr_rach_ConfigCommon->restrictedSetConfig;
+
+  // TODO msgA-TransMax not implemented
+  // TODO ra-Prioritization not implemented
+
   ra->ra_PreambleIndex = -1;
   ra->RA_usedGroupA = 1;
   ra->RA_RAPID_found = 0;
-  ra->preambleTransMax = 0;
   ra->first_Msg3 = true;
   ra->starting_preamble_nb = 0;
   ra->RA_backoff_cnt = 0;
   ra->RA_window_cnt = -1;
 
-  fapi_nr_config_request_t *cfg = &mac->phy_config.config_req;
-  NR_PRACH_RESOURCES_t *prach_resources = &ra->prach_resources;
-  prach_resources->RA_PREAMBLE_BACKOFF = 0;
-  AssertFatal(nr_rach_ConfigCommon && nr_rach_ConfigCommon->msg1_SubcarrierSpacing,
-              "Cannot handle yet the scenario without msg1_SubcarrierSpacing (L839)\n");
-  NR_SubcarrierSpacing_t prach_scs = *nr_rach_ConfigCommon->msg1_SubcarrierSpacing;
-  int n_prbs = get_N_RA_RB(prach_scs, mac->current_UL_BWP->scs);
-  int start_prb = rach_ConfigGeneric->msg1_FrequencyStart + mac->current_UL_BWP->BWPStart;
-  // PRACH shall be as specified for QPSK modulated DFT-s-OFDM of equivalent RB allocation (38.101-1)
-  prach_resources->RA_PCMAX = nr_get_Pcmax(mac->p_Max,
-                                           mac->nr_band,
-                                           mac->frame_type,
-                                           mac->frequency_range,
-                                           mac->current_UL_BWP->channel_bandwidth,
-                                           2,
-                                           false,
-                                           prach_scs,
-                                           cfg->carrier_config.dl_grid_size[prach_scs],
-                                           true,
-                                           n_prbs,
-                                           start_prb);
-  prach_resources->RA_PREAMBLE_TRANSMISSION_COUNTER = 1;
-  prach_resources->RA_PREAMBLE_POWER_RAMPING_COUNTER = 1;
-  prach_resources->POWER_OFFSET_2STEP_RA = 0;
-  prach_resources->RA_SCALING_FACTOR_BI = 1;
-
-
-  // Contention Free
-  if (rach_ConfigDedicated) {
-    if (rach_ConfigDedicated->cfra){
-      LOG_I(MAC, "Initialization of 4-Step CFRA procedure\n");
-      prach_resources->RA_TYPE = RA_4_STEP;
-      ra->ra_type = RA_4_STEP;
-      ra->cfra = 1;
-    } else if (rach_ConfigDedicated->ext1){
-      if (rach_ConfigDedicated->ext1->cfra_TwoStep_r16) {
-        LOG_I(MAC, "Initialization of 2-Step CFRA procedure\n");
-        prach_resources->RA_TYPE = RA_2_STEP;
-        ra->ra_type = RA_2_STEP;
-        ra->cfra = 1;
-      } else {
-        LOG_E(NR_MAC, "Config not handled\n");
-      }
-    } else {
-      LOG_E(NR_MAC, "Config not handled\n");
-    }
-    // Contention Based
-  } else if (mac->current_UL_BWP->msgA_ConfigCommon_r16) {
-    LOG_I(MAC, "Initialization of 2-Step CBRA procedure\n");
-    prach_resources->RA_TYPE = RA_2_STEP;
-    ra->ra_type = RA_2_STEP;
-    ra->cfra = 0;
-  } else if (nr_rach_ConfigCommon) {
-    LOG_I(MAC, "Initialization of 4-Step CBRA procedure\n");
-    prach_resources->RA_TYPE = RA_4_STEP;
-    ra->ra_type = RA_4_STEP;
-    ra->cfra = 0;
-  } else {
-    LOG_E(MAC, "Config not handled\n");
-    AssertFatal(false, "In %s: config not handled\n", __FUNCTION__);
-  }
-
-  switch (rach_ConfigGeneric->powerRampingStep){ // in dB
-    case 0:
-      prach_resources->RA_PREAMBLE_POWER_RAMPING_STEP = 0;
-      break;
-    case 1:
-      prach_resources->RA_PREAMBLE_POWER_RAMPING_STEP = 2;
-      break;
-    case 2:
-      prach_resources->RA_PREAMBLE_POWER_RAMPING_STEP = 4;
-      break;
-    case 3:
-      prach_resources->RA_PREAMBLE_POWER_RAMPING_STEP = 6;
-      break;
-  }
-
-  switch (rach_ConfigGeneric->preambleTransMax) {
-    case 0:
-      ra->preambleTransMax = 3;
-      break;
-    case 1:
-      ra->preambleTransMax = 4;
-      break;
-    case 2:
-      ra->preambleTransMax = 5;
-      break;
-    case 3:
-      ra->preambleTransMax = 6;
-      break;
-    case 4:
-      ra->preambleTransMax = 7;
-      break;
-    case 5:
-      ra->preambleTransMax = 8;
-      break;
-    case 6:
-      ra->preambleTransMax = 10;
-      break;
-    case 7:
-      ra->preambleTransMax = 20;
-      break;
-    case 8:
-      ra->preambleTransMax = 50;
-      break;
-    case 9:
-      ra->preambleTransMax = 100;
-      break;
-    case 10:
-      ra->preambleTransMax = 200;
-      break;
-  }
-
-  if (ra->ra_type == RA_2_STEP) {
-    if (nr_rach_ConfigCommon->ext1 && nr_rach_ConfigCommon->ext1->ra_PrioritizationForAccessIdentity_r16) {
-      LOG_D(MAC, "Missing implementation for Access Identity initialization procedures\n");
-    }
-    // Perform initialization of variables specific to Random Access type as specified in clause 5.1.1a of TS 38.321
-    NR_RACH_ConfigGenericTwoStepRA_r16_t nr_ra_ConfigGenericTwoStepRA_r16 =
-        mac->current_UL_BWP->msgA_ConfigCommon_r16->rach_ConfigCommonTwoStepRA_r16.rach_ConfigGenericTwoStepRA_r16;
-    // Takes the value of 2-Step RA variable
-    if (nr_ra_ConfigGenericTwoStepRA_r16.msgA_PreamblePowerRampingStep_r16) {
-      prach_resources->RA_PREAMBLE_POWER_RAMPING_STEP = *nr_ra_ConfigGenericTwoStepRA_r16.msgA_PreamblePowerRampingStep_r16;
-    } else {
-      // If 2-Step variable does not exist, it takes the value of 4-Step RA variable
-      prach_resources->RA_PREAMBLE_POWER_RAMPING_STEP = nr_rach_ConfigCommon->rach_ConfigGeneric.powerRampingStep;
-    }
-    prach_resources->RA_SCALING_FACTOR_BI = 1;
-    // Takes the value of 2-Step RA variable
-    if (nr_ra_ConfigGenericTwoStepRA_r16.preambleTransMax_r16) {
-      ra->preambleTransMax = (int)*nr_ra_ConfigGenericTwoStepRA_r16.preambleTransMax_r16;
-    } else {
-      // If 2-Step variable does not exist, it takes the value of 4-Step RA variable
-      ra->preambleTransMax = (int)nr_rach_ConfigCommon->rach_ConfigGeneric.preambleTransMax;
-    }
-  }
   return true;
 }
 
@@ -380,8 +418,8 @@ static int nr_get_Po_NOMINAL_PUSCH(NR_UE_MAC_INST_t *mac, NR_PRACH_RESOURCES_t *
 
   receivedTargerPower = preambleReceivedTargetPower +
                         delta_preamble +
-                        (prach_resources->RA_PREAMBLE_POWER_RAMPING_COUNTER - 1) * prach_resources->RA_PREAMBLE_POWER_RAMPING_STEP +
-                        prach_resources->POWER_OFFSET_2STEP_RA;
+                        (prach_resources->preamble_power_ramping_cnt - 1) * prach_resources->preamble_power_ramping_step +
+                        prach_resources->power_offset_2step;
 
   LOG_D(MAC, "ReceivedTargerPower is %d dBm \n", receivedTargerPower);
   return receivedTargerPower;
@@ -566,7 +604,7 @@ void ra_preambles_config(NR_PRACH_RESOURCES_t *prach_resources, NR_UE_MAC_INST_t
       AssertFatal(1 == 0,"Unknown messagePowerOffsetGroupB %lu\n", setup->groupBconfigured->messagePowerOffsetGroupB);
     }
 
-    PLThreshold = prach_resources->RA_PCMAX - rach_ConfigGeneric->preambleReceivedTargetPower - deltaPreamble_Msg3 - messagePowerOffsetGroupB;
+    PLThreshold = prach_resources->Pc_max - rach_ConfigGeneric->preambleReceivedTargetPower - deltaPreamble_Msg3 - messagePowerOffsetGroupB;
 
   }
 
@@ -650,8 +688,8 @@ void nr_get_prach_resources(NR_UE_MAC_INST_t *mac,
     LOG_D(MAC, "[RAPROC] - Selected RA preamble index %d for contention-based random access procedure... \n", ra->ra_PreambleIndex);
   }
 
-  if (prach_resources->RA_PREAMBLE_TRANSMISSION_COUNTER > 1)
-    prach_resources->RA_PREAMBLE_POWER_RAMPING_COUNTER++;
+  if (prach_resources->preamble_tx_counter > 1)
+    prach_resources->preamble_power_ramping_cnt++;
   prach_resources->ra_PREAMBLE_RECEIVED_TARGET_POWER = nr_get_Po_NOMINAL_PUSCH(mac, prach_resources, CC_id);
 }
 
@@ -770,10 +808,8 @@ void nr_ue_manage_ra_procedure(NR_UE_MAC_INST_t *mac, int CC_id, frame_t frame, 
   RA_config_t *ra = &mac->ra;
   NR_RACH_ConfigDedicated_t *rach_ConfigDedicated = ra->rach_ConfigDedicated;
   NR_PRACH_RESOURCES_t *prach_resources = &ra->prach_resources;
-  NR_RACH_ConfigCommon_t *setup = mac->current_UL_BWP->rach_ConfigCommon;
-  NR_RACH_ConfigGeneric_t *rach_ConfigGeneric = &setup->rach_ConfigGeneric;
   if (ra->ra_state == nrRA_UE_IDLE) {
-    bool init_success = init_RA(mac, frame, setup, rach_ConfigGeneric, rach_ConfigDedicated);
+    bool init_success = init_RA(mac, frame);
     if (!init_success)
       return;
   }
@@ -786,9 +822,9 @@ void nr_ue_manage_ra_procedure(NR_UE_MAC_INST_t *mac, int CC_id, frame_t frame, 
       LOG_D(MAC, "[%d.%d] RA is active: RA window count %d, RA backoff count %d\n", frame, nr_slot_tx, ra->RA_window_cnt, ra->RA_backoff_cnt);
 
       if (ra->RA_BI_found){
-        prach_resources->RA_PREAMBLE_BACKOFF = prach_resources->RA_SCALING_FACTOR_BI * ra->RA_backoff_indicator;
+        prach_resources->preamble_backoff = prach_resources->scaling_factor_bi * ra->RA_backoff_indicator;
       } else {
-        prach_resources->RA_PREAMBLE_BACKOFF = 0;
+        prach_resources->preamble_backoff = 0;
       }
 
       if (ra->RA_window_cnt >= 0 && ra->RA_RAPID_found == 1) {
@@ -1011,13 +1047,13 @@ void nr_ra_failed(NR_UE_MAC_INST_t *mac, uint8_t CC_id, NR_PRACH_RESOURCES_t *pr
   ra->ra_PreambleIndex = -1;
   ra->ra_state = nrRA_UE_IDLE;
 
-  prach_resources->RA_PREAMBLE_TRANSMISSION_COUNTER++;
+  prach_resources->preamble_tx_counter++;
 
   // when the Contention Resolution is considered not successful
   // stop timeAlignmentTimer
   nr_timer_stop(&mac->time_alignment_timer);
 
-  if (prach_resources->RA_PREAMBLE_TRANSMISSION_COUNTER == ra->preambleTransMax + 1) {
+  if (prach_resources->preamble_tx_counter == ra->preambleTransMax + 1) {
 
     LOG_D(NR_MAC,
           "[UE %d][%d.%d] Maximum number of RACH attempts (%d) reached, selecting backoff time...\n",
@@ -1026,9 +1062,9 @@ void nr_ra_failed(NR_UE_MAC_INST_t *mac, uint8_t CC_id, NR_PRACH_RESOURCES_t *pr
           slot,
           ra->preambleTransMax);
 
-    ra->RA_backoff_cnt = rand_r(&seed) % (prach_resources->RA_PREAMBLE_BACKOFF + 1);
-    prach_resources->RA_PREAMBLE_TRANSMISSION_COUNTER = 1;
-    prach_resources->RA_PREAMBLE_POWER_RAMPING_STEP += 2; // 2 dB increment
+    ra->RA_backoff_cnt = rand_r(&seed) % (prach_resources->preamble_backoff + 1);
+    prach_resources->preamble_tx_counter = 1;
+    prach_resources->preamble_power_ramping_step += 2; // 2 dB increment
     prach_resources->ra_PREAMBLE_RECEIVED_TARGET_POWER = nr_get_Po_NOMINAL_PUSCH(mac, prach_resources, CC_id);
 
   } else {

@@ -45,6 +45,9 @@
    \param mac      MAC pointer */
 void nr_ue_init_mac(NR_UE_MAC_INST_t *mac);
 
+NR_UE_DL_BWP_t *get_dl_bwp_structure(NR_UE_MAC_INST_t *mac, int bwp_id, bool setup);
+NR_UE_UL_BWP_t *get_ul_bwp_structure(NR_UE_MAC_INST_t *mac, int bwp_id, bool setup);
+
 void send_srb0_rrc(int ue_id, const uint8_t *sdu, sdu_size_t sdu_len, void *data);
 void update_mac_timers(NR_UE_MAC_INST_t *mac);
 NR_LC_SCHEDULING_INFO *get_scheduling_info_from_lcid(NR_UE_MAC_INST_t *mac, NR_LogicalChannelIdentity_t lcid);
@@ -264,6 +267,8 @@ float nr_get_Pcmax(int p_Max,
 float nr_get_Pcmin(int bandwidth_index);
 
 int get_sum_delta_pucch(NR_UE_MAC_INST_t *mac, int slot, frame_t frame);
+
+bool init_RA(NR_UE_MAC_INST_t *mac, int frame);
 
 /* Random Access */
 

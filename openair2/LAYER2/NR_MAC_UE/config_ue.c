@@ -1426,7 +1426,7 @@ static void setup_srsconfig(NR_UE_UL_BWP_t *bwp, NR_SRS_Config_t *source, NR_SRS
   }
 }
 
-static NR_UE_DL_BWP_t *get_dl_bwp_structure(NR_UE_MAC_INST_t *mac, int bwp_id, bool setup)
+NR_UE_DL_BWP_t *get_dl_bwp_structure(NR_UE_MAC_INST_t *mac, int bwp_id, bool setup)
 {
   NR_UE_DL_BWP_t *bwp = NULL;
   for (int i = 0; i < mac->dl_BWPs.count; i++) {
@@ -1450,7 +1450,7 @@ static NR_UE_DL_BWP_t *get_dl_bwp_structure(NR_UE_MAC_INST_t *mac, int bwp_id, b
   return bwp;
 }
 
-static NR_UE_UL_BWP_t *get_ul_bwp_structure(NR_UE_MAC_INST_t *mac, int bwp_id, bool setup)
+NR_UE_UL_BWP_t *get_ul_bwp_structure(NR_UE_MAC_INST_t *mac, int bwp_id, bool setup)
 {
   NR_UE_UL_BWP_t *bwp = NULL;
   for (int i = 0; i < mac->ul_BWPs.count; i++) {

@@ -372,8 +372,8 @@ int16_t get_pucch_tx_power_ue(NR_UE_MAC_INST_t *mac,
     if (mac->pucch_power_control_initialized == false) {
       // Initialize power control state
       // Assuming only sending on PCell
-      NR_PRACH_RESOURCES_t* prach_resources = &mac->ra.prach_resources;
-      float DELTA_P_rampup_requested = (prach_resources->RA_PREAMBLE_POWER_RAMPING_COUNTER - 1) * prach_resources->RA_PREAMBLE_POWER_RAMPING_STEP;
+      NR_PRACH_RESOURCES_t *prach_res = &mac->ra.prach_resources;
+      float DELTA_P_rampup_requested = (prach_res->preamble_power_ramping_cnt - 1) * prach_res->preamble_power_ramping_step;
       float DELTA_P_rampup = P_CMAX - (P_O_PUCCH + pathloss + delta_F_PUCCH + DELTA_TF + sum_delta_pucch);
       DELTA_P_rampup = max(min(0, DELTA_P_rampup), DELTA_P_rampup_requested);
       mac->G_b_f_c = DELTA_P_rampup + sum_delta_pucch;
@@ -572,8 +572,8 @@ int get_pusch_tx_power_ue(NR_UE_MAC_INST_t *mac,
     f_b_f_c = delta_pusch;
   } else {
     if (!mac->pusch_power_control_initialized && is_rar_tx_retx) {
-      NR_PRACH_RESOURCES_t* prach_resources = &mac->ra.prach_resources;
-      float DELTA_P_rampup_requested = (prach_resources->RA_PREAMBLE_POWER_RAMPING_COUNTER - 1) * prach_resources->RA_PREAMBLE_POWER_RAMPING_STEP;
+      NR_PRACH_RESOURCES_t *prach_res = &mac->ra.prach_resources;
+      float DELTA_P_rampup_requested = (prach_res->preamble_power_ramping_cnt - 1) * prach_res->preamble_power_ramping_step;
       float DELTA_P_rampup = P_CMAX - (P_O_PUSCH + M_pusch_component + alpha * pathloss + DELTA_TF + delta_pusch);
       DELTA_P_rampup = min(DELTA_P_rampup_requested, max(0, DELTA_P_rampup));
       mac->f_b_f_c = DELTA_P_rampup + delta_pusch;
@@ -654,9 +654,8 @@ int get_srs_tx_power_ue(NR_UE_MAC_INST_t *mac,
 
     if (!is_tpc_accumulation_provided && (!is_configured_for_pusch_on_current_bwp || separate_pc_adjustment_state)) {
       if (!current_UL_BWP->srs_power_control_initialized) {
-        NR_PRACH_RESOURCES_t *prach_resources = &mac->ra.prach_resources;
-        float DELTA_P_rampup_requested =
-            (prach_resources->RA_PREAMBLE_POWER_RAMPING_COUNTER - 1) * prach_resources->RA_PREAMBLE_POWER_RAMPING_STEP;
+        NR_PRACH_RESOURCES_t *prach = &mac->ra.prach_resources;
+        float DELTA_P_rampup_requested = (prach->preamble_power_ramping_cnt - 1) * prach->preamble_power_ramping_step;
         float DELTA_P_rampup = P_CMAX - (P_0_SRS + m_srs_component + alpha * pathloss);
         DELTA_P_rampup = min(DELTA_P_rampup_requested, max(0, DELTA_P_rampup));
         current_UL_BWP->srs_power_control_initialized = true;
