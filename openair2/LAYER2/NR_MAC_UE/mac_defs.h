@@ -294,7 +294,13 @@ typedef struct {
 } NR_PRACH_RESOURCES_t;
 
 typedef struct {
+  bool active;
+  uint32_t preamble_index;
+  uint32_t ssb_index;
+  uint32_t prach_mask;
+} NR_pdcch_order_config_t;
 
+typedef struct {
   // pointer to RACH config dedicated
   NR_RACH_ConfigDedicated_t *rach_ConfigDedicated;
   /// state of RA procedure
@@ -362,8 +368,7 @@ typedef struct {
   /// Transmitted UE Contention Resolution Identifier
   uint8_t cont_res_id[6];
 
-  /// BeamfailurerecoveryConfig
-  NR_BeamFailureRecoveryConfig_t RA_BeamFailureRecoveryConfig;
+  NR_pdcch_order_config_t pdcch_order;
 
   NR_PRACH_RESOURCES_t prach_resources;
 } RA_config_t;

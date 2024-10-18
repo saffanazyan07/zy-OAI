@@ -208,8 +208,6 @@ bool init_RA(NR_UE_MAC_INST_t *mac, int frame)
                                          n_prbs,
                                          start_prb);
 
-  // TODO if the Random Access procedure is initiated by PDCCH order
-  // and if the ra-PreambleIndex explicitly provided by PDCCH is not 0b000000
 
   // TODO if the Random Access procedure was initiated for SI request
   // and the Random Access Resources for SI request have been explicitly provided by RRC
@@ -220,10 +218,14 @@ bool init_RA(NR_UE_MAC_INST_t *mac, int frame)
 
   NR_RACH_ConfigCommonTwoStepRA_r16_t *twostep_conf = NULL;
   NR_RACH_ConfigDedicated_t *rach_Dedicated = ra->rach_ConfigDedicated;
-  if (rach_Dedicated && rach_Dedicated->cfra) {
-    // if the Random Access procedure was initiated for reconfiguration with sync and
-    // if the contention-free Random Access Resources for 4-step RA type have been explicitly provided
-    // in rach-ConfigDedicated for the BWP selected for Random Access procedure
+
+  // if the Random Access procedure is initiated by PDCCH order
+  // and if the ra-PreambleIndex explicitly provided by PDCCH is not 0b000000
+  bool pdcch_order = (ra->pdcch_order.active && ra->pdcch_order.preamble_index != 0xb000000) ? true : false;
+  // or if the Random Access procedure was initiated for reconfiguration with sync and
+  // if the contention-free Random Access Resources for 4-step RA type have been explicitly provided
+  // in rach-ConfigDedicated for the BWP selected for Random Access procedure
+  if ((rach_Dedicated && rach_Dedicated->cfra) || pdcch_order) {
     LOG_I(MAC, "Initialization of 4-Step CFRA procedure\n");
     ra->ra_type = RA_4_STEP;
     ra->cfra = true;
@@ -1072,12 +1074,19 @@ void nr_ra_failed(NR_UE_MAC_INST_t *mac, uint8_t CC_id, NR_PRACH_RESOURCES_t *pr
   }
 }
 
-void trigger_MAC_UE_RA(NR_UE_MAC_INST_t *mac)
+void trigger_MAC_UE_RA(NR_UE_MAC_INST_t *mac, dci_pdu_rel15_t *pdcch_order)
 {
   LOG_W(NR_MAC, "Triggering new RA procedure for UE with RNTI %x\n", mac->crnti);
   mac->state = UE_SYNC;
   reset_ra(mac, false);
-  mac->ra.msg3_C_RNTI = true;
+  RA_config_t *ra = &mac->ra;
+  ra->msg3_C_RNTI = true;
+  if (pdcch_order) {
+    ra->pdcch_order.active = true;
+    ra->pdcch_order.preamble_index = pdcch_order->ra_preamble_index;
+    ra->pdcch_order.ssb_index = pdcch_order->ss_pbch_index;
+    ra->pdcch_order.prach_mask = pdcch_order->prach_mask_index;
+  }
 }
 
 void prepare_msg4_msgb_feedback(NR_UE_MAC_INST_t *mac, int pid, int ack_nack)

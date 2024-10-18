@@ -2979,7 +2979,7 @@ void nr_ue_send_sdu(NR_UE_MAC_INST_t *mac, nr_downlink_indication_t *dl_info, in
         nr_timer_start(mac->data_inactivity_timer);
       // DL data arrival during RRC_CONNECTED when UL synchronisation status is "non-synchronised"
       if (!nr_timer_is_active(&mac->time_alignment_timer) && mac->state == UE_CONNECTED && !get_softmodem_params()->phy_test) {
-        trigger_MAC_UE_RA(mac);
+        trigger_MAC_UE_RA(mac, NULL);
         break;
       }
       nr_ue_process_mac_pdu(mac, dl_info, pdu_id);
@@ -3041,7 +3041,11 @@ static void extract_10_si_rnti(dci_pdu_rel15_t *dci_pdu_rel15, const uint8_t *dc
   EXTRACT_DCI_ITEM(dci_pdu_rel15->system_info_indicator, 1);
 }
 
-static void extract_10_c_rnti(dci_pdu_rel15_t *dci_pdu_rel15, const uint8_t *dci_pdu, int pos, const int N_RB)
+static bool extract_10_c_rnti(NR_UE_MAC_INST_t *mac,
+                              dci_pdu_rel15_t *dci_pdu_rel15,
+                              const uint8_t *dci_pdu,
+                              int pos,
+                              const int N_RB)
 {
   LOG_D(NR_MAC_DCI, "Received dci 1_0 C rnti\n");
 
@@ -3064,29 +3068,31 @@ static void extract_10_c_rnti(dci_pdu_rel15_t *dci_pdu_rel15, const uint8_t *dci
     EXTRACT_DCI_ITEM(dci_pdu_rel15->ss_pbch_index, 6);
     //  prach_mask_index  4 bits
     EXTRACT_DCI_ITEM(dci_pdu_rel15->prach_mask_index, 4);
+    trigger_MAC_UE_RA(mac, dci_pdu_rel15);
+    return true;
   } // end if
-  else {
-    // Time domain assignment 4bit
-    EXTRACT_DCI_ITEM(dci_pdu_rel15->time_domain_assignment.val, 4);
-    // VRB to PRB mapping  1bit
-    EXTRACT_DCI_ITEM(dci_pdu_rel15->vrb_to_prb_mapping.val, 1);
-    // MCS 5bit  //bit over 32, so dci_pdu ++
-    EXTRACT_DCI_ITEM(dci_pdu_rel15->mcs, 5);
-    // New data indicator 1bit
-    EXTRACT_DCI_ITEM(dci_pdu_rel15->ndi, 1);
-    // Redundancy version  2bit
-    EXTRACT_DCI_ITEM(dci_pdu_rel15->rv, 2);
-    // HARQ process number  4/5 bit
-    EXTRACT_DCI_ITEM(dci_pdu_rel15->harq_pid.val, dci_pdu_rel15->harq_pid.nbits);
-    // Downlink assignment index  2bit
-    EXTRACT_DCI_ITEM(dci_pdu_rel15->dai[0].val, 2);
-    // TPC command for scheduled PUCCH  2bit
-    EXTRACT_DCI_ITEM(dci_pdu_rel15->tpc, 2);
-    // PUCCH resource indicator  3bit
-    EXTRACT_DCI_ITEM(dci_pdu_rel15->pucch_resource_indicator, 3);
-    // PDSCH-to-HARQ_feedback timing indicator 3bit
-    EXTRACT_DCI_ITEM(dci_pdu_rel15->pdsch_to_harq_feedback_timing_indicator.val, 3);
-  } // end else
+
+  // Time domain assignment 4bit
+  EXTRACT_DCI_ITEM(dci_pdu_rel15->time_domain_assignment.val, 4);
+  // VRB to PRB mapping  1bit
+  EXTRACT_DCI_ITEM(dci_pdu_rel15->vrb_to_prb_mapping.val, 1);
+  // MCS 5bit  //bit over 32, so dci_pdu ++
+  EXTRACT_DCI_ITEM(dci_pdu_rel15->mcs, 5);
+  // New data indicator 1bit
+  EXTRACT_DCI_ITEM(dci_pdu_rel15->ndi, 1);
+  // Redundancy version  2bit
+  EXTRACT_DCI_ITEM(dci_pdu_rel15->rv, 2);
+  // HARQ process number  4/5 bit
+  EXTRACT_DCI_ITEM(dci_pdu_rel15->harq_pid.val, dci_pdu_rel15->harq_pid.nbits);
+  // Downlink assignment index  2bit
+  EXTRACT_DCI_ITEM(dci_pdu_rel15->dai[0].val, 2);
+  // TPC command for scheduled PUCCH  2bit
+  EXTRACT_DCI_ITEM(dci_pdu_rel15->tpc, 2);
+  // PUCCH resource indicator  3bit
+  EXTRACT_DCI_ITEM(dci_pdu_rel15->pucch_resource_indicator, 3);
+  // PDSCH-to-HARQ_feedback timing indicator 3bit
+  EXTRACT_DCI_ITEM(dci_pdu_rel15->pdsch_to_harq_feedback_timing_indicator.val, 3);
+  return false;
 }
 
 static void extract_00_c_rnti(dci_pdu_rel15_t *dci_pdu_rel15, const uint8_t *dci_pdu, int pos)
@@ -3347,7 +3353,9 @@ static nr_dci_format_t nr_extract_dci_00_10(NR_UE_MAC_INST_t *mac,
         int n_RB = get_nrb_for_dci(mac, format, ss_type);
         if (n_RB == 0)
           return NR_DCI_NONE;
-        extract_10_c_rnti(dci_pdu_rel15, dci_pdu, pos, n_RB);
+        bool pdcch_order = extract_10_c_rnti(mac, dci_pdu_rel15, dci_pdu, pos, n_RB);
+        if (pdcch_order)
+          return NR_DCI_NONE;
       }
       else {
         format = NR_UL_DCI_FORMAT_0_0;

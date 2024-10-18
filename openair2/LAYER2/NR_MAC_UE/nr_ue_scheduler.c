@@ -1404,7 +1404,7 @@ void schedule_RA_after_SR_failure(NR_UE_MAC_INST_t *mac)
 {
   if (get_softmodem_params()->phy_test)
     return; // cannot trigger RA in phytest mode
-  trigger_MAC_UE_RA(mac);
+  trigger_MAC_UE_RA(mac, NULL);
   // release PUCCH for all Serving Cells;
   // release SRS for all Serving Cells;
   release_PUCCH_SRS(mac);
@@ -1613,7 +1613,7 @@ void nr_ue_ul_scheduler(NR_UE_MAC_INST_t *mac, nr_uplink_indication_t *ul_info)
             && (mac->state == UE_CONNECTED || (ra->ra_state == nrRA_WAIT_RAR && ra->cfra))) {
           if (!nr_timer_is_active(&mac->time_alignment_timer) && mac->state == UE_CONNECTED && !get_softmodem_params()->phy_test) {
             // UL data arrival during RRC_CONNECTED when UL synchronisation status is "non-synchronised"
-            trigger_MAC_UE_RA(mac);
+            trigger_MAC_UE_RA(mac, NULL);
             return;
           }
           // Getting IP traffic to be transmitted
