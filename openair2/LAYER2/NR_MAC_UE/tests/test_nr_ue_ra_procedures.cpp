@@ -32,10 +32,6 @@ softmodem_params_t *get_softmodem_params(void)
 void nr_mac_rrc_ra_ind(const module_id_t mod_id, int frame, bool success)
 {
 }
-int nr_write_ce_msg3_pdu(uint8_t *mac_ce, NR_UE_MAC_INST_t *mac, rnti_t crnti, uint8_t *mac_ce_end)
-{
-  return 0;
-}
 tbs_size_t mac_rlc_data_req(const module_id_t module_idP,
                             const rnti_t rntiP,
                             const eNB_index_t eNB_index,

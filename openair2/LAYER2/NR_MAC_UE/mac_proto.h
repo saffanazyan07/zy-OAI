@@ -180,8 +180,6 @@ typedef struct {
   enum { b_none, b_long, b_short, b_short_trunc, b_long_trunc } type_bsr;
 } type_bsr_t;
 
-int nr_write_ce_msg3_pdu(uint8_t *mac_ce, NR_UE_MAC_INST_t *mac, rnti_t crnti, uint8_t *mac_ce_end);
-
 int nr_write_ce_ulsch_pdu(uint8_t *mac_ce,
                           NR_UE_MAC_INST_t *mac,
                           NR_SINGLE_ENTRY_PHR_MAC_CE *power_headroom,

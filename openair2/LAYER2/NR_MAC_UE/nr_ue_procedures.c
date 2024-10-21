@@ -3791,21 +3791,6 @@ void nr_ue_process_mac_pdu(NR_UE_MAC_INST_t *mac, nr_downlink_indication_t *dl_i
   }
 }
 
-int nr_write_ce_msg3_pdu(uint8_t *mac_ce, NR_UE_MAC_INST_t *mac, rnti_t crnti, uint8_t *mac_ce_end)
-{
-  uint8_t *pdu = mac_ce;
-  if (IS_SA_MODE(get_softmodem_params()) && mac->ra.ra_state != nrRA_SUCCEEDED) {
-    LOG_D(NR_MAC, "Generating C-RNTI MAC CE with C-RNTI %x\n", crnti);
-    *(NR_MAC_SUBHEADER_FIXED *)mac_ce = (NR_MAC_SUBHEADER_FIXED){.R = 0, .LCID = UL_SCH_LCID_C_RNTI};
-    mac_ce += sizeof(NR_MAC_SUBHEADER_FIXED);
-    // C-RNTI MAC CE (2 octets)
-    memcpy(mac_ce, &crnti, sizeof(crnti));
-    // update pointer and length
-    mac_ce += sizeof(crnti);
-  }
-  return mac_ce - pdu;
-}
-
 /**
  * Function:      generating MAC CEs (MAC CE and subheader) for the ULSCH PDU
  * Parameters:

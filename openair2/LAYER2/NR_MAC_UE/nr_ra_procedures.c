@@ -144,11 +144,8 @@ bool init_RA(NR_UE_MAC_INST_t *mac, int frame)
       ra->Msg3_size = size_sdu + sizeof(NR_MAC_SUBHEADER_SHORT) + sizeof(NR_MAC_SUBHEADER_SHORT);
     }
 
-  } else if (!IS_SA_MODE(get_softmodem_params())) {
-    uint8_t temp_pdu[16] = {0};
-    size_sdu = nr_write_ce_msg3_pdu(temp_pdu, mac, mac->crnti, temp_pdu + sizeof(temp_pdu));
-    ra->Msg3_size = size_sdu;
-  }
+  } else if (!IS_SA_MODE(get_softmodem_params()))
+    ra->Msg3_size = sizeof(uint16_t) + sizeof(NR_MAC_SUBHEADER_FIXED);
 
   // Random acces procedure initialization
   mac->state = UE_PERFORMING_RA;
