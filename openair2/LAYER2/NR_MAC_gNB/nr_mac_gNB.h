@@ -124,6 +124,15 @@ typedef enum {
   nrRA_WAIT_Msg4_MsgB_ACK,
 } RA_gNB_state_t;
 
+typedef enum {
+  PDCCH_AGG_LEVEL1 = 0,
+  PDCCH_AGG_LEVEL2,
+  PDCCH_AGG_LEVEL4,
+  PDCCH_AGG_LEVEL8,
+  PDCCH_AGG_LEVEL16,
+  NUM_PDCCH_AGG_LEVELS
+} Pdcch_Aggregation_Level_t;
+
 static const char *const nrra_text[] =
     {"IDLE", "Msg2", "WAIT_MsgA_PUSCH", "WAIT_Msg3", "Msg3_retransmission", "Msg3_dcch_dtch", "Msg4", "MsgB", "WAIT_Msg4_ACK"};
 
@@ -675,6 +684,10 @@ typedef struct {
 
   /// per-LC configuration
   seq_arr_t lc_config;
+
+  // pdcch closed loop adjust for PDCCH aggregation level, range <0, 1>
+  // 0 - good channel, 1 - bad channel
+  float pdcch_cl_adjust;
 } NR_UE_sched_ctrl_t;
 
 typedef struct {

@@ -38,6 +38,28 @@ The actual scheduler implementation can be found in functions `pf_dl()` and
 [`gNB_scheduler_ulsch.c`](../../openair2/LAYER2/NR_MAC_gNB/gNB_scheduler_ulsch.c)
 (for UL), respectively.
 
+## PDDCH aggregation level
+
+PDCCH aggregation level is selected using closed loop controller, where DL HARQ
+feedback is the controller feedback signal. It is used to increment `pdcch_cl_adjust`
+variable if no feedback is detected and decrement the variable when feedback is detected.
+`pdcch_cl_adjust` is later mapped PDCCH aggregation level range.
+
+The value of `pdcch_cl_adjust` is clamped to range <0,1>, the increment value is 0.05 while
+the decrement value is 0.01.
+
+### Examples:
+#### Example 1:
+Say we have 90% PDCCH success rate at aggregation level 1, `pdcch_cl_adjust` will stay at 0
+for most of the time. 2 consecutive PDCCH failures will not result in increasing the aggregation
+level (because (0.05 + 0.05) * 4 = 0.4 which is closer to 0 than to 1). If PDCCH fails 3 times
+in a row the aggregation level will change to 2 and hopefully back to 1 once more PDDCH successes
+happen.
+
+### Example 2
+Say we have 0% PDCCH success rate (radio link failure scenario) but `pdcch_cl_adjust` is 0 indicating
+perfect PDCCH channel. it would take ~18 PDCCH failures to reach maximum aggregation level.
+
 # Periodic output and interpretation
 
 The scheduler periodically outputs statistics that can help you judge the radio

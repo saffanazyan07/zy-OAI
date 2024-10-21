@@ -99,7 +99,7 @@ static void nr_generate_dci(PHY_VARS_gNB *gNB,
     if (dci_pdu->RNTI != 0xFFFF)
       LOG_D(NR_PHY_DCI,
             "DL_DCI : rb_offset %d, nb_rb %d, DMRS length per symbol %d\t DCI encoded length %d (precoder_granularity %d, "
-            "reg_mapping %d), Scrambling_Id %d, ScramblingRNTI %x, PayloadSizeBits %d\n",
+            "reg_mapping %d), Scrambling_Id %d, ScramblingRNTI %x, PayloadSizeBits %d AggregationLevel %d\n",
             rb_offset,
             n_rb,
             dmrs_length,
@@ -108,7 +108,8 @@ static void nr_generate_dci(PHY_VARS_gNB *gNB,
             pdcch_pdu_rel15->CceRegMappingType,
             dci_pdu->ScramblingId,
             dci_pdu->ScramblingRNTI,
-            dci_pdu->PayloadSizeBits);
+            dci_pdu->PayloadSizeBits,
+            dci_pdu->AggregationLevel);
     dmrs_length += rb_offset*6; // To accommodate more DMRS symbols in case of rb offset
       
     /// DMRS QPSK modulation
