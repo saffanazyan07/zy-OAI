@@ -316,18 +316,6 @@ void nr_get_RA_window(NR_UE_MAC_INST_t *mac);
 @returns indication to generate PRACH to phy */
 void nr_ue_manage_ra_procedure(NR_UE_MAC_INST_t *mac, int CC_id, frame_t frame, uint8_t gNB_id, int nr_slot_tx);
 
-/* \brief Function implementing the routine for the selection of Random Access resources (5.1.2 TS 38.321).
-@param mac pointer to MAC instance
-@param CC_id Component Carrier Index
-@param gNB_index gNB index
-@param rach_ConfigDedicated
-@returns void */
-void nr_get_prach_resources(NR_UE_MAC_INST_t *mac,
-                            int CC_id,
-                            uint8_t gNB_id,
-                            NR_PRACH_RESOURCES_t *prach_resources,
-                            NR_RACH_ConfigDedicated_t * rach_ConfigDedicated);
-
 void prepare_msg4_msgb_feedback(NR_UE_MAC_INST_t *mac, int pid, int ack_nack);
 void configure_initial_pucch(PUCCH_sched_t *pucch, int res_ind);
 void release_PUCCH_SRS(NR_UE_MAC_INST_t *mac);

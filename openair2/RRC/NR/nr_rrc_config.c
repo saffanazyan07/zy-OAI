@@ -3650,11 +3650,7 @@ NR_ReconfigurationWithSync_t *get_reconfiguration_with_sync(rnti_t rnti, uid_t u
   uplink->ra_Prioritization = NULL;
   uplink->cfra = calloc(1, sizeof(struct NR_CFRA));
   uplink->cfra->ext1 = NULL;
-  uplink->cfra->occasions = calloc(1, sizeof(struct NR_CFRA__occasions));
-  memcpy(&uplink->cfra->occasions->rach_ConfigGeneric,
-         &scc->uplinkConfigCommon->initialUplinkBWP->rach_ConfigCommon->choice.setup->rach_ConfigGeneric,
-         sizeof(NR_RACH_ConfigGeneric_t));
-  asn1cCallocOne(uplink->cfra->occasions->ssb_perRACH_Occasion, NR_CFRA__occasions__ssb_perRACH_Occasion_one);
+  uplink->cfra->occasions = NULL;
   uplink->cfra->resources.present = NR_CFRA__resources_PR_ssb;
   uplink->cfra->resources.choice.ssb = calloc(1, sizeof(struct NR_CFRA__resources__ssb));
   uplink->cfra->resources.choice.ssb->ra_ssb_OccasionMaskIndex = 0;

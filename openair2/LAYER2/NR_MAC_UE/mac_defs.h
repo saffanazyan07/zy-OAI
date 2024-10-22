@@ -334,6 +334,8 @@ typedef struct {
   uint8_t ssb_nb_in_ro;
   int zeroCorrelationZoneConfig;
   int restricted_set_config;
+  // selected SSB for RACH
+  int ra_ssb;
   /// Random-access window counter
   int16_t RA_window_cnt;
   /// Flag to monitor if matching RAPID was received in RAR
@@ -342,25 +344,21 @@ typedef struct {
   uint8_t RA_BI_found;
   /// Random-access backoff counter
   int16_t RA_backoff_indicator;
-  /// Flag to indicate whether preambles Group A was used
-  uint8_t RA_usedGroupA;
+  /// Flag to indicate whether preambles Group A is selected
+  bool RA_GroupA;
   /// RA backoff counter
   int16_t RA_backoff_cnt;
   /// RA max number of preamble transmissions
   int preambleTransMax;
-  /// Nb of preambles per SSB
-  long cb_preambles_per_ssb;
-  int starting_preamble_nb;
-
   /// Received TPC command (in dB) from RAR
   int8_t Msg3_TPC;
-  /// Flag to indicate whether it is the first Msg3 to be transmitted
-  bool first_Msg3;
   /// RA Msg3 size in bytes
   uint8_t Msg3_size;
   /// Msg3 buffer
   uint8_t *Msg3_buffer;
-
+  // initial Random Access Preamble power
+  int preambleRxTargetPower;
+  int deltaPreamble;
   bool msg3_C_RNTI;
 
   /// Random-access Contention Resolution Timer

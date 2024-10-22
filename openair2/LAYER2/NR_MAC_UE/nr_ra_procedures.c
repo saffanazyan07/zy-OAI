@@ -42,7 +42,6 @@
 #include "openair2/LAYER2/RLC/rlc.h"
 #include "openair2/LAYER2/NR_MAC_UE/mac_defs.h"
 
-
 int16_t get_prach_tx_power(NR_UE_MAC_INST_t *mac)
 {
   RA_config_t *ra = &mac->ra;
@@ -92,10 +91,337 @@ static void set_preambleTransMax(RA_config_t *ra, long preambleTransMax)
   }
 }
 
+static int get_Msg3SizeGroupA(long ra_Msg3SizeGroupA)
+{
+  int bits = 0;
+  switch (ra_Msg3SizeGroupA) {
+    case NR_RACH_ConfigCommon__groupBconfigured__ra_Msg3SizeGroupA_b56:
+      bits = 56;
+      break;
+    case NR_RACH_ConfigCommon__groupBconfigured__ra_Msg3SizeGroupA_b144:
+      bits = 144;
+      break;
+    case NR_RACH_ConfigCommon__groupBconfigured__ra_Msg3SizeGroupA_b208:
+      bits = 208;
+      break;
+    case NR_RACH_ConfigCommon__groupBconfigured__ra_Msg3SizeGroupA_b256:
+      bits = 256;
+      break;
+    case NR_RACH_ConfigCommon__groupBconfigured__ra_Msg3SizeGroupA_b282:
+      bits = 282;
+      break;
+    case NR_RACH_ConfigCommon__groupBconfigured__ra_Msg3SizeGroupA_b480:
+      bits = 480;
+      break;
+    case NR_RACH_ConfigCommon__groupBconfigured__ra_Msg3SizeGroupA_b640:
+      bits = 640;
+      break;
+    case NR_RACH_ConfigCommon__groupBconfigured__ra_Msg3SizeGroupA_b800:
+      bits = 800;
+      break;
+    case NR_RACH_ConfigCommon__groupBconfigured__ra_Msg3SizeGroupA_b1000:
+      bits = 1000;
+      break;
+    case NR_RACH_ConfigCommon__groupBconfigured__ra_Msg3SizeGroupA_b72:
+      bits = 72;
+      break;
+    default:
+      AssertFatal(false, "Unknown ra-Msg3SizeGroupA %lu\n", ra_Msg3SizeGroupA);
+  }
+  return bits / 8; // returning bytes
+}
+
+static int get_messagePowerOffsetGroupB(long messagePowerOffsetGroupB)
+{
+  int pow_offset = 0;
+  switch (messagePowerOffsetGroupB) {
+    case NR_RACH_ConfigCommon__groupBconfigured__messagePowerOffsetGroupB_minusinfinity:
+      pow_offset = INT_MIN;
+      break;
+    case NR_RACH_ConfigCommon__groupBconfigured__messagePowerOffsetGroupB_dB0:
+      pow_offset = 0;
+      break;
+    case NR_RACH_ConfigCommon__groupBconfigured__messagePowerOffsetGroupB_dB5:
+      pow_offset = 5;
+      break;
+    case NR_RACH_ConfigCommon__groupBconfigured__messagePowerOffsetGroupB_dB8:
+      pow_offset = 8;
+      break;
+    case NR_RACH_ConfigCommon__groupBconfigured__messagePowerOffsetGroupB_dB10:
+      pow_offset = 10;
+      break;
+    case NR_RACH_ConfigCommon__groupBconfigured__messagePowerOffsetGroupB_dB12:
+      pow_offset = 12;
+      break;
+    case NR_RACH_ConfigCommon__groupBconfigured__messagePowerOffsetGroupB_dB15:
+      pow_offset = 15;
+      break;
+    case NR_RACH_ConfigCommon__groupBconfigured__messagePowerOffsetGroupB_dB18:
+      pow_offset = 18;
+      break;
+    default:
+      AssertFatal(false, "Unknown messagePowerOffsetGroupB %lu\n", messagePowerOffsetGroupB);
+  }
+  return pow_offset;
+}
+
+static void select_preamble_group(NR_UE_MAC_INST_t *mac)
+{
+  RA_config_t *ra = &mac->ra;
+  // TODO if the RA_TYPE is switched from 2-stepRA to 4-stepRA
+
+  if (!ra->Msg3_buffer) { // if Msg3 buffer is empty
+    NR_RACH_ConfigCommon_t *nr_rach_ConfigCommon = mac->current_UL_BWP->rach_ConfigCommon;
+    if (nr_rach_ConfigCommon && nr_rach_ConfigCommon->groupBconfigured) { // if Random Access Preambles group B is configured
+      struct NR_RACH_ConfigCommon__groupBconfigured *groupB = nr_rach_ConfigCommon->groupBconfigured;
+      // if the potential Msg3 size (UL data available for transmission plus MAC subheader(s) and,
+      // where required, MAC CEs) is greater than ra-Msg3SizeGroupA
+      // if the pathloss is less than PCMAX (of the Serving Cell performing the Random Access Procedure)
+      // – preambleReceivedTargetPower – msg3-DeltaPreamble – messagePowerOffsetGroupB
+      int groupB_pow_offset = get_messagePowerOffsetGroupB(groupB->messagePowerOffsetGroupB);
+      int PLThreshold = ra->prach_resources.Pc_max - ra->preambleRxTargetPower - ra->deltaPreamble - groupB_pow_offset;
+      int pathloss = compute_nr_SSB_PL(mac, mac->ssb_measurements.ssb_rsrp_dBm);
+      // TODO if the Random Access procedure was initiated for the CCCH logical channel and the CCCH SDU size
+      // plus MAC subheader is greater than ra-Msg3SizeGroupA
+      if (ra->Msg3_size > get_Msg3SizeGroupA(groupB->ra_Msg3SizeGroupA) && pathloss < PLThreshold)
+        ra->RA_GroupA = false;
+      else
+        ra->RA_GroupA = true;
+    } else
+      ra->RA_GroupA = true;
+  }
+  // else if Msg3 is being retransmitted, we keep what used in first transmission of Msg3
+}
+
+typedef struct{
+  float ssb_per_ro;
+  int preambles_per_ssb;
+} ssb_ro_preambles_t;
+
+static ssb_ro_preambles_t get_ssb_ro_preambles_4step(struct NR_RACH_ConfigCommon__ssb_perRACH_OccasionAndCB_PreamblesPerSSB *config)
+{
+  ssb_ro_preambles_t ret = {0};
+  switch (config->present) {
+    case NR_RACH_ConfigCommon__ssb_perRACH_OccasionAndCB_PreamblesPerSSB_PR_oneEighth:
+      ret.ssb_per_ro = 1 / 8;
+      ret.preambles_per_ssb = (config->choice.oneEighth + 1) << 2;
+      break;
+    case NR_RACH_ConfigCommon__ssb_perRACH_OccasionAndCB_PreamblesPerSSB_PR_oneFourth:
+      ret.ssb_per_ro = 1 / 4;
+      ret.preambles_per_ssb = (config->choice.oneFourth + 1) << 2;
+      break;
+    case NR_RACH_ConfigCommon__ssb_perRACH_OccasionAndCB_PreamblesPerSSB_PR_oneHalf:
+      ret.ssb_per_ro = 1 / 2;
+      ret.preambles_per_ssb = (config->choice.oneHalf + 1) << 2;
+      break;
+    case NR_RACH_ConfigCommon__ssb_perRACH_OccasionAndCB_PreamblesPerSSB_PR_one:
+      ret.ssb_per_ro = 1;
+      ret.preambles_per_ssb = (config->choice.one + 1) << 2;
+      break;
+    case NR_RACH_ConfigCommon__ssb_perRACH_OccasionAndCB_PreamblesPerSSB_PR_two:
+      ret.ssb_per_ro = 2;
+      ret.preambles_per_ssb = (config->choice.two + 1) << 2;
+      break;
+    case NR_RACH_ConfigCommon__ssb_perRACH_OccasionAndCB_PreamblesPerSSB_PR_four:
+      ret.ssb_per_ro = 4;
+      ret.preambles_per_ssb = config->choice.four;
+      break;
+    case NR_RACH_ConfigCommon__ssb_perRACH_OccasionAndCB_PreamblesPerSSB_PR_eight:
+      ret.ssb_per_ro = 8;
+      ret.preambles_per_ssb = config->choice.eight;
+      break;
+    case NR_RACH_ConfigCommon__ssb_perRACH_OccasionAndCB_PreamblesPerSSB_PR_sixteen:
+      ret.ssb_per_ro = 16;
+      ret.preambles_per_ssb = config->choice.sixteen;
+      break;
+    default:
+      AssertFatal(false, "Invalid ssb_perRACH_OccasionAndCB_PreamblesPerSSB\n");
+  }
+  return ret;
+}
+
+static ssb_ro_preambles_t get_ssb_ro_preambles_2step(struct NR_RACH_ConfigCommonTwoStepRA_r16__msgA_SSB_PerRACH_OccasionAndCB_PreamblesPerSSB_r16 *config)
+{
+  ssb_ro_preambles_t ret = {0};
+  switch (config->present) {
+    case NR_RACH_ConfigCommonTwoStepRA_r16__msgA_SSB_PerRACH_OccasionAndCB_PreamblesPerSSB_r16_PR_oneEighth :
+      ret.ssb_per_ro = 1 / 8;
+      ret.preambles_per_ssb = (config->choice.oneEighth + 1) << 2;
+      break;
+    case NR_RACH_ConfigCommonTwoStepRA_r16__msgA_SSB_PerRACH_OccasionAndCB_PreamblesPerSSB_r16_PR_oneFourth :
+      ret.ssb_per_ro = 1 / 4;
+      ret.preambles_per_ssb = (config->choice.oneFourth + 1) << 2;
+      break;
+    case NR_RACH_ConfigCommonTwoStepRA_r16__msgA_SSB_PerRACH_OccasionAndCB_PreamblesPerSSB_r16_PR_oneHalf :
+      ret.ssb_per_ro = 1 / 2;
+      ret.preambles_per_ssb = (config->choice.oneHalf + 1) << 2;
+      break;
+    case NR_RACH_ConfigCommonTwoStepRA_r16__msgA_SSB_PerRACH_OccasionAndCB_PreamblesPerSSB_r16_PR_one :
+      ret.ssb_per_ro = 1;
+      ret.preambles_per_ssb = (config->choice.one + 1) << 2;
+      break;
+    case NR_RACH_ConfigCommonTwoStepRA_r16__msgA_SSB_PerRACH_OccasionAndCB_PreamblesPerSSB_r16_PR_two :
+      ret.ssb_per_ro = 2;
+      ret.preambles_per_ssb = (config->choice.two + 1) << 2;
+      break;
+    case NR_RACH_ConfigCommonTwoStepRA_r16__msgA_SSB_PerRACH_OccasionAndCB_PreamblesPerSSB_r16_PR_four :
+      ret.ssb_per_ro = 4;
+      ret.preambles_per_ssb = config->choice.four;
+      break;
+    case NR_RACH_ConfigCommonTwoStepRA_r16__msgA_SSB_PerRACH_OccasionAndCB_PreamblesPerSSB_r16_PR_eight :
+      ret.ssb_per_ro = 8;
+      ret.preambles_per_ssb = config->choice.eight;
+      break;
+    case NR_RACH_ConfigCommonTwoStepRA_r16__msgA_SSB_PerRACH_OccasionAndCB_PreamblesPerSSB_r16_PR_sixteen :
+      ret.ssb_per_ro = 16;
+      ret.preambles_per_ssb = config->choice.sixteen;
+      break;
+    default :
+      AssertFatal(false, "Invalid msgA_SSB_PerRACH_OccasionAndCB_PreamblesPerSSB_r16\n");
+  }
+  return ret;
+}
+
+static void config_preamble_index(NR_UE_MAC_INST_t *mac)
+{
+  RA_config_t *ra = &mac->ra;
+  // Random seed generation
+  unsigned int seed;
+  if (IS_SOFTMODEM_IQPLAYER || IS_SOFTMODEM_IQRECORDER) {
+    // Overwrite seed with non-random seed for IQ player/recorder
+    seed = 1;
+  } else {
+    // & to truncate the int64_t and keep only the LSB bits, up to sizeof(int)
+    seed = (unsigned int)(rdtsc_oai() & ~0);
+  }
+
+  NR_RACH_ConfigCommon_t *nr_rach_ConfigCommon = mac->current_UL_BWP->rach_ConfigCommon;
+  ssb_ro_preambles_t config_info;
+  int nb_of_preambles = 64;
+  bool groupBconfigured = false;
+  int preamb_ga = 0;
+  if (ra->ra_type == RA_4_STEP) {
+    AssertFatal(nr_rach_ConfigCommon->ssb_perRACH_OccasionAndCB_PreamblesPerSSB,
+                "Not expeting ssb_perRACH_OccasionAndCB_PreamblesPerSSB to be NULL here\n");
+    config_info = get_ssb_ro_preambles_4step(nr_rach_ConfigCommon->ssb_perRACH_OccasionAndCB_PreamblesPerSSB);
+    if (nr_rach_ConfigCommon->totalNumberOfRA_Preambles)
+      nb_of_preambles = *nr_rach_ConfigCommon->totalNumberOfRA_Preambles;
+    // Amongst the contention-based Random Access Preambles associated with an SSB the first numberOfRA-PreamblesGroupA
+    // included in groupBconfigured Random Access Preambles belong to Random Access Preambles group A.
+    // The remaining Random Access Preambles associated with the SSB belong to Random Access Preambles group B (if configured)
+    select_preamble_group(mac);
+    if (nr_rach_ConfigCommon->groupBconfigured) {
+      groupBconfigured = true;
+      preamb_ga = nr_rach_ConfigCommon->groupBconfigured->numberOfRA_PreamblesGroupA;
+    }
+  } else {
+    NR_RACH_ConfigCommonTwoStepRA_r16_t *twostep = &mac->current_UL_BWP->msgA_ConfigCommon_r16->rach_ConfigCommonTwoStepRA_r16;
+    AssertFatal(twostep->groupB_ConfiguredTwoStepRA_r16 == NULL, "GroupB preambles not supported for 2-step RA\n");
+    ra->RA_GroupA = true;
+    // The field is mandatory present if the 2-step random access type occasions are shared with 4-step random access type,
+    // otherwise the field is not present
+    bool sharedROs = twostep->msgA_CB_PreamblesPerSSB_PerSharedRO_r16 != NULL;
+    AssertFatal(sharedROs == false, "Shared ROs between 2- and 4-step RA not supported\n");
+
+    // For Type-2 random access procedure with separate configuration of PRACH occasions with Type-1 random access procedure
+    // configuration by msgA-SSB-PerRACH-OccasionAndCB-PreamblesPerSSB when provided;
+    // otherwise, by ssb-perRACH-OccasionAndCB-PreamblesPerSSB
+    if (twostep->msgA_SSB_PerRACH_OccasionAndCB_PreamblesPerSSB_r16)
+      config_info = get_ssb_ro_preambles_2step(twostep->msgA_SSB_PerRACH_OccasionAndCB_PreamblesPerSSB_r16);
+    else
+      config_info = get_ssb_ro_preambles_4step(nr_rach_ConfigCommon->ssb_perRACH_OccasionAndCB_PreamblesPerSSB);
+    if (twostep->msgA_TotalNumberOfRA_Preambles_r16)
+      nb_of_preambles = *twostep->msgA_TotalNumberOfRA_Preambles_r16;
+  }
+
+  int groupOffset = 0;
+  if (groupBconfigured) {
+    AssertFatal(preamb_ga < nb_of_preambles, "Nb of preambles for groupA not compatible with total number of preambles\n");
+    if (!ra->RA_GroupA) { // groupB
+      groupOffset = preamb_ga;
+      nb_of_preambles = nb_of_preambles - preamb_ga;
+    } else {
+      nb_of_preambles = preamb_ga;
+    }
+  }
+  int rand_preamb = (rand_r(&seed) % config_info.preambles_per_ssb);
+  if (config_info.ssb_per_ro < 1)
+    ra->ra_PreambleIndex = groupOffset + rand_preamb;
+  else {
+    ssb_list_info_t *ssb_list = &mac->ssb_list[mac->current_DL_BWP->bwp_id];
+    int ssb_pr_idx = ssb_list->nb_ssb_per_index[ra->ra_ssb] % (int)config_info.ssb_per_ro;
+    ra->ra_PreambleIndex = groupOffset + (ssb_pr_idx * config_info.preambles_per_ssb) + rand_preamb;
+  }
+  AssertFatal(ra->ra_PreambleIndex < nb_of_preambles,
+              "Error! Selected preamble %d which exceeds number of prambles available %d\n",
+              ra->ra_PreambleIndex,
+              nb_of_preambles);
+}
+
+// 38.321 Section 5.1.2 Random Access Resource selection
+static void ra_resource_selection(NR_UE_MAC_INST_t *mac)
+{
+  RA_config_t *ra = &mac->ra;
+  ra->ra_ssb = -1; // init as not selected
+  NR_RACH_ConfigDedicated_t *rach_ConfigDedicated = ra->rach_ConfigDedicated;
+  if (ra->ra_type == RA_4_STEP) {
+    // TODO if the Random Access procedure was initiated for SpCell beam failure recovery
+    // TODO if the Random Access procedure was initiated for SI request
+
+    if (ra->pdcch_order.active && ra->pdcch_order.preamble_index != 0xb000000) {
+      // set the PREAMBLE_INDEX to the signalled ra-PreambleIndex;
+      ra->ra_PreambleIndex = ra->pdcch_order.preamble_index;
+      // select the SSB signalled by PDCCH
+      ra->ra_ssb = ra->pdcch_order.ssb_index;
+    } else if (rach_ConfigDedicated && rach_ConfigDedicated->cfra) {
+      NR_CFRA_t *cfra = rach_ConfigDedicated->cfra;
+      AssertFatal(cfra->occasions == NULL, "Dedicated PRACH occasions for CFRA not supported\n");
+      AssertFatal(cfra->resources.present == NR_CFRA__resources_PR_ssb, "SSB-based CFRA supported only\n");
+      struct NR_CFRA__resources__ssb *ssb_list = cfra->resources.choice.ssb;
+      for (int i = 0; i < ssb_list->ssb_ResourceList.list.count; i++) {
+        NR_CFRA_SSB_Resource_t *res = ssb_list->ssb_ResourceList.list.array[i];
+        // TODO select an SSB with SS-RSRP above rsrp-ThresholdSSB amongst the associated SSBs
+        if (res->ssb == mac->mib_ssb) {
+          ra->ra_ssb = mac->mib_ssb;
+          // set the PREAMBLE_INDEX to a ra-PreambleIndex corresponding to the selected SSB
+          ra->ra_PreambleIndex = res->ra_PreambleIndex;
+          break;
+        }
+      }
+    } else { // for the contention-based Random Access preamble selection
+      // TODO if at least one of the SSBs with SS-RSRP above rsrp-ThresholdSSB is available
+      // else select any SSB
+      ra->ra_ssb = mac->mib_ssb;
+      config_preamble_index(mac);
+    }
+  } else { // 2-step RA
+    // if the contention-free 2-step RA type Resources associated with SSBs have been explicitly provided in rach-ConfigDedicated
+    // TODO and at least one SSB with SS-RSRP above msgA-RSRP-ThresholdSSB amongst the associated SSBs is available
+    if (ra->cfra) {
+      AssertFatal(rach_ConfigDedicated->ext1 && rach_ConfigDedicated->ext1->cfra_TwoStep_r16,
+                  "Two-step CFRA should be configured here\n");
+      NR_CFRA_TwoStep_r16_t *cfra = rach_ConfigDedicated->ext1->cfra_TwoStep_r16;
+      AssertFatal(cfra->occasionsTwoStepRA_r16 == NULL, "Dedicated PRACH occasions for CFRA not supported\n");
+      for (int i = 0; i < cfra->resourcesTwoStep_r16.ssb_ResourceList.list.count; i++) {
+        NR_CFRA_SSB_Resource_t *res = cfra->resourcesTwoStep_r16.ssb_ResourceList.list.array[i];
+        if (res->ssb == mac->mib_ssb) {
+          ra->ra_ssb = mac->mib_ssb;
+          // set the PREAMBLE_INDEX to a ra-PreambleIndex corresponding to the selected SSB
+          ra->ra_PreambleIndex = res->ra_PreambleIndex;
+          break;
+        }
+      }
+    } else { // for the contention-based Random Access Preamble selection
+      // TODO if at least one of the SSBs with SS-RSRP above msgA-RSRP-ThresholdSSB is available
+      // else select any SSB
+      ra->ra_ssb = mac->mib_ssb;
+      config_preamble_index(mac);
+    }
+  }
+}
+
 // Random Access procedure initialization as per 5.1.1 and initialization of variables specific
 // to Random Access type as specified in clause 5.1.1a (3GPP TS 38.321 version 16.2.1 Release 16)
-// todo:
-// - check if carrier to use is explicitly signalled then do (1) RA CARRIER SELECTION (SUL, NUL) (2) set PCMAX (currently hardcoded to 0)
 bool init_RA(NR_UE_MAC_INST_t *mac, int frame)
 {
   RA_config_t *ra = &mac->ra;
@@ -289,11 +615,20 @@ bool init_RA(NR_UE_MAC_INST_t *mac, int frame)
   // TODO msgA-TransMax not implemented
   // TODO ra-Prioritization not implemented
 
-  ra->ra_PreambleIndex = -1;
-  ra->RA_usedGroupA = 1;
+  if (ra->ra_type == RA_2_STEP && twostep_generic && twostep_generic->msgA_PreambleReceivedTargetPower_r16)
+    ra->preambleRxTargetPower = *twostep_generic->msgA_PreambleReceivedTargetPower_r16;
+  else
+    ra->preambleRxTargetPower = rach_ConfigGeneric->preambleReceivedTargetPower;
+
+  if (ra->ra_type == RA_2_STEP
+      && current_UL_BWP->msgA_ConfigCommon_r16
+      && current_UL_BWP->msgA_ConfigCommon_r16->msgA_PUSCH_Config_r16
+      && current_UL_BWP->msgA_ConfigCommon_r16->msgA_PUSCH_Config_r16->msgA_DeltaPreamble_r16)
+    ra->deltaPreamble = *current_UL_BWP->msgA_ConfigCommon_r16->msgA_PUSCH_Config_r16->msgA_DeltaPreamble_r16 << 1;
+  else
+    ra->deltaPreamble = mac->current_UL_BWP->msg3_DeltaPreamble ? *mac->current_UL_BWP->msg3_DeltaPreamble << 1 : 0;
+
   ra->RA_RAPID_found = 0;
-  ra->first_Msg3 = true;
-  ra->starting_preamble_nb = 0;
   ra->RA_backoff_cnt = 0;
   ra->RA_window_cnt = -1;
 
@@ -301,14 +636,12 @@ bool init_RA(NR_UE_MAC_INST_t *mac, int frame)
 }
 
 /* TS 38.321 subclause 7.3 - return DELTA_PREAMBLE values in dB */
-static int8_t nr_get_DELTA_PREAMBLE(NR_UE_MAC_INST_t *mac, int CC_id, uint16_t prach_format)
+static int8_t nr_get_DELTA_PREAMBLE(NR_UE_MAC_INST_t *mac, uint16_t prach_format)
 {
   NR_RACH_ConfigCommon_t *nr_rach_ConfigCommon = mac->current_UL_BWP->rach_ConfigCommon;
   NR_SubcarrierSpacing_t scs = *nr_rach_ConfigCommon->msg1_SubcarrierSpacing;
   int prach_sequence_length = nr_rach_ConfigCommon->prach_RootSequenceIndex.present - 1;
   uint8_t prachConfigIndex, mu;
-
-  AssertFatal(CC_id == 0, "Transmission on secondary CCs is not supported yet\n");
 
   // SCS configuration from msg1_SubcarrierSpacing and table 4.2-1 in TS 38.211
 
@@ -406,14 +739,14 @@ static int8_t nr_get_DELTA_PREAMBLE(NR_UE_MAC_INST_t *mac, int CC_id, uint16_t p
 // - RA_PREAMBLE_POWER_RAMPING_STEP   dB
 // - POWER_OFFSET_2STEP_RA            dB
 // returns receivedTargerPower in dBm
-static int nr_get_Po_NOMINAL_PUSCH(NR_UE_MAC_INST_t *mac, NR_PRACH_RESOURCES_t *prach_resources, uint8_t CC_id)
+static int nr_get_Po_NOMINAL_PUSCH(NR_UE_MAC_INST_t *mac, NR_PRACH_RESOURCES_t *prach_resources)
 {
   int8_t receivedTargerPower;
   int8_t delta_preamble;
 
   NR_RACH_ConfigCommon_t *nr_rach_ConfigCommon = mac->current_UL_BWP->rach_ConfigCommon;
   long preambleReceivedTargetPower = nr_rach_ConfigCommon->rach_ConfigGeneric.preambleReceivedTargetPower;
-  delta_preamble = nr_get_DELTA_PREAMBLE(mac, CC_id, prach_resources->prach_format);
+  delta_preamble = nr_get_DELTA_PREAMBLE(mac, prach_resources->prach_format);
 
   receivedTargerPower = preambleReceivedTargetPower +
                         delta_preamble +
@@ -422,220 +755,6 @@ static int nr_get_Po_NOMINAL_PUSCH(NR_UE_MAC_INST_t *mac, NR_PRACH_RESOURCES_t *
 
   LOG_D(MAC, "ReceivedTargerPower is %d dBm \n", receivedTargerPower);
   return receivedTargerPower;
-}
-
-void ssb_rach_config(RA_config_t *ra, NR_PRACH_RESOURCES_t *prach_resources, NR_RACH_ConfigCommon_t *nr_rach_ConfigCommon)
-{
-  // Determine the SSB to RACH mapping ratio
-  // =======================================
-
-  NR_RACH_ConfigCommon__ssb_perRACH_OccasionAndCB_PreamblesPerSSB_PR ssb_perRACH_config = nr_rach_ConfigCommon->ssb_perRACH_OccasionAndCB_PreamblesPerSSB->present;
-  bool multiple_ssb_per_ro; // true if more than one or exactly one SSB per RACH occasion, false if more than one RO per SSB
-  uint8_t ssb_rach_ratio; // Nb of SSBs per RACH or RACHs per SSB
-  int total_preambles_per_ssb;
-  uint8_t ssb_nb_in_ro;
-  int numberOfRA_Preambles = 64;
-
-  switch (ssb_perRACH_config){
-    case NR_RACH_ConfigCommon__ssb_perRACH_OccasionAndCB_PreamblesPerSSB_PR_oneEighth:
-      multiple_ssb_per_ro = false;
-      ssb_rach_ratio = 8;
-      ra->cb_preambles_per_ssb = 4 * (nr_rach_ConfigCommon->ssb_perRACH_OccasionAndCB_PreamblesPerSSB->choice.oneEighth + 1);
-      break;
-    case NR_RACH_ConfigCommon__ssb_perRACH_OccasionAndCB_PreamblesPerSSB_PR_oneFourth:
-      multiple_ssb_per_ro = false;
-      ssb_rach_ratio = 4;
-      ra->cb_preambles_per_ssb = 4 * (nr_rach_ConfigCommon->ssb_perRACH_OccasionAndCB_PreamblesPerSSB->choice.oneFourth + 1);
-      break;
-    case NR_RACH_ConfigCommon__ssb_perRACH_OccasionAndCB_PreamblesPerSSB_PR_oneHalf:
-      multiple_ssb_per_ro = false;
-      ssb_rach_ratio = 2;
-      ra->cb_preambles_per_ssb = 4 * (nr_rach_ConfigCommon->ssb_perRACH_OccasionAndCB_PreamblesPerSSB->choice.oneHalf + 1);
-      break;
-    case NR_RACH_ConfigCommon__ssb_perRACH_OccasionAndCB_PreamblesPerSSB_PR_one:
-      multiple_ssb_per_ro = true;
-      ssb_rach_ratio = 1;
-      ra->cb_preambles_per_ssb = 4 * (nr_rach_ConfigCommon->ssb_perRACH_OccasionAndCB_PreamblesPerSSB->choice.one + 1);
-      break;
-    case NR_RACH_ConfigCommon__ssb_perRACH_OccasionAndCB_PreamblesPerSSB_PR_two:
-      multiple_ssb_per_ro = true;
-      ssb_rach_ratio = 2;
-      ra->cb_preambles_per_ssb = 4 * (nr_rach_ConfigCommon->ssb_perRACH_OccasionAndCB_PreamblesPerSSB->choice.two + 1);
-      break;
-    case NR_RACH_ConfigCommon__ssb_perRACH_OccasionAndCB_PreamblesPerSSB_PR_four:
-      multiple_ssb_per_ro = true;
-      ssb_rach_ratio = 4;
-      ra->cb_preambles_per_ssb = nr_rach_ConfigCommon->ssb_perRACH_OccasionAndCB_PreamblesPerSSB->choice.four;
-      break;
-    case NR_RACH_ConfigCommon__ssb_perRACH_OccasionAndCB_PreamblesPerSSB_PR_eight:
-      multiple_ssb_per_ro = true;
-      ssb_rach_ratio = 8;
-      ra->cb_preambles_per_ssb = nr_rach_ConfigCommon->ssb_perRACH_OccasionAndCB_PreamblesPerSSB->choice.eight;
-      break;
-    case NR_RACH_ConfigCommon__ssb_perRACH_OccasionAndCB_PreamblesPerSSB_PR_sixteen:
-      multiple_ssb_per_ro = true;
-      ssb_rach_ratio = 16;
-      ra->cb_preambles_per_ssb = nr_rach_ConfigCommon->ssb_perRACH_OccasionAndCB_PreamblesPerSSB->choice.sixteen;
-      break;
-    default:
-      AssertFatal(1 == 0, "Unsupported ssb_perRACH_config %d\n", ssb_perRACH_config);
-  }
-
-  if (nr_rach_ConfigCommon->totalNumberOfRA_Preambles)
-    numberOfRA_Preambles = *(nr_rach_ConfigCommon->totalNumberOfRA_Preambles);
-
-  // Compute the proper Preamble selection params according to the selected SSB and the ssb_perRACH_OccasionAndCB_PreamblesPerSSB configuration
-  if ((true == multiple_ssb_per_ro) && (ssb_rach_ratio > 1)) {
-    total_preambles_per_ssb = numberOfRA_Preambles / ssb_rach_ratio;
-
-    ssb_nb_in_ro = ra->ssb_nb_in_ro;
-    ra->starting_preamble_nb = total_preambles_per_ssb * ssb_nb_in_ro;
-  } else {
-    total_preambles_per_ssb = numberOfRA_Preambles;
-    ra->starting_preamble_nb = 0;
-  }
-}
-
-// This routine implements RA preamble configuration according to
-// section 5.1 (Random Access procedure) of 3GPP TS 38.321 version 16.2.1 Release 16
-void ra_preambles_config(NR_PRACH_RESOURCES_t *prach_resources, NR_UE_MAC_INST_t *mac, int16_t dl_pathloss){
-
-  int messageSizeGroupA = 0;
-  int sizeOfRA_PreamblesGroupA = 0;
-  int messagePowerOffsetGroupB = 0;
-  int PLThreshold = 0;
-  long deltaPreamble_Msg3 = 0;
-  uint8_t noGroupB = 0;
-  // Random seed generation
-  unsigned int seed;
-
-  if (IS_SOFTMODEM_IQPLAYER || IS_SOFTMODEM_IQRECORDER) {
-    // Overwrite seed with non-random seed for IQ player/recorder
-    seed = 1;
-  } else {
-    // & to truncate the int64_t and keep only the LSB bits, up to sizeof(int)
-    seed = (unsigned int) (rdtsc_oai() & ~0);
-  }
-
-  RA_config_t *ra = &mac->ra;
-  NR_RACH_ConfigCommon_t *setup = mac->current_UL_BWP->rach_ConfigCommon;
-  NR_RACH_ConfigGeneric_t *rach_ConfigGeneric = &setup->rach_ConfigGeneric;
-
-  if (mac->current_UL_BWP->msg3_DeltaPreamble) {
-    deltaPreamble_Msg3 = (*mac->current_UL_BWP->msg3_DeltaPreamble) * 2; // dB
-    LOG_D(MAC, "In %s: deltaPreamble_Msg3 set to %ld\n", __FUNCTION__, deltaPreamble_Msg3);
-  }
-
-  if (!setup->groupBconfigured) {
-    noGroupB = 1;
-    LOG_D(MAC, "In %s:%d: preambles group B is not configured...\n", __FUNCTION__, __LINE__);
-  } else {
-    // RA preambles group B is configured
-    // - Random Access Preambles group B is configured for 4-step RA type
-    // - Defining the number of RA preambles in RA Preamble Group A for each SSB
-    LOG_D(MAC, "In %s:%d: preambles group B is configured...\n", __FUNCTION__, __LINE__);
-    sizeOfRA_PreamblesGroupA = setup->groupBconfigured->numberOfRA_PreamblesGroupA;
-    switch (setup->groupBconfigured->ra_Msg3SizeGroupA){
-      /* - Threshold to determine the groups of RA preambles */
-      case 0:
-      messageSizeGroupA = 56;
-      break;
-      case 1:
-      messageSizeGroupA = 144;
-      break;
-      case 2:
-      messageSizeGroupA = 208;
-      break;
-      case 3:
-      messageSizeGroupA = 256;
-      break;
-      case 4:
-      messageSizeGroupA = 282;
-      break;
-      case 5:
-      messageSizeGroupA = 480;
-      break;
-      case 6:
-      messageSizeGroupA = 640;
-      break;
-      case 7:
-      messageSizeGroupA = 800;
-      break;
-      case 8:
-      messageSizeGroupA = 1000;
-      break;
-      case 9:
-      messageSizeGroupA = 72;
-      break;
-      default:
-      AssertFatal(1 == 0, "Unknown ra_Msg3SizeGroupA %lu\n", setup->groupBconfigured->ra_Msg3SizeGroupA);
-      /* todo cases 10 -15*/
-      }
-
-      /* Power offset for preamble selection in dB */
-      messagePowerOffsetGroupB = -9999;
-      switch (setup->groupBconfigured->messagePowerOffsetGroupB){
-      case 0:
-      messagePowerOffsetGroupB = -9999;
-      break;
-      case 1:
-      messagePowerOffsetGroupB = 0;
-      break;
-      case 2:
-      messagePowerOffsetGroupB = 5;
-      break;
-      case 3:
-      messagePowerOffsetGroupB = 8;
-      break;
-      case 4:
-      messagePowerOffsetGroupB = 10;
-      break;
-      case 5:
-      messagePowerOffsetGroupB = 12;
-      break;
-      case 6:
-      messagePowerOffsetGroupB = 15;
-      break;
-      case 7:
-      messagePowerOffsetGroupB = 18;
-      break;
-      default:
-      AssertFatal(1 == 0,"Unknown messagePowerOffsetGroupB %lu\n", setup->groupBconfigured->messagePowerOffsetGroupB);
-    }
-
-    PLThreshold = prach_resources->Pc_max - rach_ConfigGeneric->preambleReceivedTargetPower - deltaPreamble_Msg3 - messagePowerOffsetGroupB;
-
-  }
-
-  /* Msg3 has not been transmitted yet */
-  if (ra->first_Msg3) {
-    if(ra->ra_PreambleIndex < 0 || ra->ra_PreambleIndex > 63) {
-      if (noGroupB) {
-        // use Group A preamble
-        ra->ra_PreambleIndex = ra->starting_preamble_nb + (rand_r(&seed) % ra->cb_preambles_per_ssb);
-        ra->RA_usedGroupA = 1;
-      } else if ((ra->Msg3_size < messageSizeGroupA) && (dl_pathloss > PLThreshold)) {
-        // Group B is configured and RA preamble Group A is used
-        // - todo add condition on CCCH_sdu_size for initiation by CCCH
-        ra->ra_PreambleIndex = ra->starting_preamble_nb + (rand_r(&seed) % sizeOfRA_PreamblesGroupA);
-        ra->RA_usedGroupA = 1;
-      } else {
-        // Group B preamble is configured and used
-        // the first sizeOfRA_PreamblesGroupA RA preambles belong to RA Preambles Group A
-        // the remaining belong to RA Preambles Group B
-        ra->ra_PreambleIndex = ra->starting_preamble_nb + sizeOfRA_PreamblesGroupA + (rand_r(&seed) % (ra->cb_preambles_per_ssb - sizeOfRA_PreamblesGroupA));
-        ra->RA_usedGroupA = 0;
-      }
-    }
-  } else { // Msg3 is being retransmitted
-    if (ra->RA_usedGroupA && noGroupB) {
-      ra->ra_PreambleIndex = ra->starting_preamble_nb + (rand_r(&seed) % ra->cb_preambles_per_ssb);
-    } else if (ra->RA_usedGroupA && !noGroupB){
-      ra->ra_PreambleIndex = ra->starting_preamble_nb + (rand_r(&seed) % sizeOfRA_PreamblesGroupA);
-    } else {
-      ra->ra_PreambleIndex = ra->starting_preamble_nb + sizeOfRA_PreamblesGroupA + (rand_r(&seed) % (ra->cb_preambles_per_ssb - sizeOfRA_PreamblesGroupA));
-    }
-  }
 }
 
 // This routine implements Section 5.1.2 (UE Random Access Resource Selection)
@@ -658,38 +777,13 @@ void ra_preambles_config(NR_PRACH_RESOURCES_t *prach_resources, NR_UE_MAC_INST_t
 // - check if SSB or CSI-RS have not changed since the selection in the last RA Preamble tranmission
 // - Contention-based RA preamble selection:
 // -- selection of SSB with SS-RSRP above rsrp-ThresholdSSB else select any SSB
-void nr_get_prach_resources(NR_UE_MAC_INST_t *mac,
-                            int CC_id,
-                            uint8_t gNB_id,
-                            NR_PRACH_RESOURCES_t *prach_resources,
-                            NR_RACH_ConfigDedicated_t *rach_ConfigDedicated)
+static void nr_get_prach_resources(NR_UE_MAC_INST_t *mac,
+                                   NR_PRACH_RESOURCES_t *prach_resources,
+                                   NR_RACH_ConfigDedicated_t *rach_ConfigDedicated)
 {
-  RA_config_t *ra = &mac->ra;
-
-  NR_RACH_ConfigCommon_t *nr_rach_ConfigCommon = mac->current_UL_BWP->rach_ConfigCommon;
-
-  LOG_D(MAC, "Getting PRACH resources (first_Msg3 %d)\n", ra->first_Msg3);
-
-  if (rach_ConfigDedicated) {
-    if (rach_ConfigDedicated->cfra){
-      uint8_t cfra_ssb_resource_idx = 0;
-      ra->ra_PreambleIndex = rach_ConfigDedicated->cfra->resources.choice.ssb->ssb_ResourceList.list.array[cfra_ssb_resource_idx]->ra_PreambleIndex;
-      LOG_D(MAC, "Selected RA preamble index %d for contention-free random access procedure for SSB with Id %d\n", 
-            ra->ra_PreambleIndex,
-            cfra_ssb_resource_idx);
-    }
-  } else {
-    /* TODO: This controls the tx_power of UE and the ramping procedure of RA of UE. Later we
-             can abstract this, perhaps in the proxy. But for the time being lets leave it as below. */
-    int16_t dl_pathloss = !get_softmodem_params()->emulate_l1 ? compute_nr_SSB_PL(mac, mac->ssb_measurements.ssb_rsrp_dBm) : 0;
-    ssb_rach_config(ra, prach_resources, nr_rach_ConfigCommon);
-    ra_preambles_config(prach_resources, mac, dl_pathloss);
-    LOG_D(MAC, "[RAPROC] - Selected RA preamble index %d for contention-based random access procedure... \n", ra->ra_PreambleIndex);
-  }
-
   if (prach_resources->preamble_tx_counter > 1)
     prach_resources->preamble_power_ramping_cnt++;
-  prach_resources->ra_PREAMBLE_RECEIVED_TARGET_POWER = nr_get_Po_NOMINAL_PUSCH(mac, prach_resources, CC_id);
+  prach_resources->ra_PREAMBLE_RECEIVED_TARGET_POWER = nr_get_Po_NOMINAL_PUSCH(mac, prach_resources);
 }
 
 // TbD: RA_attempt_number not used
@@ -811,6 +905,10 @@ void nr_ue_manage_ra_procedure(NR_UE_MAC_INST_t *mac, int CC_id, frame_t frame, 
     bool init_success = init_RA(mac, frame);
     if (!init_success)
       return;
+    else {
+      // perform the Random Access Resource selection procedure (see clause 5.1.2 and .2a)
+      ra_resource_selection(mac);
+    }
   }
 
   LOG_D(NR_MAC, "[UE %d][%d.%d]: ra_state %d, RA_active %d\n", mac->ue_id, frame, nr_slot_tx, ra->ra_state, ra->RA_active);
@@ -845,7 +943,7 @@ void nr_ue_manage_ra_procedure(NR_UE_MAC_INST_t *mac, int CC_id, frame_t frame, 
         // Fill in preamble and PRACH resources
         ra->RA_window_cnt--;
         if (ra->ra_state == nrRA_GENERATE_PREAMBLE) {
-          nr_get_prach_resources(mac, CC_id, gNB_id, prach_resources, rach_ConfigDedicated);
+          nr_get_prach_resources(mac, prach_resources, rach_ConfigDedicated);
         }
       } else if (ra->RA_backoff_cnt > 0) {
 
@@ -854,7 +952,7 @@ void nr_ue_manage_ra_procedure(NR_UE_MAC_INST_t *mac, int CC_id, frame_t frame, 
         ra->RA_backoff_cnt--;
 
         if ((ra->RA_backoff_cnt > 0 && ra->ra_state == nrRA_GENERATE_PREAMBLE) || ra->RA_backoff_cnt == 0) {
-          nr_get_prach_resources(mac, CC_id, gNB_id, prach_resources, rach_ConfigDedicated);
+          nr_get_prach_resources(mac, prach_resources, rach_ConfigDedicated);
         }
       }
     }
@@ -1039,10 +1137,9 @@ void nr_ra_failed(NR_UE_MAC_INST_t *mac, uint8_t CC_id, NR_PRACH_RESOURCES_t *pr
     seed = 1;
   } else {
     // & to truncate the int64_t and keep only the LSB bits, up to sizeof(int)
-    seed = (unsigned int) (rdtsc_oai() & ~0);
+    seed = (unsigned int)(rdtsc_oai() & ~0);
   }
   
-  ra->first_Msg3 = true;
   ra->ra_PreambleIndex = -1;
   ra->ra_state = nrRA_UE_IDLE;
 
@@ -1064,7 +1161,7 @@ void nr_ra_failed(NR_UE_MAC_INST_t *mac, uint8_t CC_id, NR_PRACH_RESOURCES_t *pr
     ra->RA_backoff_cnt = rand_r(&seed) % (prach_resources->preamble_backoff + 1);
     prach_resources->preamble_tx_counter = 1;
     prach_resources->preamble_power_ramping_step += 2; // 2 dB increment
-    prach_resources->ra_PREAMBLE_RECEIVED_TARGET_POWER = nr_get_Po_NOMINAL_PUSCH(mac, prach_resources, CC_id);
+    prach_resources->ra_PREAMBLE_RECEIVED_TARGET_POWER = nr_get_Po_NOMINAL_PUSCH(mac, prach_resources);
 
   } else {
     nr_get_RA_window(mac);

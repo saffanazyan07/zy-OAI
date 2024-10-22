@@ -88,6 +88,7 @@ TEST(test_init_ra, four_step_cbra)
   NR_UE_DL_BWP_t dl_bwp;
   mac.current_UL_BWP = &current_bwp;
   mac.current_DL_BWP = &dl_bwp;
+  mac.mib_ssb = 0;
   long scs = 1;
   current_bwp.scs = scs;
   current_bwp.bwp_id = 0;
@@ -122,6 +123,7 @@ TEST(test_init_ra, four_step_cfra)
   NR_UE_DL_BWP_t dl_bwp;
   mac.current_UL_BWP = &current_bwp;
   mac.current_DL_BWP = &dl_bwp;
+  mac.mib_ssb = 0;
   long scs = 1;
   current_bwp.scs = scs;
   current_bwp.bwp_id = 0;
@@ -138,7 +140,7 @@ TEST(test_init_ra, four_step_cfra)
   int frame = 151;
 
   NR_RACH_ConfigDedicated_t rach_ConfigDedicated = {0};
-  struct NR_CFRA cfra;
+  NR_CFRA_t cfra;
   rach_ConfigDedicated.cfra = &cfra;
   ra->rach_ConfigDedicated = &rach_ConfigDedicated;
 
