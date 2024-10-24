@@ -1817,17 +1817,10 @@ int nr_ue_pusch_scheduler(const NR_UE_MAC_INST_t *mac,
 // Build the list of all the valid RACH occasions in the maximum association pattern period according to the PRACH config
 static void build_ro_list(NR_UE_MAC_INST_t *mac)
 {
-  int x,y; // PRACH Configuration Index table variables used to compute the valid frame numbers
   int y2;  // PRACH Configuration Index table additional variable used to compute the valid frame numbers
   uint8_t slot_shift_for_map;
   uint8_t map_shift;
   bool even_slot_invalid;
-  int64_t s_map;
-  uint8_t prach_conf_start_symbol; // Starting symbol of the PRACH occasions in the PRACH slot
-  uint8_t N_t_slot; // Number of PRACH occasions in a 14-symbols PRACH slot
-  uint8_t N_dur; // Duration of a PRACH occasion (nb of symbols)
-  uint16_t format = 0xffff;
-  uint8_t format2 = 0xff;
   int nb_fdm;
 
   uint8_t config_index;
@@ -1857,60 +1850,34 @@ static void build_ro_list(NR_UE_MAC_INST_t *mac)
 
   int unpaired = mac->phy_config.config_req.cell_config.frame_duplex_type;
 
-  const int64_t *prach_config_info_p = get_prach_config_info(mac->frequency_range, config_index, unpaired);
+  nr_prach_info_t prach_config = get_nr_prach_occasion_info_from_index(config_index, mac->frequency_range, unpaired);
   int mu = nr_get_prach_mu(mac->current_UL_BWP->msgA_ConfigCommon_r16, setup);
 
   // Identify the proper PRACH Configuration Index table according to the operating frequency
   LOG_D(NR_MAC,"mu = %u, PRACH config index  = %u, unpaired = %u\n", mu, config_index, unpaired);
 
   if (mac->frequency_range == FR2) { //FR2
-
-    x = prach_config_info_p[2];
-    y = prach_config_info_p[3];
-    y2 = prach_config_info_p[4];
-
-    s_map = prach_config_info_p[5];
-
-    prach_conf_start_symbol = prach_config_info_p[6];
-    N_t_slot = prach_config_info_p[8];
-    N_dur = prach_config_info_p[9];
-    if (prach_config_info_p[1] != -1)
-      format2 = (uint8_t) prach_config_info_p[1];
-    format = ((uint8_t) prach_config_info_p[0]) | (format2<<8);
-
+    y2 = prach_config.y2;
     slot_shift_for_map = mu-2;
-    if ( (mu == 3) && (prach_config_info_p[7] == 1) )
+    if ((mu == 3) && (prach_config.N_RA_slot == 1))
       even_slot_invalid = true;
     else
       even_slot_invalid = false;
   }
   else { // FR1
-    x = prach_config_info_p[2];
-    y = prach_config_info_p[3];
-    y2 = y;
-
-    s_map = prach_config_info_p[4];
-
-    prach_conf_start_symbol = prach_config_info_p[5];
-    N_t_slot = prach_config_info_p[7];
-    N_dur = prach_config_info_p[8];
-    LOG_D(NR_MAC,"N_t_slot %d, N_dur %d\n",N_t_slot,N_dur);
-    if (prach_config_info_p[1] != -1)
-      format2 = (uint8_t) prach_config_info_p[1];
-    format = ((uint8_t) prach_config_info_p[0]) | (format2<<8);
-
+    y2 = prach_config.y;
     slot_shift_for_map = mu;
-    if ( (mu == 1) && (prach_config_info_p[6] <= 1) )
+    if ((mu == 1) && (prach_config.N_RA_slot <= 1))
       // no prach in even slots @ 30kHz for 1 prach per subframe
       even_slot_invalid = true;
     else
       even_slot_invalid = false;
-  } // FR2 / FR1
+  } // FR1
 
   const int bwp_id = mac->current_UL_BWP->bwp_id;
   prach_association_pattern_t *prach_assoc_pattern = &mac->prach_assoc_pattern[bwp_id];
-  prach_assoc_pattern->nb_of_prach_conf_period_in_max_period = MAX_NB_PRACH_CONF_PERIOD_IN_ASSOCIATION_PATTERN_PERIOD / x;
-  nb_of_frames_per_prach_conf_period = x;
+  prach_assoc_pattern->nb_of_prach_conf_period_in_max_period = MAX_NB_PRACH_CONF_PERIOD_IN_ASSOCIATION_PATTERN_PERIOD / prach_config.x;
+  nb_of_frames_per_prach_conf_period = prach_config.x;
 
   LOG_D(NR_MAC,"nb_of_prach_conf_period_in_max_period %d\n", prach_assoc_pattern->nb_of_prach_conf_period_in_max_period);
 
@@ -1934,14 +1901,14 @@ static void build_ro_list(NR_UE_MAC_INST_t *mac)
 
       LOG_D(NR_MAC,"PRACH Conf Period Frame Idx %d - Frame %d\n", frame_idx, frame_rach);
       // Is it a valid frame for this PRACH configuration index? (n_sfn mod x = y)
-      if ((frame_rach % x) == y || (frame_rach % x) == y2) {
+      if ((frame_rach % prach_config.x) == prach_config.y || (frame_rach % prach_config.x) == y2) {
 
         // For every slot in a frame
         // -------------------------
         for (int slot = 0; slot < nr_slots_per_frame[mu]; slot++) {
           // Is it a valid slot?
           map_shift = slot >> slot_shift_for_map; // in PRACH configuration index table slots are numbered wrt 60kHz
-          if ((s_map>>map_shift) & 0x01) {
+          if ((prach_config.s_map >> map_shift) & 0x01) {
             // Valid slot
 
             // Additionally, for 30kHz/120kHz, we must check for the n_RA_Slot param also
@@ -1952,12 +1919,12 @@ static void build_ro_list(NR_UE_MAC_INST_t *mac)
             // Compute all the PRACH occasions in the slot
 
             prach_occasion_slot_t *slot_map = &prach_conf_period_list->prach_occasion_slot_map[frame_idx][slot];
-            slot_map->nb_of_prach_occasion_in_time = N_t_slot;
+            slot_map->nb_of_prach_occasion_in_time = prach_config.N_t_slot;
             slot_map->nb_of_prach_occasion_in_freq = nb_fdm;
-            slot_map->prach_occasion = malloc(N_t_slot * nb_fdm * sizeof(*slot_map->prach_occasion));
+            slot_map->prach_occasion = malloc(prach_config.N_t_slot * nb_fdm * sizeof(*slot_map->prach_occasion));
             AssertFatal(slot_map->prach_occasion, "no memory available\n");
-            for (int n_prach_occ_in_time = 0; n_prach_occ_in_time < N_t_slot; n_prach_occ_in_time++) {
-              uint8_t start_symbol = prach_conf_start_symbol + n_prach_occ_in_time * N_dur;
+            for (int n_prach_occ_in_time = 0; n_prach_occ_in_time < prach_config.N_t_slot; n_prach_occ_in_time++) {
+              uint8_t start_symbol = prach_config.start_symbol + n_prach_occ_in_time * prach_config.N_dur;
               LOG_D(NR_MAC,"PRACH Occ in time %d\n", n_prach_occ_in_time);
 
               for (int n_prach_occ_in_freq = 0; n_prach_occ_in_freq < nb_fdm; n_prach_occ_in_freq++) {
@@ -1966,7 +1933,7 @@ static void build_ro_list(NR_UE_MAC_INST_t *mac)
                                             .fdm = n_prach_occ_in_freq,
                                             .frame = frame_idx,
                                             .slot = slot,
-                                            .format = format};
+                                            .format = prach_config.format};
                 prach_assoc_pattern->prach_conf_period_list[period_idx].nb_of_prach_occasion++;
 
                 LOG_D(NR_MAC,

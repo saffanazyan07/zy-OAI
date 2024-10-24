@@ -214,8 +214,7 @@ static void config_common_ue_sa(NR_UE_MAC_INST_t *mac,
   else {
     // If absent, the UE applies the SCS as derived from the prach-ConfigurationIndex (for 839)
     int config_index = rach_ConfigCommon->rach_ConfigGeneric.prach_ConfigurationIndex;
-    const int64_t *prach_config_info_p = get_prach_config_info(mac->frequency_range, config_index, mac->frame_type);
-    int format = prach_config_info_p[0];
+    int format = get_format0(config_index, mac->frame_type, mac->frequency_range);
     cfg->prach_config.prach_sub_c_spacing = format == 3 ? 5 : 4;
   }
 
@@ -437,8 +436,7 @@ static void config_common_ue(NR_UE_MAC_INST_t *mac,
     else {
       // If absent, the UE applies the SCS as derived from the prach-ConfigurationIndex (for 839)
       int config_index = rach_ConfigCommon->rach_ConfigGeneric.prach_ConfigurationIndex;
-      const int64_t *prach_config_info_p = get_prach_config_info(mac->frequency_range, config_index, mac->frame_type);
-      int format = prach_config_info_p[0];
+      int format = get_format0(config_index, mac->frame_type, mac->frequency_range);
       cfg->prach_config.prach_sub_c_spacing = format == 3 ? 5 : 4;
     }
 

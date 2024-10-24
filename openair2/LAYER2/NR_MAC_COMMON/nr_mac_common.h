@@ -52,6 +52,20 @@ typedef enum {
   pusch_len2 = 2
 } pusch_maxLength_t;
 
+typedef struct {
+  uint32_t format;
+  uint32_t start_symbol;
+  uint32_t N_t_slot;
+  uint32_t N_dur;
+  uint32_t N_RA_slot;
+  uint32_t N_RA_sfn;
+  uint32_t max_association_period;
+  int x;
+  int y;
+  int y2;
+  uint64_t s_map;
+} nr_prach_info_t;
+
 uint32_t get_Y(const NR_SearchSpace_t *ss, int slot, rnti_t rnti);
 
 uint8_t get_BG(uint32_t A, uint16_t R);
@@ -135,31 +149,16 @@ void find_aggregation_candidates(uint8_t *aggregation_level,
                                  const NR_SearchSpace_t *ss,
                                  int maxL);
 
-int get_nr_prach_info_from_index(uint8_t index,
-                                 int frame,
-                                 int slot,
-                                 uint32_t pointa,
-                                 uint8_t mu,
-                                 uint8_t unpaired,
-                                 uint16_t *format,
-                                 uint8_t *start_symbol,
-                                 uint8_t *N_t_slot,
-                                 uint8_t *N_dur,
-                                 uint16_t *RA_sfn_index,
-                                 uint8_t *N_RA_slot,
-                                 uint8_t *config_period);
+bool get_nr_prach_sched_from_info(nr_prach_info_t info,
+                                  int config_index,
+                                  int frame,
+                                  int slot,
+                                  int mu,
+                                  frequency_range_t freq_range,
+                                  uint16_t *RA_sfn_index,
+                                  uint8_t unpaired);
 
-int get_nr_prach_occasion_info_from_index(uint8_t index,
-                                 uint32_t pointa,
-                                 uint8_t mu,
-                                 uint8_t unpaired,
-                                 uint16_t *format,
-                                 uint8_t *start_symbol,
-                                 uint8_t *N_t_slot,
-                                 uint8_t *N_dur,
-                                 uint8_t *N_RA_slot,
-                                 uint16_t *N_RA_sfn,
-                                 uint8_t *max_association_period);
+nr_prach_info_t get_nr_prach_occasion_info_from_index(uint8_t index, frequency_range_t freq_range, uint8_t unpaired);
 
 uint8_t get_pusch_mcs_table(long *mcs_Table,
                             int is_tp,
@@ -177,9 +176,7 @@ int ul_ant_bits(NR_DMRS_UplinkConfig_t *NR_DMRS_UplinkConfig, long transformPrec
 
 uint8_t get_pdsch_mcs_table(long *mcs_Table, int dci_format, int rnti_type, int ss_type);
 
-int get_format0(uint8_t index, uint8_t unpaired,frequency_range_t);
-
-const int64_t *get_prach_config_info(frequency_range_t freq_range, uint8_t index, uint8_t unpaired);
+int get_format0(uint8_t index, uint8_t unpaired, frequency_range_t frequency_range);
 
 uint16_t get_NCS(uint8_t index, uint16_t format, uint8_t restricted_set_config);
 int compute_pucch_crc_size(int O_uci);
