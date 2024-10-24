@@ -38,7 +38,7 @@ if [ $# -eq 0 ]; then
     	   argument="P5G_FXN"
 	   ;;
         "Supermicro-G1SMH-G")
-    	   argument="P5G_FXN"
+    	   argument="P5G_FXN_GH"
 	   ;;
 	*)
 	   echo "Unrecognized server: $serverVendorAndModel"
@@ -50,8 +50,6 @@ else
     argument="$1"
 fi
 
-sed -i "s/ nic:.*/ nic: 0000:01:00.0/" ${cuBB_SDK}/cuPHY-CP/cuphycontroller/config/cuphycontroller_P5G_FXN.yaml
-sed -i "s/ dst_mac_addr:.*/ dst_mac_addr: 6c:ad:ad:00:0a:7e/" ${cuBB_SDK}/cuPHY-CP/cuphycontroller/config/cuphycontroller_P5G_FXN.yaml
 
 export AERIAL_LOG_PATH=/var/log/aerial
 sudo -E "$cuBB_Path"/build/cuPHY-CP/cuphycontroller/examples/cuphycontroller_scf $argument
