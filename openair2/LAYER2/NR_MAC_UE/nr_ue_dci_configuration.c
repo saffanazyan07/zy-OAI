@@ -440,8 +440,8 @@ bool search_space_monitoring_ocasion_other_si(NR_UE_MAC_INST_t *mac,
   get_monitoring_period_offset(ss, &period, &offset);
   for (int i = 0; i < duration; i++) {
     if (((frame * slots_per_frame + slot - offset - i) % period) == 0) {
-      int N = mac->ssb_list[bwp_id].nb_tx_ssb;
-      int K = mac->ssb_list->nb_ssb_per_index[mac->mib_ssb];
+      int N = mac->ssb_list.nb_tx_ssb;
+      int K = mac->ssb_list.nb_ssb_per_index[mac->mib_ssb];
 
       // numbering current frame and slot in terms of monitoring occasions in window
       int rel_slot = abs_slot - mac->si_SchedInfo.si_window_start;

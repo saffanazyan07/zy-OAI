@@ -78,7 +78,7 @@ void nr_ue_init_mac(NR_UE_MAC_INST_t *mac)
 
   memset(&mac->ssb_measurements, 0, sizeof(mac->ssb_measurements));
   memset(&mac->ul_time_alignment, 0, sizeof(mac->ul_time_alignment));
-  memset(mac->ssb_list, 0, sizeof(mac->ssb_list));
+  memset(&mac->ssb_list, 0, sizeof(mac->ssb_list));
   memset(mac->prach_assoc_pattern, 0, sizeof(mac->prach_assoc_pattern));
 
   for (int i = 0; i < NR_MAX_SR_ID; i++)
@@ -301,3 +301,4 @@ void release_mac_configuration(NR_UE_MAC_INST_t *mac, NR_UE_MAC_reset_cause_t ca
   for (int i = mac->TAG_list.count; i > 0 ; i--)
     asn_sequence_del(&mac->TAG_list, i - 1, 1);
 }
+

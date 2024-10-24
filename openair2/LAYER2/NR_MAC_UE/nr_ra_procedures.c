@@ -348,8 +348,7 @@ static void config_preamble_index(NR_UE_MAC_INST_t *mac)
   if (config_info.ssb_per_ro < 1)
     ra->ra_PreambleIndex = groupOffset + rand_preamb;
   else {
-    ssb_list_info_t *ssb_list = &mac->ssb_list[mac->current_DL_BWP->bwp_id];
-    int ssb_pr_idx = ssb_list->nb_ssb_per_index[ra->ra_ssb] % (int)config_info.ssb_per_ro;
+    int ssb_pr_idx = mac->ssb_list.nb_ssb_per_index[ra->ra_ssb] % (int)config_info.ssb_per_ro;
     ra->ra_PreambleIndex = groupOffset + (ssb_pr_idx * config_info.preambles_per_ssb) + rand_preamb;
   }
   AssertFatal(ra->ra_PreambleIndex < nb_of_preambles,
@@ -1215,8 +1214,6 @@ void free_rach_structures(NR_UE_MAC_INST_t *nr_mac, int bwp_id)
     for (int k = 0; k < MAX_NB_FRAME_IN_PRACH_CONF_PERIOD; k++)
       for (int l = 0; l < MAX_NB_SLOT_IN_FRAME; l++)
         free(nr_mac->prach_assoc_pattern[bwp_id].prach_conf_period_list[j].prach_occasion_slot_map[k][l].prach_occasion);
-
-  free(nr_mac->ssb_list[bwp_id].tx_ssb);
 }
 
 void reset_ra(NR_UE_MAC_INST_t *nr_mac, bool free_prach)

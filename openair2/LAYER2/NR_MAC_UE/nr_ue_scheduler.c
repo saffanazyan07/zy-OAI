@@ -1955,28 +1955,6 @@ static void build_ro_list(NR_UE_MAC_INST_t *mac)
   } // For every prach configuration periods in the maximum association pattern period (160ms)
 }
 
-// Build the list of all the valid/transmitted SSBs according to the config
-static void build_ssb_list(NR_UE_MAC_INST_t *mac)
-{
-  // Create the list of transmitted SSBs
-  const int bwp_id = mac->current_UL_BWP->bwp_id;
-  ssb_list_info_t *ssb_list = &mac->ssb_list[bwp_id];
-  fapi_nr_config_request_t *cfg = &mac->phy_config.config_req;
-  ssb_list->nb_tx_ssb = 0;
-
-  for (int ssb_index = 0; ssb_index < MAX_NB_SSB; ssb_index++) {
-    uint32_t curr_mask = cfg->ssb_table.ssb_mask_list[ssb_index / 32].ssb_mask;
-    // check if if current SSB is transmitted
-    if ((curr_mask >> (31 - (ssb_index % 32))) & 0x01) {
-      ssb_list->nb_ssb_per_index[ssb_index] = ssb_list->nb_tx_ssb;
-      ssb_list->nb_tx_ssb++;
-    }
-    else
-      ssb_list->nb_ssb_per_index[ssb_index] = -1;
-  }
-  ssb_list->tx_ssb = calloc(ssb_list->nb_tx_ssb, sizeof(*ssb_list->tx_ssb));
-}
-
 static int get_ssb_idx_from_list(ssb_list_info_t *ssb_list, int idx)
 {
   for (int ssb_index = 0; ssb_index < MAX_NB_SSB; ssb_index++) {
@@ -2010,7 +1988,7 @@ static void map_ssb_to_ro(NR_UE_MAC_INST_t *mac)
   LOG_D(NR_MAC,"SSB rach ratio %d, Multiple SSB per RO %d\n", ssb_rach_ratio, multiple_ssb_per_ro);
 
   const int bwp_id = mac->current_UL_BWP->bwp_id;
-  ssb_list_info_t *ssb_list = &mac->ssb_list[bwp_id];
+  ssb_list_info_t *ssb_list = &mac->ssb_list;
 
   // Evaluate the number of PRACH configuration periods required to map all the SSBs and set the association period
   // WIP: Assumption for now is that all the PRACH configuration periods within a maximum association pattern period have the same
@@ -2304,16 +2282,12 @@ void build_ssb_to_ro_map(NR_UE_MAC_INST_t *mac)
   // Clear all the lists and maps
   const int bwp_id = mac->current_UL_BWP->bwp_id;
   free_rach_structures(mac, bwp_id);
-  memset(&mac->ssb_list[bwp_id], 0, sizeof(ssb_list_info_t));
+
   memset(&mac->prach_assoc_pattern[bwp_id], 0, sizeof(prach_association_pattern_t));
 
   // Build the list of all the valid RACH occasions in the maximum association pattern period according to the PRACH config
   LOG_D(NR_MAC,"Build RO list\n");
   build_ro_list(mac);
-
-  // Build the list of all the valid/transmitted SSBs according to the config
-  LOG_D(NR_MAC,"Build SSB list\n");
-  build_ssb_list(mac);
 
   // Map the transmitted SSBs to the ROs and create the association pattern according to the config
   LOG_D(NR_MAC,"Map SSB to RO\n");
@@ -2829,7 +2803,7 @@ static void nr_ue_prach_scheduler(NR_UE_MAC_INST_t *mac, frame_t frameP, sub_fra
                                                             selected_gnb_ssb_idx,
                                                             (int)frameP,
                                                             (int)slotP,
-                                                            &mac->ssb_list[bwp_id],
+                                                            &mac->ssb_list,
                                                             &prach_occasion_info_p);
 
     if (is_nr_prach_slot) {

@@ -44,6 +44,28 @@
 #include "oai_asn1.h"
 #include "executables/position_interface.h"
 
+// Build the list of all the valid/transmitted SSBs according to the config
+static void build_ssb_list(NR_UE_MAC_INST_t *mac)
+{
+  // Create the list of transmitted SSBs
+  free(mac->ssb_list.tx_ssb);
+  memset(&mac->ssb_list, 0, sizeof(ssb_list_info_t));
+  ssb_list_info_t *ssb_list = &mac->ssb_list;
+  fapi_nr_config_request_t *cfg = &mac->phy_config.config_req;
+  ssb_list->nb_tx_ssb = 0;
+
+  for (int ssb_index = 0; ssb_index < MAX_NB_SSB; ssb_index++) {
+    uint32_t curr_mask = cfg->ssb_table.ssb_mask_list[ssb_index / 32].ssb_mask;
+    // check if if current SSB is transmitted
+    if ((curr_mask >> (31 - (ssb_index % 32))) & 0x01) {
+      ssb_list->nb_ssb_per_index[ssb_index] = ssb_list->nb_tx_ssb;
+      ssb_list->nb_tx_ssb++;
+    } else
+      ssb_list->nb_ssb_per_index[ssb_index] = -1;
+  }
+  ssb_list->tx_ssb = calloc(ssb_list->nb_tx_ssb, sizeof(*ssb_list->tx_ssb));
+}
+
 void set_tdd_config_nr_ue(fapi_nr_tdd_table_t *tdd_table,
                           int mu,
                           NR_TDD_UL_DL_Pattern_t *pattern)
@@ -1771,14 +1793,16 @@ void nr_rrc_mac_config_req_sib1(module_id_t module_id, int cc_idP, NR_SIB1_t *si
   mac->n_ta_offset = get_ta_offset(scc->n_TimingAdvanceOffset);
 
   config_common_ue_sa(mac, scc, cc_idP);
-  configure_common_BWP_dl(mac,
-                          0, // bwp-id
-                          &scc->downlinkConfigCommon.initialDownlinkBWP);
+
+  // Build the list of all the valid/transmitted SSBs according to the config
+  LOG_D(NR_MAC, "Build SSB list\n");
+  build_ssb_list(mac);
+
+  int bwp_id = 0;
+  configure_common_BWP_dl(mac, bwp_id, &scc->downlinkConfigCommon.initialDownlinkBWP);
   if (scc->uplinkConfigCommon) {
     mac->timeAlignmentTimerCommon = scc->uplinkConfigCommon->timeAlignmentTimerCommon;
-    configure_common_BWP_ul(mac,
-                            0, // bwp-id
-                            &scc->uplinkConfigCommon->initialUplinkBWP);
+    configure_common_BWP_ul(mac, bwp_id, &scc->uplinkConfigCommon->initialUplinkBWP);
   }
   // set current BWP only if coming from non-connected state
   // otherwise it is just a periodically update of the SIB1 content
@@ -1839,6 +1863,10 @@ static void handle_reconfiguration_with_sync(NR_UE_MAC_INST_t *mac,
     mac->dmrs_TypeA_Position = scc->dmrs_TypeA_Position;
     UPDATE_IE(mac->tdd_UL_DL_ConfigurationCommon, scc->tdd_UL_DL_ConfigurationCommon, NR_TDD_UL_DL_ConfigCommon_t);
     config_common_ue(mac, scc, cc_idP);
+    // Build the list of all the valid/transmitted SSBs according to the config
+    LOG_D(NR_MAC,"Build SSB list\n");
+    build_ssb_list(mac);
+
     const int bwp_id = 0;
     if (scc->downlinkConfigCommon)
       configure_common_BWP_dl(mac, bwp_id, scc->downlinkConfigCommon->initialDownlinkBWP);
