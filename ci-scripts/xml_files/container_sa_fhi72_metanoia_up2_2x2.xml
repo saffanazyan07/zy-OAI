@@ -34,7 +34,6 @@
     100100
     100010
     100020
-    100030
     100040
     103000
     100002
@@ -46,7 +45,7 @@
 
   <testCase id="200000">
     <class>Custom_Script</class>
-    <desc>Setup sriov and network interfaces VVDN</desc>
+    <desc>Setup sriov and network interfaces Metanoia</desc>
     <node>peafowl</node>
     <script>yaml_files/sa_fhi_7.2_metanoia_2x2_gnb/setup_sriov_metanoia.sh</script>
     <command_fail>yes</command_fail>
@@ -68,7 +67,7 @@
 
   <testCase id="120000">
     <class>Deploy_Object</class>
-    <desc>Deploy gNB (TDD/Band78/100MHz/VVDN) in a container</desc>
+    <desc>Deploy gNB (TDD/Band78/100MHz/Metanoia) in a container</desc>
     <yaml_path>ci-scripts/yaml_files/sa_fhi_7.2_metanoia_2x2_gnb</yaml_path>
     <eNB_instance>0</eNB_instance>
     <eNB_serverId>0</eNB_serverId>
@@ -91,8 +90,8 @@
 
   <testCase id="100010">
     <class>Iperf</class>
-    <desc>iperf (DL/600Mbps/UDP)(30 sec)(multi-ue profile)</desc>
-    <iperf_args>-u -b 600M -t 30 -R</iperf_args>
+    <desc>iperf (DL/650Mbps/UDP)(30 sec)(single-ue profile)</desc>
+    <iperf_args>-u -b 650M -t 30 -R</iperf_args>
     <id>up2-fhi72</id>
     <iperf_packetloss_threshold>20</iperf_packetloss_threshold>
     <iperf_bitrate_threshold>80</iperf_bitrate_threshold>
@@ -100,18 +99,9 @@
     <svr_id>oc-cn5g-20897-peafowl</svr_id>
   </testCase>
 
-  <testCase id="100030">
-    <class>Iperf</class>
-    <desc>iperf (DL/TCP)(30 sec)(multi-ue profile)</desc>
-    <iperf_args>-t 30 -R</iperf_args>
-    <id>up2-fhi72</id>
-    <iperf_tcp_rate_target>100</iperf_tcp_rate_target>
-    <svr_id>oc-cn5g-20897-peafowl</svr_id>
-  </testCase>
-
   <testCase id="100020">
     <class>Iperf</class>
-    <desc>iperf (UL/100Mbps/UDP)(30 sec)(multi-ue profile)</desc>
+    <desc>iperf (UL/100Mbps/UDP)(30 sec)(single-ue profile)</desc>
     <iperf_args>-u -b 100M -t 30</iperf_args>
     <id>up2-fhi72</id>
     <iperf_packetloss_threshold>20</iperf_packetloss_threshold>
@@ -122,10 +112,9 @@
 
   <testCase id="100040">
     <class>Iperf</class>
-    <desc>iperf (UL/TCP)(30 sec)(multi-ue profile)</desc>
-    <iperf_args>-t 30</iperf_args>
+    <desc>iperf (BIDIR TCP)(30 sec)(single-ue profile)</desc>
+    <iperf_args>-t 30 --bidir</iperf_args>
     <id>up2-fhi72</id>
-    <iperf_tcp_rate_target>40</iperf_tcp_rate_target>
     <svr_id>oc-cn5g-20897-peafowl</svr_id>
   </testCase>
 
