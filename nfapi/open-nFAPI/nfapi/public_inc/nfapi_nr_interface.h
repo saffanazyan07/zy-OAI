@@ -156,6 +156,18 @@ int nfapi_nr_p7_message_header_unpack(void *pMessageBuf, uint32_t messageBufLen,
  */
 int nfapi_nr_p7_message_unpack(void *pMessageBuf, uint32_t messageBufLen, void *pUnpackedBuf, uint32_t unpackedBufLen, nfapi_p7_codec_config_t* config);
 
+/*! \brief Peeks the SFN and Slot of an (n)FAPI P7 message
+ *  \param pMessageBuf A pointer to an encoded P7 message header
+ *  \param messageBufLen The size of the encoded P7 message header
+ *  \param SFN A pointer to store the peeked SFN
+ *  \param Slot A pointer to store the peeked Slot
+ *  \return 0 means success, -1 means failure.
+ *
+ * The function will decode the encoded SFN and Slot from an encoded P7 (n)FAPI message
+
+ */
+int peek_nr_nfapi_p7_sfn_slot(void *pMessageBuf, uint32_t messageBufLen, uint16_t *SFN, uint16_t *Slot);
+
 /*! \brief Calculates the checksum of a  message
  *
  *  \param buffer Pointer to the packed message
