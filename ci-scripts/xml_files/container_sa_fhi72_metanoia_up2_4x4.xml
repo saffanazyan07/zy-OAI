@@ -53,17 +53,19 @@
   </testCase>
 
   <testCase id="110000">
-    <class>Pull_Cluster_Image</class>
-    <desc>Pull Images from Cluster</desc>
-    <oc_project>oaicicd-ran</oc_project>
+    <class>Pull_Local_Registry</class>
+    <desc>Pull Images from Local Registry</desc>
+    <test_svr_id>0</test_svr_id>
     <images_to_pull>oai-gnb-fhi72</images_to_pull>
   </testCase>
+
   <testCase id="800813">
     <class>Create_Workspace</class>
     <desc>Create new Workspace for server 0</desc>
     <eNB_instance>0</eNB_instance>
     <eNB_serverId>0</eNB_serverId>
   </testCase>
+
   <testCase id="120000">
     <class>Deploy_Object</class>
     <desc>Deploy gNB (TDD/Band78/100MHz/VVDN) in a container</desc>
