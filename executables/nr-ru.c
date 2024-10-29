@@ -1337,8 +1337,12 @@ void *ru_thread(void *param)
         if (prach_id >= 0) {
           VCD_SIGNAL_DUMPER_DUMP_FUNCTION_BY_NAME( VCD_SIGNAL_DUMPER_FUNCTIONS_PHY_RU_PRACH_RX, 1 );
 
-          T(T_GNB_PHY_PRACH_INPUT_SIGNAL, T_INT(proc->frame_rx), T_INT(proc->tti_rx), T_INT(0),
-          T_BUFFER(&ru->common.rxdata[0][fp->get_samples_slot_timestamp(proc->tti_rx-1,fp,0)]/*-ru->N_TA_offset*/, fp->get_samples_per_slot(proc->tti_rx,fp)*4*2));
+          T(T_GNB_PHY_PRACH_INPUT_SIGNAL,
+            T_INT(proc->frame_rx),
+            T_INT(proc->tti_rx),
+            T_INT(0),
+            T_BUFFER(&ru->common.rxdata[0][fp->get_samples_slot_timestamp(proc->tti_rx - 1, fp, 0) /*-ru->N_TA_offset*/],
+                     (fp->get_samples_per_slot(proc->tti_rx - 1, fp) + fp->get_samples_per_slot(proc->tti_rx, fp)) * 4));
           RU_PRACH_list_t *p = ru->prach_list + prach_id;
           int N_dur = get_nr_prach_duration(p->fmt);
 
