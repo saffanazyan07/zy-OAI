@@ -733,6 +733,9 @@ endif()
 include_directories(${NFAPI_DIR}/vnf/public_inc)
 include_directories(${NFAPI_DIR}/vnf/inc)
 
+if(OAI_WLS)
+  target_compile_definitions(NFAPI_VNF_LIB PRIVATE ENABLE_WLS)
+endif()
 # nFAPI user defined code
 #############################
 set(NFAPI_USER_SRC

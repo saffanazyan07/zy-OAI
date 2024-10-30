@@ -1,5 +1,5 @@
 /*
- * Licensed to the OpenAirInterface (OAI) Software Alliance under one or more
+* Licensed to the OpenAirInterface (OAI) Software Alliance under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
  * The OpenAirInterface Software Alliance licenses this file to You under
@@ -19,15 +19,15 @@
  *      contact@openairinterface.org
  */
 
-#ifndef OPENAIRINTERFACE_WLS_PNF_H
-#define OPENAIRINTERFACE_WLS_PNF_H
-#include "nfapi_pnf_interface.h"
-#include "pnf.h"
+#ifndef OPENAIRINTERFACE_WLS_VNF_H
+#define OPENAIRINTERFACE_WLS_VNF_H
+#include "nfapi_vnf_interface.h"
+#include "vnf.h"
 #include "wls_common.h"
 
-int wls_pnf_nr_pack_and_send_p5_message(pnf_t* pnf, nfapi_nr_p4_p5_message_header_t* msg, uint32_t msg_len);
-int wls_pnf_nr_pack_and_send_p7_message(nfapi_nr_p7_message_header_t * msg);
-void *wls_fapi_pnf_nr_start_thread(void *ptr);
-int wls_fapi_nr_pnf_start();
-void wls_pnf_set_p7_config(nfapi_pnf_p7_config_t *p7_config);
-#endif // OPENAIRINTERFACE_WLS_PNF_H
+void *wls_fapi_vnf_nr_start_thread(void *ptr);
+int wls_fapi_nr_vnf_start();
+void wls_vnf_set_p7_config(nfapi_vnf_p7_config_t *p7_config);
+int wls_vnf_nr_pack_and_send_p5_message(vnf_t *vnf, nfapi_nr_p4_p5_message_header_t* msg, uint32_t msg_len);
+int wls_vnf_nr_pack_and_send_p7_message(nfapi_nr_p7_message_header_t* msg);
+#endif //OPENAIRINTERFACE_WLS_VNF_H

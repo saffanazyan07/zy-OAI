@@ -6202,9 +6202,9 @@ int nfapi_p7_message_unpack(void *pMessageBuf,
     return 0;
 }
 
-bool peek_nr_nfapi_p7_sfn_slot(void *pMessageBuf, uint32_t messageBufLen, uint16_t *SFN, uint16_t *Slot)
+bool peek_nr_nfapi_p7_sfn_slot(void *pMessageBuf, uint32_t messageBufLen, uint16_t *SFN, uint16_t *Slot, bool isNFAPI)
 {
-  uint8_t *pReadPackedMessage = &((uint8_t *)pMessageBuf)[NFAPI_NR_P7_HEADER_LENGTH];
+  uint8_t *pReadPackedMessage = &((uint8_t *)pMessageBuf)[isNFAPI ? NFAPI_NR_P7_HEADER_LENGTH:NFAPI_HEADER_LENGTH];
   uint8_t *end = (uint8_t*)pMessageBuf + messageBufLen;
   if(!(pull16(&pReadPackedMessage, SFN, end) && pull16(&pReadPackedMessage, Slot, end))) {
     NFAPI_TRACE(NFAPI_TRACE_ERROR, "Failed to peek SFN.Slot\n");

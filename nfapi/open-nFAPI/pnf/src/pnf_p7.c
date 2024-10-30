@@ -575,7 +575,6 @@ int pnf_p7_pack_and_send_p7_message(pnf_p7_t* pnf_p7, nfapi_p7_message_header_t*
 int pnf_nr_p7_pack_and_send_p7_message(pnf_p7_t* pnf_p7, nfapi_nr_p7_message_header_t* header, uint32_t msg_len)
 {
 #ifdef ENABLE_WLS
-  printf("Trying to send message 0x%02x\n",header->message_id);
   wls_pnf_nr_pack_and_send_p7_message(header);
   return 0;
 #else
@@ -1281,11 +1280,11 @@ uint8_t is_p7_request_in_window(uint16_t sfnsf, const char* name, pnf_p7_t* phy)
 
 
 // P7 messages
-void pnf_handle_dl_tti_request(void* pRecvMsg, int recvMsgLen, pnf_p7_t* pnf_p7)
+void pnf_handle_dl_tti_request(void* pRecvMsg, int recvMsgLen, pnf_p7_t* pnf_p7, bool isNFAPI)
 {
   // NFAPI_TRACE(NFAPI_TRACE_INFO, "DL_CONFIG.req Received\n");
   uint16_t frame, slot;
-  if (peek_nr_nfapi_p7_sfn_slot(pRecvMsg, recvMsgLen, &frame, &slot)) {
+  if (peek_nr_nfapi_p7_sfn_slot(pRecvMsg, recvMsgLen, &frame, &slot,isNFAPI)) {
     if (pthread_mutex_lock(&(pnf_p7->mutex)) != 0) {
       NFAPI_TRACE(NFAPI_TRACE_INFO, "failed to lock mutex\n");
       return;
@@ -1306,8 +1305,13 @@ void pnf_handle_dl_tti_request(void* pRecvMsg, int recvMsgLen, pnf_p7_t* pnf_p7)
                   frame,
                   slot,
                   buffer_index);
-
-      if (nfapi_nr_p7_message_unpack(pRecvMsg, recvMsgLen, req, sizeof(*req), &(pnf_p7->_public.codec_config)) != 0)
+      int result = 0;
+      if (isNFAPI) {
+        result = nfapi_nr_p7_message_unpack(pRecvMsg, recvMsgLen, req, sizeof(*req), &(pnf_p7->_public.codec_config));
+      }else {
+        result = fapi_nr_p7_message_unpack(pRecvMsg, recvMsgLen, req, sizeof(*req), &(pnf_p7->_public.codec_config));
+      }
+      if (result != 0)
         NFAPI_TRACE(NFAPI_TRACE_INFO, "failed to unpack request\n");
     } else {
       if (pnf_p7->_public.timing_info_mode_aperiodic)
@@ -1414,10 +1418,10 @@ void pnf_handle_dl_config_request(void* pRecvMsg, int recvMsgLen, pnf_p7_t* pnf_
 	}
 }
 
-void pnf_handle_ul_tti_request(void* pRecvMsg, int recvMsgLen, pnf_p7_t* pnf_p7)
+void pnf_handle_ul_tti_request(void* pRecvMsg, int recvMsgLen, pnf_p7_t* pnf_p7, bool isNFAPI)
 {
   uint16_t frame, slot;
-  if (peek_nr_nfapi_p7_sfn_slot(pRecvMsg, recvMsgLen, &frame, &slot)) {
+  if (peek_nr_nfapi_p7_sfn_slot(pRecvMsg, recvMsgLen, &frame, &slot,isNFAPI)) {
     if (pthread_mutex_lock(&(pnf_p7->mutex)) != 0) {
       NFAPI_TRACE(NFAPI_TRACE_INFO, "failed to lock mutex\n");
       return;
@@ -1439,8 +1443,13 @@ void pnf_handle_ul_tti_request(void* pRecvMsg, int recvMsgLen, pnf_p7_t* pnf_p7)
                   frame,
                   slot,
                   buffer_index);
-
-      if (nfapi_nr_p7_message_unpack(pRecvMsg, recvMsgLen, req, sizeof(*req), &(pnf_p7->_public.codec_config)) != 0)
+      int result = 0;
+      if (isNFAPI) {
+        result = nfapi_nr_p7_message_unpack(pRecvMsg, recvMsgLen, req, sizeof(*req), &(pnf_p7->_public.codec_config));
+      }else {
+        result = fapi_nr_p7_message_unpack(pRecvMsg, recvMsgLen, req, sizeof(*req), &(pnf_p7->_public.codec_config));
+      }
+      if (result != 0)
         NFAPI_TRACE(NFAPI_TRACE_ERROR, "failed to unpack UL_TTI.request\n");
     } else {
       NFAPI_TRACE(NFAPI_TRACE_NOTE,
@@ -1534,10 +1543,10 @@ void pnf_handle_ul_config_request(void* pRecvMsg, int recvMsgLen, pnf_p7_t* pnf_
 	}
 }
 
-void pnf_handle_ul_dci_request(void* pRecvMsg, int recvMsgLen, pnf_p7_t* pnf_p7)
+void pnf_handle_ul_dci_request(void* pRecvMsg, int recvMsgLen, pnf_p7_t* pnf_p7, bool isNFAPI)
 {
   uint16_t frame, slot;
-  if (peek_nr_nfapi_p7_sfn_slot(pRecvMsg, recvMsgLen, &frame, &slot)) {
+  if (peek_nr_nfapi_p7_sfn_slot(pRecvMsg, recvMsgLen, &frame, &slot,isNFAPI)) {
     if (pthread_mutex_lock(&(pnf_p7->mutex)) != 0) {
       NFAPI_TRACE(NFAPI_TRACE_INFO, "failed to lock mutex\n");
       return;
@@ -1558,8 +1567,13 @@ void pnf_handle_ul_dci_request(void* pRecvMsg, int recvMsgLen, pnf_p7_t* pnf_p7)
                   frame,
                   slot,
                   buffer_index);
-
-      if (nfapi_nr_p7_message_unpack(pRecvMsg, recvMsgLen, req, sizeof(*req), &pnf_p7->_public.codec_config) != 0)
+      int result = 0;
+      if (isNFAPI) {
+        result = nfapi_nr_p7_message_unpack(pRecvMsg, recvMsgLen, req, sizeof(*req), &pnf_p7->_public.codec_config);
+      }else {
+        result = fapi_nr_p7_message_unpack(pRecvMsg, recvMsgLen, req, sizeof(*req), &pnf_p7->_public.codec_config);
+      }
+      if (result != 0)
         NFAPI_TRACE(NFAPI_TRACE_INFO, "failed to unpack request\n");
     } else {
       if (pnf_p7->_public.timing_info_mode_aperiodic) {
@@ -1647,10 +1661,10 @@ void pnf_handle_hi_dci0_request(void* pRecvMsg, int recvMsgLen, pnf_p7_t* pnf_p7
 	}
 }
 
-void pnf_handle_tx_data_request(void* pRecvMsg, int recvMsgLen, pnf_p7_t* pnf_p7)
+void pnf_handle_tx_data_request(void* pRecvMsg, int recvMsgLen, pnf_p7_t* pnf_p7, bool isNFAPI)
 {
   uint16_t frame, slot;
-  if (peek_nr_nfapi_p7_sfn_slot(pRecvMsg, recvMsgLen, &frame, &slot)) {
+  if (peek_nr_nfapi_p7_sfn_slot(pRecvMsg, recvMsgLen, &frame, &slot, isNFAPI)) {
     if (pthread_mutex_lock(&(pnf_p7->mutex)) != 0) {
       NFAPI_TRACE(NFAPI_TRACE_INFO, "failed to lock mutex\n");
       return;
@@ -1671,8 +1685,13 @@ void pnf_handle_tx_data_request(void* pRecvMsg, int recvMsgLen, pnf_p7_t* pnf_p7
                   frame,
                   slot,
                   buffer_index);
-
-      if (nfapi_nr_p7_message_unpack(pRecvMsg, recvMsgLen, req, sizeof(*req), &pnf_p7->_public.codec_config) == 0) {
+      int result = 0;
+      if (isNFAPI) {
+        result = nfapi_nr_p7_message_unpack(pRecvMsg, recvMsgLen, req, sizeof(*req), &pnf_p7->_public.codec_config);
+      }else {
+        result = fapi_nr_p7_message_unpack(pRecvMsg, recvMsgLen, req, sizeof(*req), &pnf_p7->_public.codec_config);
+      }
+      if (result == 0) {
         for (int i = 0; i < req->Number_of_PDUs; ++i)
           pnf_p7->nr_stats.dl.bytes += req->pdu_list[i].PDU_length;
       } else {
@@ -2205,16 +2224,16 @@ void pnf_nr_dispatch_p7_message(void* pRecvMsg, int recvMsgLen, pnf_p7_t* pnf_p7
       pnf_nr_handle_dl_node_sync(pRecvMsg, recvMsgLen, pnf_p7, rx_hr_time);
       break;
     case NFAPI_NR_PHY_MSG_TYPE_DL_TTI_REQUEST:
-      pnf_handle_dl_tti_request(pRecvMsg, recvMsgLen, pnf_p7);
+      pnf_handle_dl_tti_request(pRecvMsg, recvMsgLen, pnf_p7, true);
       break;
     case NFAPI_NR_PHY_MSG_TYPE_UL_TTI_REQUEST:
-      pnf_handle_ul_tti_request(pRecvMsg, recvMsgLen, pnf_p7);
+      pnf_handle_ul_tti_request(pRecvMsg, recvMsgLen, pnf_p7, true);
       break;
     case NFAPI_NR_PHY_MSG_TYPE_UL_DCI_REQUEST:
-      pnf_handle_ul_dci_request(pRecvMsg, recvMsgLen, pnf_p7);
+      pnf_handle_ul_dci_request(pRecvMsg, recvMsgLen, pnf_p7, true);
       break;
     case NFAPI_NR_PHY_MSG_TYPE_TX_DATA_REQUEST:
-      pnf_handle_tx_data_request(pRecvMsg, recvMsgLen, pnf_p7);
+      pnf_handle_tx_data_request(pRecvMsg, recvMsgLen, pnf_p7, true);
       break;
     default: {
       if (header.message_id >= NFAPI_VENDOR_EXT_MSG_MIN && header.message_id <= NFAPI_VENDOR_EXT_MSG_MAX) {

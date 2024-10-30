@@ -34,6 +34,9 @@
 #include "nfapi_nr_interface_scf.h"
 #include "nfapi_vnf_interface.h"
 #include "nfapi_vnf.h"
+#ifdef ENABLE_WLS
+#include <wls_integration/include/wls_vnf.h>
+#endif
 #include "nfapi.h"
 #include "vendor_ext.h"
 
@@ -1445,8 +1448,12 @@ void *vnf_nr_p7_thread_start(void *ptr)
   p7_vnf->config->codec_config.deallocate = &vnf_deallocate;
   p7_vnf->config->allocate_p7_vendor_ext = &phy_nr_allocate_p7_vendor_ext;
   p7_vnf->config->deallocate_p7_vendor_ext = &phy_nr_deallocate_p7_vendor_ext;
+#ifndef ENABLE_WLS
   NFAPI_TRACE(NFAPI_TRACE_INFO, "[VNF] Creating VNF NFAPI P7 start thread %s\n", __FUNCTION__);
   pthread_create(&vnf_p7_start_pthread, NULL, &vnf_nr_p7_start_thread, p7_vnf->config);
+#else
+  wls_vnf_set_p7_config(p7_vnf->config);
+#endif
   return 0;
 }
 
@@ -1504,7 +1511,11 @@ int pnf_nr_start_resp_cb(nfapi_vnf_config_t *config, int p5_idx, nfapi_nr_pnf_st
   NFAPI_TRACE(NFAPI_TRACE_INFO, "[VNF] Sending NFAPI_VNF_PARAM_REQUEST phy_id:%d\n", pnf->phys[0].id);
   memset(&req, 0, sizeof(req));
   req.header.message_id = NFAPI_NR_PHY_MSG_TYPE_PARAM_REQUEST;
+#ifdef ENABLE_WLS
+  req.header.phy_id = 0;
+#else
   req.header.phy_id = pnf->phys[0].id;
+#endif
   nfapi_nr_vnf_param_req(config, p5_idx, &req);
   return 0;
 }
@@ -1862,9 +1873,18 @@ void configure_nr_nfapi_vnf(char *vnf_addr, int vnf_p5_port, char *pnf_ip_addr, 
   config->codec_config.allocate = &vnf_nr_allocate;
   config->codec_config.deallocate = &vnf_nr_deallocate;
   memset(&UL_RCC_INFO, 0, sizeof(UL_RCC_IND_t));
+  memset(&UL_RCC_INFO,0,sizeof(UL_RCC_IND_t));
+#ifdef ENABLE_WLS
+  printf("WLS MODE PNF\n");
+  NFAPI_TRACE(NFAPI_TRACE_INFO, "[PNF] Creating WLS VNF NFAPI start thread %s\n", __FUNCTION__);
+  //wls_fapi_pnf_nr_start_thread(config);
+  pthread_create(&vnf_start_pthread, NULL, &wls_fapi_vnf_nr_start_thread, config);
+  pthread_setname_np(vnf_start_pthread, "NFAPI_WLS_VNF");
+#else
   NFAPI_TRACE(NFAPI_TRACE_INFO, "[VNF] Creating VNF NFAPI start thread %s\n", __FUNCTION__);
   pthread_create(&vnf_start_pthread, NULL, (void *)&vnf_nr_start_thread, config);
   NFAPI_TRACE(NFAPI_TRACE_INFO, "[VNF] Created VNF NFAPI start thread %s\n", __FUNCTION__);
+#endif
 }
 
 

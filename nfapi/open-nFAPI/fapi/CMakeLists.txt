@@ -22,3 +22,7 @@ if (OAI_AERIAL)
     target_compile_definitions(nr_fapi_p5 PRIVATE ENABLE_AERIAL)
     target_compile_definitions(nr_fapi_p7 PRIVATE ENABLE_AERIAL)
 endif ()
+
+if(OAI_WLS)
+    target_compile_definitions(nr_fapi_common PRIVATE ENABLE_WLS)
+endif()

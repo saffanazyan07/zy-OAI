@@ -32,6 +32,9 @@
 #include "nfapi/oai_integration/aerial/fapi_vnf_p5.h"
 #include "nr_fapi_p5.h"
 #endif
+#ifdef ENABLE_WLS
+#include <wls_integration/include/wls_vnf.h>
+#endif // ENABLE_WLS
 #include "nfapi/oai_integration/vendor_ext.h"
 
 void* vnf_malloc(nfapi_vnf_config_t* config, size_t size)
@@ -1532,6 +1535,9 @@ static int vnf_send_p5_msg(nfapi_vnf_pnf_info_t* pnf, const void *msg, int len, 
 
 int vnf_nr_pack_and_send_p5_message(vnf_t* vnf, uint16_t p5_idx, nfapi_nr_p4_p5_message_header_t* msg, uint16_t msg_len)
 {
+#ifdef ENABLE_WLS
+return wls_vnf_nr_pack_and_send_p5_message(vnf,msg, msg_len);
+#else
 	nfapi_vnf_pnf_info_t* pnf = nfapi_vnf_pnf_list_find(&(vnf->_public), p5_idx);
 	
 	if(pnf)
@@ -1573,7 +1579,7 @@ int vnf_nr_pack_and_send_p5_message(vnf_t* vnf, uint16_t p5_idx, nfapi_nr_p4_p5_
     NFAPI_TRACE(NFAPI_TRACE_INFO, "%s() cannot find pnf info for p5_idx:%d\n", __FUNCTION__, p5_idx);
     return -1;
   }
-
+#endif // ENABLE_WLS
 }
 
 

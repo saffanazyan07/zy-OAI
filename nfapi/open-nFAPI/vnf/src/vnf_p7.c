@@ -29,6 +29,7 @@
 #include "nfapi/oai_integration/aerial/fapi_nvIPC.h"
 #endif
 #include "vnf_p7.h"
+#include <wls_integration/include/wls_vnf.h>
 #include "nr_fapi_p7_utils.h"
 
 #ifdef NDEBUG
@@ -475,7 +476,9 @@ int vnf_send_p7_msg(vnf_p7_t* vnf_p7, nfapi_vnf_p7_connection_info_t* p7_info, u
 
 int vnf_nr_p7_pack_and_send_p7_msg(vnf_p7_t* vnf_p7, nfapi_nr_p7_message_header_t* header)
 {
-
+#ifdef ENABLE_WLS
+  return wls_vnf_nr_pack_and_send_p7_message(header) == 1 ? 0 : -1;
+#else
 	nfapi_vnf_p7_connection_info_t* p7_connection = vnf_p7_connection_info_list_find(vnf_p7, header->phy_id);
 	if(p7_connection)
 	{
@@ -565,6 +568,7 @@ int vnf_nr_p7_pack_and_send_p7_msg(vnf_p7_t* vnf_p7, nfapi_nr_p7_message_header_
 		NFAPI_TRACE(NFAPI_TRACE_INFO, "%s() cannot find p7 connection info for phy_id:%d\n", __FUNCTION__, header->phy_id);
 		return -1;
 	}
+#endif
 }
 
 int vnf_p7_pack_and_send_p7_msg(vnf_p7_t* vnf_p7, nfapi_p7_message_header_t* header)

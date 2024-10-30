@@ -189,7 +189,7 @@ int nfapi_nr_p7_message_unpack(void *pMessageBuf,
  * The function will decode the encoded SFN and Slot from an encoded P7 (n)FAPI message
 
  */
-bool peek_nr_nfapi_p7_sfn_slot(void *pMessageBuf, uint32_t messageBufLen, uint16_t *SFN, uint16_t *Slot);
+bool peek_nr_nfapi_p7_sfn_slot(void *pMessageBuf, uint32_t messageBufLen, uint16_t *SFN, uint16_t *Slot, bool isNFAPI);
 
 /*! \brief Calculates the checksum of a  message
  *

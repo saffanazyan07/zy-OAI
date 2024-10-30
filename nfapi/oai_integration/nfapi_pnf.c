@@ -1759,7 +1759,7 @@ int nr_start_request(nfapi_pnf_config_t *config, nfapi_pnf_phy_config_t *phy, nf
   threadCreate(&p7_thread, &pnf_nr_p7_thread_start, p7_config, "pnf_p7_thread", -1, OAI_PRIORITY_RT);
 #else
 // pass p7_config to WLS handler
-  wls_set_p7_config(p7_config);
+  wls_pnf_set_p7_config(p7_config);
 #endif
   printf("[PNF] %s %d\n", __FUNCTION__, __LINE__);
   NFAPI_TRACE(NFAPI_TRACE_INFO, "[PNF] Calling l1_north_init_eNB() %s\n", __FUNCTION__);
