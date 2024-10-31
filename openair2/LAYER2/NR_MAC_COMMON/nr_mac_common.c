@@ -1757,6 +1757,27 @@ int get_nr_prach_occasion_info_from_index(uint8_t index,
   }
 }
 
+uint16_t get_nr_prach_format_from_index(uint8_t index, uint32_t pointa, uint8_t unpaired)
+{
+  uint8_t format2 = 0xff;
+  uint16_t format;
+  if (pointa > 2016666) { // FR2
+    if (table_6_3_3_2_4_prachConfig_Index[index][1] != -1)
+      format2 = (uint8_t)table_6_3_3_2_4_prachConfig_Index[index][1];
+    format = ((uint8_t)table_6_3_3_2_4_prachConfig_Index[index][0]) | (format2 << 8);
+  } else {
+    if (unpaired) {
+      if (table_6_3_3_2_3_prachConfig_Index[index][1] != -1)
+        format2 = (uint8_t)table_6_3_3_2_3_prachConfig_Index[index][1];
+      format = ((uint8_t)table_6_3_3_2_3_prachConfig_Index[index][0]) | (format2 << 8);
+    } else {
+      if (table_6_3_3_2_2_prachConfig_Index[index][1] != -1)
+        format2 = (uint8_t)table_6_3_3_2_2_prachConfig_Index[index][1];
+      format = ((uint8_t)table_6_3_3_2_2_prachConfig_Index[index][0]) | (format2 << 8);
+    }
+  }
+  return format;
+}
 
 int get_nr_prach_info_from_index(uint8_t index,
                                  int frame,

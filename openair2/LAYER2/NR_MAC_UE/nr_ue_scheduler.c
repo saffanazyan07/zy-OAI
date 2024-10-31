@@ -2965,10 +2965,16 @@ static void nr_ue_prach_scheduler(NR_UE_MAC_INST_t *mac, frame_t frameP, sub_fra
       nr_get_prach_resources(mac, 0, 0, &ra->prach_resources, ra->rach_ConfigDedicated);
       pdu->prach_config_pdu.ra_PreambleIndex = ra->ra_PreambleIndex;
       pdu->prach_config_pdu.prach_tx_power = get_prach_tx_power(mac);
-      mac->ra.ra_rnti = nr_get_ra_rnti(pdu->prach_config_pdu.prach_start_symbol,
-                                       pdu->prach_config_pdu.prach_slot,
-                                       pdu->prach_config_pdu.num_ra,
-                                       0);
+      unsigned int slot_RA;
+      // 3GPP TS 38.321 Section 5.1.3 says t_id for RA-RNTI depends on mu as specified in clause 5.3.2 in TS 38.211
+      // so mu = 0 for prach format < 4.
+      if (pdu->prach_config_pdu.prach_format < 4) {
+        unsigned int slots_per_sf = (1 << tdd_config->referenceSubcarrierSpacing);
+        slot_RA = pdu->prach_config_pdu.prach_slot / slots_per_sf;
+      } else {
+        slot_RA = pdu->prach_config_pdu.prach_slot;
+      }
+      mac->ra.ra_rnti = nr_get_ra_rnti(pdu->prach_config_pdu.prach_start_symbol, slot_RA, pdu->prach_config_pdu.num_ra, 0);
       release_ul_config(pdu, false);
       nr_scheduled_response_t scheduled_response = {.ul_config = mac->ul_config_request + slotP,
                                                     .mac = mac,
@@ -3018,7 +3024,7 @@ static void nr_ue_prach_scheduler(NR_UE_MAC_INST_t *mac, frame_t frameP, sub_fra
 
         // Compute MsgB RNTI
         ra->MsgB_rnti =
-            nr_get_MsgB_rnti(prach_occasion_info_p->start_symbol, prach_occasion_info_p->slot, prach_occasion_info_p->fdm, 0);
+            nr_get_MsgB_rnti(prach_occasion_info_p->start_symbol, slot_RA, prach_occasion_info_p->fdm, 0);
         LOG_D(NR_MAC, "ra->ra_state %s\n", nrra_ue_text[ra->ra_state]);
         ra->ra_state = nrRA_WAIT_MSGB;
         ra->t_crnti = 0;

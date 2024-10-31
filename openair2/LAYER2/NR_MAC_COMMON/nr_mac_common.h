@@ -135,6 +135,8 @@ void find_aggregation_candidates(uint8_t *aggregation_level,
                                  const NR_SearchSpace_t *ss,
                                  int maxL);
 
+uint16_t get_nr_prach_format_from_index(uint8_t index, uint32_t pointa, uint8_t unpaired);
+
 int get_nr_prach_info_from_index(uint8_t index,
                                  int frame,
                                  int slot,
