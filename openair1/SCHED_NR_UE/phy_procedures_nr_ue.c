@@ -1184,7 +1184,16 @@ void nr_ue_prach_procedures(PHY_VARS_NR_UE *ue, const UE_nr_rxtx_proc_t *proc)
 
     VCD_SIGNAL_DUMPER_DUMP_FUNCTION_BY_NAME(VCD_SIGNAL_DUMPER_FUNCTIONS_UE_GENERATE_PRACH, VCD_FUNCTION_IN);
 
+    start_meas_nr_ue_phy(ue, PRACH_GEN_STATS);
     prach_power = generate_nr_prach(ue, gNB_id, frame_tx, nr_slot_tx);
+    stop_meas_nr_ue_phy(ue, PRACH_GEN_STATS);
+    if (cpumeas(CPUMEAS_GETSTATE)) {
+      LOG_D(PHY,
+            "[SFN %d.%d] PRACH Proc %5.2f\n",
+            proc->frame_tx,
+            proc->nr_slot_tx,
+            ue->phy_cpu_stats.cpu_time_stats[PRACH_GEN_STATS].p_time / (cpuf * 1000.0));
+    }
 
     VCD_SIGNAL_DUMPER_DUMP_FUNCTION_BY_NAME(VCD_SIGNAL_DUMPER_FUNCTIONS_UE_GENERATE_PRACH, VCD_FUNCTION_OUT);
 
