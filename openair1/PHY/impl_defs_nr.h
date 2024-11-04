@@ -56,6 +56,8 @@ static const uint8_t N_slot_subframe[MU_NUMBER] = {1, 2, 4, 8, 16};
 
 #define  NB_DL_DATA_TO_UL_ACK              (8) /* size of table TS 38.213 Table 9.2.3-1 */
 
+#define NR_PRACH_SEQ_LEN_L 839
+#define NR_PRACH_SEQ_LEN_S 139
 
 /***********************************************************************
 *

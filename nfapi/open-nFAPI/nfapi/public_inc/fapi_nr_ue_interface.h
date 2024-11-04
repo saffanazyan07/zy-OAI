@@ -694,6 +694,7 @@ typedef struct
   fapi_nr_num_prach_fd_occasions_t* num_prach_fd_occasions_list;
   uint8_t ssb_per_rach;//SSB-per-RACH-occasion Value: 0: 1/8 1:1/4, 2:1/2 3:1 4:2 5:4, 6:8 7:16
   uint8_t prach_multiple_carriers_in_a_band;//0 = disabled 1 = enabled
+  uint8_t root_seq_computed; // flag set and used only in PHY to indicate if table is computed with this config
 
 } fapi_nr_prach_config_t;
 
