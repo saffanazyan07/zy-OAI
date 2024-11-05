@@ -94,7 +94,8 @@ static int16_t ssb_index_from_prach(module_id_t module_idP,
   NR_MsgA_ConfigCommon_r16_t *msgacc = NULL;
   if (scc->uplinkConfigCommon->initialUplinkBWP->ext1 && scc->uplinkConfigCommon->initialUplinkBWP->ext1->msgA_ConfigCommon_r16)
     msgacc = scc->uplinkConfigCommon->initialUplinkBWP->ext1->msgA_ConfigCommon_r16->choice.setup;
-  int mu = nr_get_prach_mu(msgacc, rach_ConfigCommon);
+  const int ul_mu = scc->uplinkConfigCommon->frequencyInfoUL->scs_SpecificCarrierList.list.array[0]->subcarrierSpacing;
+  const int mu = nr_get_prach_or_ul_mu(msgacc, rach_ConfigCommon, ul_mu);
 
   get_nr_prach_info_from_index(config_index,
 			       (int)frameP,
@@ -201,7 +202,8 @@ void find_SSB_and_RO_available(gNB_MAC_INST *nrmac)
   NR_MsgA_ConfigCommon_r16_t *msgacc = NULL;
   if (scc->uplinkConfigCommon->initialUplinkBWP->ext1 && scc->uplinkConfigCommon->initialUplinkBWP->ext1->msgA_ConfigCommon_r16)
     msgacc = scc->uplinkConfigCommon->initialUplinkBWP->ext1->msgA_ConfigCommon_r16->choice.setup;
-  int mu = nr_get_prach_mu(msgacc, rach_ConfigCommon);
+  const int ul_mu = scc->uplinkConfigCommon->frequencyInfoUL->scs_SpecificCarrierList.list.array[0]->subcarrierSpacing;
+  const int mu = nr_get_prach_or_ul_mu(msgacc, rach_ConfigCommon, ul_mu);
 
   // prach is scheduled according to configuration index and tables 6.3.3.2.2 to 6.3.3.2.4
   get_nr_prach_occasion_info_from_index(config_index,
@@ -266,8 +268,10 @@ static void schedule_nr_MsgA_pusch(NR_UplinkConfigCommon_t *uplinkConfigCommon,
   NR_MsgA_PUSCH_Resource_r16_t *msgA_PUSCH_Resource = uplinkConfigCommon->initialUplinkBWP->ext1->msgA_ConfigCommon_r16->choice
                                                           .setup->msgA_PUSCH_Config_r16->msgA_PUSCH_ResourceGroupA_r16;
 
-  int mu = nr_get_prach_mu(uplinkConfigCommon->initialUplinkBWP->ext1->msgA_ConfigCommon_r16->choice.setup,
-                           uplinkConfigCommon->initialUplinkBWP->rach_ConfigCommon->choice.setup);
+  const int ul_mu = uplinkConfigCommon->frequencyInfoUL->scs_SpecificCarrierList.list.array[0]->subcarrierSpacing;
+  const int mu = nr_get_prach_or_ul_mu(uplinkConfigCommon->initialUplinkBWP->ext1->msgA_ConfigCommon_r16->choice.setup,
+                                       uplinkConfigCommon->initialUplinkBWP->rach_ConfigCommon->choice.setup,
+                                       ul_mu);
 
   const int n_slots_frame = nr_slots_per_frame[mu];
   slot_t msgA_pusch_slot = (slotP + msgA_PUSCH_Resource->msgA_PUSCH_TimeDomainOffset_r16) % n_slots_frame;
@@ -371,7 +375,8 @@ void schedule_nr_prach(module_id_t module_idP, frame_t frameP, sub_frame_t slotP
   NR_MsgA_ConfigCommon_r16_t *msgacc = NULL;
   if (scc->uplinkConfigCommon->initialUplinkBWP->ext1 && scc->uplinkConfigCommon->initialUplinkBWP->ext1->msgA_ConfigCommon_r16)
     msgacc = scc->uplinkConfigCommon->initialUplinkBWP->ext1->msgA_ConfigCommon_r16->choice.setup;
-  int mu = nr_get_prach_mu(msgacc, rach_ConfigCommon);
+  const int ul_mu = scc->uplinkConfigCommon->frequencyInfoUL->scs_SpecificCarrierList.list.array[0]->subcarrierSpacing;
+  const int mu = nr_get_prach_or_ul_mu(msgacc, rach_ConfigCommon, ul_mu);
   int index = ul_buffer_index(frameP, slotP, mu, gNB->UL_tti_req_ahead_size);
   nfapi_nr_ul_tti_request_t *UL_tti_req = &RC.nrmac[module_idP]->UL_tti_req_ahead[0][index];
   nfapi_nr_config_request_scf_t *cfg = &RC.nrmac[module_idP]->config[0];

@@ -5336,7 +5336,9 @@ int get_FeedbackDisabled(NR_DownlinkHARQ_FeedbackDisabled_r17_t *downlinkHARQ_Fe
   return (downlinkHARQ_FeedbackDisabled_r17->buf[byte_index] >> (7 - bit_index)) & 1;
 }
 
-int nr_get_prach_mu(const NR_MsgA_ConfigCommon_r16_t *msgacc, const NR_RACH_ConfigCommon_t *rach_ConfigCommon)
+int nr_get_prach_or_ul_mu(const NR_MsgA_ConfigCommon_r16_t *msgacc,
+                          const NR_RACH_ConfigCommon_t *rach_ConfigCommon,
+                          const int ul_mu)
 {
   int mu;
 
@@ -5348,7 +5350,8 @@ int nr_get_prach_mu(const NR_MsgA_ConfigCommon_r16_t *msgacc, const NR_RACH_Conf
     // Choose Subcarrier Spacing of configuration file of 4-Step
     mu = *rach_ConfigCommon->msg1_SubcarrierSpacing;
   } else
-    AssertFatal(false, "PRACH subcarrier spacing mandatory present for L139, not supported otherwise\n");
+    // Return invalid UL mu
+    mu = ul_mu;
 
   return mu;
 }
