@@ -741,7 +741,7 @@ typedef struct nr_mac_rrc_ul_if_s {
   initial_ul_rrc_message_transfer_func_t initial_ul_rrc_message_transfer;
 } nr_mac_rrc_ul_if_t;
 
-typedef enum interrupt_followup_action { FOLLOW_INSYNC, FOLLOW_INSYNC_RECONFIG, FOLLOW_OUTOFSYNC  } interrupt_followup_action_t;
+typedef enum interrupt_followup_action { FOLLOW_INSYNC, FOLLOW_INSYNC_RECONFIG, FOLLOW_OUTOFSYNC, MEAS_GAP } interrupt_followup_action_t;
 
 /*! \brief UE list used by gNB to order UEs/CC for scheduling*/
 typedef struct {
