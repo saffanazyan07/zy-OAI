@@ -763,6 +763,7 @@ typedef struct {
   NR_CellGroupConfig_t *reconfigCellGroup;
   interrupt_followup_action_t interrupt_action;
   NR_UE_NR_Capability_t *capability;
+  NR_MeasConfig_t *meas_config;
   // UE selected beam index
   uint8_t UE_beam_index;
   bool Msg4_MsgB_ACKed;

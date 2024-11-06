@@ -1466,3 +1466,10 @@ int do_NR_HandoverPreparationInformation(const uint8_t *uecap_buf, int uecap_buf
   ASN_STRUCT_FREE(asn_DEF_NR_HandoverPreparationInformation, hpi);
   return (enc_rval.encoded + 7) / 8;
 }
+
+int do_NR_MeasConfig(NR_MeasConfig_t *measconfig, uint8_t *buf, int buf_size)
+{
+  asn_enc_rval_t enc_rval = uper_encode_to_buffer(&asn_DEF_NR_MeasConfig, NULL, measconfig, buf, buf_size);
+  AssertFatal(enc_rval.encoded > 0, "ASN1 message encoding failed (%s, %lu)!\n", enc_rval.failed_type->name, enc_rval.encoded);
+  return (enc_rval.encoded + 7) / 8;
+}
