@@ -18,34 +18,35 @@
  * For more information about the OpenAirInterface (OAI) Software Alliance:
  *      contact@openairinterface.org
  */
+#include "nr_fapi.h"
 
-#ifndef OPENAIRINTERFACE_NR_FAPI_H
-#define OPENAIRINTERFACE_NR_FAPI_H
-
-#include "stdint.h"
-#include "string.h"
-#include "nfapi_interface.h"
-#include "nfapi_nr_interface.h"
-#include "nfapi_nr_interface_scf.h"
-#include "nfapi.h"
-#include "nfapi/oai_integration/vendor_ext.h"
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include "assertions.h"
-
-typedef struct {
-  uint8_t num_msg;
-  uint8_t opaque_handle;
-  uint16_t message_id;
-  uint32_t message_length;
-} fapi_message_header_t;
-
-bool isFAPIMessageIDValid(uint16_t id);
+bool isFAPIMessageIDValid(const uint16_t id)
+{
+  // SCF 222.10.04 Table 3-5 PHY API message types
+  return (id >= NFAPI_NR_PHY_MSG_TYPE_PARAM_REQUEST && id <= 0xFF) || id == NFAPI_NR_PHY_MSG_TYPE_START_RESPONSE
+         || id == NFAPI_NR_PHY_MSG_TYPE_UL_NODE_SYNC || id == NFAPI_NR_PHY_MSG_TYPE_DL_NODE_SYNC
+         || id == NFAPI_NR_PHY_MSG_TYPE_TIMING_INFO;
+}
 
 int fapi_nr_message_header_unpack(uint8_t **pMessageBuf,
                                   uint32_t messageBufLen,
                                   void *pUnpackedBuf,
                                   uint32_t unpackedBufLen,
-                                  nfapi_p4_p5_codec_config_t *config);
+                                  nfapi_p4_p5_codec_config_t *config)
+{
+  uint8_t **pReadPackedMessage = pMessageBuf;
+  nfapi_p4_p5_message_header_t *header = pUnpackedBuf;
+  fapi_message_header_t fapi_msg = {0};
 
-#endif // OPENAIRINTERFACE_NR_FAPI_H
+  if (pMessageBuf == NULL || pUnpackedBuf == NULL || messageBufLen < NFAPI_HEADER_LENGTH
+      || unpackedBufLen < sizeof(fapi_message_header_t)) {
+    return -1;
+  }
+  uint8_t *end = *pMessageBuf + messageBufLen;
+  // process the header
+  int result =
+      (pull8(pReadPackedMessage, &fapi_msg.num_msg, end) && pull8(pReadPackedMessage, &fapi_msg.opaque_handle, end)
+       && pull16(pReadPackedMessage, &header->message_id, end) && pull32(pReadPackedMessage, &fapi_msg.message_length, end));
+  header->message_length = fapi_msg.message_length;
+  return (result);
+}

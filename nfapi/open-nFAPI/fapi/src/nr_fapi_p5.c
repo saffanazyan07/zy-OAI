@@ -22,37 +22,6 @@
 #include "nr_fapi_p5.h"
 #include "debug.h"
 
-bool isFAPIMessageIDValid(uint16_t id)
-{
-  // SCF 222.10.04 Table 3-5 PHY API message types
-  return (id >= NFAPI_NR_PHY_MSG_TYPE_PARAM_REQUEST && id <= 0xFF) || id == NFAPI_NR_PHY_MSG_TYPE_START_RESPONSE
-         || id == NFAPI_NR_PHY_MSG_TYPE_UL_NODE_SYNC || id == NFAPI_NR_PHY_MSG_TYPE_DL_NODE_SYNC
-         || id == NFAPI_NR_PHY_MSG_TYPE_TIMING_INFO;
-}
-
-int fapi_nr_message_header_unpack(uint8_t **pMessageBuf,
-                                  uint32_t messageBufLen,
-                                     void *pUnpackedBuf,
-                                     uint32_t unpackedBufLen,
-                                     nfapi_p4_p5_codec_config_t *config)
-{
-  uint8_t **pReadPackedMessage = pMessageBuf;
-  nfapi_p4_p5_message_header_t *header = pUnpackedBuf;
-  fapi_message_header_t fapi_msg;
-
-  if(pMessageBuf == NULL || pUnpackedBuf == NULL || messageBufLen < NFAPI_HEADER_LENGTH || unpackedBufLen < sizeof(nfapi_p4_p5_message_header_t)){
-    return -1;
-  }
-  uint8_t *end = *pMessageBuf + messageBufLen;
-  // process the header
-  int result =
-      (pull8(pReadPackedMessage, &fapi_msg.num_msg, end) && pull8(pReadPackedMessage, &fapi_msg.opaque_handle, end)
-       && pull16(pReadPackedMessage, &header->message_id, end) && pull32(pReadPackedMessage, &fapi_msg.message_length, end));
-  DevAssert(fapi_msg.message_length <= 0xFFFF);
-  header->message_length = fapi_msg.message_length;
-  return (result);
-}
-
 uint8_t fapi_nr_p5_message_body_pack(nfapi_p4_p5_message_header_t *header,
                                      uint8_t **ppWritePackedMsg,
                                      uint8_t *end,
