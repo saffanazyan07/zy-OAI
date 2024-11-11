@@ -2115,7 +2115,7 @@ static uint8_t pack_tx_request_body_value(void *tlv, uint8_t **ppWritePackedMsg,
   return 1;
 }
 
-static uint8_t pack_tx_data_request(void *msg, uint8_t **ppWritePackedMsg, uint8_t *end, nfapi_p7_codec_config_t *config)
+uint8_t pack_tx_data_request(void *msg, uint8_t **ppWritePackedMsg, uint8_t *end, nfapi_p7_codec_config_t *config)
 {
   nfapi_nr_tx_data_request_t *pNfapiMsg = (nfapi_nr_tx_data_request_t *)msg;
 
@@ -5970,7 +5970,7 @@ static uint8_t unpack_tx_data_pdu_list_value(uint8_t **ppReadPackedMsg, uint8_t 
   return 1;
 }
 
-static uint8_t unpack_tx_data_request(uint8_t **ppReadPackedMsg, uint8_t *end, void *msg, nfapi_p7_codec_config_t *config)
+uint8_t unpack_tx_data_request(uint8_t **ppReadPackedMsg, uint8_t *end, void *msg, nfapi_p7_codec_config_t *config)
 {
   nfapi_nr_tx_data_request_t *pNfapiMsg = (nfapi_nr_tx_data_request_t *)msg;
 
