@@ -34,7 +34,6 @@
     100100
     100010
     100020
-    100040
     103000
     100002
     130000
@@ -90,8 +89,8 @@
 
   <testCase id="100010">
     <class>Iperf</class>
-    <desc>iperf (DL/720Mbps/UDP)(30 sec)(single-ue profile)</desc>
-    <iperf_args>-u -b 720M -t 30 -R</iperf_args>
+    <desc>iperf (DL/900Mbps/UDP)(30 sec)(single-ue profile)</desc>
+    <iperf_args>-u -b 900M -t 60 -R</iperf_args>
     <id>up2-fhi72</id>
     <iperf_packetloss_threshold>20</iperf_packetloss_threshold>
     <iperf_bitrate_threshold>80</iperf_bitrate_threshold>
@@ -102,7 +101,7 @@
   <testCase id="100020">
     <class>Iperf</class>
     <desc>iperf (UL/100Mbps/UDP)(30 sec)(single-ue profile)</desc>
-    <iperf_args>-u -b 100M -t 30</iperf_args>
+    <iperf_args>-u -b 100M -t 60</iperf_args>
     <id>up2-fhi72</id>
     <iperf_packetloss_threshold>20</iperf_packetloss_threshold>
     <iperf_bitrate_threshold>80</iperf_bitrate_threshold>

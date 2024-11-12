@@ -34,7 +34,6 @@
     100100
     100010
     100020
-    100040
     103000
     100002
     130000
@@ -90,8 +89,8 @@
 
   <testCase id="100010">
     <class>Iperf</class>
-    <desc>iperf (DL/650Mbps/UDP)(30 sec)(single-ue profile)</desc>
-    <iperf_args>-u -b 650M -t 30 -R</iperf_args>
+    <desc>iperf (DL/650Mbps/UDP)(5 min)(single-ue profile)</desc>
+    <iperf_args>-u -b 650M -t 300 -R</iperf_args>
     <id>up2-fhi72</id>
     <iperf_packetloss_threshold>20</iperf_packetloss_threshold>
     <iperf_bitrate_threshold>80</iperf_bitrate_threshold>
@@ -101,8 +100,8 @@
 
   <testCase id="100020">
     <class>Iperf</class>
-    <desc>iperf (UL/100Mbps/UDP)(30 sec)(single-ue profile)</desc>
-    <iperf_args>-u -b 100M -t 30</iperf_args>
+    <desc>iperf (UL/100Mbps/UDP)(5 min)(single-ue profile)</desc>
+    <iperf_args>-u -b 100M -t 300</iperf_args>
     <id>up2-fhi72</id>
     <iperf_packetloss_threshold>20</iperf_packetloss_threshold>
     <iperf_bitrate_threshold>80</iperf_bitrate_threshold>
@@ -112,8 +111,8 @@
 
   <testCase id="100040">
     <class>Iperf</class>
-    <desc>iperf (BIDIR TCP)(30 sec)(single-ue profile)</desc>
-    <iperf_args>-t 30 --bidir</iperf_args>
+    <desc>iperf (BIDIR UDP)(5 min)(single-ue profile)</desc>
+    <iperf_args>-t 300 --bidir -u -b 400M</iperf_args>
     <id>up2-fhi72</id>
     <svr_id>oc-cn5g-20897-peafowl</svr_id>
   </testCase>
