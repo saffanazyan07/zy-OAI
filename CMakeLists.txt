@@ -1453,6 +1453,7 @@ set(libnas_emm_msg_OBJS
 
 set(libnas_fgs_msg_OBJS
   ${NAS_SRC}COMMON/EMM/MSG/fgs_service_request.c
+  ${NAS_SRC}COMMON/EMM/MSG/fgmm_service_accept.c
 )
 
 set(libnas_esm_msg_OBJS
