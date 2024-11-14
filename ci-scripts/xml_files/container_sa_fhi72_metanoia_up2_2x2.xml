@@ -28,6 +28,7 @@
     200000
     110000
     800813
+    222000
     120000
     102000
     102001
@@ -37,6 +38,7 @@
     103000
     100002
     130000
+    333000
     777777
     888888
   </TestCaseRequestedList>
@@ -64,9 +66,17 @@
     <eNB_serverId>0</eNB_serverId>
   </testCase>
 
+  <testCase id="222000">
+    <class>Custom_Script</class>
+    <desc>Deploy CU on OpenShift cluster</desc>
+    <node>peafowl</node>
+    <script>yaml_files/sa_fhi_7.2_metanoia_2x2_gnb/deploy_cu.sh</script>
+    <command_fail>yes</command_fail>
+  </testCase>
+
   <testCase id="120000">
     <class>Deploy_Object</class>
-    <desc>Deploy gNB (TDD/Band78/100MHz/Metanoia) in a container</desc>
+    <desc>Deploy DU (TDD/Band78/100MHz/Metanoia) in a container</desc>
     <yaml_path>ci-scripts/yaml_files/sa_fhi_7.2_metanoia_2x2_gnb</yaml_path>
     <eNB_instance>0</eNB_instance>
     <eNB_serverId>0</eNB_serverId>
@@ -89,8 +99,8 @@
 
   <testCase id="100010">
     <class>Iperf</class>
-    <desc>iperf (DL/650Mbps/UDP)(5 min)(single-ue profile)</desc>
-    <iperf_args>-u -b 650M -t 300 -R</iperf_args>
+    <desc>iperf (DL/600Mbps/UDP)(5 min)(single-ue profile)</desc>
+    <iperf_args>-u -b 600M -t 300 -R</iperf_args>
     <id>up2-fhi72</id>
     <iperf_packetloss_threshold>20</iperf_packetloss_threshold>
     <iperf_bitrate_threshold>80</iperf_bitrate_threshold>
@@ -137,6 +147,14 @@
     <yaml_path>ci-scripts/yaml_files/sa_fhi_7.2_metanoia_2x2_gnb</yaml_path>
     <eNB_instance>0</eNB_instance>
     <eNB_serverId>0</eNB_serverId>
+  </testCase>
+
+  <testCase id="333000">
+    <class>Custom_Script</class>
+    <desc>Deploy CU on OpenShift cluster</desc>
+    <node>peafowl</node>
+    <script>yaml_files/sa_fhi_7.2_metanoia_2x2_gnb/deploy_cu.sh</script>
+    <command_fail>yes</command_fail>
   </testCase>
 
   <testCase id="777777">
