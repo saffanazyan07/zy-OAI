@@ -38,6 +38,7 @@
     103000
     100002
     130000
+    100002
     333000
     777777
     888888
@@ -68,7 +69,7 @@
 
   <testCase id="222000">
     <class>Custom_Script</class>
-    <desc>Deploy CU on OpenShift cluster</desc>
+    <desc>Deploy OAI-O-CU on OpenShift cluster</desc>
     <node>peafowl</node>
     <script>yaml_files/sa_fhi_7.2_metanoia_2x2_gnb/deploy_cu.sh</script>
     <command_fail>yes</command_fail>
@@ -76,7 +77,7 @@
 
   <testCase id="120000">
     <class>Deploy_Object</class>
-    <desc>Deploy DU (TDD/Band78/100MHz/Metanoia) in a container</desc>
+    <desc>Deploy OAI-O-DU (TDD/Band78/100MHz/Metanoia) in a container</desc>
     <yaml_path>ci-scripts/yaml_files/sa_fhi_7.2_metanoia_2x2_gnb</yaml_path>
     <eNB_instance>0</eNB_instance>
     <eNB_serverId>0</eNB_serverId>
@@ -143,7 +144,7 @@
   <testCase id="130000">
     <class>Undeploy_Object</class>
     <always_exec>true</always_exec>
-    <desc>Undeploy gNB</desc>
+    <desc>Undeploy OAI-O-DU</desc>
     <yaml_path>ci-scripts/yaml_files/sa_fhi_7.2_metanoia_2x2_gnb</yaml_path>
     <eNB_instance>0</eNB_instance>
     <eNB_serverId>0</eNB_serverId>
@@ -151,9 +152,9 @@
 
   <testCase id="333000">
     <class>Custom_Script</class>
-    <desc>Deploy CU on OpenShift cluster</desc>
+    <desc>Undeploy OAI-O-CU on OpenShift cluster</desc>
     <node>peafowl</node>
-    <script>yaml_files/sa_fhi_7.2_metanoia_2x2_gnb/deploy_cu.sh</script>
+    <script>yaml_files/sa_fhi_7.2_metanoia_2x2_gnb/undeploy_cu.sh</script>
     <command_fail>yes</command_fail>
   </testCase>
 

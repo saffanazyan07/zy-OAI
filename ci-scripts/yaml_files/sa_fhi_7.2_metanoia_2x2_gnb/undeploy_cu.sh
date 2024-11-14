@@ -1,3 +1,3 @@
 set -e
-helm uninstall oai-cu --wait --timeout 60s
+/opt/undeploy_cu.sh > /dev/null
 exit 0

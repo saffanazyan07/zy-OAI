@@ -69,7 +69,7 @@ oc-cn5g:
   RunIperf3Server: False
 
 oc-cn5g-20897:
-  Host: cacofonix
+  Host: peafowl
   Namespace: "oaicicd-core-for-fhi72"
   CNPath: "/opt/oai-cn5g-fed-develop-2024-april-20897"
   NetworkScript: echo "inet 172.21.6.105"
