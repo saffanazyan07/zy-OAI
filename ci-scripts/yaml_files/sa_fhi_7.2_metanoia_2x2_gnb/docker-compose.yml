@@ -1,5 +1,5 @@
 services:
-    oai-gnb:
+    oai-du:
         image: ${REGISTRY:-oaisoftwarealliance}/oai-gnb-fhi72:${TAG:-develop}
         cap_add:
             - SYS_ADMIN
@@ -7,14 +7,14 @@ services:
             - SYS_NICE
         cap_drop:
             - ALL
-        container_name: oai-gnb
+        container_name: oai-du
         environment:
             TZ: Europe/Paris
             USE_ADDITIONAL_OPTIONS: --sa --thread-pool 11,12,13,14,15,16,17,18
         devices:
             - /dev/vfio:/dev/vfio/
         volumes:
-            - ../../conf_files/gnb.sa.band77.273prb.fhi72.4x4.2L-metanoia.conf:/opt/oai-gnb/etc/gnb.conf
+            - ../../conf_files/du.sa.band77.273prb.fhi72.4x4.2L-metanoia.conf:/opt/oai-gnb/etc/gnb.conf
             - /dev/hugepages:/dev/hugepages
         # Please change these values based on your system
         cpuset: "0,1,2,8,9,10,11,12,13,14,15,16,17,18"
