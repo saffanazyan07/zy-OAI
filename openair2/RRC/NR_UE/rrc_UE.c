@@ -613,6 +613,9 @@ NR_UE_RRC_INST_t* nr_rrc_init_ue(char* uecap_file, int nb_inst, int num_ant_tx)
     for (int i = 0; i < NB_CNX_UE; i++) {
       rrcPerNB_t *ptr = &rrc->perNB[i];
       ptr->SInfo = (NR_UE_RRC_SI_INFO){0};
+      ptr->l3_measurements = (l3_measurements_t){0};
+      ptr->l3_measurements.ssb_filter_coeff_rsrp = 1.0;
+      ptr->l3_measurements.csi_RS_filter_coeff_rsrp = 1.0;
       init_SI_timers(&ptr->SInfo);
     }
 
@@ -1512,6 +1515,14 @@ static void handle_quantityconfig(rrcPerNB_t *rrc, NR_QuantityConfig_t *quantity
       if (!rrc->QuantityConfig[i])
         rrc->QuantityConfig[i] = calloc(1, sizeof(*rrc->QuantityConfig[i]));
       rrc->QuantityConfig[i]->quantityConfigCell = quantityNR->quantityConfigCell;
+      // TODO: It remains to compute ssb_filter_coeff_rsrp and csi_RS_filter_coeff_rsrp for multiple quantityConfig
+      // TS 38.331 - 5.5.3.2 Layer 3 filtering
+      NR_QuantityConfigRS_t *qcc = &quantityNR->quantityConfigCell;
+      l3_measurements_t *l3_measurements = &rrc->l3_measurements;
+      if (qcc->ssb_FilterConfig.filterCoefficientRSRP)
+        l3_measurements->ssb_filter_coeff_rsrp = 1. / pow(2, (*qcc->ssb_FilterConfig.filterCoefficientRSRP) / 4);
+      if (qcc->csi_RS_FilterConfig.filterCoefficientRSRP)
+        l3_measurements->csi_RS_filter_coeff_rsrp = 1. / pow(2, (*qcc->csi_RS_FilterConfig.filterCoefficientRSRP) / 4);
       if (quantityNR->quantityConfigRS_Index)
         UPDATE_IE(rrc->QuantityConfig[i]->quantityConfigRS_Index, quantityNR->quantityConfigRS_Index, struct NR_QuantityConfigRS);
     }
@@ -1907,6 +1918,41 @@ static int nr_rrc_ue_decode_dcch(NR_UE_RRC_INST_t *rrc,
   return 0;
 }
 
+void nr_ue_meas_filtering(rrcPerNB_t *rrc, bool is_neighboring_cell, uint16_t Nid_cell, bool csi_meas, int rsrp_dBm)
+{
+  l3_measurements_t *l3_measurements = &rrc->l3_measurements;
+
+  meas_t *meas_cell = NULL;
+  if (!is_neighboring_cell) {
+    meas_cell = &l3_measurements->active_cell;
+    if (meas_cell->Nid_cell != Nid_cell) {
+      meas_cell->ss_rsrp_dBm_initialized = false;
+      meas_cell->csi_rsrp_dBm_initialized = false;
+    }
+    meas_cell->Nid_cell = Nid_cell;
+  } else {
+    return;
+  }
+
+  if (!csi_meas) {
+    if (meas_cell->ss_rsrp_dBm_initialized == true) {
+      double a = l3_measurements->ssb_filter_coeff_rsrp;
+      meas_cell->ss_rsrp_dBm = (1.0 - a) * meas_cell->ss_rsrp_dBm + a * rsrp_dBm;
+    } else {
+      meas_cell->ss_rsrp_dBm = rsrp_dBm;
+      meas_cell->ss_rsrp_dBm_initialized = true;
+    }
+  } else {
+    if (meas_cell->csi_rsrp_dBm_initialized == true) {
+      double a = l3_measurements->csi_RS_filter_coeff_rsrp;
+      meas_cell->csi_rsrp_dBm = (1.0 - a) * meas_cell->csi_rsrp_dBm + a * rsrp_dBm;
+    } else {
+      meas_cell->csi_rsrp_dBm = rsrp_dBm;
+      meas_cell->csi_rsrp_dBm_initialized = true;
+    }
+  }
+}
+
 void nr_rrc_handle_ra_indication(NR_UE_RRC_INST_t *rrc, bool ra_succeeded)
 {
   NR_UE_Timers_Constants_t *timers = &rrc->timers_and_constants;
@@ -2003,6 +2049,20 @@ void *rrc_nrue(void *notUsed)
 
     nr_rrc_ue_decode_NR_SBCCH_SL_BCH_Message(rrc, sbcch->gnb_index,sbcch->frame, sbcch->slot, sbcch->sdu,
                                              sbcch->sdu_size, sbcch->rx_slss_id);
+  case NR_RRC_MAC_MEAS_DATA_IND:
+
+    LOG_D(NR_RRC, "[%s][Nid_cell %i] Received %s measurements: RSRP = %i (dBm)\n",
+          NR_RRC_MAC_MEAS_DATA_IND(msg_p).is_neighboring_cell? "Neighboring cell" : "Active cell",
+          NR_RRC_MAC_MEAS_DATA_IND(msg_p).Nid_cell,
+          NR_RRC_MAC_MEAS_DATA_IND(msg_p).is_csi_meas ? "CSI meas" : "SSB meas",
+          NR_RRC_MAC_MEAS_DATA_IND(msg_p).rsrp_dBm - 157);
+
+    rrcPerNB_t *rrcNB = rrc->perNB + NR_RRC_MAC_MEAS_DATA_IND(msg_p).gnb_index;
+    nr_ue_meas_filtering(rrcNB,
+                         NR_RRC_MAC_MEAS_DATA_IND(msg_p).is_neighboring_cell,
+                         NR_RRC_MAC_MEAS_DATA_IND(msg_p).Nid_cell,
+                         NR_RRC_MAC_MEAS_DATA_IND(msg_p).is_csi_meas,
+                         NR_RRC_MAC_MEAS_DATA_IND(msg_p).rsrp_dBm - 157);
     break;
 
   case NR_RRC_MAC_CCCH_DATA_IND: {

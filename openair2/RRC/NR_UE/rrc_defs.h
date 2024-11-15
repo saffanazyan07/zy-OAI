@@ -184,6 +184,23 @@ typedef struct NR_UE_Timers_Constants_s {
   NR_UE_TimersAndConstants_t *sib1_TimersAndConstants;
 } NR_UE_Timers_Constants_t;
 
+typedef struct meas_s {
+  uint16_t Nid_cell;
+  int ss_rsrp_dBm;
+  bool ss_rsrp_dBm_initialized;
+  int csi_rsrp_dBm;
+  bool csi_rsrp_dBm_initialized;
+} meas_t;
+
+typedef struct l3_measurements_s {
+  double ssb_filter_coeff_rsrp;
+  double csi_RS_filter_coeff_rsrp;
+  meas_t active_cell;
+  long trigger_to_measid;
+  long trigger_quantity;
+  long rs_type;
+} l3_measurements_t;
+
 typedef enum {
   OUT_OF_SYNC = 0,
   IN_SYNC = 1
@@ -200,6 +217,7 @@ typedef struct rrcPerNB {
   NR_MeasGapConfig_t *measGapConfig;
   NR_UE_RRC_SI_INFO SInfo;
   NR_RSRP_Range_t s_measure;
+  l3_measurements_t l3_measurements;
 } rrcPerNB_t;
 
 typedef struct NR_UE_RRC_INST_s {

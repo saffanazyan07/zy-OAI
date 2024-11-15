@@ -60,3 +60,6 @@ MESSAGE_DEF(NR_RRC_MAC_CCCH_DATA_IND,    MESSAGE_PRIORITY_MED_PLUS, NRRrcMacCcch
 MESSAGE_DEF(NR_RRC_MAC_BCCH_DATA_IND,    MESSAGE_PRIORITY_MED_PLUS, NRRrcMacBcchDataInd,           nr_rrc_mac_bcch_data_ind)
 MESSAGE_DEF(NR_RRC_MAC_SBCCH_DATA_IND,    MESSAGE_PRIORITY_MED_PLUS, NRRrcMacSBcchDataInd,         nr_rrc_mac_sbcch_data_ind)
 
+// nrUE
+MESSAGE_DEF(NR_RRC_MAC_MEAS_DATA_IND,    MESSAGE_PRIORITY_MED_PLUS, NRRrcMacMeasDataInd,           nr_rrc_mac_meas_data_ind)
+

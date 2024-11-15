@@ -1162,13 +1162,10 @@ static void handle_rlm(rlm_t rlm_result, int frame, NR_UE_MAC_INST_t *mac)
   nr_mac_rrc_sync_ind(mac->ue_id, frame, is_sync);
 }
 
-static int8_t handle_csirs_measurements(NR_UE_MAC_INST_t *mac,
-                                        frame_t frame,
-                                        int slot,
-                                        fapi_nr_csirs_measurements_t *csirs_measurements)
+static int8_t handle_l1_measurements(NR_UE_MAC_INST_t *mac, frame_t frame, int slot, fapi_nr_l1_measurements_t *l1_measurements)
 {
-  handle_rlm(csirs_measurements->radiolink_monitoring, frame, mac);
-  return nr_ue_process_csirs_measurements(mac, frame, slot, csirs_measurements);
+  handle_rlm(l1_measurements->radiolink_monitoring, frame, mac);
+  return nr_ue_process_l1_measurements(mac, frame, slot, l1_measurements);
 }
 
 void update_harq_status(NR_UE_MAC_INST_t *mac, uint8_t harq_pid, uint8_t ack_nack)
@@ -1297,11 +1294,11 @@ static uint32_t nr_ue_dl_processing(NR_UE_MAC_INST_t *mac, nr_downlink_indicatio
           else
             LOG_I(PHY, "RAR-Msg2 decoded\n");
           break;
-        case FAPI_NR_CSIRS_IND:
-          ret_mask |= (handle_csirs_measurements(mac,
-                                                 dl_info->frame,
-                                                 dl_info->slot,
-                                                 &rx_indication_body.csirs_measurements)) << FAPI_NR_CSIRS_IND;
+        case FAPI_NR_MEAS_IND:
+          ret_mask |= (handle_l1_measurements(mac,
+                                              dl_info->frame,
+                                              dl_info->slot,
+                                              &rx_indication_body.l1_measurements)) << FAPI_NR_MEAS_IND;
           break;
         default:
           break;
