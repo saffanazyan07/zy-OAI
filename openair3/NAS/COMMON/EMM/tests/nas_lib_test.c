@@ -4,6 +4,7 @@
 #include <arpa/inet.h>
 #include "fgs_service_request.h"
 #include "fgmm_service_accept.h"
+#include "fgmm_service_reject.h"
 #include "nr_nas_msg.h"
 
 void exit_function(const char *file, const char *function, const int line, const char *s, const int assert)
@@ -141,9 +142,68 @@ static void test_service_accept(void)
   free_fgs_service_accept(&orig);
 }
 
+/**
+ * @brief Equality check for Service Reject (enc/dec)
+ */
+static bool eq_service_reject(const fgs_service_reject_msg_t *a, const fgs_service_reject_msg_t *b)
+{
+  _NAS_EQ_CHECK_INT(a->cause, b->cause);
+  for (int i = 0; i < a->num_psi_status; i++)
+    _NAS_EQ_CHECK_INT(a->psi_status[i], b->psi_status[i]);
+  if (a->t3448_value && b->t3448_value)
+    _NAS_EQ_CHECK_INT(*a->t3448_value, *b->t3448_value);
+  if (a->t3446_value && b->t3446_value)
+    _NAS_EQ_CHECK_INT(*a->t3446_value, *b->t3446_value);
+  return true;
+}
+
+/**
+ * @brief Test NAS Service Accept enc/dec
+ */
+static void test_service_reject(void)
+{
+  // Dummy NAS Service Accept message
+  fgs_service_reject_msg_t orig = {
+      .cause = Illegal_UE,
+      .num_psi_status = 3,
+      .t3446_value = malloc(sizeof(*orig.t3446_value)),
+      .t3448_value = malloc(sizeof(*orig.t3448_value)),
+  };
+  orig.psi_status[0] = PDU_SESSION_ACTIVE;
+  orig.psi_status[1] = PDU_SESSION_INACTIVE;
+  orig.psi_status[2] = PDU_SESSION_ACTIVE;
+  *orig.t3446_value = 100;
+  *orig.t3448_value = 200;
+
+  // Expected encoded data
+  uint8_t dummy_enc[] = {0x03, 0x50, 0x02, 0x0a, 0x00, 0x5F, 0x01, 0x64, 0x6B, 0x01, 0xC8};
+
+  // Buffer
+  uint8_t buffer[64];
+  memset(buffer, 0, sizeof(buffer));
+
+  // Encode NAS Service Accept
+  int encoded_length = encode_fgs_service_reject(&orig, buffer, sizeof(buffer));
+  AssertFatal(encoded_length >= 0, "encode_fgs_service_reject() failed\n");
+
+  // Compare the raw encoded buffer with expected encoded data
+  AssertFatal(memcmp(buffer, dummy_enc, encoded_length) == 0, "Encoding mismatch!\n");
+
+  // Decode NAS Service Accept
+  fgs_service_reject_msg_t dec = {0};
+  int decoded_length = decode_fgs_service_reject(&dec, buffer, encoded_length);
+  AssertFatal(decoded_length >= 0, "decode_fgs_service_reject() failed\n");
+
+  // Compare original and decoded messages
+  AssertFatal(eq_service_reject(&orig, &dec), "test_service_reject() failed: original and decoded messages do not match\n");
+  free_fgs_service_reject(&dec);
+  free_fgs_service_reject(&orig);
+}
+
 int main()
 {
   test_service_request();
   test_service_accept();
+  test_service_reject();
   return 0;
 }
