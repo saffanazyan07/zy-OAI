@@ -570,8 +570,8 @@ typedef struct
 
 typedef struct 
 {
-	int16_t sfn;
-	int16_t slot;
+	uint16_t sfn;
+	uint16_t slot;
 	nfapi_nr_dl_tti_request_t  dl_tti_req;
 	nfapi_nr_ul_tti_request_t  ul_tti_req;
 	nfapi_nr_ul_dci_request_t  ul_dci_req;
