@@ -67,11 +67,12 @@ int encode_fgs_service_accept(uint8_t *buffer, const fgs_service_accept_msg_t *m
     }
   }
 
-  // Encode T3448 Timer (O)
+  // T3448 Timer (O)
   if (msg->t3448_value) {
-    buffer[encoded++] = IEI_T3448_VALUE;
-    buffer[encoded++] = 1; // 1 octet
-    buffer[encoded++] = *msg->t3448_value;
+    if ((enc = encode_gprs_timer_ie(buffer + encoded, IEI_T3448_VALUE, *msg->t3448_value)) < 0) {
+      return enc;
+    }
+    encoded += enc;
   }
 
   return encoded;
