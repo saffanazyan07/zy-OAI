@@ -30,6 +30,8 @@
 #include "pnf_p7.h"
 #include "nr_fapi_p7_utils.h" // for 5G/NR message utils
 
+#include "common/ran_context.h"
+#include <SCHED_NR/phy_frame_config_nr.h>
 #define FAPI2_IP_DSCP	0
 
 extern uint16_t sf_ahead;
@@ -1268,6 +1270,30 @@ bool is_nr_p7_request_in_window(const uint16_t sfn, const uint16_t slot, const c
   return true;
 }
 
+/*! \brief Checks if the slot a message is intended to configure is of the appropriate type ( DL or UL slot )
+ *  \param sfn The SFN from a P7 message
+ *  \param slot The Slot from a P7 message
+ *  \param name A string with the message name (e.g. DL_TTI.request) for the warning
+ *  \param type The slot type intended for the message ( NR_DOWNLINK_SLOT or NR_UPLINK_SLOT )
+ *  \return true if the slot type is correct, false if not
+ *
+ * The function will take a SFN and Slot and check if it is of the intended type ( DL or UL ), indicated by parameter type
+ * Will print a warning if the check fails and return false
+ * returns true on success
+ */
+bool check_nr_nfapi_p7_slot_type(const uint16_t sfn, const uint16_t slot, const char* name, int type)
+{
+  DevAssert(RC.gNB != NULL && RC.gNB[0] != NULL);
+  PHY_VARS_gNB *gNB = RC.gNB[0];
+  nfapi_nr_config_request_scf_t *cfg = &gNB->gNB_config;
+  const int slot_type = nr_slot_select(cfg, sfn, slot);
+  if(slot_type != type && slot_type != NR_MIXED_SLOT) {
+    NFAPI_TRACE(NFAPI_TRACE_ERROR, "%4d.%2d Slot type is not appropriate for %s\n", sfn, slot, name);
+    return false;
+  }
+  return true;
+}
+
 uint8_t is_p7_request_in_window(uint16_t sfnsf, const char* name, pnf_p7_t* phy)
 {
 	uint32_t recv_sfn_sf_dec = NFAPI_SFNSF2DEC(sfnsf);
@@ -1331,7 +1357,9 @@ void pnf_handle_dl_tti_request(void* pRecvMsg, int recvMsgLen, pnf_p7_t* pnf_p7)
       NFAPI_TRACE(NFAPI_TRACE_INFO, "failed to lock mutex\n");
       return;
     }
-
+    if(!check_nr_nfapi_p7_slot_type(req.SFN, req.Slot,"DL_TTI.request",NR_DOWNLINK_SLOT)) {
+      return;
+    }
     if (is_nr_p7_request_in_window(req.SFN, req.Slot, "dl_tti_request", pnf_p7)) {
       uint32_t sfn_slot_dec = NFAPI_SFNSLOT2DEC(req.SFN, req.Slot);
       uint8_t buffer_index = sfn_slot_dec % 20;
@@ -1478,6 +1506,9 @@ void pnf_handle_ul_tti_request(void* pRecvMsg, int recvMsgLen, pnf_p7_t* pnf_p7)
       return;
     }
 
+    if(!check_nr_nfapi_p7_slot_type(req.SFN, req.Slot,"UL_TTI.request",NR_UPLINK_SLOT)) {
+      return;
+    }
     if (is_nr_p7_request_in_window(req.SFN, req.Slot, "ul_tti_request", pnf_p7)) {
       uint32_t sfn_slot_dec = NFAPI_SFNSLOT2DEC(req.SFN, req.Slot);
       uint8_t buffer_index = (sfn_slot_dec % 20);
@@ -1609,7 +1640,9 @@ void pnf_handle_ul_dci_request(void* pRecvMsg, int recvMsgLen, pnf_p7_t* pnf_p7)
       NFAPI_TRACE(NFAPI_TRACE_INFO, "failed to lock mutex\n");
       return;
     }
-
+    if (!check_nr_nfapi_p7_slot_type(req.SFN, req.Slot, "UL_DCI_REQUEST", NR_DOWNLINK_SLOT)) {
+      return;
+    }
     if (is_nr_p7_request_in_window(req.SFN, req.Slot, "ul_dci_request", pnf_p7)) {
       uint32_t sfn_slot_dec = NFAPI_SFNSLOT2DEC(req.SFN, req.Slot);
       uint8_t buffer_index = sfn_slot_dec % 20;
@@ -1721,7 +1754,9 @@ void pnf_handle_tx_data_request(void* pRecvMsg, int recvMsgLen, pnf_p7_t* pnf_p7
       NFAPI_TRACE(NFAPI_TRACE_INFO, "failed to lock mutex\n");
       return;
     }
-
+    if(!check_nr_nfapi_p7_slot_type(req.SFN, req.Slot,"TX_DATA.REQUEST",NR_DOWNLINK_SLOT)) {
+      return;
+    }
     if (is_nr_p7_request_in_window(req.SFN, req.Slot, "tx_request", pnf_p7)) {
       uint32_t sfn_slot_dec = NFAPI_SFNSLOT2DEC(req.SFN, req.Slot);
       uint8_t buffer_index = sfn_slot_dec % 20;
