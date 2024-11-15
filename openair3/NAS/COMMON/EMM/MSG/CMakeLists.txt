@@ -1,6 +1,8 @@
 add_library(fgs_lib OBJECT
             fgs_service_request.c
             fgmm_service_accept.c
+            fgmm_service_reject.c
+            fgmm_lib.c
 )
 
 target_link_libraries(fgs_lib PUBLIC fgs_ies_lib)

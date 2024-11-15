@@ -19,37 +19,30 @@
  *      contact@openairinterface.org
  */
 
-#ifndef FGS_SERVICE_ACCEPT_H
-#define FGS_SERVICE_ACCEPT_H
+#ifndef FGS_service_reject_H
+#define FGS_service_reject_H
 
 #include <stdint.h>
 #include "openair3/NAS/COMMON/NR_NAS_defs.h"
 #include "fgmm_lib.h"
 
 typedef struct {
-  uint8_t pdu_session_id;
-  uint8_t cause;
-} pdu_error_cause_t;
+  // 5GMM cause (M)
+  cause_id_t cause;
 
-typedef struct {
+  // T3346 Value (O)
+  uint8_t *t3446_value;
+
   // PDU Session Status (O)
   uint8_t psi_status[MAX_NUM_PSI];
   uint8_t num_psi_status;
 
-  // PDU Session Reactivation Result (O)
-  uint8_t psi_res[MAX_NUM_PSI];
-  uint8_t num_psi_res;
-
-  // PDU Session Reactivation Result Error Cause (O)
-  pdu_error_cause_t cause[MAX_NUM_PDU_ERRORS];
-  uint16_t num_errors;
-
   // T3448 Value (O)
   uint8_t *t3448_value;
-} fgs_service_accept_msg_t;
+} fgs_service_reject_msg_t;
 
-int decode_fgs_service_accept(fgs_service_accept_msg_t *msg, const uint8_t *buffer, uint32_t len);
-int encode_fgs_service_accept(uint8_t *buffer, const fgs_service_accept_msg_t *msg, uint32_t len);
-void free_fgs_service_accept(fgs_service_accept_msg_t *msg);
+int decode_fgs_service_reject(fgs_service_reject_msg_t *msg, const uint8_t *buffer, uint32_t len);
+int encode_fgs_service_reject(const fgs_service_reject_msg_t *msg, uint8_t *buffer, uint32_t len);
+void free_fgs_service_reject(fgs_service_reject_msg_t *msg);
 
-#endif /* FGS_SERVICE_ACCEPT_H */
+#endif /* FGS_service_reject_H */
