@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <arpa/inet.h>
 #include "fgs_service_request.h"
+#include "fgmm_authentication_reject.h"
 #include "nr_nas_msg.h"
 
 void exit_function(const char *file, const char *function, const int line, const char *s, const int assert)
@@ -75,8 +76,65 @@ static void test_service_request(void)
               "test_service_request() failed: original and decoded messages do not match\n");
 }
 
+bool eq_auth_reject(fgmm_auth_reject_msg_t *a, fgmm_auth_reject_msg_t *b)
+{
+  _NAS_EQ_CHECK_INT(a->eap_msg.len, b->eap_msg.len);
+  if (a->eap_msg.len > 0) {
+    return !memcmp(a->eap_msg.msg, b->eap_msg.msg, a->eap_msg.len);
+  }
+  return true;
+}
+
+/**
+ * @brief Test NAS Authentication Reject enc/dec
+ */
+static void test_auth_reject(void)
+{
+  // Dummy NAS Authentication Reject message
+  uint8_t dummy_eap_msg[] = {0x12, 0x34, 0x56, 0x78, 0x91, 0x01, 0x23}; // Example EAP message
+  fgmm_auth_reject_msg_t orig = {
+      .eap_msg.len = sizeof(dummy_eap_msg),
+  };
+  memcpy(&orig.eap_msg.msg, dummy_eap_msg, orig.eap_msg.len);
+
+  // Expected encoded data
+  uint8_t dummy_enc[] = {
+      IEI_EAPMSG, // IEI
+      0x00, // length
+      0x07, // length
+      0x12, // EAP
+      0x34, // EAP
+      0x56, // EAP
+      0x78, // EAP
+      0x91, // EAP
+      0x01, // EAP
+      0x23  // EAP
+  };
+
+  // Buffer
+  uint8_t buffer[64] = {0};
+
+  // Encode
+  int encoded_length = encode_fgmm_auth_reject(buffer, &orig, sizeof(buffer));
+  AssertFatal(encoded_length >= 0, "encode_fgmm_auth_reject() failed\n");
+
+  // Compare the raw encoded buffer with expected encoded data
+  AssertFatal(encoded_length == sizeof(dummy_enc), "Encoded length mismatch!\n");
+  AssertFatal(memcmp(buffer, dummy_enc, encoded_length) == 0, "Encoding mismatch!\n");
+
+  // Decode
+  fgmm_auth_reject_msg_t dec = {0};
+  int decoded_length = decode_fgmm_auth_reject(&dec, buffer, encoded_length);
+  AssertFatal(decoded_length >= 0, "decode_fgmm_auth_reject() failed\n");
+
+  // Compare original and decoded messages
+  AssertFatal(eq_auth_reject(&orig, &dec), "test_auth_reject() failed: original and decoded messages do not match\n");
+
+}
+
 int main()
 {
   test_service_request();
+  test_auth_reject();
   return 0;
 }
