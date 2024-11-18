@@ -910,6 +910,62 @@ int do_RRCSetupComplete(uint8_t *buffer,
   return((enc_rval.encoded+7)/8);
 }
 
+// TODO: This function is only implemented for event A2
+int do_nrMeasurementReport_SA(NR_MeasurementReport_t *measurementReport,
+                              l3_measurements_t *l3_measurements,
+                              uint8_t *buffer,
+                              size_t buffer_size)
+{
+  asn_enc_rval_t enc_rval;
+  NR_UL_DCCH_Message_t ul_dcch_msg;
+  memset((void *)&ul_dcch_msg, 0, sizeof(NR_UL_DCCH_Message_t));
+
+  ul_dcch_msg.message.present = NR_UL_DCCH_MessageType_PR_c1;
+  ul_dcch_msg.message.choice.c1 = CALLOC(1, sizeof(struct NR_UL_DCCH_MessageType__c1));
+  ul_dcch_msg.message.choice.c1->present = NR_UL_DCCH_MessageType__c1_PR_measurementReport;
+
+  memset(measurementReport, 0, sizeof(struct NR_MeasurementReport));
+  ul_dcch_msg.message.choice.c1->choice.measurementReport = measurementReport;
+  measurementReport->criticalExtensions.present = NR_MeasurementReport__criticalExtensions_PR_measurementReport;
+
+  NR_MeasurementReport_IEs_t *measurementReport_ie = CALLOC(1, sizeof(struct NR_MeasurementReport_IEs));
+  measurementReport->criticalExtensions.choice.measurementReport = measurementReport_ie;
+  measurementReport_ie->measResults.measId = l3_measurements->trigger_to_measid;
+
+  NR_MeasResultServMO_t *measResultServMo = CALLOC(1, sizeof(struct NR_MeasResultServMO));
+
+  meas_t *active_cell = &l3_measurements->active_cell;
+  NR_MeasResultNR_t *measResultServingCell = &measResultServMo->measResultServingCell;
+  measResultServingCell->physCellId = CALLOC(1, sizeof(NR_PhysCellId_t));
+  *measResultServingCell->physCellId = active_cell->Nid_cell;
+
+  struct NR_MeasQuantityResults *active_mq_res = CALLOC(1, sizeof(struct NR_MeasQuantityResults));
+
+  if (l3_measurements->trigger_quantity == NR_MeasTriggerQuantityOffset_PR_rsrp) {
+    active_mq_res->rsrp = CALLOC(1, sizeof(NR_RSRP_Range_t));
+
+    if (l3_measurements->rs_type == NR_NR_RS_Type_ssb) {
+      *active_mq_res->rsrp = active_cell->ss_rsrp_dBm + 157;
+      measResultServingCell->measResult.cellResults.resultsSSB_Cell = active_mq_res;
+    } else {
+      *active_mq_res->rsrp = active_cell->csi_rsrp_dBm + 157;
+      measResultServingCell->measResult.cellResults.resultsCSI_RS_Cell = active_mq_res;
+    }
+  }
+
+  ASN_SEQUENCE_ADD(&measurementReport_ie->measResults.measResultServingMOList.list, measResultServMo);
+  enc_rval = uper_encode_to_buffer(&asn_DEF_NR_UL_DCCH_Message, NULL, (void *)&ul_dcch_msg, buffer, buffer_size);
+  AssertFatal(enc_rval.encoded > 0, "ASN1 message encoding failed (%s, %lu)!\n", enc_rval.failed_type->name, enc_rval.encoded);
+
+  if (LOG_DEBUGFLAG(DEBUG_ASN1)) {
+    xer_fprint(stdout, &asn_DEF_NR_UL_DCCH_Message, (void *)&ul_dcch_msg);
+  }
+
+  LOG_I(NR_RRC, "MeasurementReport Encoded %zd bits (%zd bytes)\n", enc_rval.encoded, (enc_rval.encoded + 7) / 8);
+
+  return ((enc_rval.encoded + 7) / 8);
+}
+
 int do_NR_DLInformationTransfer(uint8_t *buffer,
                                 size_t buffer_len,
                                 uint8_t transaction_id,

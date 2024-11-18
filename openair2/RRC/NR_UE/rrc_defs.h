@@ -199,6 +199,7 @@ typedef struct l3_measurements_s {
   long trigger_to_measid;
   long trigger_quantity;
   long rs_type;
+  NR_timer_t TA2;
 } l3_measurements_t;
 
 typedef enum {

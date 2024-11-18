@@ -119,6 +119,8 @@ void nr_rrc_handle_timers(NR_UE_RRC_INST_t *rrc)
     // with release cause 'RRC connection failure'
     nr_rrc_going_to_IDLE(rrc, RRC_CONNECTION_FAILURE, NULL);
   }
+
+  handle_meas_timers(rrc);
 }
 
 int nr_rrc_get_T304(long t304)
@@ -563,4 +565,44 @@ void reset_rlf_timers_and_constants(NR_UE_Timers_Constants_t *tac)
   // reset the counters N310 and N311
   tac->N310_cnt = 0;
   tac->N311_cnt = 0;
+}
+
+int get_time_to_trigger(long time_to_trigger)
+{
+  switch (time_to_trigger) {
+    case NR_TimeToTrigger_ms0:
+      return 0;
+    case NR_TimeToTrigger_ms40:
+      return 40;
+    case NR_TimeToTrigger_ms64:
+      return 64;
+    case NR_TimeToTrigger_ms80:
+      return 80;
+    case NR_TimeToTrigger_ms100:
+      return 100;
+    case NR_TimeToTrigger_ms128:
+      return 128;
+    case NR_TimeToTrigger_ms160:
+      return 160;
+    case NR_TimeToTrigger_ms256:
+      return 256;
+    case NR_TimeToTrigger_ms320:
+      return 320;
+    case NR_TimeToTrigger_ms480:
+      return 480;
+    case NR_TimeToTrigger_ms512:
+      return 512;
+    case NR_TimeToTrigger_ms640:
+      return 640;
+    case NR_TimeToTrigger_ms1024:
+      return 1024;
+    case NR_TimeToTrigger_ms1280:
+      return 1280;
+    case NR_TimeToTrigger_ms2560:
+      return 2560;
+    case NR_TimeToTrigger_ms5120:
+      return 5120;
+    default:
+      AssertFatal(false, "Invalid TimeToTrigger %ld\n", time_to_trigger);
+  }
 }

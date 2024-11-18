@@ -2369,10 +2369,19 @@ static void print_rrc_meas(FILE *f, const NR_MeasResults_t *measresults)
 
   fprintf(f, "    servingCellId %ld MeasResultNR for phyCellId %ld:\n      resultSSB:", measresultservmo->servCellId, *measresultnr->physCellId);
   if (mqr != NULL) {
-    const long rrsrp = *mqr->rsrp - 156;
-    const float rrsrq = (float) (*mqr->rsrq - 87) / 2.0f;
-    const float rsinr = (float) (*mqr->sinr - 46) / 2.0f;
-    fprintf(f, "RSRP %ld dBm RSRQ %.1f dB SINR %.1f dB\n", rrsrp, rrsrq, rsinr);
+    if (mqr->rsrp) {
+      const long rrsrp = *mqr->rsrp - 156;
+      fprintf(f, "RSRP %ld dBm ", rrsrp);
+    }
+    if (mqr->rsrq) {
+      const float rrsrq = (float)(*mqr->rsrq - 87) / 2.0f;
+      fprintf(f, "RSRQ %.1f dB ", rrsrq);
+    }
+    if (mqr->sinr) {
+      const float rsinr = (float)(*mqr->sinr - 46) / 2.0f;
+      fprintf(f, "SINR %.1f dB ", rsinr);
+    }
+    fprintf(f, "\n");
   } else {
     fprintf(f, "NOT PROVIDED\n");
   }

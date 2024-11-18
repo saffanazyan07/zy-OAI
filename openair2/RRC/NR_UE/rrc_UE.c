@@ -1953,6 +1953,78 @@ void nr_ue_meas_filtering(rrcPerNB_t *rrc, bool is_neighboring_cell, uint16_t Ni
   }
 }
 
+static void nr_ue_check_meas_report(NR_UE_RRC_INST_t *rrc, const uint8_t gnb_index)
+{
+  rrcPerNB_t *rrcNB = rrc->perNB + gnb_index;
+  l3_measurements_t *l3_measurements = &rrcNB->l3_measurements;
+
+  for (int i = 0; i < MAX_MEAS_CONFIG; i++) {
+    NR_ReportConfigToAddMod_t *report_config = rrcNB->ReportConfig[i];
+    if (report_config == NULL)
+      continue;
+
+    if (report_config->reportConfig.present == NR_ReportConfigToAddMod__reportConfig_PR_reportConfigNR) {
+      NR_ReportConfigNR_t *report_config_nr = report_config->reportConfig.choice.reportConfigNR;
+
+      if (report_config_nr->reportType.present == NR_ReportConfigNR__reportType_PR_eventTriggered) {
+        NR_EventTriggerConfig_t *event_trigger_config = report_config_nr->reportType.choice.eventTriggered;
+
+        if (event_trigger_config->eventId.present == NR_EventTriggerConfig__eventId_PR_eventA2) {
+          struct NR_EventTriggerConfig__eventId__eventA2 *event_A2 = event_trigger_config->eventId.choice.eventA2;
+
+          if (event_A2->a2_Threshold.present == NR_MeasTriggerQuantity_PR_rsrp) {
+            meas_t *active_cell = &l3_measurements->active_cell;
+            int active_cell_rsrp = INT_MAX;
+            if (active_cell->ss_rsrp_dBm_initialized == true) {
+              active_cell_rsrp = active_cell->ss_rsrp_dBm;
+            } else if (active_cell->csi_rsrp_dBm_initialized == true) {
+              active_cell_rsrp = active_cell->csi_rsrp_dBm;
+            } else {
+              LOG_E(NR_RRC, "There are no RSRP measurements taken for the active cell\n");
+            }
+
+            // TS 38.133 - Table 10.1.6.1-1: SS-RSRP and CSI-RSRP measurement report mapping
+            int rsrp_threshold = event_A2->a2_Threshold.choice.rsrp - 157;
+            int rsrp_hysteresis = event_A2->hysteresis >> 1;
+
+            // TS 38.331 - 5.5.4.3 Event A2 (Serving becomes worse than threshold)
+            if (active_cell_rsrp + rsrp_hysteresis < rsrp_threshold) {
+              if (!nr_timer_is_active(&l3_measurements->TA2)) {
+                nr_timer_setup(&l3_measurements->TA2, get_time_to_trigger(event_A2->timeToTrigger), 10);
+                nr_timer_start(&l3_measurements->TA2);
+                int report_config_id = report_config->reportConfigId;
+                int meas_id = -1;
+                for (int j = 0; j < MAX_MEAS_ID; j++) {
+                  NR_MeasIdToAddMod_t *meas_id_toAddMod = rrcNB->MeasId[j];
+                  if (meas_id_toAddMod == NULL) {
+                    continue;
+                  }
+                  if (meas_id_toAddMod->reportConfigId == report_config_id) {
+                    meas_id = meas_id_toAddMod->measId;
+                  }
+                }
+                AssertFatal(meas_id > 0, "meas_id did not found for report_config_id %i\n", report_config_id);
+
+                l3_measurements->trigger_to_measid = meas_id;
+                l3_measurements->trigger_quantity = event_A2->a2_Threshold.present;
+                l3_measurements->rs_type = event_trigger_config->rsType;
+
+                LOG_W(NR_RRC,
+                      "(active_cell_rsrp) %i + (rsrp_hysteresis) %i < (rsrp_threshold) %i\n",
+                      active_cell_rsrp,
+                      rsrp_hysteresis,
+                      rsrp_threshold);
+              }
+            } else if (nr_timer_is_active(&l3_measurements->TA2) && (active_cell_rsrp - rsrp_hysteresis > rsrp_threshold)) {
+              nr_timer_stop(&l3_measurements->TA2);
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
 void nr_rrc_handle_ra_indication(NR_UE_RRC_INST_t *rrc, bool ra_succeeded)
 {
   NR_UE_Timers_Constants_t *timers = &rrc->timers_and_constants;
@@ -2063,6 +2135,7 @@ void *rrc_nrue(void *notUsed)
                          NR_RRC_MAC_MEAS_DATA_IND(msg_p).Nid_cell,
                          NR_RRC_MAC_MEAS_DATA_IND(msg_p).is_csi_meas,
                          NR_RRC_MAC_MEAS_DATA_IND(msg_p).rsrp_dBm - 157);
+    nr_ue_check_meas_report(rrc, NR_RRC_MAC_MEAS_DATA_IND(msg_p).gnb_index);
     break;
 
   case NR_RRC_MAC_CCCH_DATA_IND: {
@@ -2655,5 +2728,27 @@ void start_sidelink(int instance)
     //Process the Sidelink Preconfiguration
     rrc_ue_process_sidelink_Preconfiguration(rrc, get_softmodem_params()->sync_ref);
 
+  }
+}
+
+static void rrc_ue_generate_measurementReport(rrcPerNB_t *rrc, instance_t ue_id)
+{
+  uint8_t buffer[NR_RRC_BUF_SIZE];
+  NR_MeasurementReport_t measurementReport = {0};
+  uint8_t size = do_nrMeasurementReport_SA(&measurementReport, &rrc->l3_measurements, buffer, sizeof(buffer));
+
+  int srb_id = 1; // possibly TODO in SRB3 in some cases
+  nr_pdcp_data_req_srb(ue_id, srb_id, 0, size, buffer, deliver_pdu_srb_rlc, NULL);
+}
+
+void handle_meas_timers(NR_UE_RRC_INST_t *rrc)
+{
+  for (int i = 0; i < NB_CNX_UE; i++) {
+    rrcPerNB_t *nb = &rrc->perNB[i];
+    l3_measurements_t *l3_measurements = &nb->l3_measurements;
+    bool ta2_expired = nr_timer_tick(&l3_measurements->TA2);
+    if (ta2_expired) {
+      rrc_ue_generate_measurementReport(nb, rrc->ue_id);
+    }
   }
 }
