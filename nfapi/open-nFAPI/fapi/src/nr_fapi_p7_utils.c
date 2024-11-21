@@ -1563,7 +1563,7 @@ size_t get_tx_data_request_size(const nfapi_nr_tx_data_request_t *msg)
       if (tlv->tag == 0) {
         total_size += sizeof(tlv->value.direct);
       } else {
-        total_size += malloc_usable_size(tlv->value.ptr);
+        total_size += (tlv->length + 3) / 4 * sizeof(uint32_t);
       }
     }
   }
@@ -1613,7 +1613,7 @@ size_t get_rx_data_indication_size(const nfapi_nr_rx_data_indication_t *msg)
     total_size += sizeof(pdu->ul_cqi);
     total_size += sizeof(pdu->timing_advance);
     total_size += sizeof(pdu->rssi);
-    total_size += malloc_usable_size(pdu->pdu);
+    total_size += pdu->pdu_length;
   }
   return total_size;
 }
@@ -1666,7 +1666,7 @@ size_t get_crc_indication_size(const nfapi_nr_crc_indication_t *msg)
     total_size += sizeof(crc->tb_crc_status);
     total_size += sizeof(crc->num_cb);
     if (crc->num_cb > 0) {
-      total_size += malloc_usable_size(crc->cb_crc_status);
+      total_size += crc->num_cb / 8 + 1;
     }
     total_size += sizeof(crc->ul_cqi);
     total_size += sizeof(crc->timing_advance);
@@ -1861,13 +1861,13 @@ size_t get_uci_indication_size(const nfapi_nr_uci_indication_t *msg)
 
         // HARQ payload, CSI Part 1 and 2 are conditionally allocated
         if ((uci_pdu->pusch_pdu.pduBitmap >> 1) & 0x01) {
-          total_size += malloc_usable_size(uci_pdu->pusch_pdu.harq.harq_payload);
+          total_size += uci_pdu->pusch_pdu.harq.harq_bit_len / 8 + 1;
         }
         if ((uci_pdu->pusch_pdu.pduBitmap >> 2) & 0x01) {
-          total_size += malloc_usable_size(uci_pdu->pusch_pdu.csi_part1.csi_part1_payload);
+          total_size += uci_pdu->pusch_pdu.csi_part1.csi_part1_bit_len / 8 + 1;
         }
         if ((uci_pdu->pusch_pdu.pduBitmap >> 3) & 0x01) {
-          total_size += malloc_usable_size(uci_pdu->pusch_pdu.csi_part2.csi_part2_payload);
+          total_size += uci_pdu->pusch_pdu.csi_part2.csi_part2_bit_len / 8 + 1;
         }
         break;
 
@@ -1881,16 +1881,16 @@ size_t get_uci_indication_size(const nfapi_nr_uci_indication_t *msg)
 
         // SR, HARQ, CSI Part 1, and CSI Part 2 are conditionally allocated
         if (uci_pdu->pucch_pdu_format_2_3_4.pduBitmap & 0x01) {
-          total_size += malloc_usable_size(uci_pdu->pucch_pdu_format_2_3_4.sr.sr_payload);
+          total_size += uci_pdu->pucch_pdu_format_2_3_4.sr.sr_bit_len / 8 + 1;
         }
         if ((uci_pdu->pucch_pdu_format_2_3_4.pduBitmap >> 1) & 0x01) {
-          total_size += malloc_usable_size(uci_pdu->pucch_pdu_format_2_3_4.harq.harq_payload);
+          total_size += uci_pdu->pucch_pdu_format_2_3_4.harq.harq_bit_len / 8 + 1;
         }
         if ((uci_pdu->pucch_pdu_format_2_3_4.pduBitmap >> 2) & 0x01) {
-          total_size += malloc_usable_size(uci_pdu->pucch_pdu_format_2_3_4.csi_part1.csi_part1_payload);
+          total_size += uci_pdu->pucch_pdu_format_2_3_4.csi_part1.csi_part1_bit_len / 8 + 1;
         }
         if ((uci_pdu->pucch_pdu_format_2_3_4.pduBitmap >> 3) & 0x01) {
-          total_size += malloc_usable_size(uci_pdu->pucch_pdu_format_2_3_4.csi_part2.csi_part2_payload);
+          total_size += uci_pdu->pucch_pdu_format_2_3_4.csi_part2.csi_part2_bit_len / 8 + 1;
         }
         break;
 
@@ -1901,7 +1901,7 @@ size_t get_uci_indication_size(const nfapi_nr_uci_indication_t *msg)
   }
 
   // Finally, add the size of the uci_list pointer itself
-  total_size += malloc_usable_size(msg->uci_list);
+  total_size += msg->num_ucis * sizeof(*msg->uci_list);
 
   return total_size;
 }
@@ -1951,7 +1951,7 @@ size_t get_srs_indication_size(const nfapi_nr_srs_indication_t *msg)
   total_size += sizeof(msg->slot);
   total_size += sizeof(msg->control_length);
   total_size += sizeof(msg->number_of_pdus);
-  total_size += malloc_usable_size(msg->pdu_list);
+  total_size += msg->number_of_pdus * sizeof(*msg->pdu_list);
 
   return total_size;
 }
@@ -1997,7 +1997,7 @@ size_t get_rach_indication_size(nfapi_nr_rach_indication_t *msg)
   total_size += sizeof(msg->sfn);
   total_size += sizeof(msg->slot);
   total_size += sizeof(msg->number_of_pdus);
-  total_size += malloc_usable_size(msg->pdu_list);
+  total_size += msg->number_of_pdus * sizeof(*msg->pdu_list);
 
   return total_size;
 }
