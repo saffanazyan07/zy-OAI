@@ -433,8 +433,26 @@ static void config_csirs(const NR_ServingCellConfigCommon_t *servingcellconfigco
         resourceMapping.nrofPorts = NR_CSI_RS_ResourceMapping__nrofPorts_p4;
         resourceMapping.cdm_Type = NR_CSI_RS_ResourceMapping__cdm_Type_fd_CDM2;
         break;
+      case 8:
+        resourceMapping.frequencyDomainAllocation.present = NR_CSI_RS_ResourceMapping__frequencyDomainAllocation_PR_other;
+        resourceMapping.frequencyDomainAllocation.choice.other.buf = calloc(1, sizeof(uint8_t));
+        resourceMapping.frequencyDomainAllocation.choice.other.size = 1;
+        resourceMapping.frequencyDomainAllocation.choice.other.bits_unused = 2;
+        resourceMapping.frequencyDomainAllocation.choice.other.buf[0] = 60;
+        resourceMapping.nrofPorts = NR_CSI_RS_ResourceMapping__nrofPorts_p8;
+        resourceMapping.cdm_Type = NR_CSI_RS_ResourceMapping__cdm_Type_fd_CDM2;
+        break;
+      case 12:
+        resourceMapping.frequencyDomainAllocation.present = NR_CSI_RS_ResourceMapping__frequencyDomainAllocation_PR_other;
+        resourceMapping.frequencyDomainAllocation.choice.other.buf = calloc(1, sizeof(uint8_t));
+        resourceMapping.frequencyDomainAllocation.choice.other.size = 1;
+        resourceMapping.frequencyDomainAllocation.choice.other.bits_unused = 2;
+        resourceMapping.frequencyDomainAllocation.choice.other.buf[0] = 252;
+        resourceMapping.nrofPorts = NR_CSI_RS_ResourceMapping__nrofPorts_p8;
+        resourceMapping.cdm_Type = NR_CSI_RS_ResourceMapping__cdm_Type_fd_CDM2;
+        break;
       default:
-        AssertFatal(1==0,"Number of ports not yet supported\n");
+        AssertFatal(false, "Number of ports not yet supported\n");
     }
     resourceMapping.firstOFDMSymbolInTimeDomain = 13;  // last symbol of slot
     resourceMapping.firstOFDMSymbolInTimeDomain2 = NULL;
