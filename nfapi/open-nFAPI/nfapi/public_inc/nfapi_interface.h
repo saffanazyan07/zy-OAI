@@ -92,19 +92,19 @@ typedef signed short	int16_t;
 typedef signed char		int8_t;
 
 typedef struct {
-	uint16_t phy_id;
-	uint16_t message_id;
-	uint16_t message_length;
-	uint16_t spare;
+  uint16_t phy_id;
+  uint16_t message_id;
+  uint16_t message_length;
+  uint16_t spare;
 } nfapi_p4_p5_message_header_t;
 
 typedef struct {
-	uint16_t phy_id;
-	uint16_t message_id;
-	uint16_t message_length;
-	uint16_t m_segment_sequence; /* This consists of 3 fields - namely, M, Segement & Sequence number*/
-	uint32_t checksum;
-	uint32_t transmit_timestamp;
+  uint16_t phy_id;
+  uint16_t message_id;
+  uint16_t message_length;
+  uint16_t m_segment_sequence; /* This consists of 3 fields - namely, M, Segement & Sequence number*/
+  uint32_t checksum;
+  uint32_t transmit_timestamp;
 } nfapi_p7_message_header_t;
 
 #define NFAPI_PHY_ID_NA 0
