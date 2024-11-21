@@ -52,8 +52,8 @@
 // - idft for short sequence assumes we are transmitting starting in symbol 0 of a PRACH slot
 // - Assumes that PRACH SCS is same as PUSCH SCS @ 30 kHz, take values for formats 0-2 and adjust for others below
 // - Preamble index different from 0 is not detected by gNB
-int32_t generate_nr_prach(PHY_VARS_NR_UE *ue, uint8_t gNB_id, int frame, uint8_t slot){
-
+int32_t generate_nr_prach(PHY_VARS_NR_UE *ue, uint8_t gNB_id, int frame, uint8_t slot, c16_t **txData)
+{
   NR_DL_FRAME_PARMS *fp=&ue->frame_parms;
   fapi_nr_config_request_t *nrUE_config = &ue->nrUE_config;
   fapi_nr_ul_config_prach_pdu *prach_pdu = &ue->prach_vars[gNB_id]->prach_pdu;
@@ -62,11 +62,11 @@ int32_t generate_nr_prach(PHY_VARS_NR_UE *ue, uint8_t gNB_id, int frame, uint8_t
   uint16_t rootSequenceIndex, prach_fmt_id, NCS, preamble_offset = 0;
   const uint16_t *prach_root_sequence_map;
   uint16_t preamble_shift = 0, preamble_index0, n_shift_ra, n_shift_ra_bar, d_start=INT16_MAX, numshift, N_ZC, u, offset, offset2, first_nonzero_root_idx;
-  c16_t prach[(4688 + 4 * 24576) * 2] __attribute__((aligned(32))) = {0};
+  c16_t prach_buf[(4688 + 4 * 24576) * 2] __attribute__((aligned(32))) = {0};
   int16_t prachF_tmp[(4688+4*24576)*4*2] __attribute__((aligned(32))) = {0};
 
   int Ncp = 0;
-  int prach_start, prach_sequence_length, i, prach_len, dftlen, mu, kbar, K, n_ra_prb, k, prachStartSymbol, sample_offset_slot;
+  int prach_start, prach_sequence_length, prach_len, dftlen, mu, kbar, K, n_ra_prb, k, prachStartSymbol;
 
   fd_occasion             = 0;
   prach_len               = 0;
@@ -97,22 +97,21 @@ int32_t generate_nr_prach(PHY_VARS_NR_UE *ue, uint8_t gNB_id, int frame, uint8_t
                        ue->X_u);
 
   if (prachStartSymbol == 0) {
-    sample_offset_slot = 0;
+    prach_start = 0;
   } else if (fp->slots_per_subframe == 1) {
     if (prachStartSymbol <= 7)
-      sample_offset_slot = (fp->ofdm_symbol_size + fp->nb_prefix_samples) * (prachStartSymbol - 1) + (fp->ofdm_symbol_size + fp->nb_prefix_samples0);
+      prach_start =
+          (fp->ofdm_symbol_size + fp->nb_prefix_samples) * (prachStartSymbol - 1) + (fp->ofdm_symbol_size + fp->nb_prefix_samples0);
     else
-      sample_offset_slot = (fp->ofdm_symbol_size + fp->nb_prefix_samples) * (prachStartSymbol - 2) + (fp->ofdm_symbol_size + fp->nb_prefix_samples0) * 2;
+      prach_start = (fp->ofdm_symbol_size + fp->nb_prefix_samples) * (prachStartSymbol - 2)
+                    + (fp->ofdm_symbol_size + fp->nb_prefix_samples0) * 2;
   } else {
     if (slot % (fp->slots_per_subframe / 2) == 0)
-      sample_offset_slot = (fp->ofdm_symbol_size + fp->nb_prefix_samples) * (prachStartSymbol - 1) + (fp->ofdm_symbol_size + fp->nb_prefix_samples0);
+      prach_start =
+          (fp->ofdm_symbol_size + fp->nb_prefix_samples) * (prachStartSymbol - 1) + (fp->ofdm_symbol_size + fp->nb_prefix_samples0);
     else
-      sample_offset_slot = (fp->ofdm_symbol_size + fp->nb_prefix_samples) * prachStartSymbol;
+      prach_start = (fp->ofdm_symbol_size + fp->nb_prefix_samples) * prachStartSymbol;
   }
-
-  prach_start = fp->get_samples_slot_timestamp(slot, fp, 0) + sample_offset_slot;
-
-  //printf("prachstartsymbold %d, sample_offset_slot %d, prach_start %d\n",prachStartSymbol, sample_offset_slot, prach_start);
 
   // First compute physical root sequence
   /************************************************************************
@@ -427,22 +426,22 @@ int32_t generate_nr_prach(PHY_VARS_NR_UE *ue, uint8_t gNB_id, int frame, uint8_t
   #endif
 
   // This is after cyclic prefix
-    c16_t *prach2 = prach + Ncp;
+    c16_t *prach2 = prach_buf + Ncp;
     const idft_size_idx_t idft_size = get_idft(dftlen);
-    idft(idft_size, prachF, (int16_t *)prach, 1);
-    memmove(prach2, prach, (dftlen << 2));
+    idft(idft_size, prachF, (int16_t *)prach_buf, 1);
+    memmove(prach2, prach_buf, (dftlen << 2));
 
     if (prach_sequence_length == 0) {
       if (prach_fmt_id == 0) {
         // here we have | empty  | Prach |
-        memcpy(prach, prach + dftlen, (Ncp << 2));
+        memcpy(prach_buf, prach_buf + dftlen, (Ncp << 2));
         // here we have | Prefix | Prach |
         prach_len = dftlen + Ncp;
       } else if (prach_fmt_id == 1) {
         // here we have | empty  | Prach | empty |
         memcpy(prach2 + dftlen, prach2, (dftlen << 2));
         // here we have | empty  | Prach | Prach |
-        memcpy(prach, prach + dftlen * 2, (Ncp << 2));
+        memcpy(prach_buf, prach_buf + dftlen * 2, (Ncp << 2));
         // here we have | Prefix | Prach | Prach |
         prach_len = (dftlen * 2) + Ncp;
       } else if (prach_fmt_id == 2 || prach_fmt_id == 3) {
@@ -451,21 +450,21 @@ int32_t generate_nr_prach(PHY_VARS_NR_UE *ue, uint8_t gNB_id, int frame, uint8_t
         // here we have | empty  | Prach | Prach | empty | empty |
         memcpy(prach2 + dftlen * 2, prach2, (dftlen << 3));
         // here we have | empty  | Prach | Prach | Prach | Prach |
-        memcpy(prach, prach + dftlen * 4, (Ncp << 2));
+        memcpy(prach_buf, prach_buf + dftlen * 4, (Ncp << 2));
         // here we have | Prefix | Prach | Prach | Prach | Prach |
         prach_len = (dftlen * 4) + Ncp;
       }
   } else { // short PRACH sequence
     if (prach_fmt_id == 9) {
       // here we have | empty  | Prach |
-      memcpy(prach, prach + dftlen, (Ncp << 2));
+      memcpy(prach_buf, prach_buf + dftlen, (Ncp << 2));
       // here we have | Prefix | Prach |
       prach_len = (dftlen*1)+Ncp;
     } else if (prach_fmt_id == 4 || prach_fmt_id == 7) {
       // here we have | empty  | Prach | empty |
       memcpy(prach2 + dftlen, prach2, (dftlen << 2));
       // here we have | empty  | Prach | Prach |
-      memcpy(prach, prach+(dftlen<<1), (Ncp<<2));
+      memcpy(prach_buf, prach_buf + (dftlen << 1), (Ncp << 2));
       // here we have | Prefix | Prach | Prach |
       prach_len = (dftlen*2)+Ncp;
     } else if (prach_fmt_id == 5 || prach_fmt_id == 10) { // 4xdftlen
@@ -474,7 +473,7 @@ int32_t generate_nr_prach(PHY_VARS_NR_UE *ue, uint8_t gNB_id, int frame, uint8_t
       // here we have | empty  | Prach | Prach | empty | empty |
       memcpy(prach2 + dftlen * 2, prach2, (dftlen << 3));
       // here we have | empty  | Prach | Prach | Prach | Prach |
-      memcpy(prach, prach + dftlen, (Ncp << 2));
+      memcpy(prach_buf, prach_buf + dftlen, (Ncp << 2));
       // here we have | Prefix | Prach | Prach | Prach | Prach |
       prach_len = (dftlen*4)+Ncp;
     } else if (prach_fmt_id == 6) { // 6xdftlen
@@ -485,7 +484,7 @@ int32_t generate_nr_prach(PHY_VARS_NR_UE *ue, uint8_t gNB_id, int frame, uint8_t
       // here we have | empty  | Prach | Prach | Prach | Prach | empty | empty |
       memcpy(prach2 + dftlen * 4, prach2, (dftlen << 3));
       // here we have | empty  | Prach | Prach | Prach | Prach | Prach | Prach |
-      memcpy(prach, prach + dftlen, (Ncp << 2));
+      memcpy(prach_buf, prach_buf + dftlen, (Ncp << 2));
       // here we have | Prefix | Prach | Prach | Prach | Prach | Prach | Prach |
       prach_len = (dftlen*6)+Ncp;
     } else if (prach_fmt_id == 8) { // 12xdftlen
@@ -498,7 +497,7 @@ int32_t generate_nr_prach(PHY_VARS_NR_UE *ue, uint8_t gNB_id, int frame, uint8_t
       // here we have | empty  | Prach | Prach | Prach | Prach | Prach | Prach | empty | empty | empty | empty | empty | empty |
       memcpy(prach2 + dftlen * 6, prach2, (dftlen << 2) * 6);
       // here we have | empty  | Prach | Prach | Prach | Prach | Prach | Prach | Prach | Prach | Prach | Prach | Prach | Prach |
-      memcpy(prach, prach + dftlen, (Ncp << 2));
+      memcpy(prach_buf, prach_buf + dftlen, (Ncp << 2));
       // here we have | Prefix | Prach | Prach | Prach | Prach | Prach | Prach | Prach | Prach | Prach | Prach | Prach | Prach |
       prach_len = (dftlen*12)+Ncp;
     }
@@ -510,15 +509,20 @@ int32_t generate_nr_prach(PHY_VARS_NR_UE *ue, uint8_t gNB_id, int frame, uint8_t
       prach_start,
       prach_len);
   #endif
-
-    for (i = 0; i < prach_len; i++)
-      ue->common_vars.txData[0][prach_start + i] = prach[i];
-
+    int buf_sz = ue->frame_parms.get_samples_per_slot(slot, fp);
+    for (int i = 1; i < ue->frame_parms.nb_antennas_tx; i++)
+      memset(txData[i], 0, buf_sz * sizeof(**txData));
+    /*if (prach_start > 0)
+      memset(txData[0], 0, prach_start * sizeof(**txData));*/
+    memcpy(txData[0] + prach_start, prach_buf, prach_len * sizeof(*prach_buf));
+    /*  int tail = buf_sz - (prach_start + prach_len);
+      if (tail > 0)
+        memset(txData[0] + prach_start + prach_len, 0, tail * sizeof(**txData));
+  */
 #ifdef PRACH_WRITE_OUTPUT_DEBUG
     LOG_M("prach_tx0.m", "prachtx0", prach+(Ncp<<1), prach_len-Ncp, 1, 1);
     LOG_M("Prach_txsig.m","txs",(int16_t*)(&ue->common_vars.txdata[0][prach_start]), 2*(prach_start+prach_len), 1, 1)
   #endif
 
-  return signal_energy((int*)prach, 256);
+    return signal_energy((int *)prach_buf, 256);
 }
-

@@ -90,7 +90,7 @@
   @param proc Pointer to RXn-TXnp4 proc information
 @param phy_data
 */
-void phy_procedures_nrUE_TX(PHY_VARS_NR_UE *ue, const UE_nr_rxtx_proc_t *proc, nr_phy_data_tx_t *phy_data);
+void phy_procedures_nrUE_TX(PHY_VARS_NR_UE *ue, const UE_nr_rxtx_proc_t *proc, nr_phy_data_tx_t *phy_data, c16_t **txp);
 
 int pbch_pdcch_processing(PHY_VARS_NR_UE *ue, const UE_nr_rxtx_proc_t *proc, nr_phy_data_t *phy_data);
 
@@ -100,7 +100,7 @@ void processSlotTX(void *arg);
 
 /*! \brief UE PRACH procedures.
  */
-void nr_ue_prach_procedures(PHY_VARS_NR_UE *ue, const UE_nr_rxtx_proc_t *proc);
+void nr_ue_prach_procedures(PHY_VARS_NR_UE *ue, const UE_nr_rxtx_proc_t *proc, c16_t **txData);
 
 int8_t nr_find_ue(uint16_t rnti, PHY_VARS_eNB *phy_vars_eNB);
 
@@ -160,7 +160,7 @@ void nr_ue_csi_rs_procedures(PHY_VARS_NR_UE *ue,
                              fapi_nr_dl_config_csirs_pdu_rel15_t *csirs_config_pdu);
 
 int psbch_pscch_processing(PHY_VARS_NR_UE *ue, const UE_nr_rxtx_proc_t *proc, nr_phy_data_t *phy_data);
-void phy_procedures_nrUE_SL_TX(PHY_VARS_NR_UE *ue, const UE_nr_rxtx_proc_t *proc, nr_phy_data_tx_t *phy_data);
+void phy_procedures_nrUE_SL_TX(PHY_VARS_NR_UE *ue, const UE_nr_rxtx_proc_t *proc, nr_phy_data_tx_t *phy_data, c16_t **txp);
 /*! \brief This function prepares the sl indication to pass to the MAC
  */
 void nr_fill_sl_indication(nr_sidelink_indication_t *sl_ind,

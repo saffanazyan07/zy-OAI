@@ -583,8 +583,11 @@ int main(int argc, char **argv)
          proc.frame_rx,
          proc.nr_slot_rx,
          sl_uerx->sl_config.sl_sync_source.rx_slss_id);
-
-  phy_procedures_nrUE_SL_TX(UE_TX, &proc, &phy_data_tx);
+  int slot_start = frame_parms->get_samples_slot_timestamp(slot, frame_parms, 0);
+  c16_t *tx[frame_parms->nb_antennas_rx];
+  for (int i = 0; i < frame_parms->nb_antennas_rx; i++)
+    tx[i] = UE_TX->common_vars.txData[i] + slot_start;
+  phy_procedures_nrUE_SL_TX(UE_TX, &proc, &phy_data_tx, tx);
 
   for (SNR = snr0; SNR >= snr1; SNR -= 1) {
     for (int trial = 0; trial < n_trials; trial++) {

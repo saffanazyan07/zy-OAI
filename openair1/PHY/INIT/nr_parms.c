@@ -275,7 +275,7 @@ uint32_t get_samples_slot_timestamp(int slot, const NR_DL_FRAME_PARMS *fp, unsig
     for(unsigned int idx_slot = 0; idx_slot < slot; idx_slot++)
       samp_count += fp->get_samples_per_slot(idx_slot, fp);
   } else {
-    for(unsigned int idx_slot = slot; idx_slot < slot+sl_ahead; idx_slot++)
+    for (unsigned int idx_slot = slot; idx_slot < slot + sl_ahead; idx_slot++)
       samp_count += fp->get_samples_per_slot(idx_slot, fp);
   }
   return samp_count;

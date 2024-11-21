@@ -605,7 +605,6 @@ typedef struct nr_phy_data_tx_s {
   // Sidelink Rx action decided by MAC
   sl_nr_tx_config_type_enum_t sl_tx_action;
   sl_nr_tx_config_psbch_pdu_t psbch_vars;
-
 } nr_phy_data_tx_t;
 
 typedef struct nr_phy_data_s {

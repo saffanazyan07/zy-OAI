@@ -189,8 +189,7 @@ int main(int argc, char *argv[])
   corr_level_t corr_level = CORR_LEVEL_LOW;
   uint16_t N_RB_DL = 106, N_RB_UL = 106, mu = 1;
 
-  //unsigned char frame_type = 0;
-  NR_DL_FRAME_PARMS *frame_parms;
+  // unsigned char frame_type = 0;
   int loglvl = OAILOG_WARNING;
   uint16_t nb_symb_sch = 12;
   int start_symbol = 0;
@@ -606,11 +605,9 @@ int main(int argc, char *argv[])
   UL_INFO.crc_ind.number_crcs = 0;
   gNB->max_ldpc_iterations = max_ldpc_iterations;
   gNB->pusch_thres = -20;
-  frame_parms = &gNB->frame_parms; //to be initialized I suppose (maybe not necessary for PBCH)
-
-  frame_parms->N_RB_DL = N_RB_DL;
-  frame_parms->N_RB_UL = N_RB_UL;
-  frame_parms->Ncp = extended_prefix_flag ? EXTENDED : NORMAL;
+  gNB->frame_parms.N_RB_DL = N_RB_DL;
+  gNB->frame_parms.N_RB_UL = N_RB_UL;
+  gNB->frame_parms.Ncp = extended_prefix_flag ? EXTENDED : NORMAL;
 
   AssertFatal((gNB->if_inst = NR_IF_Module_init(0)) != NULL, "Cannot register interface");
   gNB->if_inst->NR_PHY_config_req = nr_phy_config_request;
@@ -666,8 +663,8 @@ int main(int argc, char *argv[])
 
   // UE dedicated configuration
   nr_mac_add_test_ue(RC.nrmac[0], secondaryCellGroup->spCellConfig->reconfigurationWithSync->newUE_Identity, secondaryCellGroup);
-  frame_parms->nb_antennas_tx = 1;
-  frame_parms->nb_antennas_rx = n_rx;
+  gNB->frame_parms.nb_antennas_tx = 1;
+  gNB->frame_parms.nb_antennas_rx = n_rx;
   nfapi_nr_config_request_scf_t *cfg = &gNB->gNB_config;
   cfg->carrier_config.num_tx_ant.value = 1;
   cfg->carrier_config.num_rx_ant.value = n_rx;
@@ -696,7 +693,7 @@ int main(int argc, char *argv[])
                                 n_rx,
                                 channel_model,
                                 sampling_frequency / 1e6,
-                                frame_parms->ul_CarrierFreq,
+                                gNB->frame_parms.ul_CarrierFreq,
                                 tx_bandwidth,
                                 DS_TDL,
                                 maxDoppler,
@@ -716,7 +713,7 @@ int main(int argc, char *argv[])
   PHY_vars_UE_g = malloc(sizeof(PHY_VARS_NR_UE**));
   PHY_vars_UE_g[0] = malloc(sizeof(PHY_VARS_NR_UE*));
   PHY_vars_UE_g[0][0] = UE;
-  memcpy(&UE->frame_parms, frame_parms, sizeof(NR_DL_FRAME_PARMS));
+  UE->frame_parms = gNB->frame_parms;
   UE->frame_parms.nb_antennas_tx = n_tx;
   UE->frame_parms.nb_antennas_rx = 0;
   UE->nrLDPC_coding_interface = gNB->nrLDPC_coding_interface;
@@ -849,7 +846,7 @@ int main(int argc, char *argv[])
   uint8_t ptrs_time_density = get_L_ptrs(ptrs_mcs1, ptrs_mcs2, ptrs_mcs3, Imcs, mcs_table);
   uint8_t ptrs_freq_density = get_K_ptrs(n_rb0, n_rb1, nb_rb);
 
-  double ts = 1.0/(frame_parms->subcarrier_spacing * frame_parms->ofdm_symbol_size);
+  double ts = 1.0 / (gNB->frame_parms.subcarrier_spacing * gNB->frame_parms.ofdm_symbol_size);
 
   /* -T option enable PTRS */
   if(enable_ptrs) {
@@ -881,7 +878,7 @@ int main(int argc, char *argv[])
   unsigned int available_bits = nr_get_G(nb_rb, nb_symb_sch, nb_re_dmrs, number_dmrs_symbols, unav_res, mod_order, precod_nbr_layers);
   printf("[ULSIM]: VALUE OF G: %u, TBS: %u\n", available_bits, TBS);
 
-  int frame_length_complex_samples = frame_parms->samples_per_subframe*NR_NUMBER_OF_SUBFRAMES_PER_FRAME;
+  int frame_length_complex_samples = gNB->frame_parms.samples_per_subframe * NR_NUMBER_OF_SUBFRAMES_PER_FRAME;
   for (int aatx=0; aatx<n_tx; aatx++) {
     s_re[aatx] = calloc(1,frame_length_complex_samples*sizeof(double));
     s_im[aatx] = calloc(1,frame_length_complex_samples*sizeof(double));
@@ -895,13 +892,15 @@ int main(int argc, char *argv[])
   //for (int i=0;i<16;i++) printf("%f\n",gaussdouble(0.0,1.0));
   int read_errors=0;
 
-  int slot_offset = frame_parms->get_samples_slot_timestamp(slot,frame_parms,0);
-  int slot_length = slot_offset - frame_parms->get_samples_slot_timestamp(slot-1,frame_parms,0);
+  int slot_offset = gNB->frame_parms.get_samples_slot_timestamp(slot, &gNB->frame_parms, 0);
+  int slot_length = slot_offset - gNB->frame_parms.get_samples_slot_timestamp(slot - 1, &gNB->frame_parms, 0);
 
   if (input_fd != NULL)	{
     // 800 samples is N_TA_OFFSET for FR1 @ 30.72 Ms/s,
-    AssertFatal(frame_parms->subcarrier_spacing==30000,"only 30 kHz for file input for now (%d)\n",frame_parms->subcarrier_spacing);
-  
+    AssertFatal(gNB->frame_parms.subcarrier_spacing == 30000,
+                "only 30 kHz for file input for now (%d)\n",
+                gNB->frame_parms.subcarrier_spacing);
+
     if (params_from_file) {
       fseek(input_fd,file_offset*((slot_length<<2)+4000+16),SEEK_SET);
       read_errors+=fread((void*)&n_rnti,sizeof(int16_t),1,input_fd);
@@ -926,7 +925,7 @@ int main(int argc, char *argv[])
       printf("harq_pid %d\n",harq_pid);
     }
     fseek(input_fd,file_offset*sizeof(int16_t)*2,SEEK_SET);
-    for (int irx=0; irx<frame_parms->nb_antennas_rx; irx++) {
+    for (int irx = 0; irx < gNB->frame_parms.nb_antennas_rx; irx++) {
       fseek(input_fd,irx*(slot_length+15)*sizeof(int16_t)*2,SEEK_SET); // matlab adds samlples to the end to emulate channel delay
       read_errors += fread((void *)&rxdata[irx][slot_offset-delay], sizeof(int16_t), slot_length<<1, input_fd);
       if (read_errors==0) {
@@ -1099,10 +1098,10 @@ int main(int argc, char *argv[])
           srs_pdu->rnti = n_rnti;
           srs_pdu->bwp_size = NRRIV2BW(ubwp->bwp_Common->genericParameters.locationAndBandwidth, 275);
           srs_pdu->bwp_start = NRRIV2PRBOFFSET(ubwp->bwp_Common->genericParameters.locationAndBandwidth, 275);
-          srs_pdu->subcarrier_spacing = frame_parms->subcarrier_spacing;
+          srs_pdu->subcarrier_spacing = gNB->frame_parms.subcarrier_spacing;
           srs_pdu->num_ant_ports = n_tx == 4 ? 2 : n_tx == 2 ? 1 : 0;
           srs_pdu->sequence_id = 40;
-          srs_pdu->time_start_position = frame_parms->symbols_per_slot - 1;
+          srs_pdu->time_start_position = gNB->frame_parms.symbols_per_slot - 1;
           srs_pdu->config_index = rrc_get_max_nr_csrs(srs_pdu->bwp_size, srs_pdu->bandwidth_index);
           srs_pdu->resource_type = NR_SRS_Resource__resourceType_PR_periodic;
           srs_pdu->t_srs = 1;
@@ -1181,7 +1180,7 @@ int main(int argc, char *argv[])
           srs_config_pdu->rnti = n_rnti;
           srs_config_pdu->bwp_size = NRRIV2BW(ubwp->bwp_Common->genericParameters.locationAndBandwidth, 275);
           srs_config_pdu->bwp_start = NRRIV2PRBOFFSET(ubwp->bwp_Common->genericParameters.locationAndBandwidth, 275);
-          srs_config_pdu->subcarrier_spacing = frame_parms->subcarrier_spacing;
+          srs_config_pdu->subcarrier_spacing = gNB->frame_parms.subcarrier_spacing;
           srs_config_pdu->num_ant_ports = n_tx == 4 ? 2 : n_tx == 2 ? 1 : 0;
           srs_config_pdu->config_index = rrc_get_max_nr_csrs(srs_config_pdu->bwp_size, srs_config_pdu->bandwidth_index);
           srs_config_pdu->sequence_id = 40;
@@ -1198,8 +1197,11 @@ int main(int argc, char *argv[])
 
           /////////////////////////phy_procedures_nr_ue_TX///////////////////////
           ///////////
-
-          phy_procedures_nrUE_TX(UE, &UE_proc, &phy_data);
+          int slot_start = UE->frame_parms.get_samples_slot_timestamp(slot, &UE->frame_parms, 0);
+          c16_t *tx[UE->frame_parms.nb_antennas_tx];
+          for (int i = 0; i < UE->frame_parms.nb_antennas_tx; i++)
+            tx[i] = UE->common_vars.txData[i] + slot_start;
+          phy_procedures_nrUE_TX(UE, &UE_proc, &phy_data, tx);
 
           if (n_trials == 1) {
             LOG_M("txsig0.m", "txs0", &UE->common_vars.txData[0][slot_offset], slot_length, 1, 1);
@@ -1213,13 +1215,14 @@ int main(int argc, char *argv[])
           }
           ///////////
           ////////////////////////////////////////////////////
-          tx_offset = frame_parms->get_samples_slot_timestamp(slot, frame_parms, 0);
+          tx_offset = gNB->frame_parms.get_samples_slot_timestamp(slot, &gNB->frame_parms, 0);
           txlev_sum = 0;
           for (int aa = 0; aa < UE->frame_parms.nb_antennas_tx; aa++) {
-            atxlev[aa] = signal_energy(
-                (int32_t *)&UE->common_vars.txData[aa][tx_offset + 5 * frame_parms->ofdm_symbol_size
-                                                       + 4 * frame_parms->nb_prefix_samples + frame_parms->nb_prefix_samples0],
-                frame_parms->ofdm_symbol_size + frame_parms->nb_prefix_samples);
+            atxlev[aa] =
+                signal_energy((int32_t *)&UE->common_vars
+                                  .txData[aa][tx_offset + 5 * gNB->frame_parms.ofdm_symbol_size
+                                              + 4 * gNB->frame_parms.nb_prefix_samples + gNB->frame_parms.nb_prefix_samples0],
+                              gNB->frame_parms.ofdm_symbol_size + gNB->frame_parms.nb_prefix_samples);
 
             txlev_sum += atxlev[aa];
 
@@ -1232,11 +1235,16 @@ int main(int argc, char *argv[])
         if (input_fd == NULL) {
           // Justification of division by precod_nbr_layers:
           // When the channel is the identity matrix, the results in terms of SNR should be almost equal for 2x2 and 4x4.
-          sigma_dB = 10 * log10((double)txlev_sum / precod_nbr_layers * ((double)frame_parms->ofdm_symbol_size / (12 * nb_rb))) - SNR;
+          sigma_dB =
+              10 * log10((double)txlev_sum / precod_nbr_layers * ((double)gNB->frame_parms.ofdm_symbol_size / (12 * nb_rb))) - SNR;
           sigma = pow(10, sigma_dB / 10);
 
           if (n_trials == 1)
-            printf("sigma %f (%f dB), txlev_sum %f (factor %f)\n", sigma, sigma_dB, 10 * log10((double)txlev_sum), (double)(double)frame_parms->ofdm_symbol_size / (12 * nb_rb));
+            printf("sigma %f (%f dB), txlev_sum %f (factor %f)\n",
+                   sigma,
+                   sigma_dB,
+                   10 * log10((double)txlev_sum),
+                   (double)(double)gNB->frame_parms.ofdm_symbol_size / (12 * nb_rb));
 
           for (i = 0; i < slot_length; i++) {
             for (int aa = 0; aa < UE->frame_parms.nb_antennas_tx; aa++) {
@@ -1246,7 +1254,17 @@ int main(int argc, char *argv[])
           }
 
           multipath_channel(UE2gNB, s_re, s_im, r_re, r_im, slot_length, 0, (n_trials == 1) ? 1 : 0);
-          add_noise(rxdata, (const double **) r_re, (const double **) r_im, sigma, slot_length, slot_offset, ts, delay, pdu_bit_map, PUSCH_PDU_BITMAP_PUSCH_PTRS, frame_parms->nb_antennas_rx);
+          add_noise(rxdata,
+                    (const double **)r_re,
+                    (const double **)r_im,
+                    sigma,
+                    slot_length,
+                    slot_offset,
+                    ts,
+                    delay,
+                    pdu_bit_map,
+                    PUSCH_PDU_BITMAP_PUSCH_PTRS,
+                    gNB->frame_parms.nb_antennas_rx);
 
         } /*End input_fd */
 
@@ -1282,15 +1300,15 @@ int main(int argc, char *argv[])
 
         if (n_trials == 1 && round == 0) {
           LOG_M("rxsig0.m", "rx0", &rxdata[0][slot_offset], slot_length, 1, 1);
-          LOG_M("rxsigF0.m", "rxsF0", gNB->common_vars.rxdataF[0][0], 14 * frame_parms->ofdm_symbol_size, 1, 1);
+          LOG_M("rxsigF0.m", "rxsF0", gNB->common_vars.rxdataF[0][0], 14 * gNB->frame_parms.ofdm_symbol_size, 1, 1);
           if (precod_nbr_layers > 1) {
             LOG_M("rxsig1.m", "rx1", &rxdata[1][slot_offset], slot_length, 1, 1);
-            LOG_M("rxsigF1.m", "rxsF1", gNB->common_vars.rxdataF[0][1], 14 * frame_parms->ofdm_symbol_size, 1, 1);
+            LOG_M("rxsigF1.m", "rxsF1", gNB->common_vars.rxdataF[0][1], 14 * gNB->frame_parms.ofdm_symbol_size, 1, 1);
             if (precod_nbr_layers == 4) {
               LOG_M("rxsig2.m", "rx2", &rxdata[2][slot_offset], slot_length, 1, 1);
               LOG_M("rxsig3.m", "rx3", &rxdata[3][slot_offset], slot_length, 1, 1);
-              LOG_M("rxsigF2.m", "rxsF2", gNB->common_vars.rxdataF[0][2], 14 * frame_parms->ofdm_symbol_size, 1, 1);
-              LOG_M("rxsigF3.m", "rxsF3", gNB->common_vars.rxdataF[0][3], 14 * frame_parms->ofdm_symbol_size, 1, 1);
+              LOG_M("rxsigF2.m", "rxsF2", gNB->common_vars.rxdataF[0][2], 14 * gNB->frame_parms.ofdm_symbol_size, 1, 1);
+              LOG_M("rxsigF3.m", "rxsF3", gNB->common_vars.rxdataF[0][3], 14 * gNB->frame_parms.ofdm_symbol_size, 1, 1);
             }
           }
         }
@@ -1301,8 +1319,8 @@ int main(int argc, char *argv[])
 
           LOG_M("chestF0.m",
                 "chF0",
-                &pusch_vars->ul_ch_estimates[0][start_symbol * frame_parms->ofdm_symbol_size],
-                frame_parms->ofdm_symbol_size,
+                &pusch_vars->ul_ch_estimates[0][start_symbol * gNB->frame_parms.ofdm_symbol_size],
+                gNB->frame_parms.ofdm_symbol_size,
                 1,
                 1);
 
@@ -1321,11 +1339,10 @@ int main(int argc, char *argv[])
                 0);
 
           if (precod_nbr_layers == 2) {
-
             LOG_M("chestF3.m",
                   "chF3",
-                  &pusch_vars->ul_ch_estimates[3][start_symbol * frame_parms->ofdm_symbol_size],
-                  frame_parms->ofdm_symbol_size,
+                  &pusch_vars->ul_ch_estimates[3][start_symbol * gNB->frame_parms.ofdm_symbol_size],
+                  gNB->frame_parms.ofdm_symbol_size,
                   1,
                   1);
 
@@ -1345,23 +1362,22 @@ int main(int argc, char *argv[])
           }
 
           if (precod_nbr_layers == 4) {
-
             LOG_M("chestF5.m",
                   "chF5",
-                  &pusch_vars->ul_ch_estimates[5][start_symbol * frame_parms->ofdm_symbol_size],
-                  frame_parms->ofdm_symbol_size,
+                  &pusch_vars->ul_ch_estimates[5][start_symbol * gNB->frame_parms.ofdm_symbol_size],
+                  gNB->frame_parms.ofdm_symbol_size,
                   1,
                   1);
             LOG_M("chestF10.m",
                   "chF10",
-                  &pusch_vars->ul_ch_estimates[10][start_symbol * frame_parms->ofdm_symbol_size],
-                  frame_parms->ofdm_symbol_size,
+                  &pusch_vars->ul_ch_estimates[10][start_symbol * gNB->frame_parms.ofdm_symbol_size],
+                  gNB->frame_parms.ofdm_symbol_size,
                   1,
                   1);
             LOG_M("chestF15.m",
                   "chF15",
-                  &pusch_vars->ul_ch_estimates[15][start_symbol * frame_parms->ofdm_symbol_size],
-                  frame_parms->ofdm_symbol_size,
+                  &pusch_vars->ul_ch_estimates[15][start_symbol * gNB->frame_parms.ofdm_symbol_size],
+                  gNB->frame_parms.ofdm_symbol_size,
                   1,
                   1);
 
