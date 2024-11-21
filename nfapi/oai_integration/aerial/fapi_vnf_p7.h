@@ -217,7 +217,12 @@ uint8_t aerial_unpack_nr_crc_indication(uint8_t **ppReadPackedMsg,
                                         nfapi_nr_crc_indication_t *msg,
                                         nfapi_p7_codec_config_t *config);
 uint8_t aerial_unpack_nr_uci_indication(uint8_t **ppReadPackedMsg, uint8_t *end, void *msg, nfapi_p7_codec_config_t *config);
-uint8_t aerial_unpack_nr_srs_indication(uint8_t **ppReadPackedMsg, uint8_t *end, void *msg, nfapi_p7_codec_config_t *config);
+uint8_t aerial_unpack_nr_srs_indication(uint8_t **ppReadPackedMsg,
+                                        uint8_t *end,
+                                        uint8_t **pDataMsg,
+                                        uint8_t *data_end,
+                                        void *msg,
+                                        nfapi_p7_codec_config_t *config);
 uint8_t aerial_unpack_nr_rach_indication(uint8_t **ppReadPackedMsg,
                                          uint8_t *end,
                                          nfapi_nr_rach_indication_t *msg,

@@ -250,9 +250,14 @@ static int ipc_handle_rx_msg(nv_ipc_t *ipc, nv_ipc_msg_t *msg)
       }
 
       case NFAPI_NR_PHY_MSG_TYPE_SRS_INDICATION: {
+        uint8_t *pReadData = msg->data_buf;
+        int dataBufLen = msg->data_len;
+        uint8_t *data_end = msg->data_buf + dataBufLen;
         nfapi_nr_srs_indication_t ind;
         aerial_unpack_nr_srs_indication(&pReadPackedMessage,
                                         end,
+                                        &pReadData,
+                                        data_end,
                                         &ind,
                                         &((vnf_p7_t *)((vnf_info *)vnf_config->user_data)->p7_vnfs->config)->_public.codec_config);
         if (((vnf_info *)vnf_config->user_data)->p7_vnfs->config->nr_srs_indication) {

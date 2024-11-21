@@ -502,9 +502,25 @@ uint8_t aerial_unpack_nr_uci_indication(uint8_t **ppReadPackedMsg, uint8_t *end,
   return unpack_nr_uci_indication(ppReadPackedMsg, end, msg, config);
 }
 
-uint8_t aerial_unpack_nr_srs_indication(uint8_t **ppReadPackedMsg, uint8_t *end, void *msg, nfapi_p7_codec_config_t *config)
+uint8_t aerial_unpack_nr_srs_indication(uint8_t **ppReadPackedMsg,
+                                        uint8_t *end,
+                                        uint8_t **pDataMsg,
+                                        uint8_t *data_end,
+                                        void *msg,
+                                        nfapi_p7_codec_config_t *config)
 {
-  return unpack_nr_srs_indication(ppReadPackedMsg, end, msg, config);
+  uint8_t retval = unpack_nr_srs_indication(ppReadPackedMsg, end, msg, config);
+  nfapi_nr_srs_indication_t *srs_ind = (nfapi_nr_srs_indication_t *)msg;
+  for (uint8_t pdu_idx = 0; pdu_idx < srs_ind->number_of_pdus; pdu_idx++) {
+    nfapi_nr_srs_indication_pdu_t *pdu = &srs_ind->pdu_list[pdu_idx];
+    nfapi_srs_report_tlv_t *report_tlv = &pdu->report_tlv;
+    for (int i = 0; i < (report_tlv->length + 3) / 4; i++) {
+      if (!pull32(pDataMsg, &report_tlv->value[i], data_end)) {
+        return 0;
+      }
+    }
+  }
+  return retval;
 }
 
 uint8_t aerial_unpack_nr_rach_indication(uint8_t **ppReadPackedMsg,
