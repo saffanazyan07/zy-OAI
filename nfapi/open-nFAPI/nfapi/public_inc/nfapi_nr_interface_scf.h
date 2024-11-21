@@ -480,7 +480,7 @@ typedef struct {
   uint16_t pm_idx;
   uint16_t numLayers;
   uint16_t num_ant_ports;
-  nfapi_nr_pm_weights_t weights[4][4]; // TODO temporary hardcoding
+  nfapi_nr_pm_weights_t weights[4][16]; // TODO temporary hardcoding
 } nfapi_nr_pm_pdu_t;
 
 
