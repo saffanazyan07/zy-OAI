@@ -4584,12 +4584,21 @@ int get_f3_dmrs_symbols(NR_PUCCH_Resource_t *pucchres, NR_PUCCH_Config_t *pucch_
 
 uint16_t compute_pucch_prb_size(uint8_t format,
                                 uint8_t nr_prbs,
-                                uint16_t O_uci,
+                                uint16_t O_csi,
+                                uint16_t O_ack,
+                                uint8_t O_sr,
                                 NR_PUCCH_MaxCodeRate_t *maxCodeRate,
                                 uint8_t Qm,
                                 uint8_t n_symb,
                                 uint8_t n_re_ctrl)
 {
+  // TODO: Consider also the case where there is a HARQ-ACK in response to a PDSCH reception without a corresponding PDCCH
+  //  as described in the 3GPP TS 38.213 - Section 9.2.5.2
+  if (O_csi > 0 && O_ack == 0) {
+    return nr_prbs;
+  }
+
+  int O_uci = O_csi + O_ack + O_sr;
   int O_crc = compute_pucch_crc_size(O_uci);
   int O_tot = O_uci + O_crc;
 
