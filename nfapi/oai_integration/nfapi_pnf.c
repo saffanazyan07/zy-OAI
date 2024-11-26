@@ -45,6 +45,8 @@
 #include <arpa/inet.h>
 #include <pthread.h>
 #include <errno.h>
+#include <nr_fapi_p5.h>
+#include <nr_fapi_p7.h>
 
 #include <vendor_ext.h>
 #include "fapi_stub.h"
@@ -1754,10 +1756,17 @@ int nr_start_request(nfapi_pnf_config_t *config, nfapi_pnf_phy_config_t *phy, nf
   p7_config->codec_config.pack_vendor_extension_tlv = &pnf_nr_phy_pack_vendor_extention_tlv;
 
 #ifndef ENABLE_WLS
+  p7_config->unpack_func = &nfapi_nr_p7_message_unpack;
+  p7_config->hdr_unpack_func = &nfapi_nr_p7_message_header_unpack;
+  p7_config->pack_func = &nfapi_nr_p7_message_pack;
   NFAPI_TRACE(NFAPI_TRACE_INFO, "[PNF] Creating P7 thread %s\n", __FUNCTION__);
   pthread_t p7_thread;
   threadCreate(&p7_thread, &pnf_nr_p7_thread_start, p7_config, "pnf_p7_thread", -1, OAI_PRIORITY_RT);
 #else
+  // Assume it's the FAPI handler, change from within the PNF if it's not the case
+  p7_config->unpack_func = &fapi_nr_p7_message_unpack;
+  p7_config->hdr_unpack_func = &fapi_nr_p7_message_header_unpack;
+  p7_config->pack_func = &fapi_nr_p7_message_pack;
 // pass p7_config to WLS handler
   wls_pnf_set_p7_config(p7_config);
 #endif
@@ -2208,11 +2217,18 @@ void configure_nr_nfapi_pnf(char *vnf_ip_addr, int vnf_p5_port, char *pnf_ip_add
 #ifdef ENABLE_WLS
   printf("WLS MODE PNF\n");
   NFAPI_TRACE(NFAPI_TRACE_INFO, "[PNF] Creating WLS PNF NFAPI start thread %s\n", __FUNCTION__);
+  // Assume it's the FAPI handler, change from within the PNF if it's not the case
+  config->unpack_func = &fapi_nr_p5_message_unpack;
+  config->hdr_unpack_func = &fapi_nr_message_header_unpack;
+  config->pack_func = &fapi_nr_p5_message_pack;
   //wls_fapi_pnf_nr_start_thread(config);
   pthread_create(&pnf_start_pthread, NULL, &wls_fapi_pnf_nr_start_thread, config);
   pthread_setname_np(pnf_start_pthread, "NFAPI_WLS_PNF");
 #else
   NFAPI_TRACE(NFAPI_TRACE_INFO, "[PNF] Creating PNF NFAPI start thread %s\n", __FUNCTION__);
+  config->unpack_func = &nfapi_nr_p5_message_unpack;
+  config->hdr_unpack_func = &nfapi_nr_p5_message_header_unpack;
+  config->pack_func = &nfapi_nr_p5_message_pack;
   pthread_create(&pnf_start_pthread, NULL, &pnf_nr_start_thread, config);
   pthread_setname_np(pnf_start_pthread, "NFAPI_PNF");
 #endif

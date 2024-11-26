@@ -1305,13 +1305,11 @@ void pnf_handle_dl_tti_request(void* pRecvMsg, int recvMsgLen, pnf_p7_t* pnf_p7,
                   frame,
                   slot,
                   buffer_index);
-      int result = 0;
-      if (isNFAPI) {
-        result = nfapi_nr_p7_message_unpack(pRecvMsg, recvMsgLen, req, sizeof(*req), &(pnf_p7->_public.codec_config));
-      }else {
-        result = fapi_nr_p7_message_unpack(pRecvMsg, recvMsgLen, req, sizeof(*req), &(pnf_p7->_public.codec_config));
-      }
-      if (result != 0)
+      if (pnf_p7->_public.unpack_func(pRecvMsg,
+                                      recvMsgLen + NFAPI_HEADER_LENGTH,
+                                      req,
+                                      sizeof(*req),
+                                      &(pnf_p7->_public.codec_config)) != 0)
         NFAPI_TRACE(NFAPI_TRACE_INFO, "failed to unpack request\n");
     } else {
       if (pnf_p7->_public.timing_info_mode_aperiodic)
@@ -1443,13 +1441,11 @@ void pnf_handle_ul_tti_request(void* pRecvMsg, int recvMsgLen, pnf_p7_t* pnf_p7,
                   frame,
                   slot,
                   buffer_index);
-      int result = 0;
-      if (isNFAPI) {
-        result = nfapi_nr_p7_message_unpack(pRecvMsg, recvMsgLen, req, sizeof(*req), &(pnf_p7->_public.codec_config));
-      }else {
-        result = fapi_nr_p7_message_unpack(pRecvMsg, recvMsgLen, req, sizeof(*req), &(pnf_p7->_public.codec_config));
-      }
-      if (result != 0)
+      if (pnf_p7->_public.unpack_func(pRecvMsg,
+                                      recvMsgLen + NFAPI_HEADER_LENGTH,
+                                      req,
+                                      sizeof(*req),
+                                      &(pnf_p7->_public.codec_config)) != 0)
         NFAPI_TRACE(NFAPI_TRACE_ERROR, "failed to unpack UL_TTI.request\n");
     } else {
       NFAPI_TRACE(NFAPI_TRACE_NOTE,
@@ -1567,13 +1563,11 @@ void pnf_handle_ul_dci_request(void* pRecvMsg, int recvMsgLen, pnf_p7_t* pnf_p7,
                   frame,
                   slot,
                   buffer_index);
-      int result = 0;
-      if (isNFAPI) {
-        result = nfapi_nr_p7_message_unpack(pRecvMsg, recvMsgLen, req, sizeof(*req), &pnf_p7->_public.codec_config);
-      }else {
-        result = fapi_nr_p7_message_unpack(pRecvMsg, recvMsgLen, req, sizeof(*req), &pnf_p7->_public.codec_config);
-      }
-      if (result != 0)
+      if (pnf_p7->_public.unpack_func(pRecvMsg,
+                                      recvMsgLen + NFAPI_HEADER_LENGTH,
+                                      req,
+                                      sizeof(*req),
+                                      &(pnf_p7->_public.codec_config))  != 0)
         NFAPI_TRACE(NFAPI_TRACE_INFO, "failed to unpack request\n");
     } else {
       if (pnf_p7->_public.timing_info_mode_aperiodic) {
@@ -1685,13 +1679,11 @@ void pnf_handle_tx_data_request(void* pRecvMsg, int recvMsgLen, pnf_p7_t* pnf_p7
                   frame,
                   slot,
                   buffer_index);
-      int result = 0;
-      if (isNFAPI) {
-        result = nfapi_nr_p7_message_unpack(pRecvMsg, recvMsgLen, req, sizeof(*req), &pnf_p7->_public.codec_config);
-      }else {
-        result = fapi_nr_p7_message_unpack(pRecvMsg, recvMsgLen, req, sizeof(*req), &pnf_p7->_public.codec_config);
-      }
-      if (result == 0) {
+      if (pnf_p7->_public.unpack_func(pRecvMsg,
+                                      recvMsgLen + NFAPI_HEADER_LENGTH,
+                                      req,
+                                      sizeof(*req),
+                                      &(pnf_p7->_public.codec_config)) == 0) {
         for (int i = 0; i < req->Number_of_PDUs; ++i)
           pnf_p7->nr_stats.dl.bytes += req->pdu_list[i].PDU_length;
       } else {
@@ -2089,7 +2081,7 @@ void pnf_nr_handle_dl_node_sync(void *pRecvMsg, int recvMsgLen, pnf_p7_t* pnf_p7
 	}
 
 	// unpack the message
-	if (nfapi_nr_p7_message_unpack(pRecvMsg, recvMsgLen, &dl_node_sync, sizeof(dl_node_sync), &pnf_p7->_public.codec_config) < 0)
+	if (pnf_p7->_public.unpack_func(pRecvMsg, recvMsgLen, &dl_node_sync, sizeof(dl_node_sync), &pnf_p7->_public.codec_config) < 0)
 	{
 		NFAPI_TRACE(NFAPI_TRACE_ERROR, "%s: Unpack message failed, ignoring\n", __FUNCTION__);
 		return;
@@ -2208,7 +2200,7 @@ void pnf_nr_dispatch_p7_message(void* pRecvMsg, int recvMsgLen, pnf_p7_t* pnf_p7
   }
 
   // unpack the message header
-  if (nfapi_nr_p7_message_header_unpack(pRecvMsg, recvMsgLen, &header, sizeof(header), &pnf_p7->_public.codec_config) < 0) {
+  if (pnf_p7->_public.hdr_unpack_func(pRecvMsg, recvMsgLen, &header, sizeof(header), &pnf_p7->_public.codec_config) < 0) {
     NFAPI_TRACE(NFAPI_TRACE_ERROR, "Unpack message header failed, ignoring\n");
     return;
   }
@@ -2362,7 +2354,7 @@ void pnf_nr_handle_p7_message(void* pRecvMsg, int recvMsgLen, pnf_p7_t* pnf_p7, 
   }
 
   // unpack the message header
-  if (nfapi_nr_p7_message_header_unpack(pRecvMsg,
+  if (pnf_p7->_public.hdr_unpack_func(pRecvMsg,
                                         recvMsgLen,
                                         &messageHeader,
                                         sizeof(nfapi_nr_p7_message_header_t),
@@ -2545,7 +2537,7 @@ void pnf_nr_nfapi_p7_read_dispatch_message(pnf_p7_t* pnf_p7, uint32_t now_hr_tim
     if (recvfrom_result > 0) {
       // get the segment size
       nfapi_nr_p7_message_header_t header;
-      nfapi_nr_p7_message_header_unpack(header_buffer, NFAPI_NR_P7_HEADER_LENGTH, &header, 34, 0);
+      pnf_p7->_public.hdr_unpack_func(header_buffer, NFAPI_NR_P7_HEADER_LENGTH, &header, 34, 0);
 
       // resize the buffer if we have a large segment
       if (header.message_length > pnf_p7->rx_message_buffer_size) {

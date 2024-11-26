@@ -99,7 +99,7 @@ void pnf_nr_handle_pnf_param_request(pnf_t* pnf, void *pRecvMsg, int recvMsgLen)
 		NFAPI_TRACE(NFAPI_TRACE_INFO, "PNF_PARAM.request received\n");
 
 		// unpack the message
-		if (nfapi_nr_p5_message_unpack(pRecvMsg, recvMsgLen, &req, sizeof(nfapi_nr_pnf_param_request_t), &pnf->_public.codec_config) >= 0)
+		if (pnf->_public.unpack_func(pRecvMsg, recvMsgLen, &req, sizeof(nfapi_nr_pnf_param_request_t), &pnf->_public.codec_config) >= 0)
 		{
 			if(pnf->_public.state == NFAPI_PNF_IDLE)
 			{
@@ -255,7 +255,7 @@ void pnf_nr_handle_pnf_config_request(pnf_t* pnf, void *pRecvMsg, int recvMsgLen
 		NFAPI_TRACE(NFAPI_TRACE_INFO, "PNF_CONFIG.request received\n");
 
 		// unpack the message
-		if (nfapi_nr_p5_message_unpack(pRecvMsg, recvMsgLen, &req, sizeof(req), &pnf->_public.codec_config) >= 0)
+		if (pnf->_public.unpack_func(pRecvMsg, recvMsgLen, &req, sizeof(req), &pnf->_public.codec_config) >= 0)
 		{
 			// ensure correct state
 			if(pnf->_public.state != NFAPI_PNF_RUNNING)
@@ -361,7 +361,7 @@ void pnf_nr_handle_pnf_start_request(pnf_t* pnf, void *pRecvMsg, int recvMsgLen)
 		NFAPI_TRACE(NFAPI_TRACE_INFO, "PNF_START.request Received\n");
 
 		// unpack the message
-		if (nfapi_nr_p5_message_unpack(pRecvMsg, recvMsgLen, &req, sizeof(req), &pnf->_public.codec_config) >= 0)
+		if (pnf->_public.unpack_func(pRecvMsg, recvMsgLen, &req, sizeof(req), &pnf->_public.codec_config) >= 0)
 		{
 			if(pnf->_public.state == NFAPI_PNF_CONFIGURED)
 			{
@@ -520,7 +520,7 @@ void pnf_nr_handle_param_request(pnf_t* pnf, void *pRecvMsg, int recvMsgLen)
 		NFAPI_TRACE(NFAPI_TRACE_INFO, "PARAM.request received\n");
 
 		// unpack the message
-		if (nfapi_nr_p5_message_unpack(pRecvMsg, recvMsgLen, &req, sizeof(req), &config->codec_config) >= 0)
+		if (pnf->_public.unpack_func(pRecvMsg, recvMsgLen, &req, sizeof(req), &config->codec_config) >= 0)
 		{
 			if(config->state == NFAPI_PNF_RUNNING)
 			{
@@ -665,7 +665,7 @@ void pnf_nr_handle_config_request(pnf_t* pnf, void *pRecvMsg, int recvMsgLen)
 		nfapi_pnf_config_t* config = &(pnf->_public);
 
 		// unpack the message
-		if (nfapi_nr_p5_message_unpack(pRecvMsg, recvMsgLen, &req, sizeof(req), &config->codec_config) >= 0)
+		if (pnf->_public.unpack_func(pRecvMsg, recvMsgLen, &req, sizeof(req), &config->codec_config) >= 0)
 		{
 			if(config->state == NFAPI_PNF_RUNNING)
 			{
@@ -813,7 +813,7 @@ void pnf_nr_handle_start_request(pnf_t* pnf, void *pRecvMsg, int recvMsgLen)
 		NFAPI_TRACE(NFAPI_TRACE_INFO, "%s() START.request received state:%d\n", __FUNCTION__, config->state);
 
 		// unpack the message
-		if (nfapi_nr_p5_message_unpack(pRecvMsg, recvMsgLen, &req, sizeof(req), &config->codec_config) >= 0)
+		if (pnf->_public.unpack_func(pRecvMsg, recvMsgLen, &req, sizeof(req), &config->codec_config) >= 0)
 		{
 			if(config->state == NFAPI_PNF_RUNNING)
 			{
@@ -952,7 +952,7 @@ void pnf_nr_handle_stop_request(pnf_t* pnf, void* pRecvMsg, int recvMsgLen)
     nfapi_pnf_config_t* config = &(pnf->_public);
 
     // unpack the message
-    if (nfapi_nr_p5_message_unpack(pRecvMsg, recvMsgLen, &req, sizeof(req), &config->codec_config) >= 0) {
+    if (pnf->_public.unpack_func(pRecvMsg, recvMsgLen, &req, sizeof(req), &config->codec_config) >= 0) {
       if (config->state == NFAPI_PNF_RUNNING) {
         nfapi_pnf_phy_config_t* phy = nfapi_pnf_phy_config_find(config, req.header.phy_id);
         if (phy) {
@@ -1532,7 +1532,7 @@ void pnf_nr_handle_p5_message(pnf_t* pnf, void* pRecvMsg, int recvMsgLen)
   }
 
   // unpack the message header
-  if (nfapi_nr_p5_message_header_unpack(pRecvMsg,
+  if (pnf->_public.hdr_unpack_func(pRecvMsg,
                                         recvMsgLen,
                                         &messageHeader,
                                         sizeof(nfapi_nr_p4_p5_message_header_t),
@@ -2155,7 +2155,7 @@ int pnf_nr_read_dispatch_message(pnf_t* pnf)
     }
 
     nfapi_nr_p4_p5_message_header_t header;
-    int unpack_result = nfapi_nr_p5_message_header_unpack(header_buffer, header_buffer_size, &header, sizeof(header), 0);
+    int unpack_result = pnf->_public.hdr_unpack_func(header_buffer, header_buffer_size, &header, sizeof(header), 0);
     if (unpack_result < 0) {
       NFAPI_TRACE(NFAPI_TRACE_INFO, "PNF Failed to unpack p5 message header\n");
       return 0;

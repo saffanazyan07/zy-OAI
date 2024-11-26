@@ -35,6 +35,12 @@ nfapi_pnf_p7_config_t *wls_p7_config = NULL;
 
 void wls_pnf_set_p7_config(nfapi_pnf_p7_config_t *p7_config)
 {
+  if (isNFAPI) {
+    // The PNF has received nFAPI specific messages, set the pack/unpack funcs to be the nFAPI ones
+    p7_config->unpack_func = &nfapi_nr_p7_message_unpack;
+    p7_config->hdr_unpack_func = &nfapi_nr_p7_message_header_unpack;
+    p7_config->pack_func = &nfapi_nr_p7_message_pack;
+  }
   wls_p7_config = p7_config;
 }
 
@@ -157,20 +163,11 @@ uint8_t phy_wls_init(const char *dev_name, uint64_t nWlsMacMemSize, uint64_t nWl
 
 int wls_pnf_nr_pack_and_send_p5_message(pnf_t *pnf, nfapi_nr_p4_p5_message_header_t *msg, uint32_t msg_len)
 {
-  int packed_len = -1;
-  if (isNFAPI) {
-    packed_len = nfapi_nr_p5_message_pack(msg,
-                                          msg_len,
-                                          pnf->tx_message_buffer,
-                                          sizeof(pnf->tx_message_buffer),
-                                          &pnf->_public.codec_config);
-  } else {
-    packed_len = fapi_nr_p5_message_pack(msg,
-                                         msg_len,
-                                         pnf->tx_message_buffer,
-                                         sizeof(pnf->tx_message_buffer),
-                                         &pnf->_public.codec_config);
-  }
+  int packed_len = cfg->pack_func(msg,
+                                  msg_len,
+                                  pnf->tx_message_buffer,
+                                  sizeof(pnf->tx_message_buffer),
+                                  &pnf->_public.codec_config);
 
   if (packed_len < 0) {
     NFAPI_TRACE(NFAPI_TRACE_ERROR, "nfapi_p5_message_pack failed (%d)\n", packed_len);
@@ -194,7 +191,7 @@ static void wls_pnf_nr_handle_pnf_param_request(uint32_t msgSize, void *msg_buf)
 {
   nfapi_nr_pnf_param_request_t req;
   nfapi_pnf_config_t *config = &(_this->_public);
-  int unpack_result = nfapi_nr_p5_message_unpack(msg_buf, msgSize, &req, sizeof(req), NULL);
+  int unpack_result = config->unpack_func(msg_buf, msgSize, &req, sizeof(req), NULL);
   DevAssert(unpack_result >= 0);
   if (config->state == NFAPI_PNF_IDLE) {
     if (config->pnf_nr_param_req) {
@@ -215,7 +212,7 @@ static void wls_pnf_nr_handle_pnf_config_request(uint32_t msgSize, void *msg_buf
 {
   nfapi_pnf_config_t *config = &(_this->_public);
   nfapi_nr_pnf_config_request_t req;
-  int unpack_result = nfapi_nr_p5_message_unpack(msg_buf, msgSize, &req, sizeof(req), NULL);
+  int unpack_result = config->unpack_func(msg_buf, msgSize, &req, sizeof(req), NULL);
   DevAssert(unpack_result >= 0);
   // ensure correct state
   if (config->state != NFAPI_PNF_RUNNING) {
@@ -261,7 +258,7 @@ static void wls_pnf_nr_handle_pnf_start_request(uint32_t msg_size, void *msg_buf
 {
   nfapi_pnf_config_t *config = &(_this->_public);
   nfapi_nr_pnf_start_request_t req;
-  int unpack_result = nfapi_nr_p5_message_unpack(msg_buf, msg_size, &req, sizeof(req), NULL);
+  int unpack_result = config->unpack_func(msg_buf, msg_size, &req, sizeof(req), NULL);
   DevAssert(unpack_result >= 0);
   if (config->state == NFAPI_PNF_CONFIGURED) {
     if (config->pnf_nr_start_req) {
@@ -280,7 +277,7 @@ static void wls_pnf_handle_pnf_stop_request(uint32_t msg_size, void *msg_buf)
 {
   nfapi_pnf_config_t *config = &(_this->_public);
   nfapi_pnf_stop_request_t req;
-  int unpack_result = nfapi_nr_p5_message_unpack(msg_buf, msg_size, &req, sizeof(req), NULL);
+  int unpack_result = config->unpack_func(msg_buf, msg_size, &req, sizeof(req), NULL);
   DevAssert(unpack_result >= 0);
   if (config->state == NFAPI_PNF_RUNNING) {
     if (config->pnf_stop_req) {
@@ -299,12 +296,7 @@ static void wls_pnf_nr_handle_param_request(uint32_t msg_size, void *msg_buf)
 {
   nfapi_pnf_config_t *config = &(_this->_public);
   nfapi_nr_param_request_scf_t req;
-  int unpack_result = -1;
-  if (isNFAPI) {
-    unpack_result = nfapi_nr_p5_message_unpack(msg_buf, msg_size, &req, sizeof(req), NULL);
-  } else {
-    unpack_result = fapi_nr_p5_message_unpack(msg_buf, msg_size, &req, sizeof(req), NULL);
-  }
+  int unpack_result = cfg->unpack_func(msg_buf, msg_size, &req, sizeof(req), NULL);
   DevAssert(unpack_result >= 0);
   if (config->state == NFAPI_PNF_RUNNING) {
     nfapi_pnf_phy_config_t *phy = nfapi_pnf_phy_config_find(config, req.header.phy_id);
@@ -343,12 +335,7 @@ static void wls_pnf_nr_handle_config_request(uint32_t msg_size, void *msg_buf)
 {
   nfapi_nr_config_request_scf_t req = {0};
   nfapi_pnf_config_t *config = &(_this->_public);
-  int unpack_result = -1;
-  if (isNFAPI) {
-    unpack_result = nfapi_nr_p5_message_unpack(msg_buf, msg_size, &req, sizeof(req), NULL);
-  } else {
-    unpack_result = fapi_nr_p5_message_unpack(msg_buf, msg_size, &req, sizeof(req), NULL);
-  }
+  int unpack_result = cfg->unpack_func(msg_buf, msg_size, &req, sizeof(req), NULL);
   DevAssert(unpack_result >= 0);
 
   if (!isNFAPI) {
@@ -403,12 +390,7 @@ static void wls_pnf_nr_handle_start_request(uint32_t msg_size, void *msg_buf)
 {
   nfapi_nr_start_request_scf_t req = {0};
   nfapi_pnf_config_t *config = &(_this->_public);
-  int unpack_result = -1;
-  if (isNFAPI) {
-    unpack_result = nfapi_nr_p5_message_unpack(msg_buf, msg_size, &req, sizeof(req), NULL);
-  } else {
-    unpack_result = fapi_nr_p5_message_unpack(msg_buf, msg_size, &req, sizeof(req), NULL);
-  }
+  int unpack_result = cfg->unpack_func(msg_buf, msg_size, &req, sizeof(req), NULL);
   DevAssert(unpack_result >= 0);
 
   if (config->state == NFAPI_PNF_RUNNING) {
@@ -449,17 +431,12 @@ static void wls_pnf_nr_handle_stop_request(uint32_t msg_size, void *msg_buf)
   // ensure it's valid
   nfapi_nr_stop_request_scf_t req;
   nfapi_pnf_config_t *config = &(_this->_public);
-  int unpack_result = -1;
-  if (isNFAPI) {
-    unpack_result = nfapi_nr_p5_message_unpack(msg_buf, msg_size, &req, sizeof(req), NULL);
-  } else {
-    unpack_result = fapi_nr_p5_message_unpack(msg_buf, msg_size, &req, sizeof(req), NULL);
-  }
+  int unpack_result = cfg->unpack_func(msg_buf, msg_size, &req, sizeof(req), NULL);
   DevAssert(unpack_result >= 0);
   NFAPI_TRACE(NFAPI_TRACE_INFO, "STOP.request received\n");
 
   // unpack the message
-  if (nfapi_nr_p5_message_unpack(msg_buf, msg_size, &req, sizeof(req), &config->codec_config) >= 0) {
+  if (config->unpack_func(msg_buf, msg_size, &req, sizeof(req), &config->codec_config) >= 0) {
     if (config->state == NFAPI_PNF_RUNNING) {
       nfapi_pnf_phy_config_t *phy = nfapi_pnf_phy_config_find(config, req.header.phy_id);
       if (phy) {
@@ -514,12 +491,7 @@ int wls_pnf_nr_pack_and_send_p7_message(nfapi_nr_p7_message_header_t *msg)
     return -1;
   }
 
-  int packed_len = -1;
-  if (isNFAPI) {
-    packed_len = nfapi_nr_p7_message_pack(msg, pnf->tx_message_buffer, sizeof(pnf->tx_message_buffer), NULL);
-  } else {
-    packed_len = fapi_nr_p7_message_pack(msg, pnf->tx_message_buffer, sizeof(pnf->tx_message_buffer), NULL);
-  }
+  int packed_len = wls_p7_config->pack_func(msg, pnf->tx_message_buffer, sizeof(pnf->tx_message_buffer), NULL);
 
   if (packed_len < 0) {
     NFAPI_TRACE(NFAPI_TRACE_ERROR, "nfapi_p7_message_pack failed (%d)\n", packed_len);
@@ -607,6 +579,10 @@ static void procPhyMessages(uint32_t msg_size, void *msg_buf, uint16_t msg_id)
     case NFAPI_NR_PHY_MSG_TYPE_PNF_PARAM_REQUEST:
       // received an NFAPI message from VNF, mark as to use nFAPI functions from now on
       isNFAPI = true;
+      // Set the P5 pack/unpack procedures to be the nFAPI ones
+      cfg->unpack_func = &nfapi_nr_p5_message_unpack;
+      cfg->hdr_unpack_func = &nfapi_nr_p5_message_header_unpack;
+      cfg->pack_func = &nfapi_nr_p5_message_pack;
       printf("\n NFAPI_NR_PHY_MSG_TYPE_PNF_PARAM_REQUEST");
       wls_pnf_nr_handle_pnf_param_request(msg_size + NFAPI_NR_P5_HEADER_LENGTH, msg_buf);
       break;
