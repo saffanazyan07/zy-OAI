@@ -193,25 +193,20 @@ static void select_preamble_group(NR_UE_MAC_INST_t *mac)
   // else if Msg3 is being retransmitted, we keep what used in first transmission of Msg3
 }
 
-typedef struct{
-  float ssb_per_ro;
-  int preambles_per_ssb;
-} ssb_ro_preambles_t;
-
 static ssb_ro_preambles_t get_ssb_ro_preambles_4step(struct NR_RACH_ConfigCommon__ssb_perRACH_OccasionAndCB_PreamblesPerSSB *config)
 {
   ssb_ro_preambles_t ret = {0};
   switch (config->present) {
     case NR_RACH_ConfigCommon__ssb_perRACH_OccasionAndCB_PreamblesPerSSB_PR_oneEighth:
-      ret.ssb_per_ro = 1 / 8;
+      ret.ssb_per_ro = 0.125;
       ret.preambles_per_ssb = (config->choice.oneEighth + 1) << 2;
       break;
     case NR_RACH_ConfigCommon__ssb_perRACH_OccasionAndCB_PreamblesPerSSB_PR_oneFourth:
-      ret.ssb_per_ro = 1 / 4;
+      ret.ssb_per_ro = 0.25;
       ret.preambles_per_ssb = (config->choice.oneFourth + 1) << 2;
       break;
     case NR_RACH_ConfigCommon__ssb_perRACH_OccasionAndCB_PreamblesPerSSB_PR_oneHalf:
-      ret.ssb_per_ro = 1 / 2;
+      ret.ssb_per_ro = 0.5;
       ret.preambles_per_ssb = (config->choice.oneHalf + 1) << 2;
       break;
     case NR_RACH_ConfigCommon__ssb_perRACH_OccasionAndCB_PreamblesPerSSB_PR_one:
@@ -237,6 +232,7 @@ static ssb_ro_preambles_t get_ssb_ro_preambles_4step(struct NR_RACH_ConfigCommon
     default:
       AssertFatal(false, "Invalid ssb_perRACH_OccasionAndCB_PreamblesPerSSB\n");
   }
+  LOG_D(NR_MAC, "SSB per RO %f preambles per SSB %d\n", ret.ssb_per_ro, ret.preambles_per_ssb);
   return ret;
 }
 
@@ -245,15 +241,15 @@ static ssb_ro_preambles_t get_ssb_ro_preambles_2step(struct NR_RACH_ConfigCommon
   ssb_ro_preambles_t ret = {0};
   switch (config->present) {
     case NR_RACH_ConfigCommonTwoStepRA_r16__msgA_SSB_PerRACH_OccasionAndCB_PreamblesPerSSB_r16_PR_oneEighth :
-      ret.ssb_per_ro = 1 / 8;
+      ret.ssb_per_ro = 0.125;
       ret.preambles_per_ssb = (config->choice.oneEighth + 1) << 2;
       break;
     case NR_RACH_ConfigCommonTwoStepRA_r16__msgA_SSB_PerRACH_OccasionAndCB_PreamblesPerSSB_r16_PR_oneFourth :
-      ret.ssb_per_ro = 1 / 4;
+      ret.ssb_per_ro = 0.25;
       ret.preambles_per_ssb = (config->choice.oneFourth + 1) << 2;
       break;
     case NR_RACH_ConfigCommonTwoStepRA_r16__msgA_SSB_PerRACH_OccasionAndCB_PreamblesPerSSB_r16_PR_oneHalf :
-      ret.ssb_per_ro = 1 / 2;
+      ret.ssb_per_ro = 0.5;
       ret.preambles_per_ssb = (config->choice.oneHalf + 1) << 2;
       break;
     case NR_RACH_ConfigCommonTwoStepRA_r16__msgA_SSB_PerRACH_OccasionAndCB_PreamblesPerSSB_r16_PR_one :
@@ -296,14 +292,13 @@ static void config_preamble_index(NR_UE_MAC_INST_t *mac)
   }
 
   NR_RACH_ConfigCommon_t *nr_rach_ConfigCommon = mac->current_UL_BWP->rach_ConfigCommon;
-  ssb_ro_preambles_t config_info;
   int nb_of_preambles = 64;
   bool groupBconfigured = false;
   int preamb_ga = 0;
   if (ra->ra_type == RA_4_STEP) {
     AssertFatal(nr_rach_ConfigCommon->ssb_perRACH_OccasionAndCB_PreamblesPerSSB,
                 "Not expeting ssb_perRACH_OccasionAndCB_PreamblesPerSSB to be NULL here\n");
-    config_info = get_ssb_ro_preambles_4step(nr_rach_ConfigCommon->ssb_perRACH_OccasionAndCB_PreamblesPerSSB);
+    ra->ssb_ro_config = get_ssb_ro_preambles_4step(nr_rach_ConfigCommon->ssb_perRACH_OccasionAndCB_PreamblesPerSSB);
     if (nr_rach_ConfigCommon->totalNumberOfRA_Preambles)
       nb_of_preambles = *nr_rach_ConfigCommon->totalNumberOfRA_Preambles;
     // Amongst the contention-based Random Access Preambles associated with an SSB the first numberOfRA-PreamblesGroupA
@@ -327,9 +322,9 @@ static void config_preamble_index(NR_UE_MAC_INST_t *mac)
     // configuration by msgA-SSB-PerRACH-OccasionAndCB-PreamblesPerSSB when provided;
     // otherwise, by ssb-perRACH-OccasionAndCB-PreamblesPerSSB
     if (twostep->msgA_SSB_PerRACH_OccasionAndCB_PreamblesPerSSB_r16)
-      config_info = get_ssb_ro_preambles_2step(twostep->msgA_SSB_PerRACH_OccasionAndCB_PreamblesPerSSB_r16);
+      ra->ssb_ro_config = get_ssb_ro_preambles_2step(twostep->msgA_SSB_PerRACH_OccasionAndCB_PreamblesPerSSB_r16);
     else
-      config_info = get_ssb_ro_preambles_4step(nr_rach_ConfigCommon->ssb_perRACH_OccasionAndCB_PreamblesPerSSB);
+      ra->ssb_ro_config = get_ssb_ro_preambles_4step(nr_rach_ConfigCommon->ssb_perRACH_OccasionAndCB_PreamblesPerSSB);
     if (twostep->msgA_TotalNumberOfRA_Preambles_r16)
       nb_of_preambles = *twostep->msgA_TotalNumberOfRA_Preambles_r16;
   }
@@ -344,12 +339,12 @@ static void config_preamble_index(NR_UE_MAC_INST_t *mac)
       nb_of_preambles = preamb_ga;
     }
   }
-  int rand_preamb = (rand_r(&seed) % config_info.preambles_per_ssb);
-  if (config_info.ssb_per_ro < 1)
+  int rand_preamb = (rand_r(&seed) % ra->ssb_ro_config.preambles_per_ssb);
+  if (ra->ssb_ro_config.ssb_per_ro < 1)
     ra->ra_PreambleIndex = groupOffset + rand_preamb;
   else {
-    int ssb_pr_idx = mac->ssb_list.nb_ssb_per_index[ra->ra_ssb] % (int)config_info.ssb_per_ro;
-    ra->ra_PreambleIndex = groupOffset + (ssb_pr_idx * config_info.preambles_per_ssb) + rand_preamb;
+    int ssb_pr_idx = mac->ssb_list.nb_ssb_per_index[mac->mib_ssb] % (int)ra->ssb_ro_config.ssb_per_ro;
+    ra->ra_PreambleIndex = groupOffset + (ssb_pr_idx * ra->ssb_ro_config.preambles_per_ssb) + rand_preamb;
   }
   AssertFatal(ra->ra_PreambleIndex < nb_of_preambles,
               "Error! Selected preamble %d which exceeds number of prambles available %d\n",
@@ -361,7 +356,8 @@ static void config_preamble_index(NR_UE_MAC_INST_t *mac)
 static void ra_resource_selection(NR_UE_MAC_INST_t *mac)
 {
   RA_config_t *ra = &mac->ra;
-  ra->ra_ssb = -1; // init as not selected
+  int ssb = -1; // init as not selected
+  ra->ro_mask_index = -1; // init as not selected
   NR_RACH_ConfigDedicated_t *rach_ConfigDedicated = ra->rach_ConfigDedicated;
   if (ra->ra_type == RA_4_STEP) {
     // TODO if the Random Access procedure was initiated for SpCell beam failure recovery
@@ -371,7 +367,8 @@ static void ra_resource_selection(NR_UE_MAC_INST_t *mac)
       // set the PREAMBLE_INDEX to the signalled ra-PreambleIndex;
       ra->ra_PreambleIndex = ra->pdcch_order.preamble_index;
       // select the SSB signalled by PDCCH
-      ra->ra_ssb = ra->pdcch_order.ssb_index;
+      ssb = ra->pdcch_order.ssb_index;
+      ra->ro_mask_index = ra->pdcch_order.prach_mask;
     } else if (rach_ConfigDedicated && rach_ConfigDedicated->cfra) {
       NR_CFRA_t *cfra = rach_ConfigDedicated->cfra;
       AssertFatal(cfra->occasions == NULL, "Dedicated PRACH occasions for CFRA not supported\n");
@@ -381,16 +378,17 @@ static void ra_resource_selection(NR_UE_MAC_INST_t *mac)
         NR_CFRA_SSB_Resource_t *res = ssb_list->ssb_ResourceList.list.array[i];
         // TODO select an SSB with SS-RSRP above rsrp-ThresholdSSB amongst the associated SSBs
         if (res->ssb == mac->mib_ssb) {
-          ra->ra_ssb = mac->mib_ssb;
+          ssb = mac->mib_ssb;
           // set the PREAMBLE_INDEX to a ra-PreambleIndex corresponding to the selected SSB
           ra->ra_PreambleIndex = res->ra_PreambleIndex;
+          ra->ro_mask_index = ssb_list->ra_ssb_OccasionMaskIndex;
           break;
         }
       }
     } else { // for the contention-based Random Access preamble selection
       // TODO if at least one of the SSBs with SS-RSRP above rsrp-ThresholdSSB is available
       // else select any SSB
-      ra->ra_ssb = mac->mib_ssb;
+      ssb = mac->mib_ssb;
       config_preamble_index(mac);
     }
   } else { // 2-step RA
@@ -404,19 +402,146 @@ static void ra_resource_selection(NR_UE_MAC_INST_t *mac)
       for (int i = 0; i < cfra->resourcesTwoStep_r16.ssb_ResourceList.list.count; i++) {
         NR_CFRA_SSB_Resource_t *res = cfra->resourcesTwoStep_r16.ssb_ResourceList.list.array[i];
         if (res->ssb == mac->mib_ssb) {
-          ra->ra_ssb = mac->mib_ssb;
+          ssb = mac->mib_ssb;
           // set the PREAMBLE_INDEX to a ra-PreambleIndex corresponding to the selected SSB
           ra->ra_PreambleIndex = res->ra_PreambleIndex;
+          ra->ro_mask_index =  cfra->resourcesTwoStep_r16.ra_ssb_OccasionMaskIndex;
           break;
         }
       }
     } else { // for the contention-based Random Access Preamble selection
       // TODO if at least one of the SSBs with SS-RSRP above msgA-RSRP-ThresholdSSB is available
       // else select any SSB
-      ra->ra_ssb = mac->mib_ssb;
+      ssb = mac->mib_ssb;
       config_preamble_index(mac);
     }
   }
+  AssertFatal(ra->ra_ssb >= 0, "Something wrong! RA resource selection didn't set any SSB\n");
+  // setting the RA ssb value as the progressive number of SSB transmitted
+  // non-transmitted SSBs are not taken into account
+  ra->ra_ssb = mac->ssb_list.nb_ssb_per_index[ssb];
+}
+
+static bool check_mixed_slot_prach(NR_TDD_UL_DL_ConfigCommon_t *tdd_config, int slot, int start_prach, int end_prach)
+{
+  // TODO
+  return true;
+}
+
+static void select_prach_occasion(RA_config_t *ra,
+                                  int nb_tx_ssb,
+                                  int n,
+                                  prach_occasion_info_t ra_occasions_period[n],
+                                  int num_ra_occasions_period)
+{
+  unsigned int seed;
+  if (IS_SOFTMODEM_IQPLAYER || IS_SOFTMODEM_IQRECORDER) {
+    // Overwrite seed with non-random seed for IQ player/recorder
+    seed = 1;
+  } else {
+    // & to truncate the int64_t and keep only the LSB bits, up to sizeof(int)
+    seed = (unsigned int) (rdtsc_oai() & ~0);
+  }
+
+  int num_ros_per_ssb = 0;
+  int idx_ssb = 0;
+  int temp_idx = 0;
+  if (ra->ssb_ro_config.ssb_per_ro < 1) {
+    num_ros_per_ssb = (int) (1 / ra->ssb_ro_config.ssb_per_ro);
+    idx_ssb = (rand_r(&seed) % num_ros_per_ssb);
+    temp_idx = ra->ra_ssb * num_ros_per_ssb + idx_ssb;
+  } else {
+    int ssb_per_ro = nb_tx_ssb < ra->ssb_ro_config.ssb_per_ro ? nb_tx_ssb : ra->ssb_ro_config.ssb_per_ro;
+    num_ros_per_ssb = ra->association_periods * ssb_per_ro * num_ra_occasions_period / nb_tx_ssb;
+    idx_ssb = (rand_r(&seed) % num_ros_per_ssb);
+    int eq_ssb = ra->ra_ssb + (idx_ssb * nb_tx_ssb);
+    temp_idx = eq_ssb / ra->ssb_ro_config.ssb_per_ro;
+  }
+  int ro_index = temp_idx % num_ra_occasions_period;
+  int ass_period_idx = temp_idx / num_ra_occasions_period;
+  ra->sched_ro_info = ra_occasions_period[ro_index];
+  ra->sched_ro_info.association_period_idx = ass_period_idx;
+}
+
+static void configure_prach_occasions(NR_UE_MAC_INST_t *mac, int prach_config_index, int num_fd_occasions, int scs)
+{
+  RA_config_t *ra = &mac->ra;
+  int num_ra_occasions_period = 0;
+  nr_prach_info_t prach_info =  get_nr_prach_occasion_info_from_index(prach_config_index, mac->frequency_range, mac->frame_type);
+  int max_num_occasions = prach_info.N_RA_sfn * prach_info.N_t_slot * prach_info.N_RA_slot * num_fd_occasions;
+  prach_occasion_info_t ra_occasions_period[max_num_occasions];
+  // Number of PRACH slots within a subframe (or 60kHz slot) to be taken into account only for 30 and 120kHz
+  // as defined in 5.3.2 of 211
+  int prach_slots_in_sf = (scs == 1 || scs == 3) ? prach_info.N_RA_slot : 1;
+  uint64_t temp_s_map = prach_info.s_map;
+  int n_frames = prach_info.y2 == -1 ? 1 : 2;
+  for (int n = 0; n < n_frames; n++) {
+    int sf = 0;
+    for (int s = 0; s < prach_info.N_RA_sfn; s++) { // subframe/60kHz slot occasions in period
+      while (((temp_s_map >> sf) & 0x01) == 0)
+        sf++;
+      int sl = sf;
+      for (int i = 0; i < prach_slots_in_sf; i++) { // slot per subframe/60kHz slot
+        int add_slot = i;
+        if (scs == 1 || scs == 3) {
+          sl *= 2;
+          // if only 1 slot per subframe (or 60kHz slot) in case of 30 or 120kHz it's the odd one
+          // as defined in 5.3.2 of 211
+          if (prach_slots_in_sf == 1)
+            add_slot = 1;
+        }
+        int slot = sl + add_slot;
+        if (!is_nr_UL_slot(mac->tdd_UL_DL_ConfigurationCommon, slot, mac->frame_type))
+          continue; // valid PRACH occasion only if slot is UL
+        for (int t = 0; t < prach_info.N_t_slot; t++) { // td occasions within a slot
+          int start_symbol = prach_info.start_symbol + t * prach_info.N_dur;
+          int end_symbol = start_symbol + prach_info.N_dur;
+          // valid occasion only if PRACH symbols are UL symbols in mixed slot
+          if (mac->frame_type == TDD && !check_mixed_slot_prach(mac->tdd_UL_DL_ConfigurationCommon, slot, start_symbol, end_symbol))
+            continue;
+          for (int f = 0; f < num_fd_occasions; f++) {  // fd occasions
+            ra_occasions_period[num_ra_occasions_period] = (prach_occasion_info_t) {
+              .slot = slot,
+              .frame_info[0] = prach_info.x,
+              .frame_info[1] = n == 0 ? prach_info.y : prach_info.y2,
+              .start_symbol = start_symbol,
+              .fdm = f,
+              .format = prach_info.format};
+            LOG_D(NR_MAC,
+                  "RA occasion %d: slot %d start symbol %d fd occasion %d\n",
+                  num_ra_occasions_period,
+                  slot,
+                  start_symbol,
+                  f);
+            num_ra_occasions_period++;
+          }
+        }
+      }
+      sf++;
+    }
+  }
+
+  int config_period = prach_info.x; // configuration period
+  ra->association_periods = 1;
+  int nb_eq_ssb = mac->ssb_list.nb_tx_ssb;
+  if (ra->ssb_ro_config.ssb_per_ro < 1)
+    nb_eq_ssb *= (int) (1 / ra->ssb_ro_config.ssb_per_ro);
+  int nb_eq_ro = num_ra_occasions_period;
+  if (ra->ssb_ro_config.ssb_per_ro > 1)
+    nb_eq_ro *= (int) ra->ssb_ro_config.ssb_per_ro;
+  while (nb_eq_ssb > nb_eq_ro) {
+    // not enough PRACH occasions -> need to increase association period
+    ra->association_periods <<= 1;
+    AssertFatal(ra->association_periods * config_period <= 16,
+                "Cannot find an association period for %d SSB and %d RO with %f SSB per RO\n",
+                mac->ssb_list.nb_tx_ssb,
+                num_ra_occasions_period,
+                ra->ssb_ro_config.ssb_per_ro);
+    nb_eq_ro <<= 1; // doubling the association period -> doubling ROs
+  }
+  LOG_D(NR_MAC, "PRACH configuration period %d association period %d\n", config_period, ra->association_periods);
+
+  select_prach_occasion(ra, mac->ssb_list.nb_tx_ssb, max_num_occasions, ra_occasions_period, num_ra_occasions_period);
 }
 
 // Random Access procedure initialization as per 5.1.1 and initialization of variables specific
@@ -631,6 +756,21 @@ bool init_RA(NR_UE_MAC_INST_t *mac, int frame)
   ra->RA_backoff_cnt = 0;
   ra->RA_window_cnt = -1;
 
+  int ra_config_index = 0;
+  if (ra->ra_type == RA_2_STEP && twostep_generic && twostep_generic->msgA_PRACH_ConfigurationIndex_r16)
+    ra_config_index = *twostep_generic->msgA_PRACH_ConfigurationIndex_r16;
+  else {
+    if (rach_ConfigGeneric->ext1 && rach_ConfigGeneric->ext1->prach_ConfigurationIndex_v1610)
+      ra_config_index = *rach_ConfigGeneric->ext1->prach_ConfigurationIndex_v1610;
+    else
+      ra_config_index = rach_ConfigGeneric->prach_ConfigurationIndex;
+  }
+  int fdm = 0;
+  if (ra->ra_type == RA_2_STEP && twostep_generic && twostep_generic->msgA_RO_FDM_r16)
+    fdm = 1 << *twostep_generic->msgA_RO_FDM_r16;
+  else
+    fdm = 1 << rach_ConfigGeneric->msg1_FDM;
+  configure_prach_occasions(mac, ra_config_index, fdm, prach_scs);
   return true;
 }
 

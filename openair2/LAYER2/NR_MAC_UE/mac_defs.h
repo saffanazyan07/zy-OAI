@@ -170,6 +170,34 @@
   UE_STATE(UE_CONNECTED) \
   UE_STATE(UE_DETACHING)
 
+// ===============================================
+// SSB to RO mapping public defines and structures
+// ===============================================
+#define MAX_SSB_PER_RO (16) // Maximum number of SSBs that can be mapped to a single RO
+#define MAX_TDM (7) // Maximum nb of PRACH occasions TDMed in a slot
+#define MAX_FDM (8) // Maximum nb of PRACH occasions FDMed in a slot
+
+// PRACH occasion details
+typedef struct prach_occasion_info {
+  int start_symbol; // 0 - 13 (14 symbols in a slot)
+  int fdm; // 0-7 (possible values of msg1-FDM: 1, 2, 4 or 8)
+  int slot;
+  int frame; // 0 - 15 (maximum number of frames in a 160ms association pattern)
+  uint8_t mapped_ssb_idx[MAX_SSB_PER_RO]; // List of mapped SSBs
+  uint8_t nb_mapped_ssb;
+  int format; // RO preamble format
+  int frame_info[2];
+  int association_period_idx;
+} prach_occasion_info_t;
+
+// PRACH occasion slot details
+// A PRACH occasion slot is a series of PRACH occasions in time (symbols) and frequency
+typedef struct prach_occasion_slot {
+  prach_occasion_info_t *prach_occasion; // Starting symbol of each PRACH occasions in a slot
+  uint8_t nb_of_prach_occasion_in_time;
+  uint8_t nb_of_prach_occasion_in_freq;
+} prach_occasion_slot_t;
+
 typedef enum {
   phr_cause_prohibit_timer = 0,
   phr_cause_periodic_timer,
@@ -293,6 +321,11 @@ typedef struct {
   int Pc_max;
 } NR_PRACH_RESOURCES_t;
 
+typedef struct{
+  float ssb_per_ro;
+  int preambles_per_ssb;
+} ssb_ro_preambles_t;
+
 typedef struct {
   bool active;
   uint32_t preamble_index;
@@ -334,7 +367,7 @@ typedef struct {
   uint8_t ssb_nb_in_ro;
   int zeroCorrelationZoneConfig;
   int restricted_set_config;
-  // selected SSB for RACH
+  // selected SSB for RACH (not the SSB-Index but the cumulative index, excluding not trasmitted SSBs)
   int ra_ssb;
   /// Random-access window counter
   int16_t RA_window_cnt;
@@ -369,6 +402,11 @@ typedef struct {
   NR_pdcch_order_config_t pdcch_order;
 
   NR_PRACH_RESOURCES_t prach_resources;
+
+  ssb_ro_preambles_t ssb_ro_config;
+  int association_periods;
+  prach_occasion_info_t sched_ro_info;
+  int ro_mask_index;
 } RA_config_t;
 
 typedef struct {

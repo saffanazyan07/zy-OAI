@@ -1694,6 +1694,7 @@ nr_prach_info_t get_nr_prach_occasion_info_from_index(uint8_t index, frequency_r
   if (unpaired) { // FR1 TDD
     info.x = table_6_3_3_2_3_prachConfig_Index[index][2];
     info.y = table_6_3_3_2_3_prachConfig_Index[index][3];
+    info.y2 = -1;
     info.s_map = table_6_3_3_2_3_prachConfig_Index[index][4];
     info.N_RA_sfn += count_bits64(info.s_map);
     info.N_RA_slot = table_6_3_3_2_3_prachConfig_Index[index][6];
@@ -1719,6 +1720,7 @@ nr_prach_info_t get_nr_prach_occasion_info_from_index(uint8_t index, frequency_r
   // FR1 FDD
   info.x = table_6_3_3_2_2_prachConfig_Index[index][2];
   info.y = table_6_3_3_2_2_prachConfig_Index[index][3];
+  info.y2 = -1;
   info.s_map = table_6_3_3_2_2_prachConfig_Index[index][4];
   info.N_RA_sfn += count_bits64(info.s_map);
   info.N_RA_slot = table_6_3_3_2_2_prachConfig_Index[index][6];
