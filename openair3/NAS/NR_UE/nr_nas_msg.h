@@ -129,15 +129,18 @@ typedef struct {
   uint8_t sequence_number;
 } __attribute__((__packed__)) fgs_nas_message_security_header_t;
 
-typedef union {
+/* Plain 5GMM NAS message (5GS) */
+typedef struct {
   mm_msg_header_t header;
-  registration_request_msg registration_request;
-  fgs_identiy_response_msg fgs_identity_response;
-  fgs_authentication_response_msg fgs_auth_response;
-  fgs_deregistration_request_ue_originating_msg fgs_deregistration_request_ue_originating;
-  fgs_security_mode_complete_msg fgs_security_mode_complete;
-  registration_complete_msg registration_complete;
-  fgs_uplink_nas_transport_msg uplink_nas_transport;
+  union {
+    registration_request_msg registration_request;
+    fgs_identiy_response_msg fgs_identity_response;
+    fgs_authentication_response_msg fgs_auth_response;
+    fgs_deregistration_request_ue_originating_msg fgs_deregistration_request_ue_originating;
+    fgs_security_mode_complete_msg fgs_security_mode_complete;
+    registration_complete_msg registration_complete;
+    fgs_uplink_nas_transport_msg uplink_nas_transport;
+  } mm_msg; /* 5GS Mobility Management messages */
 } MM_msg;
 
 typedef struct {

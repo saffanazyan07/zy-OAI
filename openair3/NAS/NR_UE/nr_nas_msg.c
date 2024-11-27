@@ -243,23 +243,23 @@ int mm_msg_encode(MM_msg *mm_msg, uint8_t *buffer, uint32_t len)
 
   switch (msg_type) {
     case REGISTRATION_REQUEST:
-      encode_result = encode_registration_request(&mm_msg->registration_request, buffer, len);
+      encode_result = encode_registration_request(&mm_msg->mm_msg.registration_request, buffer, len);
       break;
     case FGS_IDENTITY_RESPONSE:
-      encode_result = encode_identiy_response(&mm_msg->fgs_identity_response, buffer, len);
+      encode_result = encode_identiy_response(&mm_msg->mm_msg.fgs_identity_response, buffer, len);
       break;
     case FGS_AUTHENTICATION_RESPONSE:
-      encode_result = encode_fgs_authentication_response(&mm_msg->fgs_auth_response, buffer, len);
+      encode_result = encode_fgs_authentication_response(&mm_msg->mm_msg.fgs_auth_response, buffer, len);
       break;
     case FGS_SECURITY_MODE_COMPLETE:
-      encode_result = encode_fgs_security_mode_complete(&mm_msg->fgs_security_mode_complete, buffer, len);
+      encode_result = encode_fgs_security_mode_complete(&mm_msg->mm_msg.fgs_security_mode_complete, buffer, len);
       break;
     case FGS_UPLINK_NAS_TRANSPORT:
-      encode_result = encode_fgs_uplink_nas_transport(&mm_msg->uplink_nas_transport, buffer, len);
+      encode_result = encode_fgs_uplink_nas_transport(&mm_msg->mm_msg.uplink_nas_transport, buffer, len);
       break;
     case FGS_DEREGISTRATION_REQUEST_UE_ORIGINATING:
       encode_result =
-          encode_fgs_deregistration_request_ue_originating(&mm_msg->fgs_deregistration_request_ue_originating, buffer, len);
+          encode_fgs_deregistration_request_ue_originating(&mm_msg->mm_msg.fgs_deregistration_request_ue_originating, buffer, len);
       break;
     default:
       LOG_TRACE(ERROR, "EMM-MSG   - Unexpected message type: 0x%x", mm_msg->header.message_type);
@@ -546,26 +546,26 @@ static void generateRegistrationRequest(as_nas_info_t *initialNasMsg, nr_ue_nas_
   mm_msg->header.message_type = REGISTRATION_REQUEST;
 
   // Fill registration request
-  mm_msg->registration_request.protocoldiscriminator = FGS_MOBILITY_MANAGEMENT_MESSAGE;
+  mm_msg->mm_msg.registration_request.protocoldiscriminator = FGS_MOBILITY_MANAGEMENT_MESSAGE;
   size += 1;
-  mm_msg->registration_request.securityheadertype = PLAIN_5GS_MSG;
+  mm_msg->mm_msg.registration_request.securityheadertype = PLAIN_5GS_MSG;
   size += 1;
-  mm_msg->registration_request.messagetype = REGISTRATION_REQUEST;
+  mm_msg->mm_msg.registration_request.messagetype = REGISTRATION_REQUEST;
   size += 1;
   // 5GMM Registration Type
   if (nas->fiveGMM_state == FGS_DEREGISTERED) {
-    mm_msg->registration_request.fgsregistrationtype = INITIAL_REGISTRATION;
+    mm_msg->mm_msg.registration_request.fgsregistrationtype = INITIAL_REGISTRATION;
   } else {
-    mm_msg->registration_request.fgsregistrationtype = MOBILITY_REGISTRATION_UPDATING;
+    mm_msg->mm_msg.registration_request.fgsregistrationtype = MOBILITY_REGISTRATION_UPDATING;
   }
   size += 1;
   // NAS Key Set Identifier
-  mm_msg->registration_request.naskeysetidentifier.tsc = NAS_KEY_SET_IDENTIFIER_NATIVE;
-  mm_msg->registration_request.naskeysetidentifier.naskeysetidentifier = NAS_KEY_SET_IDENTIFIER_NOT_AVAILABLE;
+  mm_msg->mm_msg.registration_request.naskeysetidentifier.tsc = NAS_KEY_SET_IDENTIFIER_NATIVE;
+  mm_msg->mm_msg.registration_request.naskeysetidentifier.naskeysetidentifier = NAS_KEY_SET_IDENTIFIER_NOT_AVAILABLE;
   size += 1;
   // 5GMM Modile Identity
   if(nas->guti){
-    size += fill_guti(&mm_msg->registration_request.fgsmobileidentity, nas->guti);
+    size += fill_guti(&mm_msg->mm_msg.registration_request.fgsmobileidentity, nas->guti);
     LOG_D(NAS,
           "5G-GUTI in registration request: MCC: %u%u%u, MNC: %u%u, AMF Region ID: %u, AMF Set ID: %u, AMF Pointer: %u, 5G-TMSI: "
           "%u\n",
@@ -579,8 +579,8 @@ static void generateRegistrationRequest(as_nas_info_t *initialNasMsg, nr_ue_nas_
           nas->guti->amfpointer,
           nas->guti->tmsi);
   } else {
-    size += fill_suci(&mm_msg->registration_request.fgsmobileidentity, nas->uicc);
-    Suci5GSMobileIdentity_t *suci = &mm_msg->registration_request.fgsmobileidentity.suci;
+    size += fill_suci(&mm_msg->mm_msg.registration_request.fgsmobileidentity, nas->uicc);
+    Suci5GSMobileIdentity_t *suci = &mm_msg->mm_msg.registration_request.fgsmobileidentity.suci;
     LOG_D(NAS,
           "SUCI in registration request: SUPI type: %d Type of Identity: %u MCC: %u%u%u, MNC: %u%u%u, \
      Routing Indicator %d%d%d%d Protection Scheme ID: %u, Home Network PKI: %u, Scheme Output: %s\n",
@@ -601,13 +601,14 @@ static void generateRegistrationRequest(as_nas_info_t *initialNasMsg, nr_ue_nas_
           suci->schemeoutput);
   }
   // Security Capability
-  mm_msg->registration_request.presencemask |= REGISTRATION_REQUEST_UE_SECURITY_CAPABILITY_PRESENT;
-  mm_msg->registration_request.nruesecuritycapability.iei = REGISTRATION_REQUEST_UE_SECURITY_CAPABILITY_IEI;
-  mm_msg->registration_request.nruesecuritycapability.length = 8;
-  mm_msg->registration_request.nruesecuritycapability.fg_EA = 0xe0;
-  mm_msg->registration_request.nruesecuritycapability.fg_IA = 0x60;
-  mm_msg->registration_request.nruesecuritycapability.EEA = 0;
-  mm_msg->registration_request.nruesecuritycapability.EIA = 0;
+
+  mm_msg->mm_msg.registration_request.presencemask |= REGISTRATION_REQUEST_UE_SECURITY_CAPABILITY_PRESENT;
+  mm_msg->mm_msg.registration_request.nruesecuritycapability.iei = REGISTRATION_REQUEST_UE_SECURITY_CAPABILITY_IEI;
+  mm_msg->mm_msg.registration_request.nruesecuritycapability.length = 8;
+  mm_msg->mm_msg.registration_request.nruesecuritycapability.fg_EA = 0xe0;
+  mm_msg->mm_msg.registration_request.nruesecuritycapability.fg_IA = 0x60;
+  mm_msg->mm_msg.registration_request.nruesecuritycapability.EEA = 0;
+  mm_msg->mm_msg.registration_request.nruesecuritycapability.EIA = 0;
   size += 10;
   // encode the message
   initialNasMsg->nas_data = malloc16_clear(size * sizeof(Byte_t));
@@ -667,14 +668,14 @@ void generateIdentityResponse(as_nas_info_t *initialNasMsg, uint8_t identitytype
   mm_msg->header.message_type = FGS_IDENTITY_RESPONSE;
 
   // set identity response
-  mm_msg->fgs_identity_response.protocoldiscriminator = FGS_MOBILITY_MANAGEMENT_MESSAGE;
+  mm_msg->mm_msg.fgs_identity_response.protocoldiscriminator = FGS_MOBILITY_MANAGEMENT_MESSAGE;
   size += 1;
-  mm_msg->fgs_identity_response.securityheadertype = PLAIN_5GS_MSG;
+  mm_msg->mm_msg.fgs_identity_response.securityheadertype = PLAIN_5GS_MSG;
   size += 1;
-  mm_msg->fgs_identity_response.messagetype = FGS_IDENTITY_RESPONSE;
+  mm_msg->mm_msg.fgs_identity_response.messagetype = FGS_IDENTITY_RESPONSE;
   size += 1;
   if (identitytype == FGS_MOBILE_IDENTITY_SUCI) {
-    size += fill_suci(&mm_msg->fgs_identity_response.fgsmobileidentity, uicc);
+    size += fill_suci(&mm_msg->mm_msg.fgs_identity_response.fgsmobileidentity, uicc);
   }
 
   // encode the message
@@ -703,15 +704,15 @@ static void generateAuthenticationResp(nr_ue_nas_t *nas, as_nas_info_t *initialN
   mm_msg->header.message_type = FGS_AUTHENTICATION_RESPONSE;
 
   // set authentication response
-  mm_msg->fgs_identity_response.protocoldiscriminator = FGS_MOBILITY_MANAGEMENT_MESSAGE;
+  mm_msg->mm_msg.fgs_identity_response.protocoldiscriminator = FGS_MOBILITY_MANAGEMENT_MESSAGE;
   size += 1;
-  mm_msg->fgs_identity_response.securityheadertype = PLAIN_5GS_MSG;
+  mm_msg->mm_msg.fgs_identity_response.securityheadertype = PLAIN_5GS_MSG;
   size += 1;
-  mm_msg->fgs_identity_response.messagetype = FGS_AUTHENTICATION_RESPONSE;
+  mm_msg->mm_msg.fgs_identity_response.messagetype = FGS_AUTHENTICATION_RESPONSE;
   size += 1;
 
   // set response parameter
-  mm_msg->fgs_auth_response.authenticationresponseparameter.res = res;
+  mm_msg->mm_msg.fgs_auth_response.authenticationresponseparameter.res = res;
   size += 18;
   // encode the message
   initialNasMsg->nas_data = malloc(size * sizeof(Byte_t));
@@ -752,17 +753,19 @@ static void generateSecurityModeComplete(nr_ue_nas_t *nas, as_nas_info_t *initia
   mm_msg->header.message_type = FGS_SECURITY_MODE_COMPLETE;
 
   // set security mode complete
-  mm_msg->fgs_security_mode_complete.protocoldiscriminator = FGS_MOBILITY_MANAGEMENT_MESSAGE;
+  mm_msg->mm_msg.fgs_security_mode_complete.protocoldiscriminator = FGS_MOBILITY_MANAGEMENT_MESSAGE;
   size += 1;
-  mm_msg->fgs_security_mode_complete.securityheadertype = PLAIN_5GS_MSG;
+  mm_msg->mm_msg.fgs_security_mode_complete.securityheadertype = PLAIN_5GS_MSG;
   size += 1;
-  mm_msg->fgs_security_mode_complete.messagetype = FGS_SECURITY_MODE_COMPLETE;
+  mm_msg->mm_msg.fgs_security_mode_complete.messagetype = FGS_SECURITY_MODE_COMPLETE;
   size += 1;
 
-  size += fill_imeisv(&mm_msg->fgs_security_mode_complete.fgsmobileidentity, nas->uicc);
+  size += fill_imeisv(&mm_msg->mm_msg.fgs_security_mode_complete.fgsmobileidentity, nas->uicc);
 
-  mm_msg->fgs_security_mode_complete.fgsnasmessagecontainer.nasmessagecontainercontents.value = nas->registration_request_buf;
-  mm_msg->fgs_security_mode_complete.fgsnasmessagecontainer.nasmessagecontainercontents.length = nas->registration_request_len;
+  mm_msg->mm_msg.fgs_security_mode_complete.fgsnasmessagecontainer.nasmessagecontainercontents.value =
+      nas->registration_request_buf;
+  mm_msg->mm_msg.fgs_security_mode_complete.fgsnasmessagecontainer.nasmessagecontainercontents.length =
+      nas->registration_request_len;
   size += (nas->registration_request_len + 2);
 
   // encode the message
@@ -881,12 +884,12 @@ static void generateRegistrationComplete(nr_ue_nas_t *nas,
   sp_msg->header.message_authentication_code = 0;
   sp_msg->header.sequence_number = nas->security.nas_count_ul & 0xff;
   length = sizeof(fgs_nas_message_security_header_t);
-  sp_msg->plain.mm_msg.registration_complete.protocoldiscriminator = FGS_MOBILITY_MANAGEMENT_MESSAGE;
+  sp_msg->plain.mm_msg.mm_msg.registration_complete.protocoldiscriminator = FGS_MOBILITY_MANAGEMENT_MESSAGE;
   length += 1;
-  sp_msg->plain.mm_msg.registration_complete.securityheadertype = PLAIN_5GS_MSG;
-  sp_msg->plain.mm_msg.registration_complete.sparehalfoctet = 0;
+  sp_msg->plain.mm_msg.mm_msg.registration_complete.securityheadertype = PLAIN_5GS_MSG;
+  sp_msg->plain.mm_msg.mm_msg.registration_complete.sparehalfoctet = 0;
   length += 1;
-  sp_msg->plain.mm_msg.registration_complete.messagetype = REGISTRATION_COMPLETE;
+  sp_msg->plain.mm_msg.mm_msg.registration_complete.messagetype = REGISTRATION_COMPLETE;
   length += 1;
 
   if (sortransparentcontainer) {
@@ -910,16 +913,18 @@ static void generateRegistrationComplete(nr_ue_nas_t *nas,
   ENCODE_U8(initialNasMsg->nas_data + size, sp_msg->header.sequence_number, size);
 
   /* Encode the extended protocol discriminator */
-  ENCODE_U8(initialNasMsg->nas_data + size, sp_msg->plain.mm_msg.registration_complete.protocoldiscriminator, size);
+  ENCODE_U8(initialNasMsg->nas_data + size, sp_msg->plain.mm_msg.mm_msg.registration_complete.protocoldiscriminator, size);
 
   /* Encode the security header type */
-  ENCODE_U8(initialNasMsg->nas_data + size, sp_msg->plain.mm_msg.registration_complete.securityheadertype, size);
+  ENCODE_U8(initialNasMsg->nas_data + size, sp_msg->plain.mm_msg.mm_msg.registration_complete.securityheadertype, size);
 
   /* Encode the message type */
-  ENCODE_U8(initialNasMsg->nas_data + size, sp_msg->plain.mm_msg.registration_complete.messagetype, size);
+  ENCODE_U8(initialNasMsg->nas_data + size, sp_msg->plain.mm_msg.mm_msg.registration_complete.messagetype, size);
 
   if (sortransparentcontainer) {
-    encode_registration_complete(&sp_msg->plain.mm_msg.registration_complete, initialNasMsg->nas_data + size, length - size);
+    encode_registration_complete(&sp_msg->plain.mm_msg.mm_msg.registration_complete,
+                                 initialNasMsg->nas_data + size,
+                                 length - size);
   }
 
   /* ciphering */
@@ -978,7 +983,8 @@ static void generateDeregistrationRequest(nr_ue_nas_t *nas, as_nas_info_t *initi
   sp_msg->header.sequence_number = nas->security.nas_count_ul & 0xff;
   int size = sizeof(fgs_nas_message_security_header_t);
 
-  fgs_deregistration_request_ue_originating_msg *dereg_req = &sp_msg->plain.mm_msg.fgs_deregistration_request_ue_originating;
+  fgs_deregistration_request_ue_originating_msg *dereg_req =
+      &sp_msg->plain.mm_msg.mm_msg.fgs_deregistration_request_ue_originating;
   dereg_req->protocoldiscriminator = FGS_MOBILITY_MANAGEMENT_MESSAGE;
   size += 1;
   dereg_req->securityheadertype = INTEGRITY_PROTECTED_AND_CIPHERED_WITH_NEW_SECU_CTX;
@@ -1067,38 +1073,38 @@ static void generatePduSessionEstablishRequest(nr_ue_nas_t *nas, as_nas_info_t *
   mm_msg->header.message_type = FGS_UPLINK_NAS_TRANSPORT;
 
   // set uplink nas transport
-  mm_msg->uplink_nas_transport.protocoldiscriminator = FGS_MOBILITY_MANAGEMENT_MESSAGE;
+  mm_msg->mm_msg.uplink_nas_transport.protocoldiscriminator = FGS_MOBILITY_MANAGEMENT_MESSAGE;
   size += 1;
-  mm_msg->uplink_nas_transport.securityheadertype = PLAIN_5GS_MSG;
+  mm_msg->mm_msg.uplink_nas_transport.securityheadertype = PLAIN_5GS_MSG;
   size += 1;
-  mm_msg->uplink_nas_transport.messagetype = FGS_UPLINK_NAS_TRANSPORT;
+  mm_msg->mm_msg.uplink_nas_transport.messagetype = FGS_UPLINK_NAS_TRANSPORT;
   size += 1;
 
-  mm_msg->uplink_nas_transport.payloadcontainertype.iei = 0;
-  mm_msg->uplink_nas_transport.payloadcontainertype.type = 1;
+  mm_msg->mm_msg.uplink_nas_transport.payloadcontainertype.iei = 0;
+  mm_msg->mm_msg.uplink_nas_transport.payloadcontainertype.type = 1;
   size += 1;
-  mm_msg->uplink_nas_transport.fgspayloadcontainer.payloadcontainercontents.length = req_length;
-  mm_msg->uplink_nas_transport.fgspayloadcontainer.payloadcontainercontents.value = req_buffer;
+  mm_msg->mm_msg.uplink_nas_transport.fgspayloadcontainer.payloadcontainercontents.length = req_length;
+  mm_msg->mm_msg.uplink_nas_transport.fgspayloadcontainer.payloadcontainercontents.value = req_buffer;
   size += (2 + req_length);
-  mm_msg->uplink_nas_transport.pdusessionid = pdu_req->pdusession_id;
-  mm_msg->uplink_nas_transport.requesttype = 1;
+  mm_msg->mm_msg.uplink_nas_transport.pdusessionid = pdu_req->pdusession_id;
+  mm_msg->mm_msg.uplink_nas_transport.requesttype = 1;
   size += 3;
   const bool has_nssai_sd = pdu_req->sd != 0xffffff; // 0xffffff means "no SD", TS 23.003
   const size_t nssai_len = has_nssai_sd ? 4 : 1;
-  mm_msg->uplink_nas_transport.snssai.length = nssai_len;
+  mm_msg->mm_msg.uplink_nas_transport.snssai.length = nssai_len;
   // Fixme: it seems there are a lot of memory errors in this: this value was on the stack,
   //  but pushed  in a itti message to another thread
   //  this kind of error seems in many places in 5G NAS
-  mm_msg->uplink_nas_transport.snssai.value = calloc(1, nssai_len);
-  mm_msg->uplink_nas_transport.snssai.value[0] = pdu_req->sst;
+  mm_msg->mm_msg.uplink_nas_transport.snssai.value = calloc(1, nssai_len);
+  mm_msg->mm_msg.uplink_nas_transport.snssai.value[0] = pdu_req->sst;
   if (has_nssai_sd)
-    INT24_TO_BUFFER(pdu_req->sd, &mm_msg->uplink_nas_transport.snssai.value[1]);
+    INT24_TO_BUFFER(pdu_req->sd, &mm_msg->mm_msg.uplink_nas_transport.snssai.value[1]);
   size += 1 + 1 + nssai_len;
   int dnnSize = strlen(nas->uicc->dnnStr);
-  mm_msg->uplink_nas_transport.dnn.value = calloc(1, dnnSize + 1);
-  mm_msg->uplink_nas_transport.dnn.length = dnnSize + 1;
-  mm_msg->uplink_nas_transport.dnn.value[0] = dnnSize;
-  memcpy(mm_msg->uplink_nas_transport.dnn.value + 1, nas->uicc->dnnStr, dnnSize);
+  mm_msg->mm_msg.uplink_nas_transport.dnn.value = calloc(1, dnnSize + 1);
+  mm_msg->mm_msg.uplink_nas_transport.dnn.length = dnnSize + 1;
+  mm_msg->mm_msg.uplink_nas_transport.dnn.value[0] = dnnSize;
+  memcpy(mm_msg->mm_msg.uplink_nas_transport.dnn.value + 1, nas->uicc->dnnStr, dnnSize);
   size += (1 + 1 + dnnSize + 1);
 
   // encode the message
@@ -1111,8 +1117,8 @@ static void generatePduSessionEstablishRequest(nr_ue_nas_t *nas, as_nas_info_t *
 
   // Free allocated memory after encode
   free(req_buffer);
-  free(mm_msg->uplink_nas_transport.dnn.value);
-  free(mm_msg->uplink_nas_transport.snssai.value);
+  free(mm_msg->mm_msg.uplink_nas_transport.dnn.value);
+  free(mm_msg->mm_msg.uplink_nas_transport.snssai.value);
 
   /* ciphering */
   uint8_t buf[initialNasMsg->length - 7];
