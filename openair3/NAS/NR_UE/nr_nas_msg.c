@@ -638,6 +638,11 @@ static void generateRegistrationRequest(as_nas_info_t *initialNasMsg, nr_ue_nas_
     nasmessagecontainercontents->length = mm_msg_encode(mm_msg, (uint8_t *)(nasmessagecontainercontents->value), size);
     size += (nasmessagecontainercontents->length + 2);
     mm_msg->mm_msg.registration_request.presencemask |= REGISTRATION_REQUEST_NAS_MESSAGE_CONTAINER_PRESENT;
+    uint8_t *kamf = nas->security.kamf;
+    uint8_t *kgnb = nas->security.kgnb;
+    derive_kgnb(kamf, nas->security.nas_count_ul, kgnb);
+    int nas_itti_kgnb_refresh_req(instance_t instance, const uint8_t kgnb[32]);
+    nas_itti_kgnb_refresh_req(nas->UE_id, nas->security.kgnb);
   }
 
   /* message encoding */
