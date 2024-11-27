@@ -30,6 +30,7 @@
 #ifndef __NR_NAS_MSG_SIM_H__
 #define __NR_NAS_MSG_SIM_H__
 
+#include "common/utils/nr/nr_common.h"
 #include "RegistrationRequest.h"
 #include "FGSIdentityResponse.h"
 #include "FGSAuthenticationResponse.h"
@@ -100,6 +101,10 @@ typedef struct {
   uint8_t *registration_request_buf;
   uint32_t registration_request_len;
   instance_t UE_id;
+  /* RRC Inactive Indication */
+  bool is_rrc_inactive;
+  /* Timer T3512 */
+  NR_timer_t t3512;
 } nr_ue_nas_t;
 
 typedef enum fgs_protocol_discriminator_e {
