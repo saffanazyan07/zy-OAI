@@ -81,6 +81,8 @@ static const unsigned int gain_table[31] = {100,  112,  126,  141,  158,  178,  
                                             359,  398,  447,  501,  562,  631,  708,  794,  891, 1000, 1122,
                                             1258, 1412, 1585, 1778, 1995, 2239, 2512, 2818, 3162};
 
+static void nr_ue_prach_procedures(PHY_VARS_NR_UE *ue, const UE_nr_rxtx_proc_t *proc, c16_t **txData);
+
 void nr_fill_dl_indication(nr_downlink_indication_t *dl_ind,
                            fapi_nr_dci_indication_t *dci_ind,
                            fapi_nr_rx_indication_t *rx_ind,
@@ -1161,7 +1163,7 @@ void pdsch_processing(PHY_VARS_NR_UE *ue, const UE_nr_rxtx_proc_t *proc, nr_phy_
 
 // todo:
 // - power control as per 38.213 ch 7.4
-void nr_ue_prach_procedures(PHY_VARS_NR_UE *ue, const UE_nr_rxtx_proc_t *proc, c16_t **txData)
+static void nr_ue_prach_procedures(PHY_VARS_NR_UE *ue, const UE_nr_rxtx_proc_t *proc, c16_t **txData)
 {
   int gNB_id = proc->gNB_id;
   int frame_tx = proc->frame_tx, nr_slot_tx = proc->nr_slot_tx, prach_power; // tx_amp
