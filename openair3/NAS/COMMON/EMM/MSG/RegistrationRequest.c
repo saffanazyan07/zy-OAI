@@ -76,9 +76,10 @@ int encode_registration_request(registration_request_msg *registration_request, 
 {
   int encoded = 0;
   int encode_result = 0;
+  bool is_for = false; // no follow-on request
 
   *(buffer + encoded) = ((encode_nas_key_set_identifier(&registration_request->naskeysetidentifier, IEI_NULL) & 0x0f) << 4)
-                        | (encode_5gs_registration_type(&registration_request->fgsregistrationtype) & 0x0f);
+                        | (encode_5gs_registration_type(&registration_request->fgsregistrationtype, is_for) & 0x0f);
   encoded++;
 
   if ((encode_result =
