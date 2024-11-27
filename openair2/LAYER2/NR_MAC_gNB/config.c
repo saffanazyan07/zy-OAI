@@ -589,14 +589,14 @@ static void config_common(gNB_MAC_INST *nrmac,
       cfg->tdd_table.tdd_period.value = *scc->tdd_UL_DL_ConfigurationCommon->pattern1.ext1->dl_UL_TransmissionPeriodicity_v1530;
     }
     LOG_D(NR_MAC, "Setting TDD configuration period to %d\n", cfg->tdd_table.tdd_period.value);
-    int periods_per_frame = set_tdd_config_nr(cfg,
-                                              frequencyInfoUL->scs_SpecificCarrierList.list.array[0]->subcarrierSpacing,
-                                              scc->tdd_UL_DL_ConfigurationCommon->pattern1.nrofDownlinkSlots,
-                                              scc->tdd_UL_DL_ConfigurationCommon->pattern1.nrofDownlinkSymbols,
-                                              scc->tdd_UL_DL_ConfigurationCommon->pattern1.nrofUplinkSlots,
-                                              scc->tdd_UL_DL_ConfigurationCommon->pattern1.nrofUplinkSymbols);
+    int slots_per_period = set_tdd_config_nr(cfg,
+                                             frequencyInfoUL->scs_SpecificCarrierList.list.array[0]->subcarrierSpacing,
+                                             scc->tdd_UL_DL_ConfigurationCommon->pattern1.nrofDownlinkSlots,
+                                             scc->tdd_UL_DL_ConfigurationCommon->pattern1.nrofDownlinkSymbols,
+                                             scc->tdd_UL_DL_ConfigurationCommon->pattern1.nrofUplinkSlots,
+                                             scc->tdd_UL_DL_ConfigurationCommon->pattern1.nrofUplinkSymbols);
 
-    AssertFatal(periods_per_frame > 0, "TDD configuration cannot be configured\n");
+    AssertFatal(slots_per_period > 0, "TDD configuration cannot be configured\n");
   }
 
   int nb_tx = config->nb_bfw[0]; // number of tx antennas
@@ -703,7 +703,8 @@ void nr_mac_config_scc(gNB_MAC_INST *nrmac, NR_ServingCellConfigCommon_t *scc, c
   if (tdd) {
     nr_dl_slots = tdd->nrofDownlinkSlots + (tdd->nrofDownlinkSymbols != 0);
     nr_ulstart_slot = get_first_ul_slot(tdd->nrofDownlinkSlots, tdd->nrofDownlinkSymbols, tdd->nrofUplinkSymbols);
-    nr_slots_period /= get_nb_periods_per_frame(tdd->dl_UL_TransmissionPeriodicity);
+    const oai_nr_tdd_period_e tdd_period = get_tdd_period(tdd);
+    nr_slots_period = get_slots_per_period(tdd_period, n);
   } else {
     // if TDD configuration is not present and the band is not FDD, it means it is a dynamic TDD configuration
     AssertFatal(nrmac->common_channels[0].frame_type == FDD,"Dynamic TDD not handled yet\n");

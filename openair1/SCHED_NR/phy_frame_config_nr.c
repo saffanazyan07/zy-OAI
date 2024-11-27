@@ -36,20 +36,20 @@
 #include "common/utils/nr/nr_common.h"
 
 /*******************************************************************
-*
-* NAME :         set_tdd_configuration
-*
-* PARAMETERS :   pointer to frame configuration
-*
-* OUTPUT:        table of uplink symbol for each slot for 2 frames
-*
-* RETURN :       nb_periods_per_frame if tdd has been properly configurated
-*                -1 tdd configuration can not be done
-*
-* DESCRIPTION :  generate bit map for uplink symbol for each slot for several frames
-*                see TS 38.213 11.1 Slot configuration
-*
-*********************************************************************/
+ *
+ * NAME :         set_tdd_configuration
+ *
+ * PARAMETERS :   pointer to frame configuration
+ *
+ * OUTPUT:        table of uplink symbol for each slot for 2 frames
+ *
+ * RETURN :       nb_slots_per_period if tdd has been properly configurated
+ *                -1 tdd configuration can not be done
+ *
+ * DESCRIPTION :  generate bit map for uplink symbol for each slot for several frames
+ *                see TS 38.213 11.1 Slot configuration
+ *
+ *********************************************************************/
 
 int set_tdd_config_nr(nfapi_nr_config_request_scf_t *cfg,
                       int mu,
@@ -58,12 +58,10 @@ int set_tdd_config_nr(nfapi_nr_config_request_scf_t *cfg,
                       int nrofUplinkSlots,
                       int nrofUplinkSymbols)
 {
-
   int slot_number = 0;
-  int nb_periods_per_frame = get_nb_periods_per_frame(cfg->tdd_table.tdd_period.value);
   int nb_slots_to_set = TDD_CONFIG_NB_FRAMES*(1<<mu)*NR_NUMBER_OF_SUBFRAMES_PER_FRAME;
 
-  int nb_slots_per_period = ((1<<mu) * NR_NUMBER_OF_SUBFRAMES_PER_FRAME)/nb_periods_per_frame;
+  int nb_slots_per_period = get_slots_per_period(cfg->tdd_table.tdd_period.value, NR_NUMBER_OF_SUBFRAMES_PER_FRAME << mu);
 
   if ( (nrofDownlinkSymbols + nrofUplinkSymbols) == 0 )
     AssertFatal(nb_slots_per_period == (nrofDownlinkSlots + nrofUplinkSlots),
@@ -148,7 +146,7 @@ int set_tdd_config_nr(nfapi_nr_config_request_scf_t *cfg,
     LOG_E(PHY,"set_tdd_configuration_nr: additionnal tdd configuration 2 is not supported for tdd configuration \n");
     return (-1);
   }*/
-  return (nb_periods_per_frame);
+  return nb_slots_per_period;
 }
 
 /*******************************************************************

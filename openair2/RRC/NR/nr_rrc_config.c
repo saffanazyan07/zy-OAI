@@ -376,7 +376,8 @@ static void config_csirs(const NR_ServingCellConfigCommon_t *servingcellconfigco
                                         &servingcellconfigcommon->tdd_UL_DL_ConfigurationCommon->pattern1 : NULL;
 
     const int n_slots_frame = slotsperframe[*servingcellconfigcommon->ssbSubcarrierSpacing];
-    const int nb_slots_per_period = tdd ? n_slots_frame/get_nb_periods_per_frame(tdd->dl_UL_TransmissionPeriodicity): n_slots_frame;
+    const oai_nr_tdd_period_e tdd_period = get_tdd_period(tdd);
+    const int nb_slots_per_period = get_slots_per_period(tdd_period, n_slots_frame);
     const int nb_dl_slots_period = tdd ? tdd->nrofDownlinkSlots : n_slots_frame;
     const int n_ul_slots_period = tdd ? (tdd->nrofUplinkSlots + (tdd->nrofUplinkSymbols > 0)) : n_slots_frame;
     const int ideal_period = set_ideal_period(nb_slots_per_period, n_ul_slots_period); // same periodicity as CSI measurement report
@@ -614,7 +615,8 @@ static struct NR_SRS_Resource__resourceType__periodic *configure_periodic_srs(co
   const NR_TDD_UL_DL_Pattern_t *tdd = scc->tdd_UL_DL_ConfigurationCommon ? &scc->tdd_UL_DL_ConfigurationCommon->pattern1 : NULL;
   const int n_slots_frame = slotsperframe[*scc->ssbSubcarrierSpacing];
   const int ul_slots_period = tdd ? tdd->nrofUplinkSlots : n_slots_frame;
-  const int n_slots_period = tdd ? n_slots_frame/get_nb_periods_per_frame(tdd->dl_UL_TransmissionPeriodicity) : n_slots_frame;
+  const oai_nr_tdd_period_e tdd_period = get_tdd_period(tdd);
+  const int n_slots_period = get_slots_per_period(tdd_period, n_slots_frame);
   const int first_full_ul_slot = n_slots_period - ul_slots_period;
   const int ideal_period = n_slots_period * MAX_MOBILES_PER_GNB;
   const int offset = first_full_ul_slot + (uid % ul_slots_period) + (n_slots_period * (uid / ul_slots_period));
@@ -941,8 +943,8 @@ void nr_rrc_config_ul_tda(NR_ServingCellConfigCommon_t *scc, int min_fb_delay){
         asn1cSeqAdd(&scc->uplinkConfigCommon->initialUplinkBWP->pusch_ConfigCommon->choice.setup->pusch_TimeDomainAllocationList->list,pusch_timedomainresourceallocation);
       }
       // UL TDA index 3 for msg3 in the mixed slot (TDD)
-      int nb_periods_per_frame = get_nb_periods_per_frame(scc->tdd_UL_DL_ConfigurationCommon->pattern1.dl_UL_TransmissionPeriodicity);
-      int nb_slots_per_period = ((1 << mu) * 10) / nb_periods_per_frame;
+      const oai_nr_tdd_period_e tdd_period = get_tdd_period(&scc->tdd_UL_DL_ConfigurationCommon->pattern1);
+      const int nb_slots_per_period = get_slots_per_period(tdd_period, slotsperframe[mu]);
       struct NR_PUSCH_TimeDomainResourceAllocation *pusch_timedomainresourceallocation_msg3 = CALLOC(1,sizeof(struct NR_PUSCH_TimeDomainResourceAllocation));
       pusch_timedomainresourceallocation_msg3->k2 = CALLOC(1,sizeof(long));
       int no_mix_slot = ul_symb < 3 ? 1 : 0; // we need at least 2 symbols for scheduling Msg3
@@ -1550,7 +1552,8 @@ static void set_csi_meas_periodicity(const NR_ServingCellConfigCommon_t *scc, NR
   const NR_TDD_UL_DL_Pattern_t *tdd = scc->tdd_UL_DL_ConfigurationCommon ? &scc->tdd_UL_DL_ConfigurationCommon->pattern1 : NULL;
   const int n_slots_frame = slotsperframe[*scc->ssbSubcarrierSpacing];
   const int n_ul_slots_period = tdd ? (tdd->nrofUplinkSlots + (tdd->nrofUplinkSymbols > 0)) : n_slots_frame;
-  const int n_slots_period = tdd ? n_slots_frame / get_nb_periods_per_frame(tdd->dl_UL_TransmissionPeriodicity) : n_slots_frame;
+  const oai_nr_tdd_period_e tdd_period = get_tdd_period(tdd);
+  const int n_slots_period = get_slots_per_period(tdd_period, n_slots_frame);
   const int ideal_period = set_ideal_period(n_slots_period, n_ul_slots_period);
   const int first_ul_slot_period = tdd ? get_first_ul_slot(tdd->nrofDownlinkSlots, tdd->nrofDownlinkSymbols, tdd->nrofUplinkSymbols) : 0;
   const int idx = (uid << 1) + is_rsrp;

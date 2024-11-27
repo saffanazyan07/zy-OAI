@@ -960,7 +960,8 @@ static bool get_feasible_msg3_tda(frame_type_t frame_type,
 
   const int NTN_gNB_Koffset = get_NTN_Koffset(scc);
 
-  int tdd_period_slot = tdd ? slots_per_frame / get_nb_periods_per_frame(tdd->dl_UL_TransmissionPeriodicity) : slots_per_frame;
+  const oai_nr_tdd_period_e tdd_period = get_tdd_period(tdd);
+  const int tdd_period_slot = get_slots_per_period(tdd_period, slots_per_frame);
   for (int i = 0; i < tda_list->list.count; i++) {
     // check if it is UL
     long k2 = *tda_list->list.array[i]->k2 + NTN_gNB_Koffset;

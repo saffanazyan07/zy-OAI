@@ -927,8 +927,7 @@ static void fill_split7_2_config(split7_config_t *split7, const nfapi_nr_config_
   DevAssert(cell_config->frame_duplex_type.tl.tag == NFAPI_NR_CONFIG_FRAME_DUPLEX_TYPE_TAG);
   if (cell_config->frame_duplex_type.value == 1 /* TDD */) {
     DevAssert(tdd_table->tdd_period.tl.tag == NFAPI_NR_CONFIG_TDD_PERIOD_TAG);
-    int nb_periods_per_frame = get_nb_periods_per_frame(tdd_table->tdd_period.value);
-    split7->n_tdd_period = slots_per_frame / nb_periods_per_frame;
+    split7->n_tdd_period = get_slots_per_period(tdd_table->tdd_period.value, slots_per_frame);
     for (int slot = 0; slot < split7->n_tdd_period; ++slot) {
       for (int sym = 0; sym < 14; ++sym) {
         split7->slot_dirs[slot].sym_dir[sym] = tdd_table->max_tdd_periodicity_list[slot].max_num_of_symbol_per_slot_list[sym].slot_config.value;

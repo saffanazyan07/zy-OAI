@@ -1514,7 +1514,8 @@ static bool nr_UE_is_to_be_scheduled(const NR_ServingCellConfigCommon_t *scc, in
   int num_slots_per_period;
   int last_ul_slot;
   if (tdd) { // Force the default transmission in a full slot as early as possible in the UL portion of TDD period (last_ul_slot)
-    num_slots_per_period =  n / get_nb_periods_per_frame(tdd->dl_UL_TransmissionPeriodicity);
+    const oai_nr_tdd_period_e tdd_period = get_tdd_period(tdd);
+    num_slots_per_period = get_slots_per_period(tdd_period, n);
     last_ul_slot = 1 + tdd->nrofDownlinkSlots;
   } else {
     num_slots_per_period = n;

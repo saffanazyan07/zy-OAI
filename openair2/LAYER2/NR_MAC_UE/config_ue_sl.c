@@ -66,8 +66,8 @@ void sl_set_tdd_config_nr_ue(fapi_nr_tdd_table_t *tdd_table,
 {
   const int nrofUplinkSlots = pattern->nrofUplinkSlots;
   const int nrofUplinkSymbols = pattern->nrofUplinkSymbols;
-  const int nb_periods_per_frame = get_nb_periods_per_frame(pattern->dl_UL_TransmissionPeriodicity);
-  const int nb_slots_per_period = ((1 << mu) * NR_NUMBER_OF_SUBFRAMES_PER_FRAME) / nb_periods_per_frame;
+  const oai_nr_tdd_period_e tdd_period = get_tdd_period(pattern);
+  const int nb_slots_per_period = get_slots_per_period(tdd_period, nr_slots_per_frame[mu]);
   tdd_table->tdd_period_in_slots = nb_slots_per_period;
 
   LOG_I(PHY,"UL slots:%d, symbols:%d, slots_per_period:%d\n",

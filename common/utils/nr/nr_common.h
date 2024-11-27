@@ -38,6 +38,7 @@
 #include "assertions.h"
 #include "PHY/defs_common.h"
 
+#define NR_FRAME_DURATION_MS 10
 #define NR_MAX_PDSCH_TBS 3824
 #define MAX_NUM_BEAM_PERIODS 4
 #define MAX_BWP_SIZE 275
@@ -226,7 +227,25 @@ int get_subband_size(int NPRB,int size);
 void SLIV2SL(int SLIV,int *S,int *L);
 int get_dmrs_port(int nl, uint16_t dmrs_ports);
 uint16_t SL_to_bitmap(int startSymbolIndex, int nrOfSymbols);
-int get_nb_periods_per_frame(uint8_t tdd_period);
+
+typedef enum {
+  OAI_NR_TDD_PERIOD_MS0P5 = 0,
+  OAI_NR_TDD_PERIOD_MS0P625,
+  OAI_NR_TDD_PERIOD_MS1,
+  OAI_NR_TDD_PERIOD_MS1P25,
+  OAI_NR_TDD_PERIOD_MS2,
+  OAI_NR_TDD_PERIOD_MS2P5,
+  OAI_NR_TDD_PERIOD_MS5,
+  OAI_NR_TDD_PERIOD_MS10,
+  OAI_NR_TDD_PERIOD_MS3,
+  OAI_NR_TDD_PERIOD_MS4,
+} oai_nr_tdd_period_e;
+
+typedef struct NR_TDD_UL_DL_Pattern NR_TDD_UL_DL_Pattern_t; // forward declaration
+
+oai_nr_tdd_period_e get_tdd_period(const NR_TDD_UL_DL_Pattern_t *pattern);
+int get_slots_per_period(oai_nr_tdd_period_e tdd_period, int slots_per_frame);
+
 long rrc_get_max_nr_csrs(const int max_rbs, long b_SRS);
 bool compare_relative_ul_channel_bw(int nr_band, int scs, int channel_bandwidth, frame_type_t frame_type);
 int get_supported_bw_mhz(frequency_range_t frequency_range, int bw_index);

@@ -1,6 +1,6 @@
 add_library(nr_common nr_common.c)
 target_include_directories(nr_common PUBLIC .)
-target_link_libraries(nr_common PRIVATE UTIL)
+target_link_libraries(nr_common PRIVATE UTIL asn1_nr_rrc_hdrs)
 if (ENABLE_TESTS)
   add_subdirectory(tests)
 endif()

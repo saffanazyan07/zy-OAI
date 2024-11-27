@@ -35,6 +35,7 @@
 #include "common/utils/assertions.h"
 #include "nr_common.h"
 #include <complex.h>
+#include "NR_TDD-UL-DL-Pattern.h"
 
 #define C_SRS_NUMBER (64)
 #define B_SRS_NUMBER (4)
@@ -523,47 +524,27 @@ void get_coreset_rballoc(uint8_t *FreqDomainResource,int *n_rb,int *rb_offset) {
   *n_rb = 6*count;
 }
 
-int get_nb_periods_per_frame(uint8_t tdd_period)
+oai_nr_tdd_period_e get_tdd_period(const NR_TDD_UL_DL_Pattern_t *pattern)
 {
+  if (!pattern) // in case of FDD, we set the TDD period to the complete frame
+    return OAI_NR_TDD_PERIOD_MS10;
 
-  int nb_periods_per_frame;
-  switch(tdd_period) {
-    case 0:
-      nb_periods_per_frame = 20; // 10ms/0p5ms
-      break;
-
-    case 1:
-      nb_periods_per_frame = 16; // 10ms/0p625ms
-      break;
-
-    case 2:
-      nb_periods_per_frame = 10; // 10ms/1ms
-      break;
-
-    case 3:
-      nb_periods_per_frame = 8; // 10ms/1p25ms
-      break;
-
-    case 4:
-      nb_periods_per_frame = 5; // 10ms/2ms
-      break;
-
-    case 5:
-      nb_periods_per_frame = 4; // 10ms/2p5ms
-      break;
-
-    case 6:
-      nb_periods_per_frame = 2; // 10ms/5ms
-      break;
-
-    case 7:
-      nb_periods_per_frame = 1; // 10ms/10ms
-      break;
-
-    default:
-      AssertFatal(1==0,"Undefined tdd period %d\n", tdd_period);
+  if (pattern->ext1 && pattern->ext1->dl_UL_TransmissionPeriodicity_v1530) {
+    const unsigned int tdd_period = *pattern->ext1->dl_UL_TransmissionPeriodicity_v1530;
+    AssertFatal(tdd_period < 2, "Undefined TDD period %d\n", tdd_period);
+    return OAI_NR_TDD_PERIOD_MS3 + tdd_period;
   }
-  return nb_periods_per_frame;
+
+  const unsigned int tdd_period = pattern->dl_UL_TransmissionPeriodicity;
+  AssertFatal(tdd_period <= OAI_NR_TDD_PERIOD_MS10, "Undefined TDD period %d\n", tdd_period);
+  return tdd_period;
+}
+
+int get_slots_per_period(oai_nr_tdd_period_e tdd_period, int slots_per_frame)
+{
+  static const float tdd_period_ms[10] = {0.5, 0.625, 1.0, 1.25, 2.0, 2.5, 5.0, 10.0, 3.0, 4.0};
+  AssertFatal(tdd_period < 10, "Undefined TDD period %d\n", tdd_period);
+  return slots_per_frame / NR_FRAME_DURATION_MS * tdd_period_ms[tdd_period];
 }
 
 void get_delta_arfcn(int i, uint32_t nrarfcn, uint64_t N_OFFs)

@@ -461,9 +461,9 @@ void init_nr_transport(PHY_VARS_gNB *gNB)
   NR_DL_FRAME_PARMS *fp = &gNB->frame_parms;
   const nfapi_nr_config_request_scf_t *cfg = &gNB->gNB_config;
 
-  int nb_slots_per_period = cfg->cell_config.frame_duplex_type.value ?
-                            fp->slots_per_frame / get_nb_periods_per_frame(cfg->tdd_table.tdd_period.value) :
-                            fp->slots_per_frame;
+  int nb_slots_per_period = cfg->cell_config.frame_duplex_type.value
+                                ? get_slots_per_period(cfg->tdd_table.tdd_period.value, fp->slots_per_frame)
+                                : fp->slots_per_frame;
   int nb_ul_slots_period = 0;
   if (cfg->cell_config.frame_duplex_type.value) {
     for(int i=0; i<nb_slots_per_period; i++) {
