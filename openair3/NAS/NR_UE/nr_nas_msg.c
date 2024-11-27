@@ -494,6 +494,20 @@ nr_ue_nas_t *get_ue_nas_info(module_id_t module_id)
   return &nr_ue_nas[module_id];
 }
 
+static FGSRegistrationType set_fgs_ksi(nr_ue_nas_t *nas)
+{
+  if (nas->fiveGMM_mode == FGS_IDLE) {
+    /**
+     * the UE is IDLE, therefore ngKSI was deleted, along all K_AMF, ciphering key, integrity key
+     * (i.e. the 5G NAS security context associated with the ngKSI is no longer valid)
+     * see 4.4.2 of 3GPP TS 24.501
+     */
+    return NAS_KEY_SET_IDENTIFIER_NOT_AVAILABLE;
+  }
+  return 0x0;
+}
+
+
 static FGSRegistrationType set_fgs_registration_type(nr_ue_nas_t *nas)
 {
   if (nas->fiveGMM_state == FGS_REGISTERED && nas->fiveGMM_mode == FGS_IDLE && nas->t3512.active) {
@@ -520,6 +534,9 @@ static FGSRegistrationType set_fgs_registration_type(nr_ue_nas_t *nas)
   return INITIAL_REGISTRATION;
 }
 
+/**
+ * @brief Generate 5GS Registration Request (8.2.6 of 3GPP TS 24.501)
+ */
 static void generateRegistrationRequest(as_nas_info_t *initialNasMsg, nr_ue_nas_t *nas)
 {
   LOG_I(NAS, "Generate Initial NAS Message: Registration Request\n");
@@ -553,16 +570,18 @@ static void generateRegistrationRequest(as_nas_info_t *initialNasMsg, nr_ue_nas_
   mm_msg->mm_msg.registration_request.messagetype = REGISTRATION_REQUEST;
   size += 1;
   // 5GMM Registration Type
-  if (nas->fiveGMM_state == FGS_DEREGISTERED) {
-    mm_msg->mm_msg.registration_request.fgsregistrationtype = INITIAL_REGISTRATION;
-  } else {
-    mm_msg->mm_msg.registration_request.fgsregistrationtype = MOBILITY_REGISTRATION_UPDATING;
-  }
+  mm_msg->mm_msg.registration_request.fgsregistrationtype = set_fgs_registration_type(nas);
   size += 1;
+  if (mm_msg->mm_msg.registration_request.fgsregistrationtype == REG_TYPE_RESERVED) {
+    // currently only REG_TYPE_RESERVED is supported
+    LOG_E(NAS, "Initial NAS Message: Registration Request failed\n");
+    return;
+  }
   // NAS Key Set Identifier
   mm_msg->mm_msg.registration_request.naskeysetidentifier.tsc = NAS_KEY_SET_IDENTIFIER_NATIVE;
-  mm_msg->mm_msg.registration_request.naskeysetidentifier.naskeysetidentifier = NAS_KEY_SET_IDENTIFIER_NOT_AVAILABLE;
+  mm_msg->mm_msg.registration_request.naskeysetidentifier.naskeysetidentifier = set_fgs_ksi(nas);
   size += 1;
+
   // 5GMM Modile Identity
   if(nas->guti){
     size += fill_guti(&mm_msg->mm_msg.registration_request.fgsmobileidentity, nas->guti);
@@ -610,8 +629,19 @@ static void generateRegistrationRequest(as_nas_info_t *initialNasMsg, nr_ue_nas_
   mm_msg->mm_msg.registration_request.nruesecuritycapability.EEA = 0;
   mm_msg->mm_msg.registration_request.nruesecuritycapability.EIA = 0;
   size += 10;
-  // encode the message
-  initialNasMsg->nas_data = malloc16_clear(size * sizeof(Byte_t));
+
+  if (has_security_context) {
+    // NAS Message Container
+    OctetString *nasmessagecontainercontents =
+        &mm_msg->mm_msg.registration_request.fgsnasmessagecontainer.nasmessagecontainercontents;
+    nasmessagecontainercontents->value = calloc_or_fail(size, sizeof(*nasmessagecontainercontents->value));
+    nasmessagecontainercontents->length = mm_msg_encode(mm_msg, (uint8_t *)(nasmessagecontainercontents->value), size);
+    size += (nasmessagecontainercontents->length + 2);
+    mm_msg->mm_msg.registration_request.presencemask |= REGISTRATION_REQUEST_NAS_MESSAGE_CONTAINER_PRESENT;
+  }
+
+  /* message encoding */
+  initialNasMsg->nas_data = malloc_or_fail(size * sizeof(*initialNasMsg->nas_data));
   if (has_security_context) {
     // security protected encoding
     int security_header_len = nas_protected_security_header_encode((char *)(initialNasMsg->nas_data), &(nas_msg.header), size);
