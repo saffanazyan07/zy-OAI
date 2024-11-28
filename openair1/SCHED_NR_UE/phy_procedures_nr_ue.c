@@ -402,6 +402,17 @@ static int nr_ue_pbch_procedures(PHY_VARS_NR_UE *ue,
                    ue->frame_parms.samples_per_frame_wCP,
                    rxdataF);
 
+  nr_downlink_indication_t dl_indication;
+  fapi_nr_rx_indication_t rx_ind = {0};
+  const uint16_t number_pdus = 1;
+
+  void *pbch_result = ret ? NULL : &result;
+  nr_fill_dl_indication(&dl_indication, NULL, &rx_ind, proc, ue, NULL);
+  nr_fill_rx_indication(&rx_ind, FAPI_NR_RX_PDU_TYPE_SSB, ue, NULL, NULL, number_pdus, proc, pbch_result, NULL);
+
+  if (ue->if_inst && ue->if_inst->dl_indication)
+    ue->if_inst->dl_indication(&dl_indication);
+
   if (ret==0) {
     T(T_NRUE_PHY_MIB, T_INT(frame_rx), T_INT(nr_slot_rx),
       T_INT(ssb_index), T_BUFFER(result.decoded_output, 3));
