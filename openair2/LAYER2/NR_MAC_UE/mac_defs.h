@@ -80,23 +80,7 @@
 /*!\brief value for indicating BSR Timer is not running */
 #define NR_MAC_UE_BSR_TIMER_NOT_RUNNING   (0xFFFF)
 
-// ================================================
-// SSB to RO mapping private defines and structures
-// ================================================
-
-#define MAX_NB_PRACH_CONF_PERIOD_IN_ASSOCIATION_PERIOD (16) // Maximum association period is 16
-#define MAX_NB_PRACH_CONF_PERIOD_IN_ASSOCIATION_PATTERN_PERIOD (16) // Max association pattern period is 160ms and minimum PRACH configuration period is 10ms
-#define MAX_NB_ASSOCIATION_PERIOD_IN_ASSOCIATION_PATTERN_PERIOD (16) // Max nb of association periods in an association pattern period of 160ms
-#define MAX_NB_FRAME_IN_PRACH_CONF_PERIOD (16) // Max PRACH configuration period is 160ms and frame is 10ms
-#define MAX_NB_SLOT_IN_FRAME (160) // Max number of slots in a frame (@ SCS 240kHz = 160)
-#define MAX_NB_FRAME_IN_ASSOCIATION_PATTERN_PERIOD (16) // Maximum number of frames in the maximum association pattern period
 #define MAX_NB_SSB (64) // Maximum number of possible SSB indexes
-#define MAX_RO_PER_SSB (8) // Maximum number of consecutive ROs that can be mapped to an SSB according to the ssb_per_RACH config
-
-// Maximum number of ROs that can be mapped to an SSB in an association pattern
-// This is to reserve enough elements in the SSBs list for each mapped ROs for a single SSB
-// An arbitrary maximum number is chosen to be safe: maximum number of slots in an association pattern * maximum number of ROs in a slot
-#define MAX_NB_RO_PER_SSB_IN_ASSOCIATION_PATTERN (MAX_TDM*MAX_FDM*MAX_NB_SLOT_IN_FRAME*MAX_NB_FRAME_IN_ASSOCIATION_PATTERN_PERIOD)
 
 // ===============
 // DCI fields defs
@@ -182,21 +166,10 @@ typedef struct prach_occasion_info {
   int start_symbol; // 0 - 13 (14 symbols in a slot)
   int fdm; // 0-7 (possible values of msg1-FDM: 1, 2, 4 or 8)
   int slot;
-  int frame; // 0 - 15 (maximum number of frames in a 160ms association pattern)
-  uint8_t mapped_ssb_idx[MAX_SSB_PER_RO]; // List of mapped SSBs
-  uint8_t nb_mapped_ssb;
   int format; // RO preamble format
   int frame_info[2];
   int association_period_idx;
 } prach_occasion_info_t;
-
-// PRACH occasion slot details
-// A PRACH occasion slot is a series of PRACH occasions in time (symbols) and frequency
-typedef struct prach_occasion_slot {
-  prach_occasion_info_t *prach_occasion; // Starting symbol of each PRACH occasions in a slot
-  uint8_t nb_of_prach_occasion_in_time;
-  uint8_t nb_of_prach_occasion_in_freq;
-} prach_occasion_slot_t;
 
 typedef enum {
   phr_cause_prohibit_timer = 0,
@@ -472,39 +445,8 @@ typedef struct NR_UL_TIME_ALIGNMENT {
   int slot;
 } NR_UL_TIME_ALIGNMENT_t;
 
-// The PRACH Config period is a series of selected slots in one or multiple frames
-typedef struct prach_conf_period {
-  prach_occasion_slot_t prach_occasion_slot_map[MAX_NB_FRAME_IN_PRACH_CONF_PERIOD][MAX_NB_SLOT_IN_FRAME];
-  uint16_t nb_of_prach_occasion; // Total number of PRACH occasions in the PRACH Config period
-  uint8_t nb_of_frame; // Size of the PRACH Config period in number of 10ms frames
-  uint8_t nb_of_slot; // Nb of slots in each frame
-} prach_conf_period_t;
-
-// The association period is a series of PRACH Config periods
-typedef struct prach_association_period {
-  prach_conf_period_t *prach_conf_period_list[MAX_NB_PRACH_CONF_PERIOD_IN_ASSOCIATION_PERIOD];
-  uint8_t nb_of_prach_conf_period; // Nb of PRACH configuration periods within the association period
-  uint8_t nb_of_frame; // Total number of frames included in the association period
-} prach_association_period_t;
-
-// The association pattern is a series of Association periods
-typedef struct prach_association_pattern {
-  prach_association_period_t prach_association_period_list[MAX_NB_ASSOCIATION_PERIOD_IN_ASSOCIATION_PATTERN_PERIOD];
-  prach_conf_period_t prach_conf_period_list[MAX_NB_PRACH_CONF_PERIOD_IN_ASSOCIATION_PATTERN_PERIOD];
-  uint8_t nb_of_assoc_period; // Nb of association periods within the association pattern
-  uint8_t nb_of_prach_conf_period_in_max_period; // Nb of PRACH configuration periods within the maximum association pattern period (according to the size of the configured PRACH
-  uint8_t nb_of_frame; // Total number of frames included in the association pattern period (after mapping the SSBs and determining the real association pattern length)
-} prach_association_pattern_t;
-
-// SSB details
-typedef struct ssb_info {
-  prach_occasion_info_t *mapped_ro[MAX_NB_RO_PER_SSB_IN_ASSOCIATION_PATTERN]; // List of mapped RACH Occasions to this SSB index
-  uint32_t nb_mapped_ro; // Total number of mapped ROs to this SSB index
-} ssb_info_t;
-
 // List of all the possible SSBs and their details
 typedef struct ssb_list_info {
-  ssb_info_t *tx_ssb;
   int nb_tx_ssb;
   int nb_ssb_per_index[MAX_NB_SSB];
 } ssb_list_info_t;
@@ -615,7 +557,6 @@ typedef struct NR_UE_MAC_INST_s {
 
   si_schedInfo_t si_SchedInfo;
   ssb_list_info_t ssb_list;
-  prach_association_pattern_t prach_assoc_pattern[MAX_NUM_BWP_UE];
 
   NR_UE_ServingCell_Info_t sc_info;
   A_SEQUENCE_OF(NR_UE_DL_BWP_t) dl_BWPs;

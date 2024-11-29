@@ -1348,14 +1348,6 @@ void prepare_msg4_msgb_feedback(NR_UE_MAC_INST_t *mac, int pid, int ack_nack)
   release_ul_config(pdu, false);
 }
 
-void free_rach_structures(NR_UE_MAC_INST_t *nr_mac, int bwp_id)
-{
-  for (int j = 0; j < MAX_NB_PRACH_CONF_PERIOD_IN_ASSOCIATION_PATTERN_PERIOD; j++)
-    for (int k = 0; k < MAX_NB_FRAME_IN_PRACH_CONF_PERIOD; k++)
-      for (int l = 0; l < MAX_NB_SLOT_IN_FRAME; l++)
-        free(nr_mac->prach_assoc_pattern[bwp_id].prach_conf_period_list[j].prach_occasion_slot_map[k][l].prach_occasion);
-}
-
 void reset_ra(NR_UE_MAC_INST_t *nr_mac, bool free_prach)
 {
   RA_config_t *ra = &nr_mac->ra;
@@ -1365,7 +1357,4 @@ void reset_ra(NR_UE_MAC_INST_t *nr_mac, bool free_prach)
 
   if (!free_prach)
     return;
-
-  for (int i = 0; i < MAX_NUM_BWP_UE; i++)
-    free_rach_structures(nr_mac, i);
 }

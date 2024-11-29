@@ -79,7 +79,6 @@ void nr_ue_init_mac(NR_UE_MAC_INST_t *mac)
   memset(&mac->ssb_measurements, 0, sizeof(mac->ssb_measurements));
   memset(&mac->ul_time_alignment, 0, sizeof(mac->ul_time_alignment));
   memset(&mac->ssb_list, 0, sizeof(mac->ssb_list));
-  memset(mac->prach_assoc_pattern, 0, sizeof(mac->prach_assoc_pattern));
 
   for (int i = 0; i < NR_MAX_SR_ID; i++)
     memset(&mac->scheduling_info.sr_info[i], 0, sizeof(mac->scheduling_info.sr_info[i]));

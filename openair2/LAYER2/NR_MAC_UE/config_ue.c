@@ -48,7 +48,6 @@
 static void build_ssb_list(NR_UE_MAC_INST_t *mac)
 {
   // Create the list of transmitted SSBs
-  free(mac->ssb_list.tx_ssb);
   memset(&mac->ssb_list, 0, sizeof(ssb_list_info_t));
   ssb_list_info_t *ssb_list = &mac->ssb_list;
   fapi_nr_config_request_t *cfg = &mac->phy_config.config_req;
@@ -63,7 +62,6 @@ static void build_ssb_list(NR_UE_MAC_INST_t *mac)
     } else
       ssb_list->nb_ssb_per_index[ssb_index] = -1;
   }
-  ssb_list->tx_ssb = calloc(ssb_list->nb_tx_ssb, sizeof(*ssb_list->tx_ssb));
 }
 
 void set_tdd_config_nr_ue(fapi_nr_tdd_table_t *tdd_table,
@@ -1814,9 +1812,6 @@ void nr_rrc_mac_config_req_sib1(module_id_t module_id, int cc_idP, NR_SIB1_t *si
     configure_timeAlignmentTimer(&mac->time_alignment_timer, mac->timeAlignmentTimerCommon, mac->current_UL_BWP->scs);
   }
 
-  // Setup the SSB to Rach Occasions mapping according to the config
-  build_ssb_to_ro_map(mac);
-
   if (!get_softmodem_params()->emulate_l1)
     mac->if_module->phy_config_request(&mac->phy_config);
   ret = pthread_mutex_unlock(&mac->if_mutex);
@@ -2676,11 +2671,6 @@ void nr_rrc_mac_config_req_cg(module_id_t module_id,
 
   if (ue_Capability)
     handle_mac_uecap_info(mac, ue_Capability);
-
-  // Setup the SSB to Rach Occasions mapping according to the config
-  // Only if RACH is configured for current BWP
-  if (mac->current_UL_BWP->rach_ConfigCommon)
-    build_ssb_to_ro_map(mac);
 
   if (!mac->dl_config_request || !mac->ul_config_request)
     ue_init_config_request(mac, mac->current_DL_BWP->scs);

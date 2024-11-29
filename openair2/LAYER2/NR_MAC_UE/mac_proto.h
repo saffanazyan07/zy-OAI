@@ -330,7 +330,6 @@ void nr_ue_send_synch_request(NR_UE_MAC_INST_t *mac, module_id_t module_id, int 
 NR_UE_L2_STATE_t nr_ue_get_sync_state(module_id_t mod_id);
 
 int16_t get_prach_tx_power(NR_UE_MAC_INST_t *mac);
-void free_rach_structures(NR_UE_MAC_INST_t *nr_mac, int bwp_id);
 void schedule_RA_after_SR_failure(NR_UE_MAC_INST_t *mac);
 void nr_Msg1_transmitted(NR_UE_MAC_INST_t *mac);
 void nr_Msg3_transmitted(NR_UE_MAC_INST_t *mac, uint8_t CC_id, frame_t frameP, slot_t slotP, uint8_t gNB_id);
@@ -344,8 +343,6 @@ int8_t nr_ue_process_dci_freq_dom_resource_assignment(nfapi_nr_ue_pusch_pdu_t *p
                                                       uint16_t n_RB_DLBWP,
                                                       int start_DLBWP,
                                                       dci_field_t frequency_domain_assignment);
-
-void build_ssb_to_ro_map(NR_UE_MAC_INST_t *mac);
 
 void ue_init_config_request(NR_UE_MAC_INST_t *mac, int scs);
 
