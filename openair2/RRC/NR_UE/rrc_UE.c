@@ -859,6 +859,7 @@ static void nr_rrc_ue_decode_NR_BCCH_BCH_Message(NR_UE_RRC_INST_t *rrc,
     // mac will manage the pointer
     NR_MAC_RRC_CONFIG_MIB(msg).bcch = bcch_message;
     NR_MAC_RRC_CONFIG_MIB(msg).get_sib = get_sib;
+    NR_MAC_RRC_CONFIG_MIB(msg).ssb_arfcn = ssb_arfcn;
     itti_send_msg_to_task(TASK_MAC_UE, rrc->ue_id, msg);
   } else {
     LOG_E(NR_RRC, "RRC-received BCCH message is not a MIB\n");

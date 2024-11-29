@@ -878,10 +878,71 @@ static void update_mib_conf(NR_MIB_t *target, NR_MIB_t *source)
   target->intraFreqReselection = source->intraFreqReselection;
 }
 
-void nr_rrc_mac_config_req_mib(module_id_t module_id,
-                               int cc_idP,
-                               NR_MIB_t *mib,
-                               int sched_sib)
+void configure_ue_phy_for_sib1_reception(NR_UE_MAC_INST_t *mac, const int cc_id, const long ssb_arfcn)
+{
+  const int ssb_scs = mac->mu;
+  int ssb_sc_offset_norm;
+  if (mac->ssb_subcarrier_offset < 24 && mac->frequency_range == FR1)
+    ssb_sc_offset_norm = mac->ssb_subcarrier_offset >> ssb_scs;
+  else
+    ssb_sc_offset_norm = mac->ssb_subcarrier_offset;
+
+  const NR_SubcarrierSpacing_t scs_pdcch = get_type0_PDCCH_scs(mac->frequency_range, mac->mib->subCarrierSpacingCommon);
+  const channel_bandwidth_t min_ch_bw = get_type0_PDCCH_min_channel_bw(mac->nr_band);
+  const uint32_t index_4msb = (mac->mib->pdcch_ConfigSIB1.controlResourceSetZero);
+
+  NR_Type0_PDCCH_CSS_config_t dummy_cset0 = {0};
+  /* first we obtain RB offset of type 0 PDCCH from MIB */
+  fill_type0_PDCCH_coreset_config(&dummy_cset0, ssb_scs, scs_pdcch, index_4msb, min_ch_bw, (ssb_sc_offset_norm == 0), 0);
+  /* SC offset from current point A to CRB SSB start */
+  const int ssb_sc_crb_offset_point_a = mac->ssb_start_subcarrier - ssb_sc_offset_norm;
+  /* check if type0 PDCCH is within current bandwidth */
+  /* Here we don't consider cset_start_rb from NR_Type0_PDCCH_CSS_config_t becuase the varialbe has PRB granularity but
+     the UE could have arbitrary SC as the start RB. This is because the UE can start with a center frequency that is
+     not PRB aligned wrt the gNB. Hence, the following code uses type0 coreset start SC computed from current point A. */
+  int type0cset_start_sc = ssb_sc_crb_offset_point_a - dummy_cset0.rb_offset * NR_NB_SC_PER_RB;
+  int pointA_adj = 0;
+  if (type0cset_start_sc < 0) { // type 0 PDCCH coreset starts below current point A
+    pointA_adj = type0cset_start_sc;
+    type0cset_start_sc = 0; // adjusted start SC
+  } else {
+    /* check if cset0 start is PRB aligned with current point A. PHY can only handle PDCCH config with RB start wrt point A. */
+    pointA_adj = type0cset_start_sc % NR_NB_SC_PER_RB;
+    type0cset_start_sc -= pointA_adj;
+  }
+
+  AssertFatal(dummy_cset0.num_rbs <= mac->N_RB_DL, "Cannot receive SIB1 with current configured bandwidth %d\n", mac->N_RB_DL);
+
+  const int type0cset_stop_sc = type0cset_start_sc + dummy_cset0.num_rbs * NR_NB_SC_PER_RB;
+  if (type0cset_stop_sc > mac->N_RB_DL * NR_NB_SC_PER_RB) // type 0 PDCCH coreset goes beyond current bw
+    pointA_adj += mac->N_RB_DL * NR_NB_SC_PER_RB - type0cset_stop_sc;
+
+  if (pointA_adj == 0) // no need to change carrier freq
+    return;
+
+  const uint32_t ssb_abs_freq = from_nrarfcn(mac->nr_band, ssb_scs, ssb_arfcn) / 1000; // in khz
+  const uint32_t ssb_rbs = 20;
+  const uint32_t scs_khz = MU_SCS(ssb_scs);
+  const uint32_t ssb_start_abs_freq = ssb_abs_freq - ssb_rbs / 2 * NR_NB_SC_PER_RB * scs_khz;
+  const uint32_t pointA_abs_current = ssb_start_abs_freq - mac->ssb_start_subcarrier * scs_khz;
+  const uint32_t pointA_abs_new = pointA_abs_current + pointA_adj * scs_khz;
+
+  /* set new center frequency to receive SIB1 */
+  fapi_nr_config_request_t *cfg = &mac->phy_config.config_req;
+  cfg->carrier_config.dl_frequency = pointA_abs_new;
+  cfg->carrier_config.uplink_frequency = cfg->carrier_config.dl_frequency;
+  /* send sync request so PHY can sync again with new carrier freq */
+  if (!get_softmodem_params()->emulate_l1) {
+    mac->synch_request.Mod_id = mac->ue_id;
+    mac->synch_request.CC_id = cc_id;
+    fapi_nr_synch_request_t s = {.target_Nid_cell = mac->physCellId, .ssb_bw_scan = true};
+    mac->synch_request.synch_req = s;
+    mac->if_module->synch_request(&mac->synch_request);
+    mac->if_module->phy_config_request(&mac->phy_config);
+  }
+}
+
+void nr_rrc_mac_config_req_mib(module_id_t module_id, int cc_idP, NR_MIB_t *mib, const long ssb_arfcn, int sched_sib)
 {
   NR_UE_MAC_INST_t *mac = get_mac_inst(module_id);
   int ret = pthread_mutex_lock(&mac->if_mutex);
@@ -897,6 +958,8 @@ void nr_rrc_mac_config_req_mib(module_id_t module_id,
   else if (sched_sib == 2)
     mac->get_otherSI = true;
   nr_ue_decode_mib(mac, cc_idP);
+  if (mac->get_sib1)
+    configure_ue_phy_for_sib1_reception(mac, cc_idP, ssb_arfcn);
   ret = pthread_mutex_unlock(&mac->if_mutex);
   AssertFatal(!ret, "mutex failed %d\n", ret);
 }

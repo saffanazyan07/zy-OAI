@@ -133,7 +133,11 @@ void process_msg_rcc_to_mac(MessageDef *msg)
       asn1cFreeStruc(asn_DEF_NR_CellGroupConfig, NR_MAC_RRC_CONFIG_CG(msg).cellGroupConfig);
       break;
     case NR_MAC_RRC_CONFIG_MIB:
-      nr_rrc_mac_config_req_mib(ue_id, 0, NR_MAC_RRC_CONFIG_MIB(msg).bcch->message.choice.mib, NR_MAC_RRC_CONFIG_MIB(msg).get_sib);
+      nr_rrc_mac_config_req_mib(ue_id,
+                                0,
+                                NR_MAC_RRC_CONFIG_MIB(msg).bcch->message.choice.mib,
+                                NR_MAC_RRC_CONFIG_MIB(msg).ssb_arfcn,
+                                NR_MAC_RRC_CONFIG_MIB(msg).get_sib);
       ASN_STRUCT_FREE(asn_DEF_NR_BCCH_BCH_Message, NR_MAC_RRC_CONFIG_MIB(msg).bcch);
       break;
     case NR_MAC_RRC_CONFIG_SIB1: {

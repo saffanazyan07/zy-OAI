@@ -4012,55 +4012,14 @@ uint32_t get_Y(const NR_SearchSpace_t *ss, int slot, rnti_t rnti) {
   return Y;
 }
 
-void get_type0_PDCCH_CSS_config_parameters(NR_Type0_PDCCH_CSS_config_t *type0_PDCCH_CSS_config,
-                                           frame_t frameP,
-                                           const NR_MIB_t *mib,
-                                           uint8_t num_slot_per_frame,
-                                           uint8_t ssb_subcarrier_offset,
-                                           uint16_t ssb_start_symbol,
-                                           NR_SubcarrierSpacing_t scs_ssb,
-                                           frequency_range_t frequency_range,
-                                           int nr_band,
-                                           uint32_t ssb_index,
-                                           uint32_t ssb_period,
-                                           uint32_t ssb_offset_point_a)
+void fill_type0_PDCCH_coreset_config(NR_Type0_PDCCH_CSS_config_t *type0_PDCCH_CSS_config,
+                                     const uint32_t scs_ssb,
+                                     const uint32_t scs_pdcch,
+                                     const uint32_t index_4msb,
+                                     const channel_bandwidth_t min_channel_bw,
+                                     const bool is_condition_A,
+                                     const uint32_t ssb_offset_point_a)
 {
-  NR_SubcarrierSpacing_t scs_pdcch;
-
-  channel_bandwidth_t min_channel_bw;
-
-  // according to Table 5.3.5-1 in 38.104
-  // band 79 is the only one which minimum is 40
-  // for all the other channels it is either 10 or 5
-  // and there is no difference between the two for this implementation so it is set it to 10
-  if (nr_band == 79)
-    min_channel_bw = bw_40MHz;
-  else
-    min_channel_bw = bw_10MHz;
-
-  if (frequency_range == FR2) {
-    if(mib->subCarrierSpacingCommon == NR_MIB__subCarrierSpacingCommon_scs15or60)
-      scs_pdcch = NR_SubcarrierSpacing_kHz60;
-    else
-      scs_pdcch = NR_SubcarrierSpacing_kHz120;
-  }
-  else {
-    frequency_range = FR1;
-    if(mib->subCarrierSpacingCommon == NR_MIB__subCarrierSpacingCommon_scs15or60)
-      scs_pdcch = NR_SubcarrierSpacing_kHz15;
-    else
-      scs_pdcch = NR_SubcarrierSpacing_kHz30;
-  }
-  type0_PDCCH_CSS_config->scs_pdcch = scs_pdcch;
-  type0_PDCCH_CSS_config->ssb_index = ssb_index;
-  type0_PDCCH_CSS_config->frame = frameP;
-
-  uint8_t ssb_slot = ssb_start_symbol/14;
-
-  uint32_t is_condition_A = (ssb_subcarrier_offset == 0);   //  38.213 ch.13
-  uint32_t index_4msb = (mib->pdcch_ConfigSIB1.controlResourceSetZero);
-  uint32_t index_4lsb = (mib->pdcch_ConfigSIB1.searchSpaceZero);
-
   type0_PDCCH_CSS_config->num_rbs = -1;
   type0_PDCCH_CSS_config->num_symbols = -1;
   type0_PDCCH_CSS_config->rb_offset = -1;
@@ -4180,13 +4139,21 @@ void get_type0_PDCCH_CSS_config_parameters(NR_Type0_PDCCH_CSS_config_t *type0_PD
       LOG_E(NR_MAC,"NR_SubcarrierSpacing_kHz30 %d, scs_ssb %d, scs_pdcch %d, min_chan_bw %d\n",NR_SubcarrierSpacing_kHz30,(int)scs_ssb,(int)scs_pdcch,min_channel_bw);
       break;
   }
-
+  type0_PDCCH_CSS_config->cset_start_rb = ssb_offset_point_a - type0_PDCCH_CSS_config->rb_offset;
   LOG_D(NR_MAC,"Coreset0: index_4msb=%d, num_rbs=%d, num_symb=%d, rb_offset=%d\n",
         index_4msb,type0_PDCCH_CSS_config->num_rbs,type0_PDCCH_CSS_config->num_symbols,type0_PDCCH_CSS_config->rb_offset );
+}
 
-  AssertFatal(type0_PDCCH_CSS_config->num_rbs != -1, "Type0 PDCCH coreset num_rbs undefined, index_4msb=%d, min_channel_bw %d, scs_ssb %d, scs_pdcch %d\n",index_4msb,min_channel_bw,(int)scs_ssb,(int)scs_pdcch);
-  AssertFatal(type0_PDCCH_CSS_config->num_symbols != -1, "Type0 PDCCH coreset num_symbols undefined");
-  AssertFatal(type0_PDCCH_CSS_config->rb_offset != -1, "Type0 PDCCH coreset rb_offset undefined");
+void fill_type0_PDCCH_search_space_config(NR_Type0_PDCCH_CSS_config_t *type0_PDCCH_CSS_config,
+                                          const uint32_t index_4lsb,
+                                          const uint32_t scs_ssb,
+                                          const uint32_t scs_pdcch,
+                                          const uint32_t ssb_start_symbol,
+                                          const frequency_range_t frequency_range,
+                                          const uint32_t num_slot_per_frame,
+                                          const uint32_t ssb_period)
+{
+  const uint8_t ssb_slot = ssb_start_symbol / 14;
 
   // type0-pdcch search space
   float big_o = 0.0f;
@@ -4335,11 +4302,90 @@ void get_type0_PDCCH_CSS_config_parameters(NR_Type0_PDCCH_CSS_config_t *type0_PD
     type0_PDCCH_CSS_config->search_space_frame_period = ssb_period*nr_slots_per_frame[scs_ssb];
   }
 
+  type0_PDCCH_CSS_config->n_0 =
+      ((uint32_t)(big_o * (1 << scs_pdcch)) + (uint32_t)(type0_PDCCH_CSS_config->ssb_index * big_m)) % num_slot_per_frame;
+}
+
+channel_bandwidth_t get_type0_PDCCH_min_channel_bw(const int nr_band)
+{
+  // according to Table 5.3.5-1 in 38.104
+  // band 79 is the only one which minimum is 40
+  // for all the other channels it is either 10 or 5
+  // and there is no difference between the two for this implementation so it is set it to 10
+  if (nr_band == 79)
+    return bw_40MHz;
+  else
+    return bw_10MHz;
+}
+
+NR_SubcarrierSpacing_t get_type0_PDCCH_scs(const frequency_range_t frequency_range, const long scs_common)
+{
+  if (frequency_range == FR2) {
+    if (scs_common == NR_MIB__subCarrierSpacingCommon_scs15or60)
+      return NR_SubcarrierSpacing_kHz60;
+    else
+      return NR_SubcarrierSpacing_kHz120;
+  } else if (frequency_range == FR1) {
+    if (scs_common == NR_MIB__subCarrierSpacingCommon_scs15or60)
+      return NR_SubcarrierSpacing_kHz15;
+    else
+      return NR_SubcarrierSpacing_kHz30;
+  } else
+    AssertFatal(false, "Invalid frequency range %d\n", frequency_range);
+}
+
+void get_type0_PDCCH_CSS_config_parameters(NR_Type0_PDCCH_CSS_config_t *type0_PDCCH_CSS_config,
+                                           frame_t frameP,
+                                           const NR_MIB_t *mib,
+                                           uint8_t num_slot_per_frame,
+                                           uint8_t ssb_subcarrier_offset,
+                                           uint16_t ssb_start_symbol,
+                                           NR_SubcarrierSpacing_t scs_ssb,
+                                           frequency_range_t frequency_range,
+                                           int nr_band,
+                                           uint32_t ssb_index,
+                                           uint32_t ssb_period,
+                                           uint32_t ssb_offset_point_a)
+{
+  const NR_SubcarrierSpacing_t scs_pdcch = get_type0_PDCCH_scs(frequency_range, mib->subCarrierSpacingCommon);
+  const channel_bandwidth_t min_channel_bw = get_type0_PDCCH_min_channel_bw(nr_band);
+
+  type0_PDCCH_CSS_config->scs_pdcch = scs_pdcch;
+  type0_PDCCH_CSS_config->ssb_index = ssb_index;
+  type0_PDCCH_CSS_config->frame = frameP;
+
+  bool is_condition_A = (ssb_subcarrier_offset == 0); //  38.213 ch.13
+  uint32_t index_4msb = (mib->pdcch_ConfigSIB1.controlResourceSetZero);
+  uint32_t index_4lsb = (mib->pdcch_ConfigSIB1.searchSpaceZero);
+
+  fill_type0_PDCCH_coreset_config(type0_PDCCH_CSS_config,
+                                  scs_ssb,
+                                  scs_pdcch,
+                                  index_4msb,
+                                  min_channel_bw,
+                                  is_condition_A,
+                                  ssb_offset_point_a);
+
+  AssertFatal(type0_PDCCH_CSS_config->num_rbs != -1,
+              "Type0 PDCCH coreset num_rbs undefined, index_4msb=%d, min_channel_bw %d, scs_ssb %d, scs_pdcch %d\n",
+              index_4msb,
+              min_channel_bw,
+              (int)scs_ssb,
+              (int)scs_pdcch);
+  AssertFatal(type0_PDCCH_CSS_config->num_symbols != -1, "Type0 PDCCH coreset num_symbols undefined");
+  AssertFatal(type0_PDCCH_CSS_config->rb_offset != -1, "Type0 PDCCH coreset rb_offset undefined");
+
+  fill_type0_PDCCH_search_space_config(type0_PDCCH_CSS_config,
+                                       index_4lsb,
+                                       scs_ssb,
+                                       scs_pdcch,
+                                       ssb_start_symbol,
+                                       frequency_range,
+                                       num_slot_per_frame,
+                                       ssb_period);
   AssertFatal(type0_PDCCH_CSS_config->sfn_c >= 0, "");
   AssertFatal(type0_PDCCH_CSS_config->n_c != UINT_MAX, "");
 
-  type0_PDCCH_CSS_config->n_0 = ((uint32_t)(big_o*(1<<scs_pdcch)) + (uint32_t)(type0_PDCCH_CSS_config->ssb_index*big_m))%num_slot_per_frame;
-  type0_PDCCH_CSS_config->cset_start_rb = ssb_offset_point_a - type0_PDCCH_CSS_config->rb_offset;
   AssertFatal(type0_PDCCH_CSS_config->cset_start_rb >= 0, "Invalid CSET0 start PRB %d SSB offset point A %d RB offset %d\n",
               type0_PDCCH_CSS_config->cset_start_rb, ssb_offset_point_a, type0_PDCCH_CSS_config->rb_offset);
 }

@@ -212,6 +212,18 @@ uint32_t nr_compute_tbslbrm(uint16_t table,
 			    uint16_t nb_rb,
 		            uint8_t Nl);
 
+channel_bandwidth_t get_type0_PDCCH_min_channel_bw(const int nr_band);
+
+NR_SubcarrierSpacing_t get_type0_PDCCH_scs(const frequency_range_t frequency_range, const long scs_common);
+
+void fill_type0_PDCCH_coreset_config(NR_Type0_PDCCH_CSS_config_t *type0_PDCCH_CSS_config,
+                                     const uint32_t scs_ssb,
+                                     const uint32_t scs_pdcch,
+                                     const uint32_t index_4msb,
+                                     const channel_bandwidth_t min_channel_bw,
+                                     const bool is_condition_A,
+                                     const uint32_t ssb_offset_point_a);
+
 void get_type0_PDCCH_CSS_config_parameters(NR_Type0_PDCCH_CSS_config_t *type0_PDCCH_CSS_config,
                                            frame_t frameP,
                                            const NR_MIB_t *mib,
