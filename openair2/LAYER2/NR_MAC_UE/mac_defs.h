@@ -321,7 +321,7 @@ typedef struct {
   int Pc_max;
 } NR_PRACH_RESOURCES_t;
 
-typedef struct{
+typedef struct {
   float ssb_per_ro;
   int preambles_per_ssb;
 } ssb_ro_preambles_t;
@@ -363,8 +363,6 @@ typedef struct {
   bool RA_active;
   /// Random-access preamble index
   int ra_PreambleIndex;
-  // When multiple SSBs per RO is configured, this indicates which one is selected in this RO -> this is used to properly compute the PRACH preamble
-  uint8_t ssb_nb_in_ro;
   int zeroCorrelationZoneConfig;
   int restricted_set_config;
   // selected SSB for RACH (not the SSB-Index but the cumulative index, excluding not trasmitted SSBs)

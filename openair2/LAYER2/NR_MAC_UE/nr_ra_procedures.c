@@ -405,7 +405,7 @@ static void ra_resource_selection(NR_UE_MAC_INST_t *mac)
           ssb = mac->mib_ssb;
           // set the PREAMBLE_INDEX to a ra-PreambleIndex corresponding to the selected SSB
           ra->ra_PreambleIndex = res->ra_PreambleIndex;
-          ra->ro_mask_index =  cfra->resourcesTwoStep_r16.ra_ssb_OccasionMaskIndex;
+          ra->ro_mask_index = cfra->resourcesTwoStep_r16.ra_ssb_OccasionMaskIndex;
           break;
         }
       }
@@ -447,7 +447,7 @@ static void select_prach_occasion(RA_config_t *ra,
   int idx_ssb = 0;
   int temp_idx = 0;
   if (ra->ssb_ro_config.ssb_per_ro < 1) {
-    num_ros_per_ssb = (int) (1 / ra->ssb_ro_config.ssb_per_ro);
+    num_ros_per_ssb = (int)(1 / ra->ssb_ro_config.ssb_per_ro);
     idx_ssb = (rand_r(&seed) % num_ros_per_ssb);
     temp_idx = ra->ra_ssb * num_ros_per_ssb + idx_ssb;
   } else {
@@ -500,13 +500,13 @@ static void configure_prach_occasions(NR_UE_MAC_INST_t *mac, int prach_config_in
           if (mac->frame_type == TDD && !check_mixed_slot_prach(mac->tdd_UL_DL_ConfigurationCommon, slot, start_symbol, end_symbol))
             continue;
           for (int f = 0; f < num_fd_occasions; f++) {  // fd occasions
-            ra_occasions_period[num_ra_occasions_period] = (prach_occasion_info_t) {
-              .slot = slot,
-              .frame_info[0] = prach_info.x,
-              .frame_info[1] = n == 0 ? prach_info.y : prach_info.y2,
-              .start_symbol = start_symbol,
-              .fdm = f,
-              .format = prach_info.format};
+            ra_occasions_period[num_ra_occasions_period] =
+                (prach_occasion_info_t){.slot = slot,
+                                        .frame_info[0] = prach_info.x,
+                                        .frame_info[1] = n == 0 ? prach_info.y : prach_info.y2,
+                                        .start_symbol = start_symbol,
+                                        .fdm = f,
+                                        .format = prach_info.format};
             LOG_D(NR_MAC,
                   "RA occasion %d: slot %d start symbol %d fd occasion %d\n",
                   num_ra_occasions_period,
@@ -525,10 +525,10 @@ static void configure_prach_occasions(NR_UE_MAC_INST_t *mac, int prach_config_in
   ra->association_periods = 1;
   int nb_eq_ssb = mac->ssb_list.nb_tx_ssb;
   if (ra->ssb_ro_config.ssb_per_ro < 1)
-    nb_eq_ssb *= (int) (1 / ra->ssb_ro_config.ssb_per_ro);
+    nb_eq_ssb *= (int)(1 / ra->ssb_ro_config.ssb_per_ro);
   int nb_eq_ro = num_ra_occasions_period;
   if (ra->ssb_ro_config.ssb_per_ro > 1)
-    nb_eq_ro *= (int) ra->ssb_ro_config.ssb_per_ro;
+    nb_eq_ro *= (int)ra->ssb_ro_config.ssb_per_ro;
   while (nb_eq_ssb > nb_eq_ro) {
     // not enough PRACH occasions -> need to increase association period
     ra->association_periods <<= 1;
