@@ -576,17 +576,22 @@ static uint64_t get_carrier_frequency(const int N_RB, const int mu, const uint32
 static int handle_sync_req_from_mac(PHY_VARS_NR_UE *UE)
 {
   NR_DL_FRAME_PARMS *fp = &UE->frame_parms;
+  const fapi_nr_ue_carrier_config_t *cfg = &UE->nrUE_config.carrier_config;
   // Start synchronization with a target gNB
   if (UE->synch_request.received_synch_request == 1) {
     // if upper layers signal BW scan we do as instructed by command line parameter
     // if upper layers disable BW scan we set it to false
-    if (UE->synch_request.synch_req.ssb_bw_scan)
+    const fapi_nr_synch_request_t *s = &UE->synch_request.synch_req;
+    if (s->ssb_bw_scan)
       UE->UE_scan_carrier = get_nrUE_params()->UE_scan_carrier;
-    else
+    else {
       UE->UE_scan_carrier = false;
+      fp->ssb_start_subcarrier = get_ssb_first_sc(cfg->dl_frequency * 1000,
+                                                  from_nrarfcn(fp->nr_band, fp->numerology_index, s->ssb_arfcn),
+                                                  fp->numerology_index);
+    }
     UE->target_Nid_cell = UE->synch_request.synch_req.target_Nid_cell;
 
-    const fapi_nr_ue_carrier_config_t *cfg = &UE->nrUE_config.carrier_config;
     uint64_t dl_CarrierFreq = get_carrier_frequency(fp->N_RB_DL, fp->numerology_index, cfg->dl_frequency);
     uint64_t ul_CarrierFreq = get_carrier_frequency(fp->N_RB_UL, fp->numerology_index, cfg->uplink_frequency);
     if (dl_CarrierFreq != fp->dl_CarrierFreq || ul_CarrierFreq != fp->ul_CarrierFreq) {

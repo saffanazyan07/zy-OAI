@@ -1168,7 +1168,7 @@ static void find_gscn_to_scan(const double startFreq,
   }
 }
 
-static int get_ssb_first_sc(const double pointA, const double ssbCenter, const int mu)
+int get_ssb_first_sc(const double pointA, const double ssbCenter, const int mu)
 {
   const double scs = MU_SCS(mu) * 1e3;
   const int ssbRBs = 20;

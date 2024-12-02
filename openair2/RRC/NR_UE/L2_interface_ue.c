@@ -142,7 +142,8 @@ void process_msg_rcc_to_mac(MessageDef *msg)
       break;
     case NR_MAC_RRC_CONFIG_SIB1: {
       NR_SIB1_t *sib1 = NR_MAC_RRC_CONFIG_SIB1(msg).sib1;
-      nr_rrc_mac_config_req_sib1(ue_id, 0, sib1);
+      int ssb_arfcn = NR_MAC_RRC_CONFIG_SIB1(msg).ssb_arfcn;
+      nr_rrc_mac_config_req_sib1(ue_id, 0, sib1, ssb_arfcn);
       SEQUENCE_free(&asn_DEF_NR_SIB1, NR_MAC_RRC_CONFIG_SIB1(msg).sib1, ASFM_FREE_EVERYTHING);
     } break;
     case NR_MAC_RRC_CONFIG_OTHER_SIB:
