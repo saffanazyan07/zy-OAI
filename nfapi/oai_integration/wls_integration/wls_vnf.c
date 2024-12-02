@@ -271,7 +271,7 @@ static void wls_vnf_nr_handle_pnf_param_response(uint32_t msgSize, void *msg_buf
 {
   nfapi_nr_pnf_param_response_t msg;
   // unpack the message
-  if (nfapi_nr_p5_message_unpack(msg_buf, msgSize, &msg, sizeof(msg), &config->codec_config) >= 0) {
+  if (config->unpack_func(msg_buf, msgSize, &msg, sizeof(msg), &config->codec_config) >= 0) {
     // Invoke the call back
     if (config->pnf_nr_param_resp) {
       (config->pnf_nr_param_resp)(config, 0, &msg);
@@ -288,7 +288,7 @@ static void wls_vnf_nr_handle_pnf_config_response(uint32_t msgSize, void *msg_bu
   nfapi_nr_pnf_config_response_t msg;
 
   // unpack the message
-  if (nfapi_nr_p5_message_unpack(msg_buf, msgSize, &msg, sizeof(msg), &config->codec_config) >= 0) {
+  if (config->unpack_func(msg_buf, msgSize, &msg, sizeof(msg), &config->codec_config) >= 0) {
     // Invoke the call back
     if (config->pnf_nr_config_resp) {
       (config->pnf_nr_config_resp)(config, 0, &msg);
@@ -307,7 +307,7 @@ static void wls_vnf_nr_handle_pnf_start_response(uint32_t msgSize, void *msg_buf
   nfapi_nr_pnf_start_response_t msg;
 
   // unpack the message
-  if (nfapi_nr_p5_message_unpack(msg_buf, msgSize, &msg, sizeof(msg), &config->codec_config) >= 0) {
+  if (config->unpack_func(msg_buf, msgSize, &msg, sizeof(msg), &config->codec_config) >= 0) {
     if (config->pnf_nr_start_resp) {
       (config->pnf_nr_start_resp)(config, 0, &msg);
     } else {
@@ -339,7 +339,7 @@ static void wls_vnf_nr_handle_param_response(uint32_t msgSize, void *msg_buf)
   nfapi_nr_param_response_scf_t msg;
 
   // unpack the message
-  if (nfapi_nr_p5_message_unpack(msg_buf, msgSize, &msg, sizeof(msg), &config->codec_config) >= 0) {
+  if (config->unpack_func(msg_buf, msgSize, &msg, sizeof(msg), &config->codec_config) >= 0) {
     if (config->nr_param_resp) {
       (config->nr_param_resp)(config, 0, &msg);
     }
@@ -356,7 +356,7 @@ static void wls_vnf_nr_handle_config_response(uint32_t msgSize, void *msg_buf)
   printf("\n");
   nfapi_nr_config_response_scf_t req = {0};
   nfapi_vnf_config_t *config = &(_vnf->_public);
-  int unpack_result = nfapi_nr_p5_message_unpack(msg_buf, msgSize, &req, sizeof(req), &config->codec_config);
+  int unpack_result = config->unpack_func(msg_buf, msgSize, &req, sizeof(req), &config->codec_config);
   DevAssert(unpack_result >= 0);
   if (req.error_code == NFAPI_NR_CONFIG_MSG_OK) {
     if (config->nr_config_resp) {
@@ -401,7 +401,7 @@ static void wls_vnf_nr_handle_p7_messages(uint32_t msgSize, void *msg_buf, int m
       case NFAPI_NR_PHY_MSG_TYPE_SLOT_INDICATION: {
         nfapi_nr_slot_indication_scf_t unpacked_msg = {.header.message_id = msgId,
                                                        .header.message_length = msgSize};
-        if (nfapi_nr_p7_message_unpack(msg,
+        if (wls_vnf_p7_config->unpack_func(msg,
                                        msgSize + NFAPI_NR_P7_HEADER_LENGTH,
                                        &unpacked_msg,
                                        msgSize + NFAPI_NR_P7_HEADER_LENGTH,
@@ -417,7 +417,7 @@ static void wls_vnf_nr_handle_p7_messages(uint32_t msgSize, void *msg_buf, int m
       case NFAPI_NR_PHY_MSG_TYPE_RX_DATA_INDICATION: {
         nfapi_nr_rx_data_indication_t unpacked_msg = {.header.message_id = msgId,
                                                       .header.message_length = msgSize};
-        if (nfapi_nr_p7_message_unpack(msg,
+        if (wls_vnf_p7_config->unpack_func(msg,
                                        msgSize + NFAPI_NR_P7_HEADER_LENGTH,
                                        &unpacked_msg,
                                        msgSize + NFAPI_NR_P7_HEADER_LENGTH,
@@ -433,7 +433,7 @@ static void wls_vnf_nr_handle_p7_messages(uint32_t msgSize, void *msg_buf, int m
       case NFAPI_NR_PHY_MSG_TYPE_CRC_INDICATION: {
         nfapi_nr_crc_indication_t unpacked_msg = {.header.message_id = msgId,
                                                   .header.message_length = msgSize};
-        if (nfapi_nr_p7_message_unpack(msg,
+        if (wls_vnf_p7_config->unpack_func(msg,
                                        msgSize + NFAPI_NR_P7_HEADER_LENGTH,
                                        &unpacked_msg,
                                        msgSize + NFAPI_NR_P7_HEADER_LENGTH,
@@ -449,7 +449,7 @@ static void wls_vnf_nr_handle_p7_messages(uint32_t msgSize, void *msg_buf, int m
       case NFAPI_NR_PHY_MSG_TYPE_UCI_INDICATION: {
         nfapi_nr_uci_indication_t unpacked_msg = {.header.message_id = msgId,
                                                   .header.message_length = msgSize};
-        if (nfapi_nr_p7_message_unpack(msg,
+        if (wls_vnf_p7_config->unpack_func(msg,
                                        msgSize + NFAPI_NR_P7_HEADER_LENGTH,
                                        &unpacked_msg,
                                        msgSize + NFAPI_NR_P7_HEADER_LENGTH,
@@ -464,7 +464,7 @@ static void wls_vnf_nr_handle_p7_messages(uint32_t msgSize, void *msg_buf, int m
       case NFAPI_NR_PHY_MSG_TYPE_SRS_INDICATION: {
         nfapi_nr_srs_indication_t unpacked_msg = {.header.message_id = msgId,
                                                   .header.message_length = msgSize};
-        if (nfapi_nr_p7_message_unpack(msg,
+        if (wls_vnf_p7_config->unpack_func(msg,
                                        msgSize + NFAPI_NR_P7_HEADER_LENGTH,
                                        &unpacked_msg,
                                        msgSize + NFAPI_NR_P7_HEADER_LENGTH,
@@ -480,7 +480,7 @@ static void wls_vnf_nr_handle_p7_messages(uint32_t msgSize, void *msg_buf, int m
       case NFAPI_NR_PHY_MSG_TYPE_RACH_INDICATION: {
         nfapi_nr_rach_indication_t unpacked_msg = {.header.message_id = msgId,
                                                    .header.message_length = msgSize};
-        if (nfapi_nr_p7_message_unpack(msg,
+        if (wls_vnf_p7_config->unpack_func(msg,
                                        msgSize + NFAPI_NR_P7_HEADER_LENGTH,
                                        &unpacked_msg,
                                        msgSize + NFAPI_NR_P7_HEADER_LENGTH,
@@ -625,7 +625,7 @@ int wls_fapi_nr_vnf_start(nfapi_vnf_config_t *cfg)
 
 int wls_vnf_nr_pack_and_send_p5_message(vnf_t *vnf, nfapi_nr_p4_p5_message_header_t *msg, uint32_t msg_len)
 {
-  int packed_len = nfapi_nr_p5_message_pack(msg,
+  int packed_len = vnf->_public.pack_func(msg,
                                             msg_len,
                                             vnf->tx_message_buffer,
                                             sizeof(vnf->tx_message_buffer),
@@ -656,7 +656,7 @@ int wls_vnf_nr_pack_and_send_p5_message(vnf_t *vnf, nfapi_nr_p4_p5_message_heade
 
 int wls_vnf_nr_pack_and_send_p7_message(nfapi_nr_p7_message_header_t *msg)
 {
-  int packed_len = nfapi_nr_p7_message_pack(msg,
+  int packed_len = wls_vnf_p7_config->pack_func(msg,
                                             _vnf->tx_message_buffer,
                                             sizeof(_vnf->tx_message_buffer),
                                             NULL);
