@@ -274,8 +274,6 @@ static const char *const nrra_ue_text[] =
     {"UE_IDLE", "GENERATE_PREAMBLE", "WAIT_RAR", "WAIT_MSGB", "WAIT_CONTENTION_RESOLUTION", "RA_SUCCEEDED", "RA_FAILED"};
 
 typedef struct {
-  /// PRACH format retrieved from prach_ConfigIndex
-  uint16_t prach_format;
   /// Preamble Tx Counter
   uint8_t preamble_tx_counter;
   /// Preamble Power Ramping Counter
@@ -283,9 +281,7 @@ typedef struct {
   /// 2-step RA power offset
   int power_offset_2step;
   /// Target received power at gNB. Baseline is range -202..-60 dBm. Depends on delta preamble, power ramping counter and step.
-  int ra_PREAMBLE_RECEIVED_TARGET_POWER;
-  /// PRACH index for TDD (0 ... 6) depending on TDD configuration and prachConfigIndex
-  uint8_t ra_TDD_map_index;
+  int ra_preamble_rx_target_power;
   /// RA Preamble Power Ramping Step in dB
   uint32_t preamble_power_ramping_step;
   uint8_t preamble_backoff;
@@ -330,8 +326,6 @@ typedef struct {
   uint16_t MsgB_rnti;
   /// Temporary CRNTI
   uint16_t t_crnti;
-  /// number of attempt for rach
-  uint8_t RA_attempt_number;
   /// Random-access procedure flag
   bool RA_active;
   /// Random-access preamble index
@@ -362,9 +356,9 @@ typedef struct {
   uint8_t *Msg3_buffer;
   // initial Random Access Preamble power
   int preambleRxTargetPower;
-  int deltaPreamble;
+  int msg3_deltaPreamble;
   bool msg3_C_RNTI;
-
+  int preambleReceivedTargetPower_config;
   /// Random-access Contention Resolution Timer
   NR_timer_t contention_resolution_timer;
   /// Transmitted UE Contention Resolution Identifier
@@ -374,6 +368,9 @@ typedef struct {
 
   NR_PRACH_RESOURCES_t prach_resources;
 
+  bool new_ssb;
+  int num_fd_occasions;
+  int ra_config_index;
   ssb_ro_preambles_t ssb_ro_config;
   int association_periods;
   prach_occasion_info_t sched_ro_info;

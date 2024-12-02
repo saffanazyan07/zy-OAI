@@ -331,7 +331,6 @@ NR_UE_L2_STATE_t nr_ue_get_sync_state(module_id_t mod_id);
 
 int16_t get_prach_tx_power(NR_UE_MAC_INST_t *mac);
 void schedule_RA_after_SR_failure(NR_UE_MAC_INST_t *mac);
-void nr_Msg1_transmitted(NR_UE_MAC_INST_t *mac);
 void nr_Msg3_transmitted(NR_UE_MAC_INST_t *mac, uint8_t CC_id, frame_t frameP, slot_t slotP, uint8_t gNB_id);
 void trigger_MAC_UE_RA(NR_UE_MAC_INST_t *mac, dci_pdu_rel15_t *pdcch_order);
 void nr_get_Msg3_MsgA_PUSCH_payload(NR_UE_MAC_INST_t *mac, uint8_t *buf, int TBS_max);

@@ -40,13 +40,12 @@
 
 #include <executables/softmodem-common.h>
 #include "openair2/LAYER2/RLC/rlc.h"
-#include "openair2/LAYER2/NR_MAC_UE/mac_defs.h"
 
 int16_t get_prach_tx_power(NR_UE_MAC_INST_t *mac)
 {
   RA_config_t *ra = &mac->ra;
   int16_t pathloss = compute_nr_SSB_PL(mac, mac->ssb_measurements.ssb_rsrp_dBm);
-  int16_t ra_preamble_rx_power = (int16_t)(ra->prach_resources.ra_PREAMBLE_RECEIVED_TARGET_POWER + pathloss);
+  int16_t ra_preamble_rx_power = (int16_t)(ra->prach_resources.ra_preamble_rx_target_power + pathloss);
   return min(ra->prach_resources.Pc_max, ra_preamble_rx_power);
 }
 
@@ -179,7 +178,7 @@ static void select_preamble_group(NR_UE_MAC_INST_t *mac)
       // if the pathloss is less than PCMAX (of the Serving Cell performing the Random Access Procedure)
       // – preambleReceivedTargetPower – msg3-DeltaPreamble – messagePowerOffsetGroupB
       int groupB_pow_offset = get_messagePowerOffsetGroupB(groupB->messagePowerOffsetGroupB);
-      int PLThreshold = ra->prach_resources.Pc_max - ra->preambleRxTargetPower - ra->deltaPreamble - groupB_pow_offset;
+      int PLThreshold = ra->prach_resources.Pc_max - ra->preambleRxTargetPower - ra->msg3_deltaPreamble - groupB_pow_offset;
       int pathloss = compute_nr_SSB_PL(mac, mac->ssb_measurements.ssb_rsrp_dBm);
       // TODO if the Random Access procedure was initiated for the CCCH logical channel and the CCCH SDU size
       // plus MAC subheader is greater than ra-Msg3SizeGroupA
@@ -352,8 +351,7 @@ static void config_preamble_index(NR_UE_MAC_INST_t *mac)
               nb_of_preambles);
 }
 
-// 38.321 Section 5.1.2 Random Access Resource selection
-static void ra_resource_selection(NR_UE_MAC_INST_t *mac)
+static void configure_ra_preamble(NR_UE_MAC_INST_t *mac)
 {
   RA_config_t *ra = &mac->ra;
   int ssb = -1; // init as not selected
@@ -416,10 +414,12 @@ static void ra_resource_selection(NR_UE_MAC_INST_t *mac)
       config_preamble_index(mac);
     }
   }
-  AssertFatal(ra->ra_ssb >= 0, "Something wrong! RA resource selection didn't set any SSB\n");
+  AssertFatal(ssb >= 0, "Something wrong! RA resource selection didn't set any SSB\n");
   // setting the RA ssb value as the progressive number of SSB transmitted
   // non-transmitted SSBs are not taken into account
-  ra->ra_ssb = mac->ssb_list.nb_ssb_per_index[ssb];
+  int ssb_idx = mac->ssb_list.nb_ssb_per_index[ssb];
+  ra->new_ssb = ssb != ssb_idx ? true : false;
+  ra->ra_ssb = ssb_idx;
 
   // TODO not sure how to handle the RO mask when it is limiting the RO occasions
   AssertFatal(ra->ro_mask_index <= 0, "Handling of RACH occasion masking indication not implemented\n");
@@ -466,12 +466,12 @@ static void select_prach_occasion(RA_config_t *ra,
   ra->sched_ro_info.association_period_idx = ass_period_idx;
 }
 
-static void configure_prach_occasions(NR_UE_MAC_INST_t *mac, int prach_config_index, int num_fd_occasions, int scs)
+static void configure_prach_occasions(NR_UE_MAC_INST_t *mac, int scs)
 {
   RA_config_t *ra = &mac->ra;
   int num_ra_occasions_period = 0;
-  nr_prach_info_t prach_info =  get_nr_prach_occasion_info_from_index(prach_config_index, mac->frequency_range, mac->frame_type);
-  int max_num_occasions = prach_info.N_RA_sfn * prach_info.N_t_slot * prach_info.N_RA_slot * num_fd_occasions;
+  nr_prach_info_t prach_info = get_nr_prach_occasion_info_from_index(ra->ra_config_index, mac->frequency_range, mac->frame_type);
+  int max_num_occasions = prach_info.N_RA_sfn * prach_info.N_t_slot * prach_info.N_RA_slot * ra->num_fd_occasions;
   prach_occasion_info_t ra_occasions_period[max_num_occasions];
   // Number of PRACH slots within a subframe (or 60kHz slot) to be taken into account only for 30 and 120kHz
   // as defined in 5.3.2 of 211
@@ -497,19 +497,23 @@ static void configure_prach_occasions(NR_UE_MAC_INST_t *mac, int prach_config_in
         if (!is_nr_UL_slot(mac->tdd_UL_DL_ConfigurationCommon, slot, mac->frame_type))
           continue; // valid PRACH occasion only if slot is UL
         for (int t = 0; t < prach_info.N_t_slot; t++) { // td occasions within a slot
+          // see 5.3.2 in 211
+          int temp_format = prach_info.format >> 8; // B1, B2 or B3 if A1/B1, A2/B2 or A3/B3 formats in tables
+          if (t != prach_info.N_t_slot - 1 || temp_format == 0xff)
+            temp_format = prach_info.format & 0xff;
           int start_symbol = prach_info.start_symbol + t * prach_info.N_dur;
           int end_symbol = start_symbol + prach_info.N_dur;
           // valid occasion only if PRACH symbols are UL symbols in mixed slot
           if (mac->frame_type == TDD && !check_mixed_slot_prach(mac->tdd_UL_DL_ConfigurationCommon, slot, start_symbol, end_symbol))
             continue;
-          for (int f = 0; f < num_fd_occasions; f++) {  // fd occasions
+          for (int f = 0; f < ra->num_fd_occasions; f++) { // fd occasions
             ra_occasions_period[num_ra_occasions_period] =
                 (prach_occasion_info_t){.slot = slot,
                                         .frame_info[0] = prach_info.x,
                                         .frame_info[1] = n == 0 ? prach_info.y : prach_info.y2,
                                         .start_symbol = start_symbol,
                                         .fdm = f,
-                                        .format = prach_info.format};
+                                        .format = temp_format};
             LOG_D(NR_MAC,
                   "RA occasion %d: slot %d start symbol %d fd occasion %d\n",
                   num_ra_occasions_period,
@@ -545,6 +549,86 @@ static void configure_prach_occasions(NR_UE_MAC_INST_t *mac, int prach_config_in
   LOG_D(NR_MAC, "PRACH configuration period %d association period %d\n", config_period, ra->association_periods);
 
   select_prach_occasion(ra, mac->ssb_list.nb_tx_ssb, max_num_occasions, ra_occasions_period, num_ra_occasions_period);
+}
+
+/* TS 38.321 subclause 7.3 - return DELTA_PREAMBLE values in dB */
+static int nr_get_delta_preamble(int scs, int prach_format)
+{
+  int delta = 0;
+  switch (prach_format) {
+    case 0:
+    case 3:
+      delta = 0;
+      break;
+    case 1:
+      delta = -3;
+      break;
+    case 2:
+      delta = -6;
+      break;
+    case 0xa1:
+    case 0xb1:
+      delta = 8 + 3 * scs;
+      break;
+    case 0xa2:
+    case 0xb2:
+    case 0xc2:
+      delta = 5 + 3 * scs;
+      break;
+    case 0xa3:
+    case 0xb3:
+      delta = 3 + 3 * scs;
+      break;
+    case 0xb4:
+      delta = 3 * scs;
+      break;
+    case 0xc0:
+      delta = 11 + 3 * scs;
+      break;
+    default:
+      AssertFatal(false, "Invalid preamble format %x\n", prach_format);
+  }
+  return delta;
+}
+
+static int get_ra_preamble_rx_target_power(RA_config_t *ra, int scs)
+{
+  NR_PRACH_RESOURCES_t *prach_resources = &ra->prach_resources;
+  int delta_preamble = nr_get_delta_preamble(scs, ra->sched_ro_info.format);
+  int tp = ra->preambleReceivedTargetPower_config + delta_preamble + prach_resources->power_offset_2step;
+  tp += (prach_resources->preamble_power_ramping_cnt - 1) * prach_resources->preamble_power_ramping_step;
+  return tp;
+}
+
+// 38.321 Sections 5.1.3 and .3a
+static void ra_preamble_msga_transmission(RA_config_t *ra, int scs)
+{
+  NR_PRACH_RESOURCES_t *prach_resources = &ra->prach_resources;
+  if (prach_resources->preamble_tx_counter > 1) {
+    // TODO if the notification of suspending power ramping counter has not been received from lower layers (not implemented)
+    //      this happens if the L1 does not transmit PRACH of if the spacial filter changed (UE transmitting in another beam)
+    // TODO if LBT failure indication was not received from lower layers (LBT not implemented)
+    // if SSB or CSI-RS selected is not changed from the selection in the last Random Access Preamble transmission
+    if (!ra->new_ssb)
+      prach_resources->preamble_power_ramping_cnt++;
+  }
+
+
+  prach_resources->ra_preamble_rx_target_power = get_ra_preamble_rx_target_power(ra, scs);
+
+  ra->ra_rnti = nr_get_ra_rnti(ra->sched_ro_info.start_symbol, ra->sched_ro_info.slot, ra->sched_ro_info.fdm, 0);
+  if (ra->ra_type == RA_2_STEP)
+    ra->MsgB_rnti = nr_get_MsgB_rnti(ra->sched_ro_info.start_symbol, ra->sched_ro_info.slot, ra->sched_ro_info.fdm, 0);
+}
+
+// 38.321 Section 5.1.2 Random Access Resource selection
+static void ra_resource_selection(NR_UE_MAC_INST_t *mac)
+{
+  configure_ra_preamble(mac);
+  const NR_UE_UL_BWP_t *current_UL_BWP = mac->current_UL_BWP;
+  int scs = nr_get_prach_mu(current_UL_BWP->msgA_ConfigCommon_r16, current_UL_BWP->rach_ConfigCommon);
+  configure_prach_occasions(mac, scs);
+  ra_preamble_msga_transmission(&mac->ra, scs);
 }
 
 // Random Access procedure initialization as per 5.1.1 and initialization of variables specific
@@ -640,8 +724,7 @@ bool init_RA(NR_UE_MAC_INST_t *mac, int frame)
 
   // if the carrier to use for the Random Access procedure is explicitly signalled (always the case for us)
   // PRACH shall be as specified for QPSK modulated DFT-s-OFDM of equivalent RB allocation (38.101-1)
-  AssertFatal(nr_rach_ConfigCommon->msg1_SubcarrierSpacing, "Cannot handle the scenario without msg1-SubcarrierSpacing (L839)\n");
-  NR_SubcarrierSpacing_t prach_scs = *nr_rach_ConfigCommon->msg1_SubcarrierSpacing;
+  NR_SubcarrierSpacing_t prach_scs = nr_get_prach_mu(current_UL_BWP->msgA_ConfigCommon_r16, nr_rach_ConfigCommon);
   int n_prbs = get_N_RA_RB(prach_scs, current_UL_BWP->scs);
   NR_RACH_ConfigGeneric_t *rach_ConfigGeneric = &nr_rach_ConfigCommon->rach_ConfigGeneric;
   int start_prb = rach_ConfigGeneric->msg1_FrequencyStart + current_UL_BWP->BWPStart;
@@ -725,6 +808,11 @@ bool init_RA(NR_UE_MAC_INST_t *mac, int frame)
 
   prach_resources->scaling_factor_bi = 1;
 
+  if (ra->ra_type == RA_2_STEP && twostep_generic && twostep_generic->msgA_PreambleReceivedTargetPower_r16)
+    ra->preambleReceivedTargetPower_config = *twostep_generic->msgA_PreambleReceivedTargetPower_r16;
+  else
+    ra->preambleReceivedTargetPower_config = rach_ConfigGeneric->preambleReceivedTargetPower;
+
   if (ra->ra_type == RA_2_STEP && twostep_generic && twostep_generic->preambleTransMax_r16)
     set_preambleTransMax(ra, *twostep_generic->preambleTransMax_r16);
   else
@@ -751,189 +839,38 @@ bool init_RA(NR_UE_MAC_INST_t *mac, int frame)
       && current_UL_BWP->msgA_ConfigCommon_r16
       && current_UL_BWP->msgA_ConfigCommon_r16->msgA_PUSCH_Config_r16
       && current_UL_BWP->msgA_ConfigCommon_r16->msgA_PUSCH_Config_r16->msgA_DeltaPreamble_r16)
-    ra->deltaPreamble = *current_UL_BWP->msgA_ConfigCommon_r16->msgA_PUSCH_Config_r16->msgA_DeltaPreamble_r16 << 1;
+    ra->msg3_deltaPreamble = *current_UL_BWP->msgA_ConfigCommon_r16->msgA_PUSCH_Config_r16->msgA_DeltaPreamble_r16 << 1;
   else
-    ra->deltaPreamble = mac->current_UL_BWP->msg3_DeltaPreamble ? *mac->current_UL_BWP->msg3_DeltaPreamble << 1 : 0;
+    ra->msg3_deltaPreamble = mac->current_UL_BWP->msg3_DeltaPreamble ? *mac->current_UL_BWP->msg3_DeltaPreamble << 1 : 0;
 
   ra->RA_RAPID_found = 0;
   ra->RA_backoff_cnt = 0;
   ra->RA_window_cnt = -1;
+  ra->new_ssb = false;
 
-  int ra_config_index = 0;
   if (ra->ra_type == RA_2_STEP && twostep_generic && twostep_generic->msgA_PRACH_ConfigurationIndex_r16)
-    ra_config_index = *twostep_generic->msgA_PRACH_ConfigurationIndex_r16;
+    ra->ra_config_index = *twostep_generic->msgA_PRACH_ConfigurationIndex_r16;
   else {
     if (rach_ConfigGeneric->ext1 && rach_ConfigGeneric->ext1->prach_ConfigurationIndex_v1610)
-      ra_config_index = *rach_ConfigGeneric->ext1->prach_ConfigurationIndex_v1610;
+      ra->ra_config_index = *rach_ConfigGeneric->ext1->prach_ConfigurationIndex_v1610;
     else
-      ra_config_index = rach_ConfigGeneric->prach_ConfigurationIndex;
+      ra->ra_config_index = rach_ConfigGeneric->prach_ConfigurationIndex;
   }
-  int fdm = 0;
+
   if (ra->ra_type == RA_2_STEP && twostep_generic && twostep_generic->msgA_RO_FDM_r16)
-    fdm = 1 << *twostep_generic->msgA_RO_FDM_r16;
+    ra->num_fd_occasions = 1 << *twostep_generic->msgA_RO_FDM_r16;
   else
-    fdm = 1 << rach_ConfigGeneric->msg1_FDM;
-  configure_prach_occasions(mac, ra_config_index, fdm, prach_scs);
+    ra->num_fd_occasions = 1 << rach_ConfigGeneric->msg1_FDM;
+
   return true;
 }
 
-/* TS 38.321 subclause 7.3 - return DELTA_PREAMBLE values in dB */
-static int8_t nr_get_DELTA_PREAMBLE(NR_UE_MAC_INST_t *mac, uint16_t prach_format)
+static void nr_get_prach_resources(NR_UE_MAC_INST_t *mac, NR_PRACH_RESOURCES_t *prach_resources)
 {
-  NR_RACH_ConfigCommon_t *nr_rach_ConfigCommon = mac->current_UL_BWP->rach_ConfigCommon;
-  NR_SubcarrierSpacing_t scs = *nr_rach_ConfigCommon->msg1_SubcarrierSpacing;
-  int prach_sequence_length = nr_rach_ConfigCommon->prach_RootSequenceIndex.present - 1;
-  uint8_t prachConfigIndex, mu;
-
-  // SCS configuration from msg1_SubcarrierSpacing and table 4.2-1 in TS 38.211
-
-  switch (scs){
-    case NR_SubcarrierSpacing_kHz15:
-    mu = 0;
-    break;
-
-    case NR_SubcarrierSpacing_kHz30:
-    mu = 1;
-    break;
-
-    case NR_SubcarrierSpacing_kHz60:
-    mu = 2;
-    break;
-
-    case NR_SubcarrierSpacing_kHz120:
-    mu = 3;
-    break;
-
-    case NR_SubcarrierSpacing_kHz240:
-    mu = 4;
-    break;
-
-    case NR_SubcarrierSpacing_kHz480_v1700:
-    mu = 5;
-    break;
-
-    case NR_SubcarrierSpacing_kHz960_v1700:
-    mu = 6;
-    break;
-
-    case NR_SubcarrierSpacing_spare1:
-    mu = 7;
-    break;
-
-    default:
-    AssertFatal(1 == 0,"Unknown msg1_SubcarrierSpacing %lu\n", scs);
-  }
-
-  // Preamble formats given by prach_ConfigurationIndex and tables 6.3.3.2-2 and 6.3.3.2-2 in TS 38.211
-
-  prachConfigIndex = nr_rach_ConfigCommon->rach_ConfigGeneric.prach_ConfigurationIndex;
-
-  if (prach_sequence_length == 0) {
-    AssertFatal(prach_format < 4, "Illegal PRACH format %d for sequence length 839\n", prach_format);
-    switch (prach_format) {
-
-      // long preamble formats
-      case 0:
-      case 3:
-      return  0;
-
-      case 1:
-      return -3;
-
-      case 2:
-      return -6;
-    }
-  } else {
-    switch (prach_format) { // short preamble formats
-      case 0:
-      case 3:
-      return 8 + 3*mu;
-
-      case 1:
-      case 4:
-      case 8:
-      return 5 + 3*mu;
-
-      case 2:
-      case 5:
-      return 3 + 3*mu;
-
-      case 6:
-      return 3*mu;
-
-      case 7:
-      return 5 + 3*mu;
-
-      default:
-      AssertFatal(1 == 0, "[UE %d] ue_procedures.c: FATAL, Illegal preambleFormat %d, prachConfigIndex %d\n",
-                  mac->ue_id,
-                  prach_format,
-                  prachConfigIndex);
-    }
-  }
-  return 0;
-}
-
-// TS 38.321 subclause 5.1.3 - RA preamble transmission - ra_PREAMBLE_RECEIVED_TARGET_POWER configuration
-// Measurement units:
-// - preambleReceivedTargetPower      dBm (-202..-60, 2 dBm granularity)
-// - delta_preamble                   dB
-// - RA_PREAMBLE_POWER_RAMPING_STEP   dB
-// - POWER_OFFSET_2STEP_RA            dB
-// returns receivedTargerPower in dBm
-static int nr_get_Po_NOMINAL_PUSCH(NR_UE_MAC_INST_t *mac, NR_PRACH_RESOURCES_t *prach_resources)
-{
-  int8_t receivedTargerPower;
-  int8_t delta_preamble;
-
-  NR_RACH_ConfigCommon_t *nr_rach_ConfigCommon = mac->current_UL_BWP->rach_ConfigCommon;
-  long preambleReceivedTargetPower = nr_rach_ConfigCommon->rach_ConfigGeneric.preambleReceivedTargetPower;
-  delta_preamble = nr_get_DELTA_PREAMBLE(mac, prach_resources->prach_format);
-
-  receivedTargerPower = preambleReceivedTargetPower +
-                        delta_preamble +
-                        (prach_resources->preamble_power_ramping_cnt - 1) * prach_resources->preamble_power_ramping_step +
-                        prach_resources->power_offset_2step;
-
-  LOG_D(MAC, "ReceivedTargerPower is %d dBm \n", receivedTargerPower);
-  return receivedTargerPower;
-}
-
-// This routine implements Section 5.1.2 (UE Random Access Resource Selection)
-// and Section 5.1.3 (Random Access Preamble Transmission) from 3GPP TS 38.321
-// - currently the PRACH preamble is set through RRC configuration for 4-step CFRA mode
-// todo:
-// - determine next available PRACH occasion
-// -- if RA initiated for SI request and ra_AssociationPeriodIndex and si-RequestPeriod are configured
-// -- else if SSB is selected above
-// -- else if CSI-RS is selected above
-// - switch initialisation cases
-// -- RA initiated by beam failure recovery operation (subclause 5.17 TS 38.321)
-// --- SSB selection, set ra_PreambleIndex
-// -- RA initiated by PDCCH: ra_preamble_index provided by PDCCH && ra_PreambleIndex != 0b000000
-// --- set PREAMBLE_INDEX to ra_preamble_index
-// --- select the SSB signalled by PDCCH
-// -- RA initiated for SI request:
-// --- SSB selection, set ra_PreambleIndex
-// - condition on notification of suspending power ramping counter from lower layer (5.1.3 TS 38.321)
-// - check if SSB or CSI-RS have not changed since the selection in the last RA Preamble tranmission
-// - Contention-based RA preamble selection:
-// -- selection of SSB with SS-RSRP above rsrp-ThresholdSSB else select any SSB
-static void nr_get_prach_resources(NR_UE_MAC_INST_t *mac,
-                                   NR_PRACH_RESOURCES_t *prach_resources,
-                                   NR_RACH_ConfigDedicated_t *rach_ConfigDedicated)
-{
+  int scs = nr_get_prach_mu(mac->current_UL_BWP->msgA_ConfigCommon_r16, mac->current_UL_BWP->rach_ConfigCommon);
   if (prach_resources->preamble_tx_counter > 1)
     prach_resources->preamble_power_ramping_cnt++;
-  prach_resources->ra_PREAMBLE_RECEIVED_TARGET_POWER = nr_get_Po_NOMINAL_PUSCH(mac, prach_resources);
-}
-
-// TbD: RA_attempt_number not used
-void nr_Msg1_transmitted(NR_UE_MAC_INST_t *mac)
-{
-  RA_config_t *ra = &mac->ra;
-  ra->ra_state = nrRA_WAIT_RAR;
-  ra->RA_attempt_number++;
+  prach_resources->ra_preamble_rx_target_power = get_ra_preamble_rx_target_power(&mac->ra, scs);
 }
 
 void nr_Msg3_transmitted(NR_UE_MAC_INST_t *mac, uint8_t CC_id, frame_t frameP, slot_t slotP, uint8_t gNB_id)
@@ -1041,8 +978,8 @@ void nr_get_Msg3_MsgA_PUSCH_payload(NR_UE_MAC_INST_t *mac, uint8_t *buf, int TBS
 void nr_ue_manage_ra_procedure(NR_UE_MAC_INST_t *mac, int CC_id, frame_t frame, uint8_t gNB_id, int nr_slot_tx)
 {
   RA_config_t *ra = &mac->ra;
-  NR_RACH_ConfigDedicated_t *rach_ConfigDedicated = ra->rach_ConfigDedicated;
   NR_PRACH_RESOURCES_t *prach_resources = &ra->prach_resources;
+
   if (ra->ra_state == nrRA_UE_IDLE) {
     bool init_success = init_RA(mac, frame);
     if (!init_success)
@@ -1085,7 +1022,7 @@ void nr_ue_manage_ra_procedure(NR_UE_MAC_INST_t *mac, int CC_id, frame_t frame, 
         // Fill in preamble and PRACH resources
         ra->RA_window_cnt--;
         if (ra->ra_state == nrRA_GENERATE_PREAMBLE) {
-          nr_get_prach_resources(mac, prach_resources, rach_ConfigDedicated);
+          nr_get_prach_resources(mac, prach_resources);
         }
       } else if (ra->RA_backoff_cnt > 0) {
 
@@ -1094,7 +1031,7 @@ void nr_ue_manage_ra_procedure(NR_UE_MAC_INST_t *mac, int CC_id, frame_t frame, 
         ra->RA_backoff_cnt--;
 
         if ((ra->RA_backoff_cnt > 0 && ra->ra_state == nrRA_GENERATE_PREAMBLE) || ra->RA_backoff_cnt == 0) {
-          nr_get_prach_resources(mac, prach_resources, rach_ConfigDedicated);
+          nr_get_prach_resources(mac, prach_resources);
         }
       }
     }
@@ -1303,7 +1240,8 @@ void nr_ra_failed(NR_UE_MAC_INST_t *mac, uint8_t CC_id, NR_PRACH_RESOURCES_t *pr
     ra->RA_backoff_cnt = rand_r(&seed) % (prach_resources->preamble_backoff + 1);
     prach_resources->preamble_tx_counter = 1;
     prach_resources->preamble_power_ramping_step += 2; // 2 dB increment
-    prach_resources->ra_PREAMBLE_RECEIVED_TARGET_POWER = nr_get_Po_NOMINAL_PUSCH(mac, prach_resources);
+    int scs = nr_get_prach_mu(mac->current_UL_BWP->msgA_ConfigCommon_r16, mac->current_UL_BWP->rach_ConfigCommon);
+    prach_resources->ra_preamble_rx_target_power = get_ra_preamble_rx_target_power(ra, scs);
 
   } else {
     nr_get_RA_window(mac);
