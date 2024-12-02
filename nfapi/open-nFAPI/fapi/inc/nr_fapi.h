@@ -74,10 +74,15 @@ bool isFAPIMessageIDValid(uint16_t id);
 
 int check_nr_fapi_unpack_length(nfapi_nr_phy_msg_type_e msgId, uint32_t unpackedBufLen);
 
-int fapi_nr_message_header_unpack(uint8_t **pMessageBuf,
+int fapi_nr_message_header_unpack(void *pMessageBuf,
                                   uint32_t messageBufLen,
                                   void *pUnpackedBuf,
                                   uint32_t unpackedBufLen,
                                   nfapi_p4_p5_codec_config_t *config);
+int fapi_nr_p7_message_header_unpack(void *pMessageBuf,
+                                  uint32_t messageBufLen,
+                                  void *pUnpackedBuf,
+                                  uint32_t unpackedBufLen,
+                                  nfapi_p7_codec_config_t *config);
 
 #endif // OPENAIRINTERFACE_NR_FAPI_H
