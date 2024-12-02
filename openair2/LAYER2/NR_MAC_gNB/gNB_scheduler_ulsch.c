@@ -88,7 +88,7 @@ int get_ul_tda(gNB_MAC_INST *nrmac, const NR_ServingCellConfigCommon_t *scc, int
       return 1;
   }
 
-  return 0; // if FDD or not mixed slot in TDD, for now use default TDA (TODO handle CSI-RS slots)
+  return 1; // if FDD or not mixed slot in TDD, for now use default TDA (TODO handle CSI-RS slots)
 }
 
 static int compute_ph_factor(int mu, int tbs_bits, int rb, int n_layers, int n_symbols, int n_dmrs, long *deltaMCS, bool include_bw)
@@ -1512,6 +1512,7 @@ static bool nr_UE_is_to_be_scheduled(const NR_ServingCellConfigCommon_t *scc, in
   const int now = frame * n + slot;
 
   const NR_UE_sched_ctrl_t *sched_ctrl =&UE->UE_sched_ctrl;
+  NR_sched_srs_t sched_srs = sched_ctrl->sched_srs;
 
   const NR_TDD_UL_DL_Pattern_t *tdd =
       scc->tdd_UL_DL_ConfigurationCommon ? &scc->tdd_UL_DL_ConfigurationCommon->pattern1 : NULL;
@@ -1533,6 +1534,7 @@ static bool nr_UE_is_to_be_scheduled(const NR_ServingCellConfigCommon_t *scc, in
    * (3) or we did not schedule it in more than 10 frames */
   const bool has_data = sched_ctrl->estimated_ul_buffer > sched_ctrl->sched_ul_bytes;
   const bool high_inactivity = diff >= (ulsch_max_frame_inactivity > 0 ? ulsch_max_frame_inactivity * n : num_slots_per_period);
+  const bool srs = (sched_srs.srs_scheduled && sched_srs.frame == frame && sched_srs.slot == slot);
   LOG_D(NR_MAC,
         "%4d.%2d UL inactivity %d slots has_data %d SR %d\n",
         frame,
@@ -1540,7 +1542,7 @@ static bool nr_UE_is_to_be_scheduled(const NR_ServingCellConfigCommon_t *scc, in
         diff,
         has_data,
         sched_ctrl->SR);
-  return has_data || sched_ctrl->SR || high_inactivity;
+  return srs || has_data || sched_ctrl->SR || high_inactivity;
 }
 
 static void update_ul_ue_R_Qm(int mcs, int mcs_table, const NR_PUSCH_Config_t *pusch_Config, uint16_t *R, uint8_t *Qm)
