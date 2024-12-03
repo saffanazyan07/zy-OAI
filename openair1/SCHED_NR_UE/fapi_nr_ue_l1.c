@@ -600,8 +600,7 @@ void nr_ue_phy_config_request(nr_phy_config_t *phy_config)
 {
   PHY_VARS_NR_UE *phy = PHY_vars_UE_g[phy_config->Mod_id][phy_config->CC_id];
   fapi_nr_config_request_t *nrUE_config = &phy->nrUE_config;
-  if(phy_config != NULL) {
-    phy->received_config_request = true;
+  if (phy_config != NULL) {
     memcpy(nrUE_config, &phy_config->config_req, sizeof(fapi_nr_config_request_t));
   }
 }
@@ -618,7 +617,6 @@ void nr_ue_sl_phy_config_request(nr_sl_phy_config_t *phy_config)
   PHY_VARS_NR_UE *phy = PHY_vars_UE_g[phy_config->Mod_id][phy_config->CC_id];
   sl_nr_phy_config_request_t *sl_config = &phy->SL_UE_PHY_PARAMS.sl_config;
   if (phy_config != NULL) {
-    phy->received_config_request = true;
     memcpy(sl_config, &phy_config->sl_config_req, sizeof(sl_nr_phy_config_request_t));
   }
 }

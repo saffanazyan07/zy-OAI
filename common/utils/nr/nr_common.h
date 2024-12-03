@@ -92,6 +92,14 @@ static inline const char *rnti_types(nr_rnti_type_t rr)
 // the total shift is 2 * 15, in dB scale thats 10log10(2^(15*2))
 #define SQ15_SQUARED_NORM_FACTOR_DB 90.3089986992
 
+typedef enum {
+  PHY_CONFIG_BIT_MASK_CARRIER = 0,
+  PHY_CONFIG_BIT_MASK_CELL,
+  PHY_CONFIG_BIT_MASK_SSB,
+  PHY_CONFIG_BIT_MASK_TDD,
+  PHY_CONFIG_BIT_MASK_PRACH
+} nr_phy_config_mask_t;
+
 typedef struct nr_bandentry_s {
   int16_t band;
   uint64_t ul_min;
@@ -258,6 +266,9 @@ unsigned short get_N_b_srs(int c_srs, int b_srs);
 
 #define CEILIDIV(a,b) ((a+b-1)/b)
 #define ROUNDIDIV(a,b) (((a<<1)+b)/(b<<1))
+
+#define SETBIT(a, b) ((a) |= (1 << (b)))
+#define GETBIT(a, b) (((a) >> (b)) & 1)
 
 // Align up to a multiple of 16
 #define ALIGN_UP_16(a) ((a + 15) & ~15)

@@ -399,7 +399,6 @@ typedef struct PHY_VARS_NR_UE_s {
   NR_UE_COMMON    common_vars;
 
   nr_ue_if_module_t *if_inst;
-  bool received_config_request;
   fapi_nr_config_request_t nrUE_config;
   nr_synch_request_t synch_request;
 

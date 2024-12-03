@@ -840,10 +840,10 @@ static bool nr_ue_dlsch_procedures(PHY_VARS_NR_UE *ue,
 
 static bool is_ssb_index_transmitted(const PHY_VARS_NR_UE *ue, const int index)
 {
-  if (ue->received_config_request) {
-    const fapi_nr_config_request_t *cfg = &ue->nrUE_config;
+  const fapi_nr_config_request_t *cfg = &ue->nrUE_config;
+  if (GETBIT(cfg->config_mask, PHY_CONFIG_BIT_MASK_SSB)) {
     const uint32_t curr_mask = cfg->ssb_table.ssb_mask_list[index / 32].ssb_mask;
-    return ((curr_mask >> (31 - (index % 32))) & 0x01);
+    return GETBIT(curr_mask, (31 - (index % 32)));
   } else
     return ue->frame_parms.ssb_index == index;
 }
@@ -869,7 +869,9 @@ int pbch_pdcch_processing(PHY_VARS_NR_UE *ue, const UE_nr_rxtx_proc_t *proc, nr_
   // checking if current frame is compatible with SSB periodicity
 
   const int default_ssb_period = 2;
-  const int ssb_period = ue->received_config_request ? ue->nrUE_config.ssb_table.ssb_period : default_ssb_period;
+  const fapi_nr_config_request_t *cfg = &ue->nrUE_config;
+  const int ssb_period =
+      GETBIT(cfg->config_mask, PHY_CONFIG_BIT_MASK_SSB) ? ue->nrUE_config.ssb_table.ssb_period : default_ssb_period;
   if (ssb_period == 0 || !(frame_rx % (1 << (ssb_period - 1)))) {
     const int estimateSz = fp->symbols_per_slot * fp->ofdm_symbol_size;
     // loop over SSB blocks
