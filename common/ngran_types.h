@@ -30,6 +30,8 @@
 * \warning
 */
 
+#include <stdint.h>
+
 #ifndef __NGRAN_TYPES_H__
 #define __NGRAN_TYPES_H__
 

@@ -334,6 +334,17 @@ static void trigger_stop(int sig)
   if (!oai_exit)
     itti_wait_tasks_unblock();
 }
+
+/**
+ * @brief Send ITTI message to NAS task trigger NAS Registration Request
+ */
+static void trigger_registration(uint8_t ue_id)
+{
+  MessageDef *msg = itti_alloc_new_message(TASK_NAS_NRUE, 0, NAS_REGISTRATION_REQ);
+  NAS_REGISTRATION_REQ(msg).UEid = ue_id;
+  itti_send_msg_to_task(TASK_NAS_NRUE, ue_id, msg);
+}
+
 static void trigger_deregistration(int sig)
 {
   if (!stop_immediately && IS_SA_MODE(get_softmodem_params())) {
@@ -545,6 +556,13 @@ int main(int argc, char **argv)
   if (create_tasks_nrue(1) < 0) {
     printf("cannot create ITTI tasks\n");
     exit(-1); // need a softer mode
+  }
+
+  if (!get_softmodem_params()->emulate_l1) {
+    for (int inst = 0; inst < NB_UE_INST; inst++) {
+    /* Trigger NAS Registration Request */
+    trigger_registration(inst);
+    }
   }
 
   // Sleep a while before checking all parameters have been used

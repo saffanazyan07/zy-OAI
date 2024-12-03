@@ -99,7 +99,7 @@ typedef struct nr_rrc_guami_s {
   uint8_t  amf_region_id;
   uint16_t amf_set_id;
   uint8_t  amf_pointer;
-} nr_rrc_guami_t;
+} nr_rrc_nr_guami_t;
 
 typedef enum pdu_session_satus_e {
   PDU_SESSION_STATUS_NEW,
@@ -226,7 +226,8 @@ typedef struct gNB_RRC_UE_s {
   uint64_t nr_cellid;
   uint32_t                           rrc_ue_id;
   uint64_t amf_ue_ngap_id;
-  nr_rrc_guami_t                     ue_guami;
+  // Globally Unique AMF Identifier
+  nr_guami_t ue_guami;
 
   ngap_security_capabilities_t       security_capabilities;
   //NSA block

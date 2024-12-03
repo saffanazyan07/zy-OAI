@@ -266,7 +266,7 @@ static void nr_rrc_ue_prepare_RRCSetupRequest(NR_UE_RRC_INST_t *rrc)
   }
 
   uint8_t buf[1024];
-  int len = do_RRCSetupRequest(buf, sizeof(buf), rv);
+  int len = do_RRCSetupRequest(buf, sizeof(buf), rv, rrc->fiveG_S_TMSI);
 
   nr_rlc_srb_recv_sdu(rrc->ue_id, 0, buf, len);
 }
@@ -564,6 +564,8 @@ NR_UE_RRC_INST_t* nr_rrc_init_ue(char* uecap_file, int nb_inst, int num_ant_tx)
     rrc->as_security_activated = false;
     rrc->detach_after_release = false;
     rrc->reconfig_after_reestab = false;
+    /* 5G-S-TMSI */
+    rrc->fiveG_S_TMSI = UINT64_MAX;
 
     FILE *f = NULL;
     if (uecap_file)
@@ -1036,24 +1038,37 @@ static void rrc_ue_generate_RRCSetupComplete(const NR_UE_RRC_INST_t *rrc, const 
 {
   uint8_t buffer[100];
   const char *nas_msg;
-  int   nas_msg_length;
+  int nas_msg_length;
 
   if (IS_SA_MODE(get_softmodem_params())) {
-    as_nas_info_t initialNasMsg;
-    nr_ue_nas_t *nas = get_ue_nas_info(rrc->ue_id);
-    generateRegistrationRequest(&initialNasMsg, nas);
-    nas_msg = (char *)initialNasMsg.nas_data;
-    nas_msg_length = initialNasMsg.length;
+    if (rrc->nasInitialUEMsg.nas_data) {
+      nas_msg = (char *)rrc->nasInitialUEMsg.nas_data;
+      nas_msg_length = rrc->nasInitialUEMsg.length;
+      LOG_D(NR_RRC, "NAS InitialUEMessage with length %d \n", nas_msg_length);
+    } else {
+      LOG_E(NR_RRC, "Failed to complete RRCSetup. NAS InitialUEMessage message not found. \n");
+      return;
+    }
   } else {
     nas_msg = nr_nas_attach_req_imsi_dummy_NSA_case;
     nas_msg_length = sizeof(nr_nas_attach_req_imsi_dummy_NSA_case);
   }
 
-  int size = do_RRCSetupComplete(buffer, sizeof(buffer), Transaction_id, rrc->selected_plmn_identity, nas_msg_length, nas_msg);
+  /* ng-5G-S-TMSI-Part2: The leftmost 9 bits of 5G-S-TMSI. */
+  if (rrc->fiveG_S_TMSI == UINT64_MAX)
+    LOG_D(NR_RRC, "5G-S-TMSI is not available!\n");
+  int size = do_RRCSetupComplete(buffer,
+                                 sizeof(buffer),
+                                 Transaction_id,
+                                 rrc->selected_plmn_identity,
+                                 rrc->ra_trigger == RRC_CONNECTION_SETUP,
+                                 rrc->fiveG_S_TMSI,
+                                 nas_msg_length,
+                                 nas_msg);
+  free(rrc->nasInitialUEMsg.nas_data);
   LOG_I(NR_RRC, "[UE %ld][RAPROC] Logical Channel UL-DCCH (SRB1), Generating RRCSetupComplete (bytes%d)\n", rrc->ue_id, size);
   int srb_id = 1; // RRC setup complete on SRB1
   LOG_D(NR_RRC, "[RRC_UE %ld] PDCP_DATA_REQ/%d Bytes RRCSetupComplete ---> %d\n", rrc->ue_id, size, srb_id);
-
   nr_pdcp_data_req_srb(rrc->ue_id, srb_id, 0, size, buffer, deliver_pdu_srb_rlc, NULL);
 }
 
@@ -1092,6 +1107,10 @@ static void nr_rrc_process_rrcsetup(NR_UE_RRC_INST_t *rrc,
   // if the RRCSetup is received in response to an RRCResumeRequest, RRCResumeRequest1 or RRCSetupRequest
   // enter RRC_CONNECTED
   rrc->nrRrcState = RRC_STATE_CONNECTED_NR;
+
+  // Indicate to NAS that the RRC connection has been established (5.3.1.3 of 3GPP TS 24.501)
+  MessageDef *msg_p = itti_alloc_new_message(TASK_RRC_NRUE, 0, NR_NAS_CONN_ESTABLISH_IND);
+  itti_send_msg_to_task(TASK_NAS_NRUE, rrc->ue_id, msg_p);
 
   // set the content of RRCSetupComplete message
   // TODO procedues described in 5.3.3.4 seems more complex than what we actualy do
@@ -1987,6 +2006,19 @@ void *rrc_nrue(void *notUsed)
     break;
   }
 
+  case NAS_5GMM_IND: {
+    nas_5gmm_ind_t *req = &NAS_5GMM_IND(msg_p);
+    rrc->fiveG_S_TMSI = req->fiveG_STMSI;
+    break;
+  }
+
+  case NAS_INITIAL_UE_MSG_IND:
+    LOG_I(NR_RRC, "Received InitialUEMessage indication from NAS\n");
+    nas_init_ue_msg_ind_t *ind = &NAS_INITIAL_UE_MSG_IND(msg_p);
+    rrc->nasInitialUEMsg.length = ind->nasMsg.length;
+    rrc->nasInitialUEMsg.nas_data = calloc_or_fail(ind->nasMsg.length, sizeof(*ind->nasMsg.nas_data));
+    memcpy(rrc->nasInitialUEMsg.nas_data, ind->nasMsg.nas_data, rrc->nasInitialUEMsg.length);
+    break;
   default:
     LOG_E(NR_RRC, "[UE %ld] Received unexpected message %s\n", rrc->ue_id, ITTI_MSG_NAME(msg_p));
     break;
@@ -2429,6 +2461,8 @@ void nr_rrc_going_to_IDLE(NR_UE_RRC_INST_t *rrc,
 
   // discard the keys (only kgnb is stored)
   memset(rrc->kgnb, 0, sizeof(rrc->kgnb));
+  rrc->integrityProtAlgorithm = 0;
+  rrc->cipheringAlgorithm = 0;
 
   // release all radio resources, including release of the RLC entity,
   // the MAC configuration and the associated PDCP entity

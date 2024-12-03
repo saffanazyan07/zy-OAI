@@ -41,6 +41,7 @@
 #include "MessageType.h"
 #include "FGMMCapability.h"
 #include "NrUESecurityCapability.h"
+#include "FGCNasMessageContainer.h"
 
 #ifndef REGISTRATION_REQUEST_H_
 #define REGISTRATION_REQUEST_H_
@@ -101,6 +102,26 @@ typedef enum registration_request_iei_tag {
  * Direction: UE to network
  */
 
+typedef struct {
+  uint8_t iei;
+  uint8_t length;
+  uint16_t psi;
+} PDUSessionStatus;
+
+/* 9.11.3.8 of 3GPP TS 24.501 */
+typedef struct {
+  uint8_t iei;
+  uint16_t mcc;
+  uint16_t mnc;
+  uint32_t tac;
+} FGSTrackingAreaIdentity;
+
+typedef struct {
+  uint8_t iei;
+  uint8_t length;
+  uint16_t psi;
+} UplinkDataStatus;
+
 typedef struct registration_request_msg_tag {
   /* Mandatory fields */
   ExtendedProtocolDiscriminator           protocoldiscriminator;
@@ -112,9 +133,12 @@ typedef struct registration_request_msg_tag {
   FGSMobileIdentity                       fgsmobileidentity;
 
   /* Optional fields */
+  FGCNasMessageContainer fgsnasmessagecontainer;
   uint32_t                                presencemask;
   FGMMCapability                          fgmmcapability;
   NrUESecurityCapability                  nruesecuritycapability;
+  PDUSessionStatus pdusessionstatus;
+  UplinkDataStatus ulDataStatus;
 } registration_request_msg;
 
 int decode_registration_request(registration_request_msg *registrationrequest, uint8_t *buffer, uint32_t len);

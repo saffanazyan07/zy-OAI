@@ -203,15 +203,6 @@ typedef struct pdusession_level_qos_parameter_s {
   ngap_allocation_retention_priority_t allocation_retention_priority;
 } pdusession_level_qos_parameter_t;
 
-typedef struct ngap_guami_s {
-  uint16_t mcc;
-  uint16_t mnc;
-  uint8_t  mnc_len;
-  uint8_t  amf_region_id;
-  uint16_t amf_set_id;
-  uint8_t  amf_pointer;
-} ngap_guami_t;
-
 typedef struct fiveg_s_tmsi_s {
   uint16_t amf_set_id;
   uint8_t  amf_pointer;
@@ -237,7 +228,7 @@ typedef enum ngap_ue_identities_presenceMask_e {
 typedef struct ngap_ue_identity_s {
   ngap_ue_identities_presenceMask_t presenceMask;
   fiveg_s_tmsi_t  s_tmsi;
-  ngap_guami_t    guami;
+  nr_guami_t guami;
 } ngap_ue_identity_t;
 
 typedef struct ngap_nas_pdu_s {
@@ -612,7 +603,7 @@ typedef struct ngap_initial_context_setup_req_s {
   ngap_ambr_t ue_ambr;
 
   /* guami */
-  ngap_guami_t guami;
+  nr_guami_t guami;
 
   /* allowed nssai */
   uint8_t nb_allowed_nssais;
@@ -718,7 +709,7 @@ typedef struct ngap_path_switch_req_s {
   /* AMF UE id  */
   uint64_t amf_ue_ngap_id;
 
-  ngap_guami_t ue_guami;
+  nr_guami_t ue_guami;
 
   uint16_t ue_initial_id;
   /* Security algorithms */
