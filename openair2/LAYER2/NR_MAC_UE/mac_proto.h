@@ -291,12 +291,8 @@ void configure_csi_resource_mapping(fapi_nr_dl_config_csirs_pdu_rel15_t *csirs_c
 @param
 @returns void
 */
-void nr_ue_msg3_scheduler(NR_UE_MAC_INST_t *mac,
-                          frame_t current_frame,
-                          sub_frame_t current_slot,
-                          uint8_t Msg3_tda_id);
 
-void nr_ra_contention_resolution_failed(RA_config_t *ra);
+void nr_ra_contention_resolution_failed(NR_UE_MAC_INST_t *mac);
 void nr_ra_succeeded(NR_UE_MAC_INST_t *mac, const uint8_t gNB_index, const frame_t frame, const int slot);
 void nr_ra_backoff_setting(RA_config_t *ra);
 void nr_get_RA_window(NR_UE_MAC_INST_t *mac);

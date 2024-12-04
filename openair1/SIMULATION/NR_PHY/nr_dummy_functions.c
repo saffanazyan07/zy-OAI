@@ -36,7 +36,7 @@ void nr_mac_rrc_sync_ind(const module_id_t module_id,
 
 void nr_mac_rrc_msg3_ind(const module_id_t mod_id, int rnti, int gnb_id) {}
 
-void nr_mac_rrc_ra_ind(const module_id_t mod_id, int frame, bool success) {}
+void nr_mac_rrc_ra_ind(const module_id_t mod_id, bool success) {}
 
 void nr_mac_rrc_inactivity_timer_ind(const module_id_t mod_id) {}
 

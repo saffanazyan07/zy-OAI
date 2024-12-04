@@ -3773,7 +3773,7 @@ void nr_ue_process_mac_pdu(NR_UE_MAC_INST_t *mac, nr_downlink_indication_t *dl_i
             nr_ra_succeeded(mac, gNB_index, frameP, slot);
           } else if (!ra_success) {
             // consider this Contention Resolution not successful and discard the successfully decoded MAC PDU
-            nr_ra_contention_resolution_failed(ra);
+            nr_ra_contention_resolution_failed(mac);
             return;
           }
         }

@@ -870,6 +870,7 @@ bool init_RA(NR_UE_MAC_INST_t *mac, int frame)
   // Random acces procedure initialization
   mac->state = UE_PERFORMING_RA;
   ra->RA_active = true;
+  ra->msg3_C_RNTI = false;
   NR_PRACH_RESOURCES_t *prach_resources = &ra->prach_resources;
   fapi_nr_config_request_t *cfg = &mac->phy_config.config_req;
   // flush MSG3 buffer
@@ -1215,7 +1216,7 @@ void nr_ra_succeeded(NR_UE_MAC_INST_t *mac, const uint8_t gNB_index, const frame
   ra->ra_state = nrRA_SUCCEEDED;
   mac->state = UE_CONNECTED;
   free_and_zero(ra->Msg3_buffer);
-  nr_mac_rrc_ra_ind(mac->ue_id, frame, true);
+  nr_mac_rrc_ra_ind(mac->ue_id, true);
 }
 
 void nr_ra_backoff_setting(RA_config_t *ra)
@@ -1228,8 +1229,10 @@ void nr_ra_backoff_setting(RA_config_t *ra)
   nr_timer_start(&ra->RA_backoff_timer);
 }
 
-void nr_ra_contention_resolution_failed(RA_config_t *ra)
+void nr_ra_contention_resolution_failed(NR_UE_MAC_INST_t *mac)
 {
+  LOG_W(MAC, "[UE %d] Contention resolution failed\n", mac->ue_id);
+  RA_config_t *ra = &mac->ra;
   // discard the TEMPORARY_C-RNTI
   ra->t_crnti = 0;
   // flush MSG3 buffer
@@ -1237,7 +1240,8 @@ void nr_ra_contention_resolution_failed(RA_config_t *ra)
   NR_PRACH_RESOURCES_t *prach_resources = &ra->prach_resources;
   prach_resources->preamble_tx_counter++;
   if (prach_resources->preamble_tx_counter == ra->preambleTransMax + 1) {
-    // TODO indicate a Random Access problem to upper layers
+    // indicate a Random Access problem to upper layers
+    nr_mac_rrc_ra_ind(mac->ue_id, false);
     // TODO handle msgA-TransMax (go back to 4-step if the threshold is reached)
     // starting backoff time
     nr_ra_backoff_setting(ra);
@@ -1255,7 +1259,8 @@ void nr_rar_not_successful(NR_UE_MAC_INST_t *mac)
     // if the Random Access Preamble is transmitted on the SpCell
     // TODO to be verified, this means SA if I'm not mistaken
     if (IS_SA_MODE(get_softmodem_params())) {
-      // TODO indicate a Random Access problem to upper layers
+      // indicate a Random Access problem to upper layers
+      nr_mac_rrc_ra_ind(mac->ue_id, false);
     } else {
       // if the Random Access Preamble is transmitted on an SCell:
       // consider the Random Access procedure unsuccessfully completed.

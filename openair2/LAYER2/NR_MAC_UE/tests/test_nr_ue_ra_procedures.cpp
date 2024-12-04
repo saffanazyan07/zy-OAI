@@ -29,7 +29,7 @@ softmodem_params_t *get_softmodem_params(void)
 {
   return &softmodem_params;
 }
-void nr_mac_rrc_ra_ind(const module_id_t mod_id, int frame, bool success)
+void nr_mac_rrc_ra_ind(const module_id_t mod_id, bool success)
 {
 }
 tbs_size_t mac_rlc_data_req(const module_id_t module_idP,

@@ -1915,6 +1915,16 @@ void nr_rrc_handle_ra_indication(NR_UE_RRC_INST_t *rrc, bool ra_succeeded)
     nr_timer_stop(&timers->T304);
     // TODO handle the rest of procedures as described in 5.3.5.3 for when
     // reconfigurationWithSync is included in spCellConfig
+  } else if (!ra_succeeded) {
+    // upon random access problem indication from MCG MAC
+    // while neither T300, T301, T304, T311 nor T319 are running
+    // consider radio link failure to be detected
+    if (!nr_timer_is_active(&timers->T300)
+        && !nr_timer_is_active(&timers->T301)
+        && !nr_timer_is_active(&timers->T304)
+        && !nr_timer_is_active(&timers->T311)
+        && !nr_timer_is_active(&timers->T319))
+      handle_rlf_detection(rrc);
   }
 }
 
@@ -1980,11 +1990,10 @@ void *rrc_nrue(void *notUsed)
 
   case NR_RRC_MAC_RA_IND:
     LOG_D(NR_RRC,
-	  "[UE %ld] Received %s: frame %d RA %s\n",
-	  rrc->ue_id,
-	  ITTI_MSG_NAME(msg_p),
-	  NR_RRC_MAC_RA_IND(msg_p).frame,
-	  NR_RRC_MAC_RA_IND(msg_p).RA_succeeded ? "successful" : "failed");
+          "[UE %ld] Received %s: RA %s\n",
+          rrc->ue_id,
+          ITTI_MSG_NAME(msg_p),
+          NR_RRC_MAC_RA_IND(msg_p).RA_succeeded ? "successful" : "failed");
     nr_rrc_handle_ra_indication(rrc, NR_RRC_MAC_RA_IND(msg_p).RA_succeeded);
     break;
 

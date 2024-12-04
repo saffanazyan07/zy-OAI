@@ -179,9 +179,11 @@ void reset_mac_inst(NR_UE_MAC_INST_t *nr_mac)
   if (nr_mac->data_inactivity_timer)
     nr_timer_stop(nr_mac->data_inactivity_timer);
   nr_timer_stop(&nr_mac->time_alignment_timer);
-  nr_timer_stop(&nr_mac->ra.contention_resolution_timer);
   nr_timer_stop(&nr_mac->scheduling_info.sr_DelayTimer);
   nr_timer_stop(&nr_mac->scheduling_info.retxBSR_Timer);
+  nr_timer_stop(&nr_mac->ra.response_window_timer);
+  nr_timer_stop(&nr_mac->ra.RA_backoff_timer);
+  nr_timer_stop(&nr_mac->ra.contention_resolution_timer);
   for (int i = 0; i < NR_MAX_SR_ID; i++)
     nr_timer_stop(&nr_mac->scheduling_info.sr_info[i].prohibitTimer);
 
@@ -193,8 +195,10 @@ void reset_mac_inst(NR_UE_MAC_INST_t *nr_mac)
     nr_mac->ul_harq_info[k].last_ndi = -1; // initialize to invalid value
 
   // stop any ongoing RACH procedure
-  if (nr_mac->ra.ra_state < nrRA_SUCCEEDED)
+  if (nr_mac->ra.RA_active) {
     nr_mac->ra.ra_state = nrRA_UE_IDLE;
+    nr_mac->ra.RA_active = false;
+  }
 
   // discard explicitly signalled contention-free Random Access Resources
   // TODO not sure what needs to be done here
