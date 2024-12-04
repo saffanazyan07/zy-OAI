@@ -302,10 +302,6 @@ void nr_ra_failed(NR_UE_MAC_INST_t *mac, uint8_t CC_id, NR_PRACH_RESOURCES_t *pr
 
 void nr_ra_succeeded(NR_UE_MAC_INST_t *mac, const uint8_t gNB_index, const frame_t frame, const int slot);
 
-int16_t nr_get_RA_window_2Step(const NR_MsgA_ConfigCommon_r16_t *msgA_ConfigCommon_r16);
-
-int16_t nr_get_RA_window_4Step(const NR_RACH_ConfigCommon_t *rach_ConfigCommon);
-
 void nr_get_RA_window(NR_UE_MAC_INST_t *mac);
 
 /*@mac pointer to MAC instance
@@ -331,6 +327,8 @@ NR_UE_L2_STATE_t nr_ue_get_sync_state(module_id_t mod_id);
 
 int16_t get_prach_tx_power(NR_UE_MAC_INST_t *mac);
 void schedule_RA_after_SR_failure(NR_UE_MAC_INST_t *mac);
+void nr_rar_not_successful(NR_UE_MAC_INST_t *mac);
+void ra_resource_selection(NR_UE_MAC_INST_t *mac);
 void nr_Msg3_transmitted(NR_UE_MAC_INST_t *mac, uint8_t CC_id, frame_t frameP, slot_t slotP, uint8_t gNB_id);
 void trigger_MAC_UE_RA(NR_UE_MAC_INST_t *mac, dci_pdu_rel15_t *pdcch_order);
 void nr_get_Msg3_MsgA_PUSCH_payload(NR_UE_MAC_INST_t *mac, uint8_t *buf, int TBS_max);

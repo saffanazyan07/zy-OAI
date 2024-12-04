@@ -492,9 +492,7 @@ int get_pusch_tx_power_ue(NR_UE_MAC_INST_t *mac,
     if (current_UL_BWP->msg3_DeltaPreamble) {
       DELTA_PREAMBLE_MSG3 = *current_UL_BWP->msg3_DeltaPreamble;
     }
-    NR_RACH_ConfigCommon_t *nr_rach_ConfigCommon = current_UL_BWP->rach_ConfigCommon;
-    long preambleReceivedTargetPower = nr_rach_ConfigCommon->rach_ConfigGeneric.preambleReceivedTargetPower;
-    int P_O_PRE = preambleReceivedTargetPower;
+    int P_O_PRE = mac->ra.prach_resources.ra_preamble_rx_target_power;
     P_O_NOMINAL_PUSCH = P_O_PRE + DELTA_PREAMBLE_MSG3;
 
     if (has_pusch_power_control_config && pusch_Config->pusch_PowerControl->msg3_Alpha) {

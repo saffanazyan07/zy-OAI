@@ -242,6 +242,15 @@ void update_mac_timers(NR_UE_MAC_INST_t *mac)
       phr_info->phr_reporting |= (1 << phr_cause_periodic_timer);
     }
   }
+  bool ra_window_expired = nr_timer_tick(&mac->ra.response_window_timer);
+  if (ra_window_expired) // consider the Random Access Response reception not successful
+    nr_rar_not_successful(mac);
+  bool ra_backoff_expired = nr_timer_tick(&mac->ra.RA_backoff_timer);
+  if (ra_backoff_expired) {
+    // perform the Random Access Resource selection procedure after the backoff time
+    mac->ra.ra_state = nrRA_GENERATE_PREAMBLE;
+    ra_resource_selection(mac);
+  }
 }
 
 void remove_ul_config_last_item(fapi_nr_ul_config_request_pdu_t *pdu)
@@ -2317,7 +2326,6 @@ static bool is_prach_frame(frame_t frame, prach_occasion_info_t *prach_occasion_
 static void nr_ue_prach_scheduler(NR_UE_MAC_INST_t *mac, frame_t frameP, int slotP)
 {
   RA_config_t *ra = &mac->ra;
-  ra->RA_offset = 2; // to compensate the rx frame offset at the gNB
   if (ra->ra_state != nrRA_GENERATE_PREAMBLE)
     return;
 
@@ -2331,7 +2339,6 @@ static void nr_ue_prach_scheduler(NR_UE_MAC_INST_t *mac, frame_t frameP, int slo
 
   if (is_nr_UL_slot(tdd_config, slotP, mac->frame_type)) {
     if (slotP == prach_occasion_info->slot) {
-      nr_get_RA_window(mac);
       fapi_nr_ul_config_request_pdu_t *pdu = lockGet_ul_config(mac, frameP, slotP, FAPI_NR_UL_CONFIG_TYPE_PRACH);
       if (!pdu) {
         LOG_E(NR_MAC, "Error in PRACH allocation\n");
@@ -2412,6 +2419,7 @@ static void nr_ue_prach_scheduler(NR_UE_MAC_INST_t *mac, frame_t frameP, int slo
 
       if (ra->ra_type == RA_4_STEP) {
         ra->ra_state = nrRA_WAIT_RAR;
+        ra->start_response_window = true;
       } else if (ra->ra_type == RA_2_STEP) {
         NR_RACH_ConfigCommon_t *setup = mac->current_UL_BWP->rach_ConfigCommon;
         NR_MsgA_PUSCH_Resource_r16_t *msgA_PUSCH_Resource =

@@ -391,8 +391,7 @@ static bool is_my_dci(NR_UE_MAC_INST_t *mac, nfapi_nr_dl_dci_pdu_t *received_pdu
      already. Only once the RA procedure succeeds is the CRNTI value updated
      to the TC_RNTI. */
   if (get_softmodem_params()->nsa) {
-    if (received_pdu->RNTI != mac->crnti &&
-        (received_pdu->RNTI != mac->ra.ra_rnti || mac->ra.RA_RAPID_found))
+    if (received_pdu->RNTI != mac->crnti && (received_pdu->RNTI != mac->ra.ra_rnti))
       return false;
   }
   if (IS_SA_MODE(get_softmodem_params())) {

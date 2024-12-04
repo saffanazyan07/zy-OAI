@@ -60,7 +60,24 @@
 // #define DEBUG_MIB
 // #define ENABLE_MAC_PAYLOAD_DEBUG 1
 // #define DEBUG_RAR
-extern uint32_t N_RB_DL;
+
+// table 7.2-1 TS 38.321
+const uint16_t table_7_2_1[16] = {
+    5,    // row index 0
+    10,   // row index 1
+    20,   // row index 2
+    30,   // row index 3
+    40,   // row index 4
+    60,   // row index 5
+    80,   // row index 6
+    120,  // row index 7
+    160,  // row index 8
+    240,  // row index 9
+    320,  // row index 10
+    480,  // row index 11
+    960,  // row index 12
+    1920, // row index 13
+};
 
 /* TS 36.213 Table 9.2.3-3: Mapping of values for one HARQ-ACK bit to sequences */
 static const int sequence_cyclic_shift_1_harq_ack_bit[2]
@@ -699,7 +716,7 @@ static int nr_ue_process_dci_dl_10(NR_UE_MAC_INST_t *mac,
       dlsch_pdu->SubcarrierSpacing = mac->mib->subCarrierSpacingCommon + 2;
   } else {
     dlsch_pdu->SubcarrierSpacing = current_DL_BWP->scs;
-    if (mac->ra.RA_window_cnt >= 0 && rnti_type == TYPE_RA_RNTI_) {
+    if (nr_timer_is_active(&mac->ra.response_window_timer) && rnti_type == TYPE_RA_RNTI_) {
       dl_conf_req->pdu_type = FAPI_NR_DL_CONFIG_TYPE_RA_DLSCH;
     } else {
       dl_conf_req->pdu_type = FAPI_NR_DL_CONFIG_TYPE_DLSCH;
@@ -3466,11 +3483,11 @@ static bool check_ra_contention_resolution(const uint8_t *pdu, const uint8_t *co
 }
 
 static int nr_ue_validate_successrar(uint8_t *pduP,
-                              int32_t pdu_len,
-                              NR_UE_MAC_INST_t *mac,
-                              uint8_t gNB_index,
-                              frame_t frameP,
-                              int slot)
+                                     int32_t pdu_len,
+                                     NR_UE_MAC_INST_t *mac,
+                                     uint8_t gNB_index,
+                                     frame_t frameP,
+                                     int slot)
 {
   // TS 38.321 - Figure 6.1.5a-1: BI MAC subheader
   // TS 38.321 - Figure 6.1.5a-3: SuccessRAR MAC subheader
@@ -3478,6 +3495,7 @@ static int nr_ue_validate_successrar(uint8_t *pduP,
   uint8_t E = 1;
   uint8_t cont_res_id[6];
   RA_config_t *ra = &mac->ra;
+  ra->RA_backoff_limit = 0;
 
   while (n < pdu_len && E) {
     E = (pduP[n] >> 7) & 0x1;
@@ -3485,7 +3503,10 @@ static int nr_ue_validate_successrar(uint8_t *pduP,
     if (SUCESS_RAR_header_T1 == 0) { // T2 exist
       int SUCESS_RAR_header_T2 = (pduP[n] >> 5) & 0x1;
       if (SUCESS_RAR_header_T2 == 0) { // BI
-        ra->RA_backoff_indicator = pduP[n] & 0x0F;
+        int bi_ms = table_7_2_1[(pduP[n] & 0x0F)] * ra->scaling_factor_bi;
+        int mu = mac->current_DL_BWP->scs;
+        int slots_per_ms = nr_slots_per_frame[mu] / 10;
+        ra->RA_backoff_limit = bi_ms * slots_per_ms;
         n++;
       } else { // S
         n++;
@@ -3528,6 +3549,7 @@ static int nr_ue_validate_successrar(uint8_t *pduP,
         bool ra_success = check_ra_contention_resolution(cont_res_id, ra->cont_res_id);
 
         if (ra->RA_active && ra_success) {
+          nr_timer_stop(&ra->response_window_timer);
           nr_ra_succeeded(mac, gNB_index, frameP, slot);
         } else if (!ra_success) {
           // nr_ra_failed(mac, CC_id, &ra->prach_resources, frameP, slot);
@@ -3893,6 +3915,115 @@ int nr_write_ce_ulsch_pdu(uint8_t *mac_ce,
   return mac_ce - pdu;
 }
 
+static void handle_rar_reception(NR_UE_MAC_INST_t *mac, nr_downlink_indication_t *dlinfo, NR_MAC_RAR *rar, frame_t frame, int slot)
+{
+  RAR_grant_t rar_grant;
+  RA_config_t *ra = &mac->ra;
+#ifdef DEBUG_RAR
+  // CSI
+  unsigned char csi_req = (unsigned char)(rar->UL_GRANT_4 & 0x01);
+#endif
+
+  // TPC
+  unsigned char tpc_command = (unsigned char)((rar->UL_GRANT_4 >> 1) & 0x07);
+  ra->Msg3_TPC = (tpc_command << 1) - 6;
+
+  // MCS
+  rar_grant.mcs = (unsigned char)(rar->UL_GRANT_4 >> 4);
+  // time alloc
+  rar_grant.Msg3_t_alloc = (unsigned char)(rar->UL_GRANT_3 & 0x0f);
+  // frequency alloc
+  rar_grant.Msg3_f_alloc = (uint16_t)((rar->UL_GRANT_3 >> 4) | (rar->UL_GRANT_2 << 4) | ((rar->UL_GRANT_1 & 0x03) << 12));
+  // frequency hopping
+  rar_grant.freq_hopping = (unsigned char)(rar->UL_GRANT_1 >> 2);
+
+  // Schedule Msg3
+  const NR_UE_UL_BWP_t *current_UL_BWP = mac->current_UL_BWP;
+  const NR_UE_DL_BWP_t *current_DL_BWP = mac->current_DL_BWP;
+  const NR_BWP_PDCCH_t *pdcch_config = &mac->config_BWP_PDCCH[current_DL_BWP->bwp_id];
+  NR_tda_info_t tda_info = get_ul_tda_info(current_UL_BWP,
+                                           *pdcch_config->ra_SS->controlResourceSetId,
+                                           pdcch_config->ra_SS->searchSpaceType->present,
+                                           TYPE_RA_RNTI_,
+                                           rar_grant.Msg3_t_alloc);
+  if (!tda_info.valid_tda || tda_info.nrOfSymbols == 0) {
+    LOG_E(MAC, "Cannot schedule Msg3. Something wrong in TDA information\n");
+    return;
+  }
+  frame_t frame_tx = 0;
+  int slot_tx = 0;
+  const int ntn_ue_koffset = GET_NTN_UE_K_OFFSET(&mac->ntn_ta, mac->current_UL_BWP->scs);
+  int ret = nr_ue_pusch_scheduler(mac, 1, frame, slot, &frame_tx, &slot_tx, tda_info.k2 + ntn_ue_koffset);
+
+  // TA command
+  // if the timeAlignmentTimer associated with this TAG is not running
+  if (!nr_timer_is_active(&mac->time_alignment_timer)) {
+    const int ta = rar->TA2 + (rar->TA1 << 5);
+    set_time_alignment(mac, ta, rar_ta, frame_tx, slot_tx);
+    LOG_W(MAC, "received TA command %d\n", 31 + ta);
+  }
+  // else ignore the received Timing Advance Command
+
+#ifdef DEBUG_RAR
+  LOG_I(NR_MAC, "rarh->E = 0x%x\n", rarh->E);
+  LOG_I(NR_MAC, "rarh->T = 0x%x\n", rarh->T);
+  LOG_I(NR_MAC, "rarh->RAPID = 0x%x (%i)\n", rarh->RAPID, rarh->RAPID);
+
+  LOG_I(NR_MAC, "rar->R = 0x%x\n", rar->R);
+  LOG_I(NR_MAC, "rar->TA1 = 0x%x\n", rar->TA1);
+
+  LOG_I(NR_MAC, "rar->TA2 = 0x%x\n", rar->TA2);
+  LOG_I(NR_MAC, "rar->UL_GRANT_1 = 0x%x\n", rar->UL_GRANT_1);
+
+  LOG_I(NR_MAC, "rar->UL_GRANT_2 = 0x%x\n", rar->UL_GRANT_2);
+  LOG_I(NR_MAC, "rar->UL_GRANT_3 = 0x%x\n", rar->UL_GRANT_3);
+  LOG_I(NR_MAC, "rar->UL_GRANT_4 = 0x%x\n", rar->UL_GRANT_4);
+
+  LOG_I(NR_MAC, "rar->TCRNTI_1 = 0x%x\n", rar->TCRNTI_1);
+  LOG_I(NR_MAC, "rar->TCRNTI_2 = 0x%x\n", rar->TCRNTI_2);
+
+  LOG_I(NR_MAC,
+        "[%d.%d]: [UE %d] Received RAR with t_alloc %d f_alloc %d ta_command %d mcs %d freq_hopping %d tpc_command %d\n",
+        frame,
+        slot,
+        mac->ue_id,
+        rar_grant.Msg3_t_alloc,
+        rar_grant.Msg3_f_alloc,
+        ta_command,
+        rar_grant.mcs,
+        rar_grant.freq_hopping,
+        tpc_command);
+#endif
+
+  if (ret != -1) {
+    uint16_t rnti = mac->crnti;
+    // Upon successful reception, set the T-CRNTI to the RAR value
+    // if the RA preamble is selected among the contention-based RA Preambles
+    if (!ra->cfra) {
+      ra->t_crnti = rar->TCRNTI_2 + (rar->TCRNTI_1 << 8);
+      rnti = ra->t_crnti;
+      if (!ra->msg3_C_RNTI)
+        nr_mac_rrc_msg3_ind(mac->ue_id, rnti, dlinfo->gNB_index);
+    }
+    fapi_nr_ul_config_request_pdu_t *pdu = lockGet_ul_config(mac, frame_tx, slot_tx, FAPI_NR_UL_CONFIG_TYPE_PUSCH);
+    if (!pdu)
+      return;
+    // Config Msg3 PDU
+    int ret = nr_config_pusch_pdu(mac,
+                                  &tda_info,
+                                  &pdu->pusch_config_pdu,
+                                  NULL,
+                                  NULL,
+                                  &rar_grant,
+                                  rnti,
+                                  NR_SearchSpace__searchSpaceType_PR_common,
+                                  NR_DCI_NONE);
+    if (ret != 0)
+      remove_ul_config_last_item(pdu);
+    release_ul_config(pdu, false);
+  }
+}
+
 /////////////////////////////////////
 //    Random Access Response PDU   //
 //         TS 38.213 ch 8.2        //
@@ -3937,13 +4068,10 @@ static void nr_ue_process_rar(NR_UE_MAC_INST_t *mac, nr_downlink_indication_t *d
   }
 
   RA_config_t *ra = &mac->ra;
+  ra->t_crnti = 0;
   uint8_t n_subPDUs  = 0;  // number of RAR payloads
   uint8_t n_subheaders = 0;  // number of MAC RAR subheaders
   uint8_t *dlsch_buffer = dl_info->rx_ind->rx_indication_body[pdu_id].pdsch_pdu.pdu;
-  uint8_t is_Msg3 = 1;
-  frame_t frame_tx = 0;
-  int slot_tx = 0;
-  int ret = 0;
   NR_RA_HEADER_RAPID *rarh = (NR_RA_HEADER_RAPID *) dlsch_buffer; // RAR subheader pointer
   NR_MAC_RAR *rar = (NR_MAC_RAR *) (dlsch_buffer + 1);   // RAR subPDU pointer
   uint8_t preamble_index = ra->ra_PreambleIndex;
@@ -3952,7 +4080,8 @@ static void nr_ue_process_rar(NR_UE_MAC_INST_t *mac, nr_downlink_indication_t *d
   T(T_NRUE_MAC_DL_RAR_PDU_WITH_DATA, T_INT(rnti), T_INT(frame), T_INT(slot),
     T_BUFFER(dlsch_buffer, dl_info->rx_ind->rx_indication_body[pdu_id].pdsch_pdu.pdu_length));
 
-  LOG_D(NR_MAC, "[%d.%d]: [UE %d][RAPROC] invoking MAC for received RAR (current preamble %d)\n", frame, slot, mac->ue_id, preamble_index);
+  ra->RA_backoff_limit = 0;
+  LOG_D(NR_MAC, "[%d.%d]: [UE %d][RAPROC] MAC received RAR (current preamble %d)\n", frame, slot, mac->ue_id, preamble_index);
 
   while (1) {
     n_subheaders++;
@@ -3960,10 +4089,12 @@ static void nr_ue_process_rar(NR_UE_MAC_INST_t *mac, nr_downlink_indication_t *d
       n_subPDUs++;
       LOG_I(NR_MAC, "[UE %d][RAPROC][RA-RNTI %04x] Got RAPID RAR subPDU\n", mac->ue_id, rnti);
     } else {
-      ra->RA_backoff_indicator = table_7_2_1[((NR_RA_HEADER_BI *)rarh)->BI];
-      ra->RA_BI_found = 1;
-      LOG_I(NR_MAC, "[UE %d][RAPROC][RA-RNTI %04x] Got BI RAR subPDU %d ms\n", mac->ue_id, ra->RA_backoff_indicator, rnti);
-      if ( ((NR_RA_HEADER_BI *)rarh)->E == 1) {
+      int bi_ms = table_7_2_1[((NR_RA_HEADER_BI *)rarh)->BI] * ra->scaling_factor_bi;
+      int mu = mac->current_DL_BWP->scs;
+      int slots_per_ms = nr_slots_per_frame[mu] / 10;
+      ra->RA_backoff_limit = bi_ms * slots_per_ms;
+      LOG_I(NR_MAC, "[UE %d][RAPROC][RA-RNTI %04x] Got BI RAR subPDU %d ms\n", mac->ue_id, rnti, bi_ms);
+      if (((NR_RA_HEADER_BI *)rarh)->E == 1) {
         rarh += sizeof(NR_RA_HEADER_BI);
         continue;
       } else {
@@ -3971,9 +4102,15 @@ static void nr_ue_process_rar(NR_UE_MAC_INST_t *mac, nr_downlink_indication_t *d
       }
     }
     if (rarh->RAPID == preamble_index) {
+      // The MAC entity may stop ra-ResponseWindow (and hence monitoring for Random Access Response(s)) after
+      // successful reception of a Random Access Response containing Random Access Preamble identifiers
+      // that matches the transmitted PREAMBLE_INDEX.
+      nr_timer_stop(&ra->response_window_timer);
       LOG_A(NR_MAC, "[UE %d][RAPROC][%d.%d] Found RAR with the intended RAPID %d\n", mac->ue_id, frame, slot, rarh->RAPID);
       rar = (NR_MAC_RAR *) (dlsch_buffer + n_subheaders + (n_subPDUs - 1) * sizeof(NR_MAC_RAR));
-      ra->RA_RAPID_found = 1;
+      handle_rar_reception(mac, dl_info, rar, frame, slot);
+      if (ra->cfra)
+        nr_ra_succeeded(mac, dl_info->gNB_index, frame, slot);
       if (get_softmodem_params()->emulate_l1) {
         /* When we are emulating L1 with multiple UEs, the rx_indication will have
            multiple RAR PDUs. The code would previously handle each of these PDUs,
@@ -4023,142 +4160,6 @@ static void nr_ue_process_rar(NR_UE_MAC_INST_t *mac, nr_downlink_indication_t *d
         rarh->RAPID,
         preamble_index);
 #endif
-
-  if (ra->RA_RAPID_found) {
-    RAR_grant_t rar_grant;
-
-#ifdef DEBUG_RAR
-    // CSI
-    unsigned char csi_req = (unsigned char) (rar->UL_GRANT_4 & 0x01);
-#endif
-
-    // TPC
-    unsigned char tpc_command = (unsigned char) ((rar->UL_GRANT_4 >> 1) & 0x07);
-    switch (tpc_command){
-      case 0:
-        ra->Msg3_TPC = -6;
-        break;
-      case 1:
-        ra->Msg3_TPC = -4;
-        break;
-      case 2:
-        ra->Msg3_TPC = -2;
-        break;
-      case 3:
-        ra->Msg3_TPC = 0;
-        break;
-      case 4:
-        ra->Msg3_TPC = 2;
-        break;
-      case 5:
-        ra->Msg3_TPC = 4;
-        break;
-      case 6:
-        ra->Msg3_TPC = 6;
-        break;
-      case 7:
-        ra->Msg3_TPC = 8;
-        break;
-      default:
-        LOG_E(NR_PHY, "RAR impossible msg3 TPC\n");
-    }
-    // MCS
-    rar_grant.mcs = (unsigned char) (rar->UL_GRANT_4 >> 4);
-    // time alloc
-    rar_grant.Msg3_t_alloc = (unsigned char) (rar->UL_GRANT_3 & 0x0f);
-    // frequency alloc
-    rar_grant.Msg3_f_alloc = (uint16_t) ((rar->UL_GRANT_3 >> 4) | (rar->UL_GRANT_2 << 4) | ((rar->UL_GRANT_1 & 0x03) << 12));
-    // frequency hopping
-    rar_grant.freq_hopping = (unsigned char) (rar->UL_GRANT_1 >> 2);
-
-    // Schedule Msg3
-    const NR_UE_UL_BWP_t *current_UL_BWP = mac->current_UL_BWP;
-    const NR_UE_DL_BWP_t *current_DL_BWP = mac->current_DL_BWP;
-    const NR_BWP_PDCCH_t *pdcch_config = &mac->config_BWP_PDCCH[current_DL_BWP->bwp_id];
-    NR_tda_info_t tda_info = get_ul_tda_info(current_UL_BWP,
-                                             *pdcch_config->ra_SS->controlResourceSetId,
-                                             pdcch_config->ra_SS->searchSpaceType->present,
-                                             TYPE_RA_RNTI_,
-                                             rar_grant.Msg3_t_alloc);
-    if (!tda_info.valid_tda || tda_info.nrOfSymbols == 0) {
-      LOG_E(MAC, "Cannot schedule Msg3. Something wrong in TDA information\n");
-      return;
-    }
-    const int ntn_ue_koffset = GET_NTN_UE_K_OFFSET(&mac->ntn_ta, mac->current_UL_BWP->scs);
-    ret = nr_ue_pusch_scheduler(mac, is_Msg3, frame, slot, &frame_tx, &slot_tx, tda_info.k2 + ntn_ue_koffset);
-
-    // TA command
-    // if the timeAlignmentTimer associated with this TAG is not running
-    if (!nr_timer_is_active(&mac->time_alignment_timer)) {
-      const int ta = rar->TA2 + (rar->TA1 << 5);
-      set_time_alignment(mac, ta, rar_ta, frame_tx, slot_tx);
-      LOG_W(MAC, "received TA command %d\n", 31 + ta);
-    }
-    // else ignore the received Timing Advance Command
-
-#ifdef DEBUG_RAR
-    LOG_I(NR_MAC, "rarh->E = 0x%x\n", rarh->E);
-    LOG_I(NR_MAC, "rarh->T = 0x%x\n", rarh->T);
-    LOG_I(NR_MAC, "rarh->RAPID = 0x%x (%i)\n", rarh->RAPID, rarh->RAPID);
-
-    LOG_I(NR_MAC, "rar->R = 0x%x\n", rar->R);
-    LOG_I(NR_MAC, "rar->TA1 = 0x%x\n", rar->TA1);
-
-    LOG_I(NR_MAC, "rar->TA2 = 0x%x\n", rar->TA2);
-    LOG_I(NR_MAC, "rar->UL_GRANT_1 = 0x%x\n", rar->UL_GRANT_1);
-
-    LOG_I(NR_MAC, "rar->UL_GRANT_2 = 0x%x\n", rar->UL_GRANT_2);
-    LOG_I(NR_MAC, "rar->UL_GRANT_3 = 0x%x\n", rar->UL_GRANT_3);
-    LOG_I(NR_MAC, "rar->UL_GRANT_4 = 0x%x\n", rar->UL_GRANT_4);
-
-    LOG_I(NR_MAC, "rar->TCRNTI_1 = 0x%x\n", rar->TCRNTI_1);
-    LOG_I(NR_MAC, "rar->TCRNTI_2 = 0x%x\n", rar->TCRNTI_2);
-
-    LOG_I(NR_MAC, "[%d.%d]: [UE %d] Received RAR with t_alloc %d f_alloc %d ta_command %d mcs %d freq_hopping %d tpc_command %d\n",
-          frame,
-          slot,
-          mac->ue_id,
-          rar_grant.Msg3_t_alloc,
-          rar_grant.Msg3_f_alloc,
-          ta_command,
-          rar_grant.mcs,
-          rar_grant.freq_hopping,
-          tpc_command);
-#endif
-
-    if (ret != -1) {
-      uint16_t rnti = mac->crnti;
-      // Upon successful reception, set the T-CRNTI to the RAR value if the RA preamble is selected among the contention-based RA Preambles
-      if (!ra->cfra) {
-        ra->t_crnti = rar->TCRNTI_2 + (rar->TCRNTI_1 << 8);
-        rnti = ra->t_crnti;
-        if (!ra->msg3_C_RNTI)
-          nr_mac_rrc_msg3_ind(mac->ue_id, rnti, dl_info->gNB_index);
-      }
-      fapi_nr_ul_config_request_pdu_t *pdu = lockGet_ul_config(mac, frame_tx, slot_tx, FAPI_NR_UL_CONFIG_TYPE_PUSCH);
-      if (!pdu)
-        return;
-      // Config Msg3 PDU
-      int ret = nr_config_pusch_pdu(mac,
-                                    &tda_info,
-                                    &pdu->pusch_config_pdu,
-                                    NULL,
-                                    NULL,
-                                    &rar_grant,
-                                    rnti,
-                                    NR_SearchSpace__searchSpaceType_PR_common,
-                                    NR_DCI_NONE);
-      if (ret != 0)
-        remove_ul_config_last_item(pdu);
-      release_ul_config(pdu, false);
-    }
-
-  } else {
-    ra->t_crnti = 0;
-    // TODO if the Random Access Preamble was not selected by the MAC entity
-    //      among the contention-based Random Access Preamble
-    //      apply the Timing Advance Command and start or restart the timeAlignmentTimer
-  }
   return;
 }
 

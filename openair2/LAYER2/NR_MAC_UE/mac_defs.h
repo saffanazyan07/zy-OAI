@@ -284,8 +284,6 @@ typedef struct {
   int ra_preamble_rx_target_power;
   /// RA Preamble Power Ramping Step in dB
   uint32_t preamble_power_ramping_step;
-  uint8_t preamble_backoff;
-  uint8_t scaling_factor_bi;
   /// UE configured maximum output power
   int Pc_max;
 } NR_PRACH_RESOURCES_t;
@@ -311,8 +309,6 @@ typedef struct {
   bool cfra;
   /// RA type
   nr_ra_type_t ra_type;
-  /// RA rx frame offset: compensate RA rx offset introduced by OAI gNB.
-  uint8_t RA_offset;
   /// MsgB SuccessRAR MAC subheader
   int8_t MsgB_R;
   int8_t MsgB_CH_ACESS_CPEXT;
@@ -334,18 +330,15 @@ typedef struct {
   int restricted_set_config;
   // selected SSB for RACH (not the SSB-Index but the cumulative index, excluding not trasmitted SSBs)
   int ra_ssb;
-  /// Random-access window counter
-  int16_t RA_window_cnt;
-  /// Flag to monitor if matching RAPID was received in RAR
-  uint8_t RA_RAPID_found;
-  /// Flag to monitor if BI was received in RAR
-  uint8_t RA_BI_found;
-  /// Random-access backoff counter
-  int16_t RA_backoff_indicator;
+  /// Random-access response window timer
+  NR_timer_t response_window_timer;
+  bool start_response_window;
+  /// Random-access backoff timer
+  NR_timer_t RA_backoff_timer;
+  int RA_backoff_limit;
+  uint8_t scaling_factor_bi;
   /// Flag to indicate whether preambles Group A is selected
   bool RA_GroupA;
-  /// RA backoff counter
-  int16_t RA_backoff_cnt;
   /// RA max number of preamble transmissions
   int preambleTransMax;
   /// Received TPC command (in dB) from RAR

@@ -443,7 +443,7 @@ static void select_prach_occasion(RA_config_t *ra,
     seed = 1;
   } else {
     // & to truncate the int64_t and keep only the LSB bits, up to sizeof(int)
-    seed = (unsigned int) (rdtsc_oai() & ~0);
+    seed = (unsigned int)(rdtsc_oai() & ~0);
   }
 
   int num_ros_per_ssb = 0;
@@ -622,13 +622,196 @@ static void ra_preamble_msga_transmission(RA_config_t *ra, int scs)
 }
 
 // 38.321 Section 5.1.2 Random Access Resource selection
-static void ra_resource_selection(NR_UE_MAC_INST_t *mac)
+void ra_resource_selection(NR_UE_MAC_INST_t *mac)
 {
   configure_ra_preamble(mac);
   const NR_UE_UL_BWP_t *current_UL_BWP = mac->current_UL_BWP;
   int scs = nr_get_prach_mu(current_UL_BWP->msgA_ConfigCommon_r16, current_UL_BWP->rach_ConfigCommon);
   configure_prach_occasions(mac, scs);
   ra_preamble_msga_transmission(&mac->ra, scs);
+}
+
+static int nr_get_RA_window_2Step_v17(long msgB_ResponseWindow)
+{
+  switch (msgB_ResponseWindow) {
+    case NR_RACH_ConfigGenericTwoStepRA_r16__ext1__msgB_ResponseWindow_v1700_sl240:
+      return 240;
+      break;
+    case NR_RACH_ConfigGenericTwoStepRA_r16__ext1__msgB_ResponseWindow_v1700_sl640:
+      return 640;
+      break;
+    case NR_RACH_ConfigGenericTwoStepRA_r16__ext1__msgB_ResponseWindow_v1700_sl960:
+      return 960;
+      break;
+    case NR_RACH_ConfigGenericTwoStepRA_r16__ext1__msgB_ResponseWindow_v1700_sl1280:
+      return 1280;
+      break;
+    case NR_RACH_ConfigGenericTwoStepRA_r16__ext1__msgB_ResponseWindow_v1700_sl1920:
+      return 1920;
+      break;
+    case NR_RACH_ConfigGenericTwoStepRA_r16__ext1__msgB_ResponseWindow_v1700_sl2560:
+      return 2590;
+    default:
+      AssertFatal(false, "illegal msgB_responseWindow value %ld\n", msgB_ResponseWindow);
+      break;
+  }
+  return 0;
+}
+
+static int nr_get_RA_window_2Step_v16(long msgB_ResponseWindow)
+{
+  switch (msgB_ResponseWindow) {
+    case NR_RACH_ConfigGenericTwoStepRA_r16__msgB_ResponseWindow_r16_sl1:
+      return 1;
+      break;
+    case NR_RACH_ConfigGenericTwoStepRA_r16__msgB_ResponseWindow_r16_sl2:
+      return 2;
+      break;
+    case NR_RACH_ConfigGenericTwoStepRA_r16__msgB_ResponseWindow_r16_sl4:
+      return 4;
+      break;
+    case NR_RACH_ConfigGenericTwoStepRA_r16__msgB_ResponseWindow_r16_sl8:
+      return 8;
+      break;
+    case NR_RACH_ConfigGenericTwoStepRA_r16__msgB_ResponseWindow_r16_sl10:
+      return 10;
+      break;
+    case NR_RACH_ConfigGenericTwoStepRA_r16__msgB_ResponseWindow_r16_sl20:
+      return 20;
+      break;
+    case NR_RACH_ConfigGenericTwoStepRA_r16__msgB_ResponseWindow_r16_sl40:
+      return 40;
+      break;
+    case NR_RACH_ConfigGenericTwoStepRA_r16__msgB_ResponseWindow_r16_sl80:
+      return 80;
+      break;
+    case NR_RACH_ConfigGenericTwoStepRA_r16__msgB_ResponseWindow_r16_sl160:
+      return 160;
+      break;
+    case NR_RACH_ConfigGenericTwoStepRA_r16__msgB_ResponseWindow_r16_sl320:
+      return 360;
+      break;
+    default:
+      AssertFatal(false, "illegal msgB_responseWindow value %ld\n", msgB_ResponseWindow);
+      break;
+  }
+  return 0;
+}
+
+static int nr_get_RA_window_4Step_v16(long ra_ResponseWindow)
+{
+  switch (ra_ResponseWindow) {
+    case NR_RACH_ConfigGeneric__ext1__ra_ResponseWindow_v1610_sl60:
+      return 60;
+    case NR_RACH_ConfigGeneric__ext1__ra_ResponseWindow_v1610_sl160:
+      return 160;
+    default:
+      AssertFatal(false, "illegal ra_ResponseWindow value %ld\n", ra_ResponseWindow);
+  }
+  return 0;
+}
+
+static int nr_get_RA_window_4Step_v17(long ra_ResponseWindow)
+{
+  switch (ra_ResponseWindow) {
+    case NR_RACH_ConfigGeneric__ext2__ra_ResponseWindow_v1700_sl240:
+      return 240;
+    case NR_RACH_ConfigGeneric__ext2__ra_ResponseWindow_v1700_sl320:
+      return 320;
+    case NR_RACH_ConfigGeneric__ext2__ra_ResponseWindow_v1700_sl640:
+      return 640;
+    case NR_RACH_ConfigGeneric__ext2__ra_ResponseWindow_v1700_sl960:
+      return 960;
+    case NR_RACH_ConfigGeneric__ext2__ra_ResponseWindow_v1700_sl1280:
+      return 1280;
+    case NR_RACH_ConfigGeneric__ext2__ra_ResponseWindow_v1700_sl1920:
+      return 1920;
+    case NR_RACH_ConfigGeneric__ext2__ra_ResponseWindow_v1700_sl2560:
+      return 2590;
+    default:
+      AssertFatal(false, "illegal msgB_responseWindow value %ld\n", ra_ResponseWindow);
+  }
+  return 0;
+}
+
+static int nr_get_RA_window_4Step(long ra_ResponseWindow)
+{
+  switch (ra_ResponseWindow) {
+    case NR_RACH_ConfigGeneric__ra_ResponseWindow_sl1:
+      return 1;
+      break;
+    case NR_RACH_ConfigGeneric__ra_ResponseWindow_sl2:
+      return 2;
+      break;
+    case NR_RACH_ConfigGeneric__ra_ResponseWindow_sl4:
+      return 4;
+      break;
+    case NR_RACH_ConfigGeneric__ra_ResponseWindow_sl8:
+      return 8;
+      break;
+    case NR_RACH_ConfigGeneric__ra_ResponseWindow_sl10:
+      return 10;
+      break;
+    case NR_RACH_ConfigGeneric__ra_ResponseWindow_sl20:
+      return 20;
+      break;
+    case NR_RACH_ConfigGeneric__ra_ResponseWindow_sl40:
+      return 40;
+      break;
+    case NR_RACH_ConfigGeneric__ra_ResponseWindow_sl80:
+      return 80;
+      break;
+    default:
+      AssertFatal(false, "illegal ra_ResponseWindow value %ld\n", ra_ResponseWindow);
+      break;
+  }
+  return 0;
+}
+
+static void setup_ra_response_window(RA_config_t *ra,
+                                     int mu,
+                                     NR_NTN_Config_r17_t *ntn_Config_r17,
+                                     NR_RACH_ConfigGeneric_t *configGeneric,
+                                     NR_RACH_ConfigGenericTwoStepRA_r16_t *twostep,
+                                     ntn_timing_advance_componets_t *ntn_ta)
+{
+  int respwind_value = 0;
+  if (ra->ra_type == RA_2_STEP) {
+    long *msgB_ResponseWindow = twostep->msgB_ResponseWindow_r16;
+    if (msgB_ResponseWindow)
+      respwind_value = nr_get_RA_window_2Step_v16(*msgB_ResponseWindow);
+    if (twostep->ext1 && twostep->ext1->msgB_ResponseWindow_v1700) {
+      AssertFatal(msgB_ResponseWindow == NULL,
+                  "The network does not configure msgB-ResponseWindow-r16 simultaneously with msgB-ResponseWindow-v1700\n");
+      msgB_ResponseWindow = twostep->ext1->msgB_ResponseWindow_v1700;
+      if (msgB_ResponseWindow)
+        respwind_value = nr_get_RA_window_2Step_v17(*msgB_ResponseWindow);
+    }
+    // The network configures a value lower than or equal to 40ms
+    int slots_40ms = 4 * nr_slots_per_frame[mu];
+    AssertFatal(respwind_value != 0 && respwind_value <= slots_40ms, "Invalid MSGB response window value\n");
+  } else {
+    AssertFatal(ra->ra_type == RA_4_STEP, "Invalid RA type\n");
+    long *response_window = NULL;
+    if (configGeneric->ext1 && configGeneric->ext1->ra_ResponseWindow_v1610)
+      respwind_value = nr_get_RA_window_4Step_v16(*configGeneric->ext1->ra_ResponseWindow_v1610);
+    if (configGeneric->ext2 && configGeneric->ext2->ra_ResponseWindow_v1700) {
+      AssertFatal(response_window == NULL, "ra_ResponseWindow_v1610 and ra_ResponseWindow_v1700 are mutually exclusive\n");
+      respwind_value = nr_get_RA_window_4Step_v17(*configGeneric->ext2->ra_ResponseWindow_v1700);
+    }
+    if (!response_window)
+      respwind_value = nr_get_RA_window_4Step(configGeneric->ra_ResponseWindow);
+    // The network configures a value lower than or equal to 10ms
+    AssertFatal(respwind_value != 0 && respwind_value <= nr_slots_per_frame[mu], "Invalid RAR response window value\n");
+  }
+
+  int ta_Common_slots = 0;
+  if (ntn_Config_r17) {
+    const double ta_Common_ms = GET_COMPLETE_TIME_ADVANCE_MS(ntn_ta);
+    ta_Common_slots = (int)ceil(ta_Common_ms * nr_slots_per_frame[mu] / 10);
+  }
+
+  nr_timer_setup(&ra->response_window_timer, respwind_value + ta_Common_slots, 1);
 }
 
 // Random Access procedure initialization as per 5.1.1 and initialization of variables specific
@@ -695,8 +878,6 @@ bool init_RA(NR_UE_MAC_INST_t *mac, int frame)
   prach_resources->preamble_tx_counter = 1;
   // set the PREAMBLE_POWER_RAMPING_COUNTER to 1
   prach_resources->preamble_power_ramping_cnt = 1;
-  // set the PREAMBLE_BACKOFF to 0 ms TODO to be set as a timer?
-  prach_resources->preamble_backoff = 0;
   // set POWER_OFFSET_2STEP_RA to 0 dB
   prach_resources->power_offset_2step = 0;
 
@@ -806,7 +987,7 @@ bool init_RA(NR_UE_MAC_INST_t *mac, int frame)
   else
     prach_resources->preamble_power_ramping_step = rach_ConfigGeneric->powerRampingStep << 1;
 
-  prach_resources->scaling_factor_bi = 1;
+  ra->scaling_factor_bi = 1;
 
   if (ra->ra_type == RA_2_STEP && twostep_generic && twostep_generic->msgA_PreambleReceivedTargetPower_r16)
     ra->preambleReceivedTargetPower_config = *twostep_generic->msgA_PreambleReceivedTargetPower_r16;
@@ -843,9 +1024,6 @@ bool init_RA(NR_UE_MAC_INST_t *mac, int frame)
   else
     ra->msg3_deltaPreamble = mac->current_UL_BWP->msg3_DeltaPreamble ? *mac->current_UL_BWP->msg3_DeltaPreamble << 1 : 0;
 
-  ra->RA_RAPID_found = 0;
-  ra->RA_backoff_cnt = 0;
-  ra->RA_window_cnt = -1;
   ra->new_ssb = false;
 
   if (ra->ra_type == RA_2_STEP && twostep_generic && twostep_generic->msgA_PRACH_ConfigurationIndex_r16)
@@ -862,15 +1040,14 @@ bool init_RA(NR_UE_MAC_INST_t *mac, int frame)
   else
     ra->num_fd_occasions = 1 << rach_ConfigGeneric->msg1_FDM;
 
+  setup_ra_response_window(ra,
+                           mac->current_DL_BWP->scs,
+                           mac->sc_info.ntn_Config_r17,
+                           rach_ConfigGeneric,
+                           twostep_generic,
+                           &mac->ntn_ta);
+  ra->start_response_window = false;
   return true;
-}
-
-static void nr_get_prach_resources(NR_UE_MAC_INST_t *mac, NR_PRACH_RESOURCES_t *prach_resources)
-{
-  int scs = nr_get_prach_mu(mac->current_UL_BWP->msgA_ConfigCommon_r16, mac->current_UL_BWP->rach_ConfigCommon);
-  if (prach_resources->preamble_tx_counter > 1)
-    prach_resources->preamble_power_ramping_cnt++;
-  prach_resources->ra_preamble_rx_target_power = get_ra_preamble_rx_target_power(&mac->ra, scs);
 }
 
 void nr_Msg3_transmitted(NR_UE_MAC_INST_t *mac, uint8_t CC_id, frame_t frameP, slot_t slotP, uint8_t gNB_id)
@@ -992,152 +1169,21 @@ void nr_ue_manage_ra_procedure(NR_UE_MAC_INST_t *mac, int CC_id, frame_t frame, 
 
   LOG_D(NR_MAC, "[UE %d][%d.%d]: ra_state %d, RA_active %d\n", mac->ue_id, frame, nr_slot_tx, ra->ra_state, ra->RA_active);
 
-  if (ra->ra_state < nrRA_SUCCEEDED) {
-    if (ra->RA_window_cnt != -1) { // RACH is active
-
-      LOG_D(MAC, "[%d.%d] RA is active: RA window count %d, RA backoff count %d\n", frame, nr_slot_tx, ra->RA_window_cnt, ra->RA_backoff_cnt);
-
-      if (ra->RA_BI_found){
-        prach_resources->preamble_backoff = prach_resources->scaling_factor_bi * ra->RA_backoff_indicator;
-      } else {
-        prach_resources->preamble_backoff = 0;
-      }
-
-      if (ra->RA_window_cnt >= 0 && ra->RA_RAPID_found == 1) {
-
-        if(ra->cfra) {
-          // Reset RA_active flag: it disables Msg3 retransmission (8.3 of TS 38.213)
-          nr_ra_succeeded(mac, gNB_id, frame, nr_slot_tx);
-        }
-
-      } else if (ra->RA_window_cnt == 0 && !ra->RA_RAPID_found && ra->ra_state != nrRA_WAIT_MSGB) {
-        LOG_W(MAC, "[UE %d][%d:%d] RAR reception failed \n", mac->ue_id, frame, nr_slot_tx);
-
-        nr_ra_failed(mac, CC_id, prach_resources, frame, nr_slot_tx);
-
-      } else if (ra->RA_window_cnt > 0) {
-
-        LOG_D(MAC, "[UE %d][%d.%d]: RAR not received yet (RA window count %d) \n", mac->ue_id, frame, nr_slot_tx, ra->RA_window_cnt);
-
-        // Fill in preamble and PRACH resources
-        ra->RA_window_cnt--;
-        if (ra->ra_state == nrRA_GENERATE_PREAMBLE) {
-          nr_get_prach_resources(mac, prach_resources);
-        }
-      } else if (ra->RA_backoff_cnt > 0) {
-
-        LOG_D(MAC, "[UE %d][%d.%d]: RAR not received yet (RA backoff count %d) \n", mac->ue_id, frame, nr_slot_tx, ra->RA_backoff_cnt);
-
-        ra->RA_backoff_cnt--;
-
-        if ((ra->RA_backoff_cnt > 0 && ra->ra_state == nrRA_GENERATE_PREAMBLE) || ra->RA_backoff_cnt == 0) {
-          nr_get_prach_resources(mac, prach_resources);
-        }
-      }
+  if (nr_timer_is_active(&ra->RA_backoff_timer)) {
+    // if the criteria (as defined in clause 5.1.2) to select contention-free Random Access Resources
+    // is met during the backoff time
+    // TODO verify what does this mean
+    if (ra->cfra) {
+      // perform the Random Access Resource selection procedure
+      nr_timer_stop(&ra->RA_backoff_timer);
+      mac->ra.ra_state = nrRA_GENERATE_PREAMBLE;
+      ra_resource_selection(mac);
     }
   }
 
   if (nr_timer_is_active(&ra->contention_resolution_timer)) {
     nr_ue_contention_resolution(mac, CC_id, frame, nr_slot_tx, prach_resources);
   }
-}
-
-int16_t nr_get_RA_window_2Step(const NR_MsgA_ConfigCommon_r16_t *msgA_ConfigCommon_r16)
-{
-  int16_t ra_ResponseWindow = *msgA_ConfigCommon_r16->rach_ConfigCommonTwoStepRA_r16
-                              .rach_ConfigGenericTwoStepRA_r16.msgB_ResponseWindow_r16;
-
-  switch (ra_ResponseWindow) {
-    case NR_RACH_ConfigGenericTwoStepRA_r16__msgB_ResponseWindow_r16_sl1:
-      return 1;
-      break;
-    case NR_RACH_ConfigGenericTwoStepRA_r16__msgB_ResponseWindow_r16_sl2:
-      return 2;
-      break;
-    case NR_RACH_ConfigGenericTwoStepRA_r16__msgB_ResponseWindow_r16_sl4:
-      return 4;
-      break;
-    case NR_RACH_ConfigGenericTwoStepRA_r16__msgB_ResponseWindow_r16_sl8:
-      return 8;
-      break;
-    case NR_RACH_ConfigGenericTwoStepRA_r16__msgB_ResponseWindow_r16_sl10:
-      return 10;
-      break;
-    case NR_RACH_ConfigGenericTwoStepRA_r16__msgB_ResponseWindow_r16_sl20:
-      return 20;
-      break;
-    case NR_RACH_ConfigGenericTwoStepRA_r16__msgB_ResponseWindow_r16_sl40:
-      return 40;
-      break;
-    case NR_RACH_ConfigGenericTwoStepRA_r16__msgB_ResponseWindow_r16_sl80:
-      return 80;
-      break;
-    case NR_RACH_ConfigGenericTwoStepRA_r16__msgB_ResponseWindow_r16_sl160:
-      return 160;
-      break;
-    case NR_RACH_ConfigGenericTwoStepRA_r16__msgB_ResponseWindow_r16_sl320:
-      return 360;
-      break;
-    default:
-      AssertFatal(false, "illegal msgB_responseWindow value %d\n", ra_ResponseWindow);
-      break;
-  }
-  return 0;
-}
-
-int16_t nr_get_RA_window_4Step(const NR_RACH_ConfigCommon_t *rach_ConfigCommon)
-{
-  int16_t ra_ResponseWindow = rach_ConfigCommon->rach_ConfigGeneric.ra_ResponseWindow;
-
-  switch (ra_ResponseWindow) {
-    case NR_RACH_ConfigGeneric__ra_ResponseWindow_sl1:
-      return 1;
-      break;
-    case NR_RACH_ConfigGeneric__ra_ResponseWindow_sl2:
-      return 2;
-      break;
-    case NR_RACH_ConfigGeneric__ra_ResponseWindow_sl4:
-      return 4;
-      break;
-    case NR_RACH_ConfigGeneric__ra_ResponseWindow_sl8:
-      return 8;
-      break;
-    case NR_RACH_ConfigGeneric__ra_ResponseWindow_sl10:
-      return 10;
-      break;
-    case NR_RACH_ConfigGeneric__ra_ResponseWindow_sl20:
-      return 20;
-      break;
-    case NR_RACH_ConfigGeneric__ra_ResponseWindow_sl40:
-      return 40;
-      break;
-    case NR_RACH_ConfigGeneric__ra_ResponseWindow_sl80:
-      return 80;
-      break;
-    default:
-      AssertFatal(false, "illegal ra_ResponseWindow value %d\n", ra_ResponseWindow);
-      break;
-  }
-  return 0;
-}
-
-void nr_get_RA_window(NR_UE_MAC_INST_t *mac)
-{
-  RA_config_t *ra = &mac->ra;
-
-  NR_RACH_ConfigCommon_t *setup = mac->current_UL_BWP->rach_ConfigCommon;
-  AssertFatal(&setup->rach_ConfigGeneric != NULL, "In %s: FATAL! rach_ConfigGeneric is NULL...\n", __FUNCTION__);
-  const double ta_Common_ms = GET_COMPLETE_TIME_ADVANCE_MS(&mac->ntn_ta);
-  const int mu = mac->current_DL_BWP->scs;
-  const int slots_per_ms = nr_slots_per_frame[mu] / 10;
-
-  const int ra_Offset_slots = ra->RA_offset * nr_slots_per_frame[mu];
-  const int ta_Common_slots = (int)ceil(ta_Common_ms * slots_per_ms);
-
-  ra->RA_window_cnt = ra_Offset_slots + ta_Common_slots; // taking into account the 2 frames gap introduced by OAI gNB
-
-  ra->RA_window_cnt += ra->ra_type == RA_2_STEP ? nr_get_RA_window_2Step(mac->current_UL_BWP->msgA_ConfigCommon_r16)
-                                                : nr_get_RA_window_4Step(mac->current_UL_BWP->rach_ConfigCommon);
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -1170,7 +1216,6 @@ void nr_ra_succeeded(NR_UE_MAC_INST_t *mac, const uint8_t gNB_index, const frame
 
   if (ra->cfra) {
     LOG_I(MAC, "[UE %d][%d.%d][RAPROC] RA procedure succeeded. CFRA: RAR successfully received.\n", mac->ue_id, frame, slot);
-    ra->RA_window_cnt = -1;
   } else if (ra->ra_type == RA_2_STEP) {
     LOG_A(MAC,
           "[UE %d][%d.%d][RAPROC] 2-Step RA procedure succeeded. CBRA: Contention Resolution is successful.\n",
@@ -1192,13 +1237,41 @@ void nr_ra_succeeded(NR_UE_MAC_INST_t *mac, const uint8_t gNB_index, const frame
     LOG_D(MAC, "[UE %d][%d.%d] CBRA: cleared contention resolution timer...\n", mac->ue_id, frame, slot);
   }
 
-  LOG_D(MAC, "[UE %d] clearing RA_active flag...\n", mac->ue_id);
   ra->RA_active = false;
   ra->msg3_C_RNTI = false;
   ra->ra_state = nrRA_SUCCEEDED;
   mac->state = UE_CONNECTED;
   free_and_zero(ra->Msg3_buffer);
   nr_mac_rrc_ra_ind(mac->ue_id, frame, true);
+}
+
+void nr_rar_not_successful(NR_UE_MAC_INST_t *mac)
+{
+  LOG_W(MAC, "[UE %d] RAR reception failed\n", mac->ue_id);
+  RA_config_t *ra = &mac->ra;
+  NR_PRACH_RESOURCES_t *prach_resources = &ra->prach_resources;
+  prach_resources->preamble_tx_counter++;
+  bool ra_completed = false;
+  if (prach_resources->preamble_tx_counter == ra->preambleTransMax + 1) {
+    // if the Random Access Preamble is transmitted on the SpCell
+    // TODO to be verified, this means SA if I'm not mistaken
+    if (IS_SA_MODE(get_softmodem_params())) {
+      // TODO indicate a Random Access problem to upper layers
+    } else {
+      // if the Random Access Preamble is transmitted on an SCell:
+      // consider the Random Access procedure unsuccessfully completed.
+      ra_completed = true;
+      ra->ra_state = nrRA_UE_IDLE;
+    }
+  }
+  if (!ra_completed) {
+    // select a random backoff time according to a uniform distribution
+    // between 0 and the PREAMBLE_BACKOFF
+    uint32_t seed = (unsigned int)(rdtsc_oai() & ~0);
+    uint32_t random_backoff = rand_r(&seed) % ra->RA_backoff_limit; // in slots
+    nr_timer_setup(&ra->RA_backoff_timer, random_backoff, 1);
+    nr_timer_start(&ra->RA_backoff_timer);
+  }
 }
 
 // Handling failure of RA procedure @ MAC layer
@@ -1208,17 +1281,6 @@ void nr_ra_succeeded(NR_UE_MAC_INST_t *mac, const uint8_t gNB_index, const frame
 void nr_ra_failed(NR_UE_MAC_INST_t *mac, uint8_t CC_id, NR_PRACH_RESOURCES_t *prach_resources, frame_t frame, int slot)
 {
   RA_config_t *ra = &mac->ra;
-  // Random seed generation
-  unsigned int seed;
-
-  if (IS_SOFTMODEM_IQPLAYER || IS_SOFTMODEM_IQRECORDER) {
-    // Overwrite seed with non-random seed for IQ player/recorder
-    seed = 1;
-  } else {
-    // & to truncate the int64_t and keep only the LSB bits, up to sizeof(int)
-    seed = (unsigned int)(rdtsc_oai() & ~0);
-  }
-  
   ra->ra_PreambleIndex = -1;
   ra->ra_state = nrRA_UE_IDLE;
 
@@ -1237,14 +1299,11 @@ void nr_ra_failed(NR_UE_MAC_INST_t *mac, uint8_t CC_id, NR_PRACH_RESOURCES_t *pr
           slot,
           ra->preambleTransMax);
 
-    ra->RA_backoff_cnt = rand_r(&seed) % (prach_resources->preamble_backoff + 1);
     prach_resources->preamble_tx_counter = 1;
     prach_resources->preamble_power_ramping_step += 2; // 2 dB increment
     int scs = nr_get_prach_mu(mac->current_UL_BWP->msgA_ConfigCommon_r16, mac->current_UL_BWP->rach_ConfigCommon);
     prach_resources->ra_preamble_rx_target_power = get_ra_preamble_rx_target_power(ra, scs);
 
-  } else {
-    nr_get_RA_window(mac);
   }
 }
 
