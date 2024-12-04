@@ -1155,8 +1155,6 @@ void nr_get_Msg3_MsgA_PUSCH_payload(NR_UE_MAC_INST_t *mac, uint8_t *buf, int TBS
 void nr_ue_manage_ra_procedure(NR_UE_MAC_INST_t *mac, int CC_id, frame_t frame, uint8_t gNB_id, int nr_slot_tx)
 {
   RA_config_t *ra = &mac->ra;
-  NR_PRACH_RESOURCES_t *prach_resources = &ra->prach_resources;
-
   if (ra->ra_state == nrRA_UE_IDLE) {
     bool init_success = init_RA(mac, frame);
     if (!init_success)
@@ -1179,30 +1177,6 @@ void nr_ue_manage_ra_procedure(NR_UE_MAC_INST_t *mac, int CC_id, frame_t frame, 
       mac->ra.ra_state = nrRA_GENERATE_PREAMBLE;
       ra_resource_selection(mac);
     }
-  }
-
-  if (nr_timer_is_active(&ra->contention_resolution_timer)) {
-    nr_ue_contention_resolution(mac, CC_id, frame, nr_slot_tx, prach_resources);
-  }
-}
-
-////////////////////////////////////////////////////////////////////////////
-/////////* Random Access Contention Resolution (5.1.35 TS 38.321) */////////
-////////////////////////////////////////////////////////////////////////////
-// Handling contention resolution timer
-// WIP todo:
-// - beam failure recovery
-// - RA completed
-void nr_ue_contention_resolution(NR_UE_MAC_INST_t *mac, int cc_id, frame_t frame, int slot, NR_PRACH_RESOURCES_t *prach_resources)
-{
-  RA_config_t *ra = &mac->ra;
-
-  if (nr_timer_expired(&ra->contention_resolution_timer)) {
-    ra->t_crnti = 0;
-    nr_timer_stop(&ra->contention_resolution_timer);
-    // Signal PHY to quit RA procedure
-    LOG_E(MAC, "[UE %d] 4-Step CBRA: Contention resolution timer has expired, RA procedure has failed...\n", mac->ue_id);
-    nr_ra_failed(mac, cc_id, prach_resources, frame, slot);
   }
 }
 
@@ -1231,7 +1205,6 @@ void nr_ra_succeeded(NR_UE_MAC_INST_t *mac, const uint8_t gNB_index, const frame
           mac->ue_id,
           frame,
           slot);
-    nr_timer_stop(&ra->contention_resolution_timer);
     mac->crnti = ra->t_crnti;
     ra->t_crnti = 0;
     LOG_D(MAC, "[UE %d][%d.%d] CBRA: cleared contention resolution timer...\n", mac->ue_id, frame, slot);
@@ -1243,6 +1216,32 @@ void nr_ra_succeeded(NR_UE_MAC_INST_t *mac, const uint8_t gNB_index, const frame
   mac->state = UE_CONNECTED;
   free_and_zero(ra->Msg3_buffer);
   nr_mac_rrc_ra_ind(mac->ue_id, frame, true);
+}
+
+void nr_ra_backoff_setting(RA_config_t *ra)
+{
+  // select a random backoff time according to a uniform distribution
+  // between 0 and the PREAMBLE_BACKOFF
+  uint32_t seed = (unsigned int)(rdtsc_oai() & ~0);
+  uint32_t random_backoff = ra->RA_backoff_limit ? rand_r(&seed) % ra->RA_backoff_limit : 0; // in slots
+  nr_timer_setup(&ra->RA_backoff_timer, random_backoff, 1);
+  nr_timer_start(&ra->RA_backoff_timer);
+}
+
+void nr_ra_contention_resolution_failed(RA_config_t *ra)
+{
+  // discard the TEMPORARY_C-RNTI
+  ra->t_crnti = 0;
+  // flush MSG3 buffer
+  free_and_zero(ra->Msg3_buffer);
+  NR_PRACH_RESOURCES_t *prach_resources = &ra->prach_resources;
+  prach_resources->preamble_tx_counter++;
+  if (prach_resources->preamble_tx_counter == ra->preambleTransMax + 1) {
+    // TODO indicate a Random Access problem to upper layers
+    // TODO handle msgA-TransMax (go back to 4-step if the threshold is reached)
+    // starting backoff time
+    nr_ra_backoff_setting(ra);
+  }
 }
 
 void nr_rar_not_successful(NR_UE_MAC_INST_t *mac)
@@ -1265,45 +1264,7 @@ void nr_rar_not_successful(NR_UE_MAC_INST_t *mac)
     }
   }
   if (!ra_completed) {
-    // select a random backoff time according to a uniform distribution
-    // between 0 and the PREAMBLE_BACKOFF
-    uint32_t seed = (unsigned int)(rdtsc_oai() & ~0);
-    uint32_t random_backoff = rand_r(&seed) % ra->RA_backoff_limit; // in slots
-    nr_timer_setup(&ra->RA_backoff_timer, random_backoff, 1);
-    nr_timer_start(&ra->RA_backoff_timer);
-  }
-}
-
-// Handling failure of RA procedure @ MAC layer
-// according to section 5 of 3GPP TS 38.321 version 16.2.1 Release 16
-// todo:
-// - complete handling of received contention-based RA preamble
-void nr_ra_failed(NR_UE_MAC_INST_t *mac, uint8_t CC_id, NR_PRACH_RESOURCES_t *prach_resources, frame_t frame, int slot)
-{
-  RA_config_t *ra = &mac->ra;
-  ra->ra_PreambleIndex = -1;
-  ra->ra_state = nrRA_UE_IDLE;
-
-  prach_resources->preamble_tx_counter++;
-
-  // when the Contention Resolution is considered not successful
-  // stop timeAlignmentTimer
-  nr_timer_stop(&mac->time_alignment_timer);
-
-  if (prach_resources->preamble_tx_counter == ra->preambleTransMax + 1) {
-
-    LOG_D(NR_MAC,
-          "[UE %d][%d.%d] Maximum number of RACH attempts (%d) reached, selecting backoff time...\n",
-          mac->ue_id,
-          frame,
-          slot,
-          ra->preambleTransMax);
-
-    prach_resources->preamble_tx_counter = 1;
-    prach_resources->preamble_power_ramping_step += 2; // 2 dB increment
-    int scs = nr_get_prach_mu(mac->current_UL_BWP->msgA_ConfigCommon_r16, mac->current_UL_BWP->rach_ConfigCommon);
-    prach_resources->ra_preamble_rx_target_power = get_ra_preamble_rx_target_power(ra, scs);
-
+    nr_ra_backoff_setting(ra);
   }
 }
 

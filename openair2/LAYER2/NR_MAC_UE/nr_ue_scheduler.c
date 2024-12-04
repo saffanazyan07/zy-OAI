@@ -198,7 +198,9 @@ void update_mac_timers(NR_UE_MAC_INST_t *mac)
   bool alignment_timer_expired = nr_timer_tick(&mac->time_alignment_timer);
   if (alignment_timer_expired)
     handle_time_alignment_timer_expired(mac);
-  nr_timer_tick(&mac->ra.contention_resolution_timer);
+  bool contention_resolution_expired = nr_timer_tick(&mac->ra.contention_resolution_timer);
+  if (contention_resolution_expired)
+    nr_ra_contention_resolution_failed(&mac->ra);
   for (int j = 0; j < NR_MAX_SR_ID; j++)
     nr_timer_tick(&mac->scheduling_info.sr_info[j].prohibitTimer);
   nr_timer_tick(&mac->scheduling_info.sr_DelayTimer);

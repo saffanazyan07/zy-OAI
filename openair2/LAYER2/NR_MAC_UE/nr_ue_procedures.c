@@ -3552,9 +3552,7 @@ static int nr_ue_validate_successrar(uint8_t *pduP,
           nr_timer_stop(&ra->response_window_timer);
           nr_ra_succeeded(mac, gNB_index, frameP, slot);
         } else if (!ra_success) {
-          // nr_ra_failed(mac, CC_id, &ra->prach_resources, frameP, slot);
-          ra->ra_state = nrRA_UE_IDLE;
-          ra->RA_active = 0;
+          nr_ra_backoff_setting(ra);
         }
       }
     } else { // RAPID
@@ -3757,7 +3755,8 @@ void nr_ue_process_mac_pdu(NR_UE_MAC_INST_t *mac, nr_downlink_indication_t *dl_i
         mac_len = 6;
 
         if (ra->ra_state == nrRA_WAIT_CONTENTION_RESOLUTION) {
-          LOG_I(MAC, "[UE %d]Frame %d Contention resolution identity: 0x%02x%02x%02x%02x%02x%02x Terminating RA procedure\n",
+          LOG_D(NR_MAC,
+                "[UE %d]Frame %d Contention resolution identity: 0x%02x%02x%02x%02x%02x%02x Terminating RA procedure\n",
                 mac->ue_id,
                 frameP,
                 pduP[1],
@@ -3767,15 +3766,15 @@ void nr_ue_process_mac_pdu(NR_UE_MAC_INST_t *mac, nr_downlink_indication_t *dl_i
                 pduP[5],
                 pduP[6]);
 
+          nr_timer_stop(&ra->contention_resolution_timer);
           bool ra_success = check_ra_contention_resolution(&pduP[1], ra->cont_res_id);
 
           if (ra->RA_active && ra_success) {
             nr_ra_succeeded(mac, gNB_index, frameP, slot);
           } else if (!ra_success) {
-            // TODO: Handle failure of RA procedure @ MAC layer
-            //  nr_ra_failed(module_idP, CC_id, prach_resources, frameP, slot); // prach_resources is a PHY structure
-            ra->ra_state = nrRA_UE_IDLE;
-            ra->RA_active = false;
+            // consider this Contention Resolution not successful and discard the successfully decoded MAC PDU
+            nr_ra_contention_resolution_failed(ra);
+            return;
           }
         }
         break;

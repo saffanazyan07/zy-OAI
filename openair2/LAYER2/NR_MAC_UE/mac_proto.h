@@ -296,12 +296,9 @@ void nr_ue_msg3_scheduler(NR_UE_MAC_INST_t *mac,
                           sub_frame_t current_slot,
                           uint8_t Msg3_tda_id);
 
-void nr_ue_contention_resolution(NR_UE_MAC_INST_t *mac, int cc_id, frame_t frame, int slot, NR_PRACH_RESOURCES_t *prach_resources);
-
-void nr_ra_failed(NR_UE_MAC_INST_t *mac, uint8_t CC_id, NR_PRACH_RESOURCES_t *prach_resources, frame_t frame, int slot);
-
+void nr_ra_contention_resolution_failed(RA_config_t *ra);
 void nr_ra_succeeded(NR_UE_MAC_INST_t *mac, const uint8_t gNB_index, const frame_t frame, const int slot);
-
+void nr_ra_backoff_setting(RA_config_t *ra);
 void nr_get_RA_window(NR_UE_MAC_INST_t *mac);
 
 /*@mac pointer to MAC instance
