@@ -379,6 +379,7 @@ static int32_t aerial_pack_tx_data_request(void *pMessageBuf,
     return 0;
   }
 
+  uint32_t offset = 0;
   for (int i = 0; i < pNfapiMsg->Number_of_PDUs; i++) {
     nfapi_nr_pdu_t *value = (nfapi_nr_pdu_t *)&pNfapiMsg->pdu_list[i];
     // recalculate PDU_Length for Aerial (leave only the size occupied in the payload buffer afterward)
@@ -393,13 +394,14 @@ static int32_t aerial_pack_tx_data_request(void *pMessageBuf,
 
     for (; k < total_number_of_tlvs; ++k) {
       // For Aerial, the TLV tag is always 2
-      if (!(push16(/*value->TLVs[k].tag*/ 2, ppWriteBody, end) && push16(/*value->TLVs[k].length*/ 4, ppWriteBody, end))) {
+      if (!(push16(/*value->TLVs[k].tag*/ 2, ppWriteBody, end) && push16(value->TLVs[k].length, ppWriteBody, end))) {
         return 0;
       }
       // value
-      if (!push32(0, ppWriteBody, end)) {
+      if (!push32(offset, ppWriteBody, end)) {
         return 0;
       }
+      offset += value->TLVs[k].length;
     }
   }
 
