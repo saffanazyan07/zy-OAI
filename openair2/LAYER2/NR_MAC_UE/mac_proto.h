@@ -296,15 +296,6 @@ void nr_ra_contention_resolution_failed(NR_UE_MAC_INST_t *mac);
 void nr_ra_succeeded(NR_UE_MAC_INST_t *mac, const uint8_t gNB_index, const frame_t frame, const int slot);
 void nr_ra_backoff_setting(RA_config_t *ra);
 void nr_get_RA_window(NR_UE_MAC_INST_t *mac);
-
-/*@mac pointer to MAC instance
-@param CC_id Component Carrier Index
-@param frame
-@param gNB_id gNB index
-@param nr_slot_tx slot for PRACH transmission
-@returns indication to generate PRACH to phy */
-void nr_ue_manage_ra_procedure(NR_UE_MAC_INST_t *mac, int CC_id, frame_t frame, uint8_t gNB_id, int nr_slot_tx);
-
 void prepare_msg4_msgb_feedback(NR_UE_MAC_INST_t *mac, int pid, int ack_nack);
 void configure_initial_pucch(PUCCH_sched_t *pucch, int res_ind);
 void release_PUCCH_SRS(NR_UE_MAC_INST_t *mac);

@@ -1048,6 +1048,7 @@ bool init_RA(NR_UE_MAC_INST_t *mac, int frame)
                            twostep_generic,
                            &mac->ntn_ta);
   ra->start_response_window = false;
+
   return true;
 }
 
@@ -1138,47 +1139,6 @@ void nr_get_Msg3_MsgA_PUSCH_payload(NR_UE_MAC_INST_t *mac, uint8_t *buf, int TBS
   }
   ra->Msg3_buffer = calloc(TBS_max, sizeof(uint8_t));
   memcpy(ra->Msg3_buffer, buf, sizeof(uint8_t) * TBS_max);
-}
-
-/**
- * Function:            handles Random Access Preamble Initialization (5.1.1 TS 38.321)
- *                      handles Random Access Response reception (5.1.4 TS 38.321)
- * Note:                In SA mode the Msg3 contains a CCCH SDU, therefore no C-RNTI MAC CE is transmitted.
- *
- * @prach_resources     pointer to PRACH resources
- * @prach_pdu           pointer to FAPI UL PRACH PDU
- * @mod_id              module ID
- * @CC_id               CC ID
- * @frame               current UL TX frame
- * @gNB_id              gNB ID
- * @nr_slot_tx          current UL TX slot
- */
-void nr_ue_manage_ra_procedure(NR_UE_MAC_INST_t *mac, int CC_id, frame_t frame, uint8_t gNB_id, int nr_slot_tx)
-{
-  RA_config_t *ra = &mac->ra;
-  if (ra->ra_state == nrRA_UE_IDLE) {
-    bool init_success = init_RA(mac, frame);
-    if (!init_success)
-      return;
-    else {
-      // perform the Random Access Resource selection procedure (see clause 5.1.2 and .2a)
-      ra_resource_selection(mac);
-    }
-  }
-
-  LOG_D(NR_MAC, "[UE %d][%d.%d]: ra_state %d, RA_active %d\n", mac->ue_id, frame, nr_slot_tx, ra->ra_state, ra->RA_active);
-
-  if (nr_timer_is_active(&ra->RA_backoff_timer)) {
-    // if the criteria (as defined in clause 5.1.2) to select contention-free Random Access Resources
-    // is met during the backoff time
-    // TODO verify what does this mean
-    if (ra->cfra) {
-      // perform the Random Access Resource selection procedure
-      nr_timer_stop(&ra->RA_backoff_timer);
-      mac->ra.ra_state = nrRA_GENERATE_PREAMBLE;
-      ra_resource_selection(mac);
-    }
-  }
 }
 
 // Handlig successful RA completion @ MAC layer

@@ -252,6 +252,18 @@ void update_mac_timers(NR_UE_MAC_INST_t *mac)
     // perform the Random Access Resource selection procedure after the backoff time
     mac->ra.ra_state = nrRA_GENERATE_PREAMBLE;
     ra_resource_selection(mac);
+  } else {
+    if (nr_timer_is_active(&mac->ra.RA_backoff_timer)) {
+      // if the criteria (as defined in clause 5.1.2) to select contention-free Random Access Resources
+      // is met during the backoff time
+      // TODO verify what does this mean
+      if (mac->ra.cfra) {
+        // perform the Random Access Resource selection procedure
+        nr_timer_stop(&mac->ra.RA_backoff_timer);
+        mac->ra.ra_state = nrRA_GENERATE_PREAMBLE;
+        ra_resource_selection(mac);
+      }
+    }
   }
 }
 
@@ -1576,10 +1588,16 @@ void nr_ue_ul_scheduler(NR_UE_MAC_INST_t *mac, nr_uplink_indication_t *ul_info)
   uint32_t gNB_index = ul_info->gNB_index;
 
   RA_config_t *ra = &mac->ra;
-  if(mac->state > UE_NOT_SYNC && mac->state < UE_CONNECTED) {
-    nr_ue_manage_ra_procedure(mac, cc_id, frame_tx, gNB_index, slot_tx);
-    nr_ue_prach_scheduler(mac, frame_tx, slot_tx);
+  if (mac->state > UE_NOT_SYNC && mac->state < UE_CONNECTED && ra->ra_state == nrRA_UE_IDLE) {
+    bool res = init_RA(mac, frame_tx);
+    if (res) {
+      // perform the Random Access Resource selection procedure (see clause 5.1.2 and .2a)
+      ra_resource_selection(mac);
+    }
   }
+
+  if (ra->ra_state == nrRA_GENERATE_PREAMBLE)
+    nr_ue_prach_scheduler(mac, frame_tx, slot_tx);
 
   bool BSRsent = false;
   if (mac->state == UE_CONNECTED) {
@@ -2328,8 +2346,6 @@ static bool is_prach_frame(frame_t frame, prach_occasion_info_t *prach_occasion_
 static void nr_ue_prach_scheduler(NR_UE_MAC_INST_t *mac, frame_t frameP, int slotP)
 {
   RA_config_t *ra = &mac->ra;
-  if (ra->ra_state != nrRA_GENERATE_PREAMBLE)
-    return;
 
   // Get any valid PRACH occasion in the current slot for the selected SSB index
   prach_occasion_info_t *prach_occasion_info = &ra->sched_ro_info;
