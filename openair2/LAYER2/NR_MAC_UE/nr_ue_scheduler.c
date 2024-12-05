@@ -2435,15 +2435,31 @@ static void nr_ue_prach_scheduler(NR_UE_MAC_INST_t *mac, frame_t frameP, int slo
       T(T_UE_PHY_INITIATE_RA_PROCEDURE, T_INT(frameP), T_INT(pdu->prach_config_pdu.prach_slot),
         T_INT(pdu->prach_config_pdu.ra_PreambleIndex), T_INT(pdu->prach_config_pdu.prach_tx_power));
 
+      const int n_slots_frame = nr_slots_per_frame[mac->current_UL_BWP->scs];
       if (ra->ra_type == RA_4_STEP) {
         ra->ra_state = nrRA_WAIT_RAR;
-        ra->start_response_window = true;
+        // we start to monitor DCI for RAR in the first valid occasion after transmitting RACH
+        // the response window timer should be started at that time
+        // but for processing reasons it is better to start it here and to add the slot difference
+        // that also takes into account the rx to tx slot offset
+        int next_slot = (slotP + 1) % n_slots_frame;
+        int next_frame = (frameP + (next_slot < slotP)) % MAX_FRAME_NUMBER;
+        int add_slots = 1;
+        NR_BWP_PDCCH_t *pdcch_config = &mac->config_BWP_PDCCH[mac->current_DL_BWP->bwp_id];
+        while (!is_nr_DL_slot(tdd_config, next_slot)
+               || !is_ss_monitor_occasion(next_frame, next_slot, n_slots_frame, pdcch_config->ra_SS)) {
+          int temp_slot = (next_slot + 1) % n_slots_frame;
+          next_frame = (next_frame + (temp_slot < next_slot)) % MAX_FRAME_NUMBER;
+          next_slot = temp_slot;
+          add_slots++;
+        }
+        nr_timer_setup(&ra->response_window_timer,
+                       ra->response_window_setup_time + add_slots + GET_DURATION_RX_TO_TX(&mac->ntn_ta),
+                       1);
+        nr_timer_start(&ra->response_window_timer);
       } else if (ra->ra_type == RA_2_STEP) {
-        NR_RACH_ConfigCommon_t *setup = mac->current_UL_BWP->rach_ConfigCommon;
         NR_MsgA_PUSCH_Resource_r16_t *msgA_PUSCH_Resource =
             mac->current_UL_BWP->msgA_ConfigCommon_r16->msgA_PUSCH_Config_r16->msgA_PUSCH_ResourceGroupA_r16;
-        int mu = nr_get_prach_mu(mac->current_UL_BWP->msgA_ConfigCommon_r16, setup);
-        const int n_slots_frame = nr_slots_per_frame[mu];
         slot_t msgA_pusch_slot = (slotP + msgA_PUSCH_Resource->msgA_PUSCH_TimeDomainOffset_r16) % n_slots_frame;
         frame_t msgA_pusch_frame =
             (frameP + ((slotP + msgA_PUSCH_Resource->msgA_PUSCH_TimeDomainOffset_r16) / n_slots_frame)) % 1024;

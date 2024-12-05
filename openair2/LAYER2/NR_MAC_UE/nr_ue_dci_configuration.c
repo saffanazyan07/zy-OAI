@@ -558,18 +558,13 @@ void ue_dci_configuration(NR_UE_MAC_INST_t *mac, fapi_nr_dl_config_request_t *dl
       config_dci_pdu(mac, dl_config, TYPE_SI_RNTI_, slot, ss);
     }
   }
-  if (mac->state == UE_PERFORMING_RA && mac->ra.ra_state >= nrRA_WAIT_RAR) {
+  RA_config_t *ra = &mac->ra;
+  if (mac->state == UE_PERFORMING_RA && ra->ra_state >= nrRA_WAIT_RAR) {
     // if RA is ongoing use RA search space
     if (is_ss_monitor_occasion(frame, slot, slots_per_frame, pdcch_config->ra_SS)) {
-      // The RA response window starts at the first symbol of the earliest CORESET
-      // the UE is configured to receive PDCCH for Type1-PDCCH CSS set
-      if (mac->ra.start_response_window) {
-        nr_timer_start(&mac->ra.response_window_timer);
-        mac->ra.start_response_window = false;
-      }
       nr_rnti_type_t rnti_type = 0;
-      if (mac->ra.ra_type == RA_4_STEP) {
-        rnti_type = mac->ra.ra_state == nrRA_WAIT_RAR ? TYPE_RA_RNTI_ : TYPE_TC_RNTI_;
+      if (ra->ra_type == RA_4_STEP) {
+        rnti_type = ra->ra_state == nrRA_WAIT_RAR ? TYPE_RA_RNTI_ : TYPE_TC_RNTI_;
       } else {
         rnti_type = TYPE_MSGB_RNTI_;
       }

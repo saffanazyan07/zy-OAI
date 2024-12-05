@@ -811,7 +811,7 @@ static void setup_ra_response_window(RA_config_t *ra,
     ta_Common_slots = (int)ceil(ta_Common_ms * nr_slots_per_frame[mu] / 10);
   }
 
-  nr_timer_setup(&ra->response_window_timer, respwind_value + ta_Common_slots, 1);
+  ra->response_window_setup_time = respwind_value + ta_Common_slots;
 }
 
 // Random Access procedure initialization as per 5.1.1 and initialization of variables specific
@@ -1047,8 +1047,6 @@ bool init_RA(NR_UE_MAC_INST_t *mac, int frame)
                            rach_ConfigGeneric,
                            twostep_generic,
                            &mac->ntn_ta);
-  ra->start_response_window = false;
-
   return true;
 }
 

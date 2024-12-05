@@ -332,7 +332,7 @@ typedef struct {
   int ra_ssb;
   /// Random-access response window timer
   NR_timer_t response_window_timer;
-  bool start_response_window;
+  int response_window_setup_time;
   /// Random-access backoff timer
   NR_timer_t RA_backoff_timer;
   int RA_backoff_limit;
