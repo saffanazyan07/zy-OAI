@@ -189,7 +189,7 @@ int nfapi_nr_vnf_p7_start(nfapi_vnf_p7_config_t* config)
 				    gNB->UL_INFO.frame, gNB->UL_INFO.slot, prev_slot);
 			if (setup_done && prev_slot != gNB->UL_INFO.slot) { //Give the VNF sufficient time to setup before starting scheduling  && prev_slot != gNB->UL_INFO.slot
 
-				//Call the scheduler
+				// Call into the scheduler (this is hardcoded and should be init properly!)
 				gNB->UL_INFO.module_id = gNB->Mod_id;
 				gNB->UL_INFO.CC_id     = gNB->CC_id;
 				NFAPI_TRACE(NFAPI_TRACE_DEBUG, "Calling NR_UL_indication for gNB->UL_INFO.frame = %d and slot %d\n",
