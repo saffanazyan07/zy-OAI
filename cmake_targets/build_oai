@@ -49,6 +49,8 @@ CMAKE_CMD="$CMAKE"
 OPTIONAL_LIBRARIES="telnetsrv enbscope uescope nrscope ldpc_cuda ldpc_t2 ldpc_xdma websrv oai_iqplayer imscope"
 TARGET_LIST=""
 BUILD_TOOL_OPT="-j$(nproc)"
+MPLANE_V1="False"
+MPLANE_V2="False"
 
 function print_help() {
   echo_info "
@@ -76,6 +78,10 @@ Options:
    This option will require root password
 --install-optional-packages
    Install useful but not mandatory packages such as valgrind
+--install-mplane-v1
+   Install FHI7.2 M-plane v1 packages - one time installation
+--install-mplane-v2
+   Install FHI7.2 M-plane v2 packages - one time installation
 -g | --run-with-gdb <Release | RelWithDebInfo | MinSizeRel | Debug
   specify the build mode used by cmake. defaults to Debug mode if -g is used alone, with no mode parameter
   if -g is not specifies, Release mode is used.
@@ -193,6 +199,14 @@ function main() {
        --install-optional-packages)
             INSTALL_OPTIONAL=1
             echo_info "Will install optional packages"
+            shift;;
+       --install-mplane-v1)
+            echo_info "Will install libyang and libnetconf2 v1"
+            MPLANE_V1="True"
+            shift;;
+       --install-mplane-v2)
+            echo_info "Will install libyang and libnetconf2 v2"
+            MPLANE_V2="True"
             shift;;
        -g | --run-with-gdb)
             case "$2" in
@@ -475,6 +489,15 @@ function main() {
   if [ "$INSTALL_OPTIONAL" = "1" ] ; then
     echo_info "Installing optional packages"
     check_install_additional_tools
+  fi
+
+  if [ "$MPLANE_V1" == "True" ] ; then
+    echo "Installing packages for FHI7.2 M-plane v1 support"
+    install_mplane_v1
+  fi
+  if [ "$MPLANE_V2" == "True" ] ; then
+    echo "Installing packages for FHI7.2 M-plane v2 support"
+    install_mplane_v2
   fi
 
   DIR=$OPENAIR_DIR/cmake_targets
