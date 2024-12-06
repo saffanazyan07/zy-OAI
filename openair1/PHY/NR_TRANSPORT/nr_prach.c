@@ -86,7 +86,12 @@ void nr_fill_prach(PHY_VARS_gNB *gNB, int SFN, int Slot, nfapi_nr_prach_pdu_t *p
     // TODO no idea how to compute final prach symbol here so for now we go til the end of the slot
     int temp_nb_symbols = NR_NUMBER_OF_SYMBOLS_PER_SLOT - prach_pdu->prach_start_symbol;
     int bitmap = SL_to_bitmap(prach_pdu->prach_start_symbol, temp_nb_symbols);
-    prach->beam_nb = beam_index_allocation(fapi_beam_idx, &gNB->common_vars, Slot, NR_NUMBER_OF_SYMBOLS_PER_SLOT, bitmap);
+    prach->beam_nb = beam_index_allocation(fapi_beam_idx,
+                                           &gNB->gNB_config,
+                                           &gNB->common_vars,
+                                           Slot,
+                                           NR_NUMBER_OF_SYMBOLS_PER_SLOT,
+                                           bitmap);
   }
   LOG_D(NR_PHY,"Copying prach pdu %d bytes to index %d\n", (int)sizeof(*prach_pdu), prach_id);
   memcpy(&prach->pdu, prach_pdu, sizeof(*prach_pdu));

@@ -519,6 +519,7 @@ void nr_generate_pdsch(processingData_L1tx_t *msgTx, int frame, int slot)
     // beam number in multi-beam scenario (concurrent beams)
     int bitmap = SL_to_bitmap(rel15->StartSymbolIndex, rel15->NrOfSymbols);
     int beam_nb = beam_index_allocation(pb->prgs_list[0].dig_bf_interface_list[0].beam_idx,
+                                        &gNB->gNB_config,
                                         &gNB->common_vars,
                                         slot,
                                         frame_parms->symbols_per_slot,
