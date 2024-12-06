@@ -595,7 +595,9 @@ check_install_oai_software() {
 	openssl \
 	zlib1g-dev \
 	xxd \
-	libyaml-cpp-dev
+	libyaml-cpp-dev \
+  libpcre3-dev \
+  libssh-dev
 
   elif [[ "$OS_BASEDISTRO" == "fedora" ]]; then
     if [[ "$OS_DISTRO" == "rhel" ]] || [[ "$OS_DISTRO" == "centos" ]] || [[ "$OS_DISTRO" == "rocky" ]]; then
@@ -629,7 +631,9 @@ check_install_oai_software() {
       blas-devel \
       vim-common \
       zlib-devel \
-      yaml-cpp-devel
+      yaml-cpp-devel \
+      pcre-devel \
+      libssh-devel
   fi
 
     install_asn1c_from_source $1
