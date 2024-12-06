@@ -57,7 +57,7 @@
     <class>Pull_Local_Registry</class>
     <desc>Pull Images from Local Registry</desc>
     <test_svr_id>0</test_svr_id>
-    <images_to_pull>oai-gnb-fhi72</images_to_pull>
+    <images>oai-gnb-fhi72</images>
   </testCase>
 
   <testCase id="800813">
