@@ -1806,52 +1806,29 @@ void pnf_handle_hi_dci0_request(void* pRecvMsg, int recvMsgLen, pnf_p7_t* pnf_p7
 	}
 }
 
-static void cp_nr_tx_data_req(nfapi_nr_tx_data_request_t *dst, const nfapi_nr_tx_data_request_t *src)
-{
-  dst->header = src->header;
-  dst->SFN = src->SFN;
-  dst->Slot = src->Slot;
-  dst->Number_of_PDUs = src->Number_of_PDUs;
-  for (int i = 0; i < dst->Number_of_PDUs; ++i) {
-    nfapi_nr_pdu_t *dst_pdu = &dst->pdu_list[i];
-    const nfapi_nr_pdu_t *src_pdu = &src->pdu_list[i];
-    dst_pdu->PDU_length = src_pdu->PDU_length;
-    dst_pdu->PDU_index = src_pdu->PDU_index;
-    dst_pdu->num_TLV = src_pdu->num_TLV;
-    for (int j = 0; j < dst->pdu_list[i].num_TLV; ++j) {
-      nfapi_nr_tx_data_request_tlv_t *dst_tlv = &dst_pdu->TLVs[j];
-      const nfapi_nr_tx_data_request_tlv_t *src_tlv = &src_pdu->TLVs[j];
-      dst_tlv->tag = src_tlv->tag;
-      dst_tlv->length = src_tlv->length;
-      memcpy(dst_tlv->value.direct, src_tlv->value.direct, dst_tlv->length);
-    }
-  }
-}
-
 void pnf_handle_tx_data_request(void* pRecvMsg, int recvMsgLen, pnf_p7_t* pnf_p7)
 {
-	//NFAPI_TRACE(NFAPI_TRACE_INFO, "TX.req Received\n");
-	
-	nfapi_nr_tx_data_request_t req;
+  // NFAPI_TRACE(NFAPI_TRACE_INFO, "TX.req Received\n");
 
-	int unpack_result = nfapi_nr_p7_message_unpack(pRecvMsg, recvMsgLen, &req, sizeof(nfapi_nr_tx_data_request_t), &pnf_p7->_public.codec_config);
-	if(unpack_result == 0)
-	{
-		if(pthread_mutex_lock(&(pnf_p7->mutex)) != 0)
-		{
-			NFAPI_TRACE(NFAPI_TRACE_INFO, "failed to lock mutex\n");
-			return;
-		}
+  nfapi_nr_tx_data_request_t req;
 
-		if(is_nr_p7_request_in_window(req.SFN, req.Slot,"tx_request", pnf_p7))
-		{
-			uint32_t sfn_slot_dec = NFAPI_SFNSLOT2DEC(req.SFN,req.Slot);
-			uint8_t buffer_index = sfn_slot_dec % 20;
+  int unpack_result =
+      nfapi_nr_p7_message_unpack(pRecvMsg, recvMsgLen, &req, sizeof(nfapi_nr_tx_data_request_t), &pnf_p7->_public.codec_config);
+  if (unpack_result == 0) {
+    if (pthread_mutex_lock(&(pnf_p7->mutex)) != 0) {
+      NFAPI_TRACE(NFAPI_TRACE_INFO, "failed to lock mutex\n");
+      return;
+    }
 
-                        struct timespec t;
-                        clock_gettime(CLOCK_MONOTONIC, &t);
+    if (is_nr_p7_request_in_window(req.SFN, req.Slot, "tx_request", pnf_p7)) {
+      uint32_t sfn_slot_dec = NFAPI_SFNSLOT2DEC(req.SFN, req.Slot);
+      uint8_t buffer_index = sfn_slot_dec % 20;
 
-                        //NFAPI_TRACE(NFAPI_TRACE_INFO,"%s() %ld.%09ld POPULATE TX_DATA_REQ sfn_sf:%d buffer_index:%d\n", __FUNCTION__, t.tv_sec, t.tv_nsec, sfn_slot_dec, buffer_index);
+      struct timespec t;
+      clock_gettime(CLOCK_MONOTONIC, &t);
+
+      // NFAPI_TRACE(NFAPI_TRACE_INFO,"%s() %ld.%09ld POPULATE TX_DATA_REQ sfn_sf:%d buffer_index:%d\n", __FUNCTION__, t.tv_sec,
+      // t.tv_nsec, sfn_slot_dec, buffer_index);
 #if 0
                         if (0 && NFAPI_SFNSF2DEC(req->sfn_sf)%100==0) NFAPI_TRACE(NFAPI_TRACE_INFO, "%s() TX_REQ.req sfn_sf:%d pdus:%d - TX_REQ is within window\n",
                             __FUNCTION__,
@@ -1859,34 +1836,32 @@ void pnf_handle_tx_data_request(void* pRecvMsg, int recvMsgLen, pnf_p7_t* pnf_p7
                             req->tx_request_body.number_of_pdus);
 #endif
 
+      pnf_p7->slot_buffer[buffer_index].sfn = req.SFN;
+      pnf_p7->slot_buffer[buffer_index].slot = req.Slot;
+      pnf_p7->slot_buffer[buffer_index].tx_data_req.header = req.header;
+      copy_tx_data_request(&req, &pnf_p7->slot_buffer[buffer_index].tx_data_req);
 
-			pnf_p7->slot_buffer[buffer_index].sfn = req.SFN;
-			pnf_p7->slot_buffer[buffer_index].slot = req.Slot;
-      cp_nr_tx_data_req(&pnf_p7->slot_buffer[buffer_index].tx_data_req, &req);
+      pnf_p7->stats.tx_data_ontime++;
+    } else {
+      NFAPI_TRACE(NFAPI_TRACE_INFO,
+                  "%s() TX_DATA_REQUEST Request is outside of window REQ:SFN_SLOT:%d CURR:SFN_SLOT:%d\n",
+                  __FUNCTION__,
+                  NFAPI_SFNSLOT2DEC(req.SFN, req.Slot),
+                  NFAPI_SFNSLOT2DEC(pnf_p7->sfn, pnf_p7->slot));
 
-			pnf_p7->stats.tx_data_ontime++;
-		}
-		else
-		{
-                  NFAPI_TRACE(NFAPI_TRACE_INFO,"%s() TX_DATA_REQUEST Request is outside of window REQ:SFN_SLOT:%d CURR:SFN_SLOT:%d\n", __FUNCTION__, NFAPI_SFNSLOT2DEC(req.SFN,req.Slot), NFAPI_SFNSLOT2DEC(pnf_p7->sfn,pnf_p7->slot));
+      if (pnf_p7->_public.timing_info_mode_aperiodic) {
+        pnf_p7->timing_info_aperiodic_send = 1;
+      }
 
-			if(pnf_p7->_public.timing_info_mode_aperiodic)
-			{
-				pnf_p7->timing_info_aperiodic_send = 1;
-			}
+      pnf_p7->stats.tx_data_late++;
+    }
 
-			pnf_p7->stats.tx_data_late++;
-		}
-
-		if(pthread_mutex_unlock(&(pnf_p7->mutex)) != 0)
-		{
-			NFAPI_TRACE(NFAPI_TRACE_INFO, "failed to unlock mutex\n");
-			return;
-		}
+    if (pthread_mutex_unlock(&(pnf_p7->mutex)) != 0) {
+      NFAPI_TRACE(NFAPI_TRACE_INFO, "failed to unlock mutex\n");
+      return;
+    }
   }
 }
-
-
 
 void pnf_handle_tx_request(void* pRecvMsg, int recvMsgLen, pnf_p7_t* pnf_p7)
 {
