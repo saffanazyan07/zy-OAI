@@ -1508,10 +1508,7 @@ void pnf_handle_ul_tti_request(void* pRecvMsg, int recvMsgLen, pnf_p7_t* pnf_p7)
   // NFAPI_TRACE(NFAPI_TRACE_INFO, "UL_CONFIG.req Received\n");
 
   nfapi_nr_ul_tti_request_t req;
-  int unpack_result =
-      nfapi_nr_p7_message_unpack(pRecvMsg, recvMsgLen, &req, sizeof(nfapi_nr_ul_tti_request_t), &(pnf_p7->_public.codec_config));
-
-  if (unpack_result == 0) {
+  if (!peek_nr_nfapi_p7_sfn_slot(pRecvMsg, recvMsgLen, &req.SFN, &req.Slot)) {
     if (pthread_mutex_lock(&(pnf_p7->mutex)) != 0) {
       NFAPI_TRACE(NFAPI_TRACE_INFO, "failed to lock mutex\n");
       return;
@@ -1534,6 +1531,11 @@ void pnf_handle_ul_tti_request(void* pRecvMsg, int recvMsgLen, pnf_p7_t* pnf_p7)
                   req.Slot,
                   buffer_index);
 
+      if (nfapi_nr_p7_message_unpack(pRecvMsg, recvMsgLen, &req, sizeof(nfapi_nr_ul_tti_request_t), &(pnf_p7->_public.codec_config))
+          != 0) {
+        NFAPI_TRACE(NFAPI_TRACE_INFO, "failed to unpack request\n");
+        return;
+      }
       // filling slot buffer
 
       pnf_p7->slot_buffer[buffer_index].sfn = req.SFN;
