@@ -1811,10 +1811,7 @@ void pnf_handle_tx_data_request(void* pRecvMsg, int recvMsgLen, pnf_p7_t* pnf_p7
   // NFAPI_TRACE(NFAPI_TRACE_INFO, "TX.req Received\n");
 
   nfapi_nr_tx_data_request_t req;
-
-  int unpack_result =
-      nfapi_nr_p7_message_unpack(pRecvMsg, recvMsgLen, &req, sizeof(nfapi_nr_tx_data_request_t), &pnf_p7->_public.codec_config);
-  if (unpack_result == 0) {
+  if (!peek_nr_nfapi_p7_sfn_slot(pRecvMsg, recvMsgLen, &req.SFN, &req.Slot)) {
     if (pthread_mutex_lock(&(pnf_p7->mutex)) != 0) {
       NFAPI_TRACE(NFAPI_TRACE_INFO, "failed to lock mutex\n");
       return;
@@ -1823,7 +1820,11 @@ void pnf_handle_tx_data_request(void* pRecvMsg, int recvMsgLen, pnf_p7_t* pnf_p7
     if (is_nr_p7_request_in_window(req.SFN, req.Slot, "tx_request", pnf_p7)) {
       uint32_t sfn_slot_dec = NFAPI_SFNSLOT2DEC(req.SFN, req.Slot);
       uint8_t buffer_index = sfn_slot_dec % 20;
-
+      if (nfapi_nr_p7_message_unpack(pRecvMsg, recvMsgLen, &req, sizeof(nfapi_nr_tx_data_request_t), &pnf_p7->_public.codec_config)
+          != 0) {
+        NFAPI_TRACE(NFAPI_TRACE_INFO, "failed to unpack request\n");
+        return;
+      }
       struct timespec t;
       clock_gettime(CLOCK_MONOTONIC, &t);
 
