@@ -1746,48 +1746,36 @@ void pnf_handle_hi_dci0_request(void* pRecvMsg, int recvMsgLen, pnf_p7_t* pnf_p7
 
 void pnf_handle_tx_data_request(void* pRecvMsg, int recvMsgLen, pnf_p7_t* pnf_p7)
 {
-  // NFAPI_TRACE(NFAPI_TRACE_INFO, "TX.req Received\n");
-
-  nfapi_nr_tx_data_request_t req;
-  if (peek_nr_nfapi_p7_sfn_slot(pRecvMsg, recvMsgLen, &req.SFN, &req.Slot)) {
+  uint16_t frame, slot;
+  if (peek_nr_nfapi_p7_sfn_slot(pRecvMsg, recvMsgLen, &frame, &slot)) {
     if (pthread_mutex_lock(&(pnf_p7->mutex)) != 0) {
       NFAPI_TRACE(NFAPI_TRACE_INFO, "failed to lock mutex\n");
       return;
     }
-    if(!check_nr_nfapi_p7_slot_type(req.SFN, req.Slot,"TX_DATA.REQUEST",NR_DOWNLINK_SLOT)) {
-      return;
-    }
-    if (is_nr_p7_request_in_window(req.SFN, req.Slot, "tx_request", pnf_p7)) {
-      uint32_t sfn_slot_dec = NFAPI_SFNSLOT2DEC(req.SFN, req.Slot);
+    if (check_nr_nfapi_p7_slot_type(frame, slot, "TX_DATA.REQUEST", NR_DOWNLINK_SLOT)
+        && is_nr_p7_request_in_window(frame, slot, "tx_request", pnf_p7)) {
+      uint32_t sfn_slot_dec = NFAPI_SFNSLOT2DEC(frame, slot);
       uint8_t buffer_index = sfn_slot_dec % 20;
-      if (nfapi_nr_p7_message_unpack(pRecvMsg, recvMsgLen, &req, sizeof(nfapi_nr_tx_data_request_t), &pnf_p7->_public.codec_config)
-          != 0) {
-        NFAPI_TRACE(NFAPI_TRACE_INFO, "failed to unpack request\n");
-        return;
-      }
-      struct timespec t;
-      clock_gettime(CLOCK_MONOTONIC, &t);
-
-      // NFAPI_TRACE(NFAPI_TRACE_INFO,"%s() %ld.%09ld POPULATE TX_DATA_REQ sfn_sf:%d buffer_index:%d\n", __FUNCTION__, t.tv_sec,
-      // t.tv_nsec, sfn_slot_dec, buffer_index);
-#if 0
-                        if (0 && NFAPI_SFNSF2DEC(req->sfn_sf)%100==0) NFAPI_TRACE(NFAPI_TRACE_INFO, "%s() TX_REQ.req sfn_sf:%d pdus:%d - TX_REQ is within window\n",
-                            __FUNCTION__,
-                            NFAPI_SFNSF2DEC(req->sfn_sf),
-                            req->tx_request_body.number_of_pdus);
-#endif
-
-      pnf_p7->slot_buffer[buffer_index].sfn = req.SFN;
-      pnf_p7->slot_buffer[buffer_index].slot = req.Slot;
-      pnf_p7->slot_buffer[buffer_index].tx_data_req.header = req.header;
-      copy_tx_data_request(&req, &pnf_p7->slot_buffer[buffer_index].tx_data_req);
-
+      pnf_p7->slot_buffer[buffer_index].sfn = frame;
+      pnf_p7->slot_buffer[buffer_index].slot = slot;
+      nfapi_nr_tx_data_request_t *req = &pnf_p7->slot_buffer[buffer_index].tx_data_req;
       pnf_p7->stats.tx_data_ontime++;
+
+      NFAPI_TRACE(NFAPI_TRACE_DEBUG,
+                  "POPULATE TX_data.request current tx sfn/slot:%d.%d p7 msg sfn/slot: %d.%d buffer_index:%d\n",
+                  pnf_p7->sfn,
+                  pnf_p7->slot,
+                  frame,
+                  slot,
+                  buffer_index);
+
+      if (nfapi_nr_p7_message_unpack(pRecvMsg, recvMsgLen, req, sizeof(*req), &pnf_p7->_public.codec_config) != 0)
+        NFAPI_TRACE(NFAPI_TRACE_ERROR, "failed to unpack TX_data.request\n");
     } else {
       NFAPI_TRACE(NFAPI_TRACE_INFO,
                   "%s() TX_DATA_REQUEST Request is outside of window REQ:SFN_SLOT:%d CURR:SFN_SLOT:%d\n",
                   __FUNCTION__,
-                  NFAPI_SFNSLOT2DEC(req.SFN, req.Slot),
+                  NFAPI_SFNSLOT2DEC(frame, slot),
                   NFAPI_SFNSLOT2DEC(pnf_p7->sfn, pnf_p7->slot));
 
       if (pnf_p7->_public.timing_info_mode_aperiodic) {
