@@ -55,7 +55,7 @@ int beam_index_allocation(int fapi_beam_index,
     return 0;
 
   int idx = -1;
-  int ru_beam_idx = cfg->dbt_config.dig_beam_list[fapi_beam_index].txru_list[0].dig_beam_weight_Re;
+  int ru_beam_idx =  cfg->analog_beamforming_ve.analog_beam_list[fapi_beam_index].value;
   for (int j = 0; j < common_vars->num_beams_period; j++) {
     for (int i = 0; i < symbols_per_slot; i++) {
       if (((bitmap_symbols >> i) & 0x01) == 0)
