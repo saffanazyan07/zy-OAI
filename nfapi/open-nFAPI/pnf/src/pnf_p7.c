@@ -891,8 +891,6 @@ int pnf_p7_slot_ind(pnf_p7_t* pnf_p7, uint16_t phy_id, uint16_t sfn, uint16_t sl
 			pnf_p7->slot_shift = 0;
 		}
 
-		nfapi_pnf_p7_slot_buffer_t* rx_slot_buffer = &(pnf_p7->slot_buffer[buffer_index_rx]);
-
 		nfapi_pnf_p7_slot_buffer_t* tx_slot_buffer = &(pnf_p7->slot_buffer[buffer_index_tx]);
 
 		if(tx_slot_buffer->dl_tti_req.dl_tti_request_body.nPDUs > 0 && tx_slot_buffer->dl_tti_req.SFN == sfn_tx && tx_slot_buffer->dl_tti_req.Slot == slot_tx)
