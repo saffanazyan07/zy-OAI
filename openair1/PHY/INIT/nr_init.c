@@ -171,8 +171,7 @@ void phy_init_nr_gNB(PHY_VARS_gNB *gNB)
   for (int i = 0; i < common_vars->num_beams_period; i++)
     common_vars->rxdataF[i] = (c16_t **)malloc16(Prx * sizeof(c16_t*));
 
-  common_vars->num_beams = cfg->dbt_config.num_dig_beams;
-  if (common_vars->num_beams > 0) {
+  if (cfg->analog_beamforming_ve.analog_bf_vendor_ext.value) {
     common_vars->beam_id = (int **)malloc16(common_vars->num_beams_period * sizeof(int*));
     for (int i = 0; i < common_vars->num_beams_period; i++)
       common_vars->beam_id[i] = (int*)malloc16_clear(fp->symbols_per_slot * fp->slots_per_frame * sizeof(int));
