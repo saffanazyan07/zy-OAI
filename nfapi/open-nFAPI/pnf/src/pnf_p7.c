@@ -901,40 +901,33 @@ int pnf_p7_slot_ind(pnf_p7_t* pnf_p7, uint16_t phy_id, uint16_t sfn, uint16_t sl
 		if(tx_slot_buffer->dl_tti_req.dl_tti_request_body.nPDUs > 0 && tx_slot_buffer->dl_tti_req.SFN == sfn_tx && tx_slot_buffer->dl_tti_req.Slot == slot_tx)
 		{
 			DevAssert(pnf_p7->_public.dl_tti_req_fn != NULL);
-			// pnf_phy_dl_tti_req()
 			(pnf_p7->_public.dl_tti_req_fn)(NULL, &(pnf_p7->_public), &tx_slot_buffer->dl_tti_req);
+      tx_slot_buffer->dl_tti_req.SFN = -1;
+      tx_slot_buffer->dl_tti_req.Slot = -1;
 		}
 
 		if(tx_slot_buffer->ul_tti_req.n_pdus > 0 && tx_slot_buffer->ul_tti_req.SFN == sfn_tx && tx_slot_buffer->ul_tti_req.Slot == slot_tx)
 		{
 			DevAssert(pnf_p7->_public.ul_tti_req_fn != NULL);
-			// pnf_phy_ul_tti_req()
 			(pnf_p7->_public.ul_tti_req_fn)(NULL, &(pnf_p7->_public), &tx_slot_buffer->ul_tti_req);
+      tx_slot_buffer->ul_tti_req.SFN = -1;
+      tx_slot_buffer->ul_tti_req.Slot = -1;
 		}
 
-		if(tx_slot_buffer->tx_data_req.SFN == sfn_tx && tx_slot_buffer->tx_data_req.Slot == slot_tx)
+		if(tx_slot_buffer->tx_data_req.Number_of_PDUs > 0 && tx_slot_buffer->tx_data_req.SFN == sfn_tx && tx_slot_buffer->tx_data_req.Slot == slot_tx)
 		{
-				
 			DevAssert(pnf_p7->_public.tx_data_req_fn != NULL);
-			LOG_D(PHY, "Process tx_data SFN/slot %d.%d buffer index: %d \n",sfn_tx,slot_tx,buffer_index_tx);	
-			// pnf_phy_tx_data_req()
 			(pnf_p7->_public.tx_data_req_fn)(&(pnf_p7->_public), &tx_slot_buffer->tx_data_req);
+      tx_slot_buffer->tx_data_req.SFN = -1;
+      tx_slot_buffer->tx_data_req.Slot = - 1;
 		}
 
 		if(tx_slot_buffer->ul_dci_req.numPdus > 0 && tx_slot_buffer->ul_dci_req.SFN == sfn_tx && tx_slot_buffer->ul_dci_req.Slot == slot_tx)
 		{
 			DevAssert(pnf_p7->_public.ul_dci_req_fn != NULL);
-			LOG_D(PHY, "Process ul_dci SFN/slot %d.%d buffer index: %d \n",sfn_tx,slot_tx,buffer_index_tx);
-			// pnf_phy_ul_dci_req()
-     		(pnf_p7->_public.ul_dci_req_fn)(NULL, &(pnf_p7->_public), &tx_slot_buffer->ul_dci_req);
-		}
-
-		//reset slot buffer 
-
-		if (rx_slot_buffer->ul_tti_req.n_pdus == 0)
-		{
-			pnf_p7->slot_buffer[buffer_index_rx].sfn = -1;
-			pnf_p7->slot_buffer[buffer_index_rx].slot = -1;
+      (pnf_p7->_public.ul_dci_req_fn)(NULL, &(pnf_p7->_public), &tx_slot_buffer->ul_dci_req);
+      tx_slot_buffer->ul_dci_req.SFN = -1;
+      tx_slot_buffer->ul_dci_req.Slot = -1;
 		}
 
 		//send the periodic timing info if configured
