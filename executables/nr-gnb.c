@@ -333,7 +333,13 @@ void *nrL1_stats_thread(void *param) {
   return(NULL);
 }
 
-void init_gNB_Tpool(int inst) {
+void init_gNB_Tpool(int inst)
+{
+  AssertFatal(NFAPI_MODE == NFAPI_MODE_PNF || NFAPI_MODE == NFAPI_MONOLITHIC,
+              "illegal NFAPI_MODE %d (%s): it cannot have an L1\n",
+              NFAPI_MODE,
+              nfapi_get_strmode());
+
   PHY_VARS_gNB *gNB;
   gNB = RC.gNB[inst];
   gNB_L1_proc_t *proc = &gNB->proc;
@@ -366,9 +372,7 @@ void init_gNB_Tpool(int inst) {
   // this will be removed when the msgDataTx is not necessary anymore
   gNB->msgDataTx = msgDataTx;
 
-  if ((!get_softmodem_params()->emulate_l1) && (!IS_SOFTMODEM_NOSTATS_BIT) && (NFAPI_MODE!=NFAPI_MODE_VNF) && (NFAPI_MODE != NFAPI_MODE_AERIAL))
-     threadCreate(&proc->L1_stats_thread,nrL1_stats_thread,(void*)gNB,"L1_stats",-1,OAI_PRIORITY_RT_LOW);
-
+  threadCreate(&proc->L1_stats_thread, nrL1_stats_thread, (void *)gNB, "L1_stats", -1, OAI_PRIORITY_RT_LOW);
 }
 
 void term_gNB_Tpool(int inst) {
@@ -382,8 +386,7 @@ void term_gNB_Tpool(int inst) {
   abortNotifiedFIFO(&gNB->L1_rx_out);
 
   gNB_L1_proc_t *proc = &gNB->proc;
-  if (!get_softmodem_params()->emulate_l1)
-    pthread_join(proc->L1_stats_thread, NULL);
+  pthread_join(proc->L1_stats_thread, NULL);
 }
 
 /// eNB kept in function name for nffapi calls, TO FIX
