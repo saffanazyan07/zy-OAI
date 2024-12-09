@@ -1603,31 +1603,31 @@ void pnf_handle_ul_config_request(void* pRecvMsg, int recvMsgLen, pnf_p7_t* pnf_
 
 void pnf_handle_ul_dci_request(void* pRecvMsg, int recvMsgLen, pnf_p7_t* pnf_p7)
 {
-  nfapi_nr_ul_dci_request_t req;
-
-  if (peek_nr_nfapi_p7_sfn_slot(pRecvMsg, recvMsgLen, &req.SFN, &req.Slot)) {
+  uint16_t frame, slot;
+  if (peek_nr_nfapi_p7_sfn_slot(pRecvMsg, recvMsgLen, &frame, &slot)) {
     if (pthread_mutex_lock(&(pnf_p7->mutex)) != 0) {
       NFAPI_TRACE(NFAPI_TRACE_INFO, "failed to lock mutex\n");
       return;
     }
-    if (!check_nr_nfapi_p7_slot_type(req.SFN, req.Slot, "UL_DCI_REQUEST", NR_DOWNLINK_SLOT)) {
-      return;
-    }
-    if (is_nr_p7_request_in_window(req.SFN, req.Slot, "ul_dci_request", pnf_p7)) {
-      uint32_t sfn_slot_dec = NFAPI_SFNSLOT2DEC(req.SFN, req.Slot);
+    if (check_nr_nfapi_p7_slot_type(frame, slot, "UL_DCI.request", NR_DOWNLINK_SLOT)
+        && is_nr_p7_request_in_window(frame, slot, "ul_dci_request", pnf_p7)) {
+      uint32_t sfn_slot_dec = NFAPI_SFNSLOT2DEC(frame, slot);
       uint8_t buffer_index = sfn_slot_dec % 20;
-      if (nfapi_nr_p7_message_unpack(pRecvMsg, recvMsgLen, &req, sizeof(nfapi_nr_ul_dci_request_t), &pnf_p7->_public.codec_config)
-          != 0) {
-        NFAPI_TRACE(NFAPI_TRACE_INFO, "failed to unpack request\n");
-        return;
-      }
-      pnf_p7->slot_buffer[buffer_index].sfn = req.SFN;
-      pnf_p7->slot_buffer[buffer_index].slot = req.Slot;
-      pnf_p7->slot_buffer[buffer_index].ul_dci_req.header = req.header;
-      copy_ul_dci_request(&req, &pnf_p7->slot_buffer[buffer_index].ul_dci_req);
-
+      pnf_p7->slot_buffer[buffer_index].sfn = frame;
+      pnf_p7->slot_buffer[buffer_index].slot = slot;
+      nfapi_nr_ul_dci_request_t *req = &pnf_p7->slot_buffer[buffer_index].ul_dci_req;
       pnf_p7->stats.ul_dci_ontime++;
 
+      NFAPI_TRACE(NFAPI_TRACE_DEBUG,
+                  "POPULATE UL_DCI.request current tx sfn/slot:%d.%d p7 msg sfn/slot: %d.%d buffer_index:%d\n",
+                  pnf_p7->sfn,
+                  pnf_p7->slot,
+                  frame,
+                  slot,
+                  buffer_index);
+
+      if (nfapi_nr_p7_message_unpack(pRecvMsg, recvMsgLen, req, sizeof(*req), &pnf_p7->_public.codec_config) != 0)
+        NFAPI_TRACE(NFAPI_TRACE_INFO, "failed to unpack request\n");
     } else {
       if (pnf_p7->_public.timing_info_mode_aperiodic) {
         pnf_p7->timing_info_aperiodic_send = 1;
