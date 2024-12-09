@@ -36,14 +36,6 @@
 
 extern void set_taus_seed(unsigned int seed_type);
 
-
-/// Payload emulation
-void nr_emulate_dlsch_payload(uint8_t* pdu, uint16_t size) {
-  set_taus_seed(0);
-  for (int i=0; i<size; i++)
-    *(pdu+i) = (uint8_t)rand();
-}
-
 void nr_fill_dlsch_dl_tti_req(processingData_L1tx_t *msgTx, nfapi_nr_dl_tti_pdsch_pdu *pdsch_pdu)
 {
   NR_gNB_DLSCH_t *dlsch = &msgTx->dlsch[msgTx->num_pdsch_slot][0];
@@ -55,12 +47,12 @@ void nr_fill_dlsch_dl_tti_req(processingData_L1tx_t *msgTx, nfapi_nr_dl_tti_pdsc
               pdsch_pdu->pdsch_pdu_rel15.pduIndex,
               msgTx->num_pdsch_slot);
   msgTx->num_pdsch_slot++;
-  harq->pdu_len = 0;
+  harq->pdu = NULL;
 }
 
-void nr_fill_dlsch_tx_req(processingData_L1tx_t *msgTx, int idx, uint8_t *pdu, uint32_t pdu_len)
+void nr_fill_dlsch_tx_req(processingData_L1tx_t *msgTx, int idx, uint8_t *sdu)
 {
-  AssertFatal(pdu != NULL, "pdu is null\n");
+  AssertFatal(sdu != NULL, "sdu is null\n");
 
   /* not sure if FAPI could transmit DL_TTI_req and TX_req in different orders.
    * for the moment, assume they are in the same order (and check!) */
@@ -68,7 +60,5 @@ void nr_fill_dlsch_tx_req(processingData_L1tx_t *msgTx, int idx, uint8_t *pdu, u
   NR_DL_gNB_HARQ_t *harq = &dlsch->harq_process;
   nfapi_nr_dl_tti_pdsch_pdu *pdsch = &harq->pdsch_pdu;
   AssertFatal(pdsch->pdsch_pdu_rel15.pduIndex == idx, "PDSCH PDU index %d does not match %d\n", pdsch->pdsch_pdu_rel15.pduIndex, idx);
-  harq->pdu_len = pdu_len;
-  AssertFatal(pdu_len <= sizeof(harq->pdu), "buffer too small\n");
-  memcpy(harq->pdu, pdu, pdu_len);
+  harq->pdu = sdu;
 }
