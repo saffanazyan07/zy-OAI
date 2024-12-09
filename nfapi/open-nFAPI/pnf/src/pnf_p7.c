@@ -528,10 +528,7 @@ static uint32_t get_sf_time(uint32_t now_hr, uint32_t sf_start_hr)
 int pnf_p7_send_message(pnf_p7_t* pnf_p7, uint8_t* msg, uint32_t len)
 {
 	// todo : consider how to do this only once
-	struct sockaddr_in remote_addr;
-	memset((char*)&remote_addr, 0, sizeof(struct sockaddr_in));
-	remote_addr.sin_family = AF_INET;
-	remote_addr.sin_port = htons(pnf_p7->_public.remote_p7_port);
+  struct sockaddr_in remote_addr = {.sin_family = AF_INET, .sin_port = htons(pnf_p7->_public.remote_p7_port)};
 
 	
 	if(inet_aton(pnf_p7->_public.remote_p7_addr, &remote_addr.sin_addr) == -1)
