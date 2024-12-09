@@ -28,6 +28,7 @@
 #include <stdio.h>
 
 #include "pnf_p7.h"
+#include "nr_fapi_p7_utils.h" // for 5G/NR message utils
 
 #define FAPI2_IP_DSCP	0
 
