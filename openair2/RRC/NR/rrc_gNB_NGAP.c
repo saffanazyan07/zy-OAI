@@ -85,6 +85,7 @@
 
 #ifdef E2_AGENT
 #include "openair2/E2AP/RAN_FUNCTION/O-RAN/ran_func_rc_extern.h"
+#include "openair2/E2AP/RAN_FUNCTION/O-RAN/ran_func_rc_subs.h"
 #endif
 
 extern RAN_CONTEXT_t RC;
@@ -496,7 +497,18 @@ int rrc_gNB_process_NGAP_INITIAL_CONTEXT_SETUP_REQ(MessageDef *msg_p, instance_t
   }
 
 #ifdef E2_AGENT
-  signal_rrc_state_changed_to(UE, RC_SM_RRC_CONNECTED);
+  signal_rrc_state_changed_to_ric(UE, RC_SM_RRC_CONNECTED);
+  UE->ue_guami = (nr_rrc_guami_t) {
+                              .mcc = req->guami.mcc,
+                              .mnc = req->guami.mnc,
+                              .mnc_len = req->guami.mnc_len,
+                              .amf_region_id = req->guami.amf_region_id,
+                              .amf_set_id = req->guami.amf_set_id,
+                              .amf_pointer = req->guami.amf_pointer
+                              };
+  if(check_event_trigger_rrc_message(UE_ID_E2SM_RC_RAN_PARAM_ID_REPORT_1, UL_DCCH_NR_RRC_CLASS, NR_UL_DCCH_MessageType__c1_PR_rrcSetupComplete - 1)) {
+    signal_ue_id_to_ric(UE, RRC_SETUP_COMPLETE_MSG);
+  }
 #endif
 
   return 0;
@@ -1115,7 +1127,7 @@ int rrc_gNB_process_NGAP_UE_CONTEXT_RELEASE_COMMAND(MessageDef *msg_p, instance_
   gNB_RRC_UE_t *UE = &ue_context_p->ue_context;
   UE->an_release = true;
 #ifdef E2_AGENT
-  signal_rrc_state_changed_to(UE, RC_SM_RRC_IDLE);
+  signal_rrc_state_changed_to_ric(UE, RC_SM_RRC_IDLE);
 #endif
 
   /* a UE might not be associated to a CU-UP if it never requested a PDU

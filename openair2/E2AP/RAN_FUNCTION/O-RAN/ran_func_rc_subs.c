@@ -42,7 +42,7 @@ int cmp_ric_req_id(struct ric_req_id_s *c1, struct ric_req_id_s *c2)
 
 RB_GENERATE(ric_id_2_param_id_trees, ric_req_id_s, entries, cmp_ric_req_id);
 
-void init_rc_subs_data(rc_subs_data_t* rc_subs_data)
+void init_rc_subs_data(rc_subs_data_t* rc_subs_data, int rc_report_style)
 {
   pthread_mutex_lock(&rc_mutex);
  
@@ -51,16 +51,47 @@ void init_rc_subs_data(rc_subs_data_t* rc_subs_data)
  
   // Initialize RB trees
   // 1 RB tree = 1 ran_param_id => many ric_req_id(s)
-  for (size_t i = 0; i < END_E2SM_RC_RAN_PARAM_ID; i++) {
-    RB_INIT(&rc_subs_data->rb[i]);
+  switch (rc_report_style) {
+    case RC_REPORT_STYLE_1:
+      for (size_t i = 0; i < END_E2SM_RC_REPORT_STYLE_1_RAN_PARAM_ID; i++) {
+        RB_INIT(&rc_subs_data->rb_1[i]);
+      }
+      break;
+
+    case RC_REPORT_STYLE_2:
+      for (size_t i = 0; i < END_E2SM_RC_REPORT_STYLE_2_RAN_PARAM_ID; i++) {
+        RB_INIT(&rc_subs_data->rb_2[i]);
+      }
+      break;
+
+    case RC_REPORT_STYLE_3:
+      for (size_t i = 0; i < END_E2SM_RC_REPORT_STYLE_3_RAN_PARAM_ID; i++) {
+        RB_INIT(&rc_subs_data->rb_3[i]);
+      }
+      break;
+
+    case RC_REPORT_STYLE_4:
+      for (size_t i = 0; i < END_E2SM_RC_REPORT_STYLE_4_RAN_PARAM_ID; i++) {
+        RB_INIT(&rc_subs_data->rb_4[i]);
+      }
+      break;
+
+    case RC_REPORT_STYLE_5:
+      for (size_t i = 0; i < END_E2SM_RC_REPORT_STYLE_5_RAN_PARAM_ID; i++) {
+        RB_INIT(&rc_subs_data->rb_5[i]);
+      }
+      break;
+
+    default:
+      printf("Invalid Report Style for RAN Control Service Model. Cannot initialize rc_subs_data!\n");
   }
 
-   rc_subs_data->htable = hashtable_create(MAX_NUM_RIC_REQ_ID, NULL, free);
+  rc_subs_data->htable = hashtable_create(MAX_NUM_RIC_REQ_ID, NULL, free);
   assert(rc_subs_data->htable != NULL && "Memory exhausted");
   pthread_mutex_unlock(&rc_mutex);
 }
 
-void insert_rc_subs_data(rc_subs_data_t* rc_subs_data, uint32_t ric_req_id, arr_ran_param_id_t* arr_ran_param_id)
+void insert_rc_subs_data(rc_subs_data_t* rc_subs_data, uint32_t ric_req_id, arr_ran_param_id_t* arr_ran_param_id, int rc_report_style)
 {
   pthread_mutex_lock(&rc_mutex);
 
@@ -81,14 +112,46 @@ void insert_rc_subs_data(rc_subs_data_t* rc_subs_data, uint32_t ric_req_id, arr_
   rb_ric_req_id_t *node = calloc(1, sizeof(*node));
   assert(node != NULL);
   node->ric_req_id = ric_req_id;
-  for (size_t i = 0; i < sz; i++) {
-    RB_INSERT(ric_id_2_param_id_trees, &rc_subs_data->rb[arr_ran_param_id->ran_param_id[i]], node);
+
+  switch (rc_report_style) {
+    case RC_REPORT_STYLE_1:
+      for (size_t i = 0; i < sz; i++) {
+        RB_INSERT(ric_id_2_param_id_trees, &rc_subs_data->rb_1[arr_ran_param_id->sty1_ran_param_id[i]], node);
+      }
+      break;
+
+    case RC_REPORT_STYLE_2:
+      for (size_t i = 0; i < sz; i++) {
+        RB_INSERT(ric_id_2_param_id_trees, &rc_subs_data->rb_2[arr_ran_param_id->sty2_ran_param_id[i]], node);
+      }
+      break;
+
+    case RC_REPORT_STYLE_3:
+      for (size_t i = 0; i < sz; i++) {
+        RB_INSERT(ric_id_2_param_id_trees, &rc_subs_data->rb_3[arr_ran_param_id->sty3_ran_param_id[i]], node);
+      }
+      break;
+
+    case RC_REPORT_STYLE_4:
+      for (size_t i = 0; i < sz; i++) {
+        RB_INSERT(ric_id_2_param_id_trees, &rc_subs_data->rb_4[arr_ran_param_id->sty4_ran_param_id[i]], node);
+      }
+      break;
+
+    case RC_REPORT_STYLE_5:
+      for (size_t i = 0; i < sz; i++) {
+        RB_INSERT(ric_id_2_param_id_trees, &rc_subs_data->rb_5[arr_ran_param_id->sty5_ran_param_id[i]], node);
+      }
+      break;
+
+    default:
+      printf("Invalid Report Style for RAN Control Service Model. Cannot insert rc_subs_data!\n");
   }
 
   pthread_mutex_unlock(&rc_mutex);
 }
 
-void remove_rc_subs_data(rc_subs_data_t* rc_subs_data, uint32_t ric_req_id)
+void remove_rc_subs_data(rc_subs_data_t* rc_subs_data, uint32_t ric_req_id, int rc_report_style)
 {
   pthread_mutex_lock(&rc_mutex);
   DevAssert(rc_subs_data->htable != NULL);
@@ -106,8 +169,40 @@ void remove_rc_subs_data(rc_subs_data_t* rc_subs_data, uint32_t ric_req_id)
   rb_ric_req_id_t *node = calloc(1, sizeof(*node));
   assert(node != NULL);
   node->ric_req_id = ric_req_id;
-  for (size_t i = 0; i < arr_ran_param_id.len; i++) {
-    RB_REMOVE(ric_id_2_param_id_trees, &rc_subs_data->rb[arr_ran_param_id.ran_param_id[i]], node);
+
+  switch (rc_report_style) {
+    case RC_REPORT_STYLE_1:
+      for (size_t i = 0; i < arr_ran_param_id.len; i++) {
+        RB_REMOVE(ric_id_2_param_id_trees, &rc_subs_data->rb_1[arr_ran_param_id.sty1_ran_param_id[i]], node);
+      }
+      break;
+
+    case RC_REPORT_STYLE_2:
+      for (size_t i = 0; i < arr_ran_param_id.len; i++) {
+        RB_REMOVE(ric_id_2_param_id_trees, &rc_subs_data->rb_2[arr_ran_param_id.sty2_ran_param_id[i]], node);
+      }
+      break;
+
+    case RC_REPORT_STYLE_3:
+      for (size_t i = 0; i < arr_ran_param_id.len; i++) {
+        RB_REMOVE(ric_id_2_param_id_trees, &rc_subs_data->rb_3[arr_ran_param_id.sty3_ran_param_id[i]], node);
+      }
+      break;
+
+    case RC_REPORT_STYLE_4:
+      for (size_t i = 0; i < arr_ran_param_id.len; i++) {
+        RB_REMOVE(ric_id_2_param_id_trees, &rc_subs_data->rb_4[arr_ran_param_id.sty4_ran_param_id[i]], node);
+      }
+      break;
+
+    case RC_REPORT_STYLE_5:
+      for (size_t i = 0; i < arr_ran_param_id.len; i++) {
+        RB_REMOVE(ric_id_2_param_id_trees, &rc_subs_data->rb_5[arr_ran_param_id.sty5_ran_param_id[i]], node);
+      }
+      break;
+
+    default:
+      printf("Invalid Report Style for RAN Control Service Model. Cannot remove rc_subs_data!\n");
   }
 
   pthread_mutex_unlock(&rc_mutex);
