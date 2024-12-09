@@ -1660,72 +1660,46 @@ void pnf_handle_ul_config_request(void* pRecvMsg, int recvMsgLen, pnf_p7_t* pnf_
 	}
 }
 
-static void cp_nr_ul_dci_req(nfapi_nr_ul_dci_request_t* dst, const nfapi_nr_ul_dci_request_t* src)
-{
-  dst->header = src->header;
-  dst->SFN = src->SFN;
-  dst->Slot = src->Slot;
-  dst->numPdus = src->numPdus;
-
-  for (int i = 0; i < dst->numPdus; ++i) {
-    nfapi_nr_ul_dci_request_pdus_t* dst_pdu = &dst->ul_dci_pdu_list[i];
-    const nfapi_nr_ul_dci_request_pdus_t* src_pdu = &src->ul_dci_pdu_list[i];
-
-    dst_pdu->PDUType = src_pdu->PDUType;
-    dst_pdu->PDUSize = src_pdu->PDUSize;
-    dst_pdu->pdcch_pdu = src_pdu->pdcch_pdu;
-  }
-}
-
 void pnf_handle_ul_dci_request(void* pRecvMsg, int recvMsgLen, pnf_p7_t* pnf_p7)
 {
-	nfapi_nr_ul_dci_request_t req;
+  nfapi_nr_ul_dci_request_t req;
 
-	int unpack_result = nfapi_nr_p7_message_unpack(pRecvMsg, recvMsgLen, &req, sizeof(nfapi_nr_ul_dci_request_t), &pnf_p7->_public.codec_config);
+  int unpack_result =
+      nfapi_nr_p7_message_unpack(pRecvMsg, recvMsgLen, &req, sizeof(nfapi_nr_ul_dci_request_t), &pnf_p7->_public.codec_config);
 
-	if(unpack_result == 0)
-	{
-		if(pthread_mutex_lock(&(pnf_p7->mutex)) != 0)
-		{
-			NFAPI_TRACE(NFAPI_TRACE_INFO, "failed to lock mutex\n");
-			return;
-		}
+  if (unpack_result == 0) {
+    if (pthread_mutex_lock(&(pnf_p7->mutex)) != 0) {
+      NFAPI_TRACE(NFAPI_TRACE_INFO, "failed to lock mutex\n");
+      return;
+    }
 
-		if(is_nr_p7_request_in_window(req.SFN,req.Slot,"ul_dci_request", pnf_p7))
-		{
-			uint32_t sfn_slot_dec = NFAPI_SFNSLOT2DEC(req.SFN,req.Slot);
-			uint8_t buffer_index = sfn_slot_dec % 20;
+    if (is_nr_p7_request_in_window(req.SFN, req.Slot, "ul_dci_request", pnf_p7)) {
+      uint32_t sfn_slot_dec = NFAPI_SFNSLOT2DEC(req.SFN, req.Slot);
+      uint8_t buffer_index = sfn_slot_dec % 20;
 
-			pnf_p7->slot_buffer[buffer_index].sfn = req.SFN;
-			cp_nr_ul_dci_req(&pnf_p7->slot_buffer[buffer_index].ul_dci_req, &req);
+      pnf_p7->slot_buffer[buffer_index].sfn = req.SFN;
+      pnf_p7->slot_buffer[buffer_index].slot = req.Slot;
+      pnf_p7->slot_buffer[buffer_index].ul_dci_req.header = req.header;
+      copy_ul_dci_request(&req, &pnf_p7->slot_buffer[buffer_index].ul_dci_req);
 
+      pnf_p7->stats.ul_dci_ontime++;
 
-			pnf_p7->stats.ul_dci_ontime++;
-			
-		}
-		else
-		{
-			if(pnf_p7->_public.timing_info_mode_aperiodic)
-			{
-				pnf_p7->timing_info_aperiodic_send = 1;
-			}
+    } else {
+      if (pnf_p7->_public.timing_info_mode_aperiodic) {
+        pnf_p7->timing_info_aperiodic_send = 1;
+      }
 
-			pnf_p7->stats.ul_dci_late++;
-		}
+      pnf_p7->stats.ul_dci_late++;
+    }
 
-		if(pthread_mutex_unlock(&(pnf_p7->mutex)) != 0)
-		{
-			NFAPI_TRACE(NFAPI_TRACE_INFO, "failed to unlock mutex\n");
-			return;
-		}
-	}
-	else
-	{
-		NFAPI_TRACE(NFAPI_TRACE_ERROR, "Failed to unpack UL DCI req\n");
-	}
+    if (pthread_mutex_unlock(&(pnf_p7->mutex)) != 0) {
+      NFAPI_TRACE(NFAPI_TRACE_INFO, "failed to unlock mutex\n");
+      return;
+    }
+  } else {
+    NFAPI_TRACE(NFAPI_TRACE_ERROR, "Failed to unpack UL DCI req\n");
+  }
 }
-
-
 
 void pnf_handle_hi_dci0_request(void* pRecvMsg, int recvMsgLen, pnf_p7_t* pnf_p7)
 
