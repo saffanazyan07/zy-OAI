@@ -1352,7 +1352,7 @@ void pnf_handle_dl_tti_request(void* pRecvMsg, int recvMsgLen, pnf_p7_t* pnf_p7)
 {
   // NFAPI_TRACE(NFAPI_TRACE_INFO, "DL_CONFIG.req Received\n");
   nfapi_nr_dl_tti_request_t req;
-  if (!peek_nr_nfapi_p7_sfn_slot(pRecvMsg, recvMsgLen, &req.SFN, &req.Slot)) {
+  if (peek_nr_nfapi_p7_sfn_slot(pRecvMsg, recvMsgLen, &req.SFN, &req.Slot)) {
     if (pthread_mutex_lock(&(pnf_p7->mutex)) != 0) {
       NFAPI_TRACE(NFAPI_TRACE_INFO, "failed to lock mutex\n");
       return;
@@ -1500,7 +1500,7 @@ void pnf_handle_ul_tti_request(void* pRecvMsg, int recvMsgLen, pnf_p7_t* pnf_p7)
   // NFAPI_TRACE(NFAPI_TRACE_INFO, "UL_CONFIG.req Received\n");
 
   nfapi_nr_ul_tti_request_t req;
-  if (!peek_nr_nfapi_p7_sfn_slot(pRecvMsg, recvMsgLen, &req.SFN, &req.Slot)) {
+  if (peek_nr_nfapi_p7_sfn_slot(pRecvMsg, recvMsgLen, &req.SFN, &req.Slot)) {
     if (pthread_mutex_lock(&(pnf_p7->mutex)) != 0) {
       NFAPI_TRACE(NFAPI_TRACE_INFO, "failed to lock mutex\n");
       return;
@@ -1635,7 +1635,7 @@ void pnf_handle_ul_dci_request(void* pRecvMsg, int recvMsgLen, pnf_p7_t* pnf_p7)
 {
   nfapi_nr_ul_dci_request_t req;
 
-  if (!peek_nr_nfapi_p7_sfn_slot(pRecvMsg, recvMsgLen, &req.SFN, &req.Slot)) {
+  if (peek_nr_nfapi_p7_sfn_slot(pRecvMsg, recvMsgLen, &req.SFN, &req.Slot)) {
     if (pthread_mutex_lock(&(pnf_p7->mutex)) != 0) {
       NFAPI_TRACE(NFAPI_TRACE_INFO, "failed to lock mutex\n");
       return;
@@ -1749,7 +1749,7 @@ void pnf_handle_tx_data_request(void* pRecvMsg, int recvMsgLen, pnf_p7_t* pnf_p7
   // NFAPI_TRACE(NFAPI_TRACE_INFO, "TX.req Received\n");
 
   nfapi_nr_tx_data_request_t req;
-  if (!peek_nr_nfapi_p7_sfn_slot(pRecvMsg, recvMsgLen, &req.SFN, &req.Slot)) {
+  if (peek_nr_nfapi_p7_sfn_slot(pRecvMsg, recvMsgLen, &req.SFN, &req.Slot)) {
     if (pthread_mutex_lock(&(pnf_p7->mutex)) != 0) {
       NFAPI_TRACE(NFAPI_TRACE_INFO, "failed to lock mutex\n");
       return;

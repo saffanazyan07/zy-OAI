@@ -10,6 +10,8 @@
 #define _NFAPI_NR_INTERFACE_H_
 #include "nfapi_common_interface.h"
 
+#include <stdbool.h>
+
 #define NFAPI_NR_P5_HEADER_LENGTH 10
 #define NFAPI_NR_P7_HEADER_LENGTH 18
 
@@ -182,12 +184,12 @@ int nfapi_nr_p7_message_unpack(void *pMessageBuf,
  *  \param messageBufLen The size of the encoded P7 message header
  *  \param SFN A pointer to store the peeked SFN
  *  \param Slot A pointer to store the peeked Slot
- *  \return 0 means success, -1 means failure.
+ *  \return true on success, false, otherwise.
  *
  * The function will decode the encoded SFN and Slot from an encoded P7 (n)FAPI message
 
  */
-int peek_nr_nfapi_p7_sfn_slot(void *pMessageBuf, uint32_t messageBufLen, uint16_t *SFN, uint16_t *Slot);
+bool peek_nr_nfapi_p7_sfn_slot(void *pMessageBuf, uint32_t messageBufLen, uint16_t *SFN, uint16_t *Slot);
 
 /*! \brief Calculates the checksum of a  message
  *
