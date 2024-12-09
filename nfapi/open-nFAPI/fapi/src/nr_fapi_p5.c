@@ -1124,6 +1124,33 @@ uint8_t pack_nr_config_request(void *msg, uint8_t **ppWritePackedMsg, uint8_t *e
   // only increase if it was set
   numTLVs += pNfapiMsg->analog_beamforming_ve.analog_bf_vendor_ext.tl.tag == NFAPI_NR_FAPI_ANALOG_BF_VENDOR_EXTENSION_TAG;
 
+  AssertFatal(pNfapiMsg->analog_beamforming_ve.total_num_beams_vendor_ext.tl.tag == 0,
+              "Total num beams Vendor extension shouldn't be set!");
+  // The call to pack the TLV would be the same as any other TLV, it is only packed if the tag is set,
+  // so, it's safe to add the call to pack_nr_tlv even if it is not always set
+  retval &= pack_nr_tlv(NFAPI_NR_FAPI_TOTAL_NUM_BEAMS_VENDOR_EXTENSION_TAG,
+                        &(pNfapiMsg->analog_beamforming_ve.total_num_beams_vendor_ext),
+                        ppWritePackedMsg,
+                        end,
+                        &pack_uint8_tlv_value);
+  // only increase if it was set
+  numTLVs +=
+      pNfapiMsg->analog_beamforming_ve.total_num_beams_vendor_ext.tl.tag == NFAPI_NR_FAPI_TOTAL_NUM_BEAMS_VENDOR_EXTENSION_TAG;
+
+  for (int beam = 0; beam < pNfapiMsg->analog_beamforming_ve.total_num_beams_vendor_ext.value; beam++) {
+    AssertFatal(pNfapiMsg->analog_beamforming_ve.analog_beam_list[beam].tl.tag == 0,
+                "Analog beams list Vendor extension shouldn't be set!");
+    // The call to pack the TLV would be the same as any other TLV, it is only packed if the tag is set,
+    // so, it's safe to add the call to pack_nr_tlv even if it is not always set
+    retval &= pack_nr_tlv(NFAPI_NR_FAPI_ANALOG_BEAM_VENDOR_EXTENSION_TAG,
+                          &(pNfapiMsg->analog_beamforming_ve.analog_beam_list[beam]),
+                          ppWritePackedMsg,
+                          end,
+                          &pack_uint8_tlv_value);
+    // only increase if it was set
+    numTLVs += pNfapiMsg->analog_beamforming_ve.analog_bf_vendor_ext.tl.tag == NFAPI_NR_FAPI_TOTAL_NUM_BEAMS_VENDOR_EXTENSION_TAG;
+  }
+
   pNfapiMsg->num_tlv = numTLVs;
   retval &= push8(pNfapiMsg->num_tlv, &pNumTLVFields, end);
   return retval;
@@ -1138,6 +1165,7 @@ uint8_t unpack_nr_config_request(uint8_t **ppReadPackedMsg, uint8_t *end, void *
   int config_beam_idx = 0;
   int tdd_periodicity_idx = 0;
   int symbol_per_slot_idx = 0;
+  int beam_ve_idx = 0;
   nfapi_nr_config_request_scf_t *pNfapiMsg = (nfapi_nr_config_request_scf_t *)msg;
   // unpack TLVs
 
@@ -1188,6 +1216,10 @@ uint8_t unpack_nr_config_request(uint8_t **ppReadPackedMsg, uint8_t *end, void *
        &unpack_uint8_tlv_value},
       {NFAPI_NR_CONFIG_TDD_PERIOD_TAG, &(pNfapiMsg->tdd_table.tdd_period), &unpack_uint8_tlv_value},
       {NFAPI_NR_CONFIG_SLOT_CONFIG_TAG, NULL, &unpack_uint8_tlv_value},
+      {NFAPI_NR_FAPI_NUM_BEAMS_PERIOD_VENDOR_EXTENSION_TAG, &(pNfapiMsg->analog_beamforming_ve.num_beams_period_vendor_ext), &unpack_uint8_tlv_value},
+      {NFAPI_NR_FAPI_ANALOG_BF_VENDOR_EXTENSION_TAG, &(pNfapiMsg->analog_beamforming_ve.analog_bf_vendor_ext), &unpack_uint8_tlv_value},
+      {NFAPI_NR_FAPI_TOTAL_NUM_BEAMS_VENDOR_EXTENSION_TAG, &(pNfapiMsg->analog_beamforming_ve.total_num_beams_vendor_ext), &unpack_uint8_tlv_value},
+      {NFAPI_NR_FAPI_ANALOG_BEAM_VENDOR_EXTENSION_TAG, NULL, &unpack_uint8_tlv_value},
       {NFAPI_NR_CONFIG_RSSI_MEASUREMENT_TAG, &(pNfapiMsg->measurement_config.rssi_measurement), &unpack_uint8_tlv_value},
       {NFAPI_NR_NFAPI_P7_VNF_ADDRESS_IPV4_TAG, &(pNfapiMsg->nfapi_config.p7_vnf_address_ipv4), &unpack_ipv4_address_value},
       {NFAPI_NR_NFAPI_P7_VNF_ADDRESS_IPV6_TAG, &(pNfapiMsg->nfapi_config.p7_vnf_address_ipv6), &unpack_ipv6_address_value},
@@ -1221,6 +1253,21 @@ uint8_t unpack_nr_config_request(uint8_t **ppReadPackedMsg, uint8_t *end, void *
         }
         int result = 0;
         switch (generic_tl.tag) {
+          case NFAPI_NR_FAPI_TOTAL_NUM_BEAMS_VENDOR_EXTENSION_TAG:
+            pNfapiMsg->analog_beamforming_ve.total_num_beams_vendor_ext.tl.tag = generic_tl.tag;
+            pNfapiMsg->analog_beamforming_ve.total_num_beams_vendor_ext.tl.length = generic_tl.length;
+            result = (*unpack_fns[idx].unpack_func)(&pNfapiMsg->analog_beamforming_ve.total_num_beams_vendor_ext, ppReadPackedMsg, end);
+            pNfapiMsg->analog_beamforming_ve.analog_beam_list = (nfapi_uint8_tlv_t *)malloc(
+                pNfapiMsg->analog_beamforming_ve.total_num_beams_vendor_ext.value * sizeof(nfapi_uint8_tlv_t));
+            beam_ve_idx = 0;
+            break;
+          case NFAPI_NR_FAPI_ANALOG_BEAM_VENDOR_EXTENSION_TAG:
+            unpack_fns[idx].tlv = &pNfapiMsg->analog_beamforming_ve.analog_beam_list[beam_ve_idx];
+            pNfapiMsg->analog_beamforming_ve.analog_beam_list[beam_ve_idx].tl.tag = generic_tl.tag;
+            pNfapiMsg->analog_beamforming_ve.analog_beam_list[beam_ve_idx].tl.length = generic_tl.length;
+            result = (*unpack_fns[idx].unpack_func)(&pNfapiMsg->analog_beamforming_ve.analog_beam_list[beam_ve_idx], ppReadPackedMsg, end);
+            beam_ve_idx ++;
+            break;
           case NFAPI_NR_CONFIG_NUM_PRACH_FD_OCCASIONS_TAG:
             pNfapiMsg->prach_config.num_prach_fd_occasions.tl.tag = generic_tl.tag;
             pNfapiMsg->prach_config.num_prach_fd_occasions.tl.length = generic_tl.length;

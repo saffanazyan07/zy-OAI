@@ -611,12 +611,14 @@ static void config_common(gNB_MAC_INST *nrmac,
     cfg->analog_beamforming_ve.analog_bf_vendor_ext.tl.tag = NFAPI_NR_FAPI_ANALOG_BF_VENDOR_EXTENSION_TAG;
     cfg->analog_beamforming_ve.analog_bf_vendor_ext.value = 1;  // analog BF enabled
     cfg->num_tlv++;
-    //cfg->analog_beamforming_ve.analog_bf_vendor_ext.tl.tag = ???;
+    cfg->analog_beamforming_ve.total_num_beams_vendor_ext.tl.tag = NFAPI_NR_FAPI_TOTAL_NUM_BEAMS_VENDOR_EXTENSION_TAG;
     cfg->analog_beamforming_ve.total_num_beams_vendor_ext.value = nb_beams;
     cfg->num_tlv++;
     cfg->analog_beamforming_ve.analog_beam_list = malloc16(nb_beams * sizeof(*cfg->analog_beamforming_ve.analog_beam_list));
-    for (int i = 0; i < nb_beams; i++)
+    for (int i = 0; i < nb_beams; i++) {
+      cfg->analog_beamforming_ve.analog_beam_list[i].tl.tag = NFAPI_NR_FAPI_ANALOG_BEAM_VENDOR_EXTENSION_TAG;
       cfg->analog_beamforming_ve.analog_beam_list[i].value = config->bw_list[i];
+    }
   } else {
     cfg->analog_beamforming_ve.analog_bf_vendor_ext.value = 0;  // analog BF disabled
     if (NFAPI_MODE == NFAPI_MONOLITHIC) {
