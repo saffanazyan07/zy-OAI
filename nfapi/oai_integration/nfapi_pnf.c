@@ -1104,15 +1104,6 @@ void pnf_nr_phy_deallocate_p7_vendor_ext(void *header)
   free(header);
 }
 
-notifiedFIFO_elt_t *l1tx_message_extract(PHY_VARS_gNB *gNB, int frame, int slot) {
-  notifiedFIFO_elt_t *res;
-  DevAssert(0);
-
-  //TODO: This needs to be reworked for nfapi to work
-  res = pullNotifiedFIFO(&gNB->L1_tx_free);
-  return res;
-}
-
 extern void nr_schedule_ul_dci_req(PHY_VARS_gNB *gNB, nfapi_nr_ul_dci_request_t *UL_dci_req);
 int pnf_phy_ul_dci_req(gNB_L1_rxtx_proc_t *proc, nfapi_pnf_p7_config_t *pnf_p7, nfapi_nr_ul_dci_request_t *req)
 {
