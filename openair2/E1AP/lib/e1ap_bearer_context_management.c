@@ -518,8 +518,7 @@ static bool eq_pdu_session_item(const pdu_session_to_setup_t *a, const pdu_sessi
 {
   _E1_EQ_CHECK_LONG(a->sessionId, b->sessionId);
   _E1_EQ_CHECK_LONG(a->sessionType, b->sessionType);
-  _E1_EQ_CHECK_INT(a->UP_TL_information.tlAddress, b->UP_TL_information.tlAddress);
-  _E1_EQ_CHECK_INT(a->UP_TL_information.teId, b->UP_TL_information.teId);
+  eq_up_tl_info(&a->UP_TL_information, &b->UP_TL_information);
   _E1_EQ_CHECK_INT(a->numDRB2Setup, b->numDRB2Setup);
   for (int i = 0; i < a->numDRB2Setup; i++)
     if (!eq_drb_to_setup(&a->DRBnGRanList[i], &b->DRBnGRanList[i]))
@@ -587,8 +586,7 @@ E1AP_E1AP_PDU_t *encode_E1_bearer_context_setup_request(const e1ap_bearer_setup_
   ieC5->criticality = E1AP_Criticality_reject;
   ieC5->value.present = E1AP_BearerContextSetupRequestIEs__value_PR_ActivityNotificationLevel;
   ieC5->value.choice.ActivityNotificationLevel = E1AP_ActivityNotificationLevel_pdu_session; // TODO: Remove hard coding
-  /* mandatory */
-  /*  */
+  // System (M)
   asn1cSequenceAdd(out->protocolIEs.list, E1AP_BearerContextSetupRequestIEs_t, ieC6);
   ieC6->id = E1AP_ProtocolIE_ID_id_System_BearerContextSetupRequest;
   ieC6->criticality = E1AP_Criticality_reject;
