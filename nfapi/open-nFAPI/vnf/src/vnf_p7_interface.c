@@ -42,7 +42,7 @@ nfapi_vnf_p7_config_t* nfapi_vnf_p7_config_create()
 		return 0;
 
 	// todo : initialize
-	_this->_public.segment_size = 1400;
+	_this->_public.segment_size = 65000; // UDP max packet size is 65535
 	_this->_public.max_num_segments = 8;
 	_this->_public.checksum_enabled = 1;
 
