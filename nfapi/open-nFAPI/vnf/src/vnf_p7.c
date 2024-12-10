@@ -241,7 +241,7 @@ void vnf_p7_rx_reassembly_queue_remove_old_msgs(vnf_p7_t* vnf_p7, vnf_p7_rx_reas
 				previous->next = iterator->next;
 			}
 			
-			NFAPI_TRACE(NFAPI_TRACE_INFO, "Deleting stale reassembly message (%u %u %d)\n", iterator->rx_hr_time, rx_hr_time, delta);
+			NFAPI_TRACE(NFAPI_TRACE_WARN, "Deleting stale reassembly message (packet rx_hr_time %u current rx_hr_time %u delta %d us)\n", iterator->rx_hr_time, rx_hr_time, delta);
 
 			vnf_p7_rx_message_t* to_delete = iterator;
 			iterator = iterator->next;
@@ -2505,7 +2505,8 @@ void vnf_nr_handle_p7_message(void *pRecvMsg, int recvMsgLen, vnf_p7_t* vnf_p7)
 				vnf_p7_rx_reassembly_queue_remove_msg(vnf_p7, &(phy->reassembly_queue), rx_msg);
 			}
 
-			vnf_p7_rx_reassembly_queue_remove_old_msgs(vnf_p7, &(phy->reassembly_queue), 1000);
+      // see corresponding comment in pnf_nr_handle_p7_message() [same commit]
+			vnf_p7_rx_reassembly_queue_remove_old_msgs(vnf_p7, &(phy->reassembly_queue), 10000);
 		}
 		else
 		{

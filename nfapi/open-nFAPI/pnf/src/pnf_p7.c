@@ -455,7 +455,7 @@ void pnf_p7_rx_reassembly_queue_remove_old_msgs(pnf_p7_t* pnf_p7, pnf_p7_rx_reas
 				previous->next = iterator->next;
 			}
 			
-			NFAPI_TRACE(NFAPI_TRACE_INFO, "Deleting stale reassembly message (%u %u %d)\n", iterator->rx_hr_time, rx_hr_time, delta);
+			NFAPI_TRACE(NFAPI_TRACE_WARN, "Deleting stale reassembly message (packet rx_hr_time %u current rx_hr_time %u delta %d us)\n", iterator->rx_hr_time, rx_hr_time, delta);
 
 			pnf_p7_rx_message_t* to_delete = iterator;
 			iterator = iterator->next;
@@ -2475,7 +2475,13 @@ void pnf_nr_handle_p7_message(void* pRecvMsg, int recvMsgLen, pnf_p7_t* pnf_p7, 
     }
   }
 
-  pnf_p7_rx_reassembly_queue_remove_old_msgs(pnf_p7, &(pnf_p7->reassembly_queue), rx_hr_time, 1000);
+  // The timeout used to be 1000, i.e., 1ms, which is too short. The below 10ms
+  // is selected to be able to encompass any "reasonable" slot ahead time for the VNF.
+  // Ideally, we would remove old msg (segments) if we detect packet loss
+  // (e.g., if the sequence numbers advances sufficiently); in the branch of
+  // this commit, our goal is to make the PNF work, so we content ourselves to
+  // just remove very old messages.
+  pnf_p7_rx_reassembly_queue_remove_old_msgs(pnf_p7, &(pnf_p7->reassembly_queue), rx_hr_time, 10000);
 }
 
 
