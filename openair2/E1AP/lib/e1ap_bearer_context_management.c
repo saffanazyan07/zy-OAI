@@ -789,12 +789,7 @@ static bool e1_decode_pdu_session_setup_item(pdu_session_setup_t *pduSetup, E1AP
   pduSetup->id = in->pDU_Session_ID;
   pduSetup->numDRBSetup = in->dRB_Setup_List_NG_RAN.list.count;
   // NG DL UP Transport Layer Information (M)
-  E1AP_UP_TNL_Information_t *DL_UP_TNL_Info = &in->nG_DL_UP_TNL_Information;
-  if (DL_UP_TNL_Info->choice.gTPTunnel) {
-    _E1_EQ_CHECK_INT(DL_UP_TNL_Info->present, E1AP_UP_TNL_Information_PR_gTPTunnel);
-    BIT_STRING_TO_TRANSPORT_LAYER_ADDRESS_IPv4(&DL_UP_TNL_Info->choice.gTPTunnel->transportLayerAddress, pduSetup->tl_info.tlAddress);
-    OCTET_STRING_TO_INT32(&DL_UP_TNL_Info->choice.gTPTunnel->gTP_TEID, pduSetup->tl_info.teId);
-  }
+  e1_decode_up_tnl_info(&pduSetup->tl_info, &in->nG_DL_UP_TNL_Information);
   // DRB Setup List (1..<maxnoofDRBs>)
   for (int j = 0; j < in->dRB_Setup_List_NG_RAN.list.count; j++) {
     DRB_nGRAN_setup_t *drbSetup = pduSetup->DRBnGRanList + j;
@@ -803,29 +798,24 @@ static bool e1_decode_pdu_session_setup_item(pdu_session_setup_t *pduSetup, E1AP
     drbSetup->id = drb->dRB_ID;
     // UL UP Parameters (M)
     drbSetup->numUpParam = drb->uL_UP_Transport_Parameters.list.count;
-    for (int k = 0; k < drb->uL_UP_Transport_Parameters.list.count; k++) {
-      up_params_t *UL_UP_param = drbSetup->UpParamList + k;
-      // UP Parameters List (1..<maxnoofUPParameters>)
-      E1AP_UP_Parameters_Item_t *UL_UP_item = drb->uL_UP_Transport_Parameters.list.array[k];
-      // UP Transport Layer Information (M)
-      DevAssert(UL_UP_item->uP_TNL_Information.present == E1AP_UP_TNL_Information_PR_gTPTunnel);
-      // GTP Tunnel (M)
-      E1AP_GTPTunnel_t *gTPTunnel = UL_UP_item->uP_TNL_Information.choice.gTPTunnel;
-      AssertError(gTPTunnel != NULL, return false, "gTPTunnel information in required in UP Transport Layer Information\n");
-      if (gTPTunnel) {
-        BIT_STRING_TO_TRANSPORT_LAYER_ADDRESS_IPv4(&gTPTunnel->transportLayerAddress, UL_UP_param->tl_info.tlAddress);
-        OCTET_STRING_TO_INT32(&gTPTunnel->gTP_TEID, UL_UP_param->tl_info.teId);
-      } else {
-      }
-      // Cell Group ID (M)
-      UL_UP_param->cell_group_id = UL_UP_item->cell_Group_ID;
-    }
+    decode_dl_up_parameters(drbSetup->UpParamList, &drb->uL_UP_Transport_Parameters);
     // Flow Setup List (M)
     drbSetup->numQosFlowSetup = drb->flow_Setup_List.list.count;
     for (int q = 0; q < drb->flow_Setup_List.list.count; q++) {
       qos_flow_list_t *qosflowSetup = &drbSetup->qosFlows[q];
       E1AP_QoS_Flow_Item_t *in_qosflowSetup = drb->flow_Setup_List.list.array[q];
       qosflowSetup->qfi = in_qosflowSetup->qoS_Flow_Identifier;
+    }
+  }
+  // DRB Failed to Setup List (O)
+  if (in->dRB_Failed_List_NG_RAN) {
+    for (int j = 0; j < in->dRB_Failed_List_NG_RAN->list.count; j++) {
+      DRB_nGRAN_failed_t *drbFailed = pduSetup->DRBnGRanFailedList + j;
+      E1AP_DRB_Failed_Item_NG_RAN_t *item = in->dRB_Failed_List_NG_RAN->list.array[j];
+      // DRB ID (M)
+      drbFailed->id = item->dRB_ID;
+      // Cause (M)
+      drbFailed->cause = e1_decode_cause_ie(&item->cause);
     }
   }
   return true;
@@ -839,23 +829,14 @@ static bool e1_encode_pdu_session_setup_item(E1AP_PDU_Session_Resource_Setup_Ite
   // PDU Session ID (M)
   item->pDU_Session_ID = in->id;
   // NG DL UP Transport Layer Information (M)
-  item->nG_DL_UP_TNL_Information.present = E1AP_UP_TNL_Information_PR_gTPTunnel;
-  asn1cCalloc(item->nG_DL_UP_TNL_Information.choice.gTPTunnel, gTPTunnel);
-  TRANSPORT_LAYER_ADDRESS_IPv4_TO_BIT_STRING(in->tl_info.tlAddress, &gTPTunnel->transportLayerAddress);
-  INT32_TO_OCTET_STRING(in->tl_info.teId, &gTPTunnel->gTP_TEID);
+  e1_encode_up_tnl_info(&item->nG_DL_UP_TNL_Information, &in->tl_info);
   // DRB Setup List (1..<maxnoofDRBs>)
   for (const DRB_nGRAN_setup_t *j = in->DRBnGRanList; j < in->DRBnGRanList + in->numDRBSetup; j++) {
     asn1cSequenceAdd(item->dRB_Setup_List_NG_RAN.list, E1AP_DRB_Setup_Item_NG_RAN_t, ieC3_1_1);
     // DRB ID (M)
     ieC3_1_1->dRB_ID = j->id;
     // UL UP Parameters (M)
-    for (const up_params_t *k = j->UpParamList; k < j->UpParamList + j->numUpParam; k++) {
-      asn1cSequenceAdd(ieC3_1_1->uL_UP_Transport_Parameters.list, E1AP_UP_Parameters_Item_t, ieC3_1_1_1);
-      ieC3_1_1_1->uP_TNL_Information.present = E1AP_UP_TNL_Information_PR_gTPTunnel;
-      asn1cCalloc(ieC3_1_1_1->uP_TNL_Information.choice.gTPTunnel, gTPTunnel);
-      TRANSPORT_LAYER_ADDRESS_IPv4_TO_BIT_STRING(k->tl_info.tlAddress, &gTPTunnel->transportLayerAddress);
-      INT32_TO_OCTET_STRING(k->tl_info.teId, &gTPTunnel->gTP_TEID);
-    }
+    encode_dl_up_parameters(&ieC3_1_1->uL_UP_Transport_Parameters, j->numUpParam, j->UpParamList);
     // Flow Setup List(M)
     for (const qos_flow_list_t *k = j->qosFlows; k < j->qosFlows + j->numQosFlowSetup; k++) {
       asn1cSequenceAdd(ieC3_1_1->flow_Setup_List.list, E1AP_QoS_Flow_Item_t, ieC3_1_1_1);
@@ -1040,8 +1021,7 @@ bool eq_bearer_context_setup_response(const e1ap_bearer_setup_resp_t *a, const e
     const pdu_session_setup_t *ps_a = &a->pduSession[i];
     const pdu_session_setup_t *ps_b = &b->pduSession[i];
     _E1_EQ_CHECK_LONG(ps_a->id, ps_b->id);
-    _E1_EQ_CHECK_INT(ps_a->tl_info.tlAddress, ps_b->tl_info.tlAddress);
-    _E1_EQ_CHECK_LONG(ps_a->tl_info.teId, ps_b->tl_info.teId);
+    eq_up_tl_info(&ps_a->tl_info, &ps_b->tl_info);
     _E1_EQ_CHECK_INT(ps_a->numDRBSetup, ps_b->numDRBSetup);
     _E1_EQ_CHECK_INT(ps_a->numDRBFailed, ps_b->numDRBFailed);
     // Check DRB Setup
