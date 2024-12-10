@@ -2291,6 +2291,7 @@ void handle_nr_slot_ind(uint16_t sfn, uint16_t slot)
     uint16_t sfn_tx = NFAPI_SFNSLOT2SFN(sfn_slot_tx);
     uint8_t slot_tx = NFAPI_SFNSLOT2SLOT(sfn_slot_tx);
 
+    NFAPI_TRACE(NFAPI_TRACE_DEBUG, "send slot indication for sfn/slot:%4d.%2d current:%4d.%2d\n", sfn_tx, slot_tx, sfn, slot);
     nfapi_nr_slot_indication_scf_t ind = { .sfn = sfn_tx, .slot = slot_tx };
     oai_nfapi_nr_slot_indication(&ind);
 
