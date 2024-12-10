@@ -1245,7 +1245,7 @@ bool is_nr_p7_request_in_window(const uint16_t sfn, const uint16_t slot, const c
   if (diff > NFAPI_MAX_SFNSLOTDEC / 2)
     diff = NFAPI_MAX_SFNSLOTDEC - diff;
   if (diff > timing_window) {
-    NFAPI_TRACE(NFAPI_TRACE_NOTE, "[%d] %s is out of window %d (delta:%d) [max:%d]\n", curr, name, recv, diff, timing_window);
+    NFAPI_TRACE(NFAPI_TRACE_WARN, "[%d] %s is out of window %d (delta:%d) [max:%d]\n", curr, name, recv, diff, timing_window);
     return false;
   }
   return true;
