@@ -840,8 +840,8 @@ static bool set_fh_config(int ru_idx, int num_rus, enum xran_category xran_cat, 
 #endif
   fh_config->puschMaskEnable = 0; // enable PUSCH mask; only used if id = O_RU
   fh_config->puschMaskSlot = 0; // specific which slot PUSCH channel masked; only used if id = O_RU
-  fh_config->cp_vlan_tag = *gpd(fhp, nfh, ORAN_FH_CONFIG_CP_VLAN_TAG)->uptr; // C-plane VLAN tag; not used in xran; needed for M-plane
-  fh_config->up_vlan_tag = *gpd(fhp, nfh, ORAN_FH_CONFIG_UP_VLAN_TAG)->uptr; // U-plane VLAN tag; not used in xran; needed for M-plane
+  fh_config->cp_vlan_tag = 0; // C-plane VLAN tag; not used in xran; needed for M-plane
+  fh_config->up_vlan_tag = 0; // U-plane VLAN tag; not used in xran; needed for M-plane
   fh_config->debugStop = 0; // enable auto stop; only used if id = O_RU
   fh_config->debugStopCount = 0; // enable auto stop after number of Tx packets; not used in xran
   fh_config->DynamicSectionEna = 0; // enable dynamic C-Plane section allocation
