@@ -257,10 +257,7 @@ void nr_fill_ulsch(PHY_VARS_gNB *gNB,
                    int slot,
                    nfapi_nr_pusch_pdu_t *ulsch_pdu);
 
-void nr_fill_prach(PHY_VARS_gNB *gNB,
-                   int SFN,
-                   int Slot,
-                   nfapi_nr_prach_pdu_t *prach_pdu);
+int nr_fill_prach(PHY_VARS_gNB *gNB, int SFN, int Slot, nfapi_nr_prach_pdu_t *prach_pdu);
 
 void rx_nr_prach(PHY_VARS_gNB *gNB,
                  nfapi_nr_prach_pdu_t *prach_pdu,
@@ -274,12 +271,13 @@ void rx_nr_prach(PHY_VARS_gNB *gNB,
 void rx_nr_prach_ru(RU_t *ru,
                     int prach_fmt,
                     int numRA,
+                    int beam,
                     int prachStartSymbol,
                     int prachOccasion,
                     int frame,
                     int subframe);
 
-void nr_fill_prach_ru(RU_t *ru, int SFN, int Slot, nfapi_nr_prach_pdu_t *prach_pdu);
+void nr_fill_prach_ru(RU_t *ru,int SFN, int Slot, nfapi_nr_prach_pdu_t *prach_pdum, int beam_id);
 
 int16_t find_nr_prach(PHY_VARS_gNB *gNB,int frame,int slot, find_type_t type);
 int16_t find_nr_prach_ru(RU_t *ru,int frame,int slot, find_type_t type);

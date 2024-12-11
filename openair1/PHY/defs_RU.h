@@ -172,6 +172,7 @@ typedef struct RU_prec_t_s{
 
 typedef struct {
  int aid;
+ int beam;
  struct RU_t_s *ru;
  int startSymbol;
  int endSymbol;
@@ -181,6 +182,7 @@ typedef struct {
 
 typedef struct {
  int aid;
+ int beam;
  struct RU_t_s *ru;
  int slot; 
  int startSymbol;
@@ -195,6 +197,7 @@ typedef struct {
   int numRA;
   int prachStartSymbol;
   int num_prach_ocas;
+  int beam;
 } RU_PRACH_list_t;
 
 #define NUMBER_OF_NR_RU_PRACH_MAX 8
@@ -488,6 +491,8 @@ typedef struct RU_t_s {
   int nb_rx;
   /// number of TX paths on device
   int nb_tx;
+  /// number of concurrent analog beams in period
+  int num_beams_period;
   /// number of logical antennas at TX beamformer input
   int nb_log_antennas;
   /// maximum PDSCH RS EPRE

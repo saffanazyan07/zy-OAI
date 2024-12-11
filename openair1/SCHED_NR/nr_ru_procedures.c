@@ -238,6 +238,7 @@ void nr_feptx(void *arg)
   RU_t *ru = feptx->ru;
   int slot = feptx->slot;
   int aa = feptx->aid;
+  int bb = feptx->beam;
   int startSymbol = feptx->startSymbol;
   NR_DL_FRAME_PARMS *fp = ru->nr_frame_parms;
   int numSymbols = feptx->numSymbols;
@@ -246,44 +247,32 @@ void nr_feptx(void *arg)
   int txdataF_BF_offset = startSymbol * fp->ofdm_symbol_size;
 
   VCD_SIGNAL_DUMPER_DUMP_FUNCTION_BY_NAME(VCD_SIGNAL_DUMPER_FUNCTIONS_PHY_PROCEDURES_RU_FEPTX_PREC+feptx->aid , 1);
+  int tx_idx = aa + bb * ru->nb_tx;
 
-  if (aa == 0)
+  if (tx_idx == 0)
     start_meas(&ru->precoding_stats);
 
-  if (ru->config.dbt_config.num_dig_beams != 0) {
-     for(int i = 0; i < ru->gNB_list[0]->common_vars.num_beams_period; i++) {
-       memcpy(&ru->common.beam_id[i][slot * fp->symbols_per_slot],
-              &ru->gNB_list[0]->common_vars.beam_id[i][slot * fp->symbols_per_slot],
-              (fp->symbols_per_slot) * sizeof(int));
-      }
+  if (ru->gNB_list[0]->common_vars.analog_bf) {
+    memcpy(&ru->common.beam_id[bb][slot * fp->symbols_per_slot],
+           &ru->gNB_list[0]->common_vars.beam_id[bb][slot * fp->symbols_per_slot],
+           (fp->symbols_per_slot) * sizeof(int));
   }
 
   // If there is no digital beamforming we just need to copy the data to RU
   if (ru->config.dbt_config.num_dig_beams == 0 || ru->gNB_list[0]->common_vars.analog_bf)
-     memcpy((void*)&ru->common.txdataF_BF[aa][txdataF_BF_offset],
-            (void*)&ru->gNB_list[0]->common_vars.txdataF[0][aa][txdataF_offset], // TODO hardcoded beam to 0, still need to understand how to handle this properly
+     memcpy((void*)&ru->common.txdataF_BF[tx_idx][txdataF_BF_offset],
+            (void*)&ru->gNB_list[0]->common_vars.txdataF[bb][aa][txdataF_offset],
             numSamples * sizeof(int32_t));
   else {
      AssertFatal(false, "This needs to be fixed by using appropriate beams from config\n");
-     for(int i = 0; i < fp->symbols_per_slot; ++i) {
-       nr_beam_precoding((c16_t **)ru->gNB_list[0]->common_vars.txdataF,
-                         (c16_t **)ru->common.txdataF_BF,
-                         fp,
-                         ru->beam_weights[0],
-                         slot,
-                         i,
-                         aa,
-                         ru->nb_log_antennas,
-                         txdataF_offset);
-     }
   }
 
-  if (aa==0)
+  if (tx_idx == 0)
     stop_meas(&ru->precoding_stats);
   VCD_SIGNAL_DUMPER_DUMP_FUNCTION_BY_NAME(VCD_SIGNAL_DUMPER_FUNCTIONS_PHY_PROCEDURES_RU_FEPTX_PREC+feptx->aid , 0);
 
       ////////////FEPTX////////////
-  nr_feptx0(ru, slot, startSymbol, numSymbols, aa);
+  nr_feptx0(ru, slot, startSymbol, numSymbols, tx_idx);
 
   // Task completed in //
   completed_task_ans(feptx->ans);
@@ -305,33 +294,35 @@ void nr_feptx_tp(RU_t *ru, int frame_tx, int slot)
   init_task_ans(&ans, sz);
 
   int nbfeptx = 0;
-  for (int aid = 0; aid < ru->nb_tx; aid++) {
-    feptx_cmd_t *feptx_cmd = &arr[nbfeptx];
-    feptx_cmd->ans = &ans;
-
-    feptx_cmd->aid = aid;
-    feptx_cmd->ru = ru;
-    feptx_cmd->slot = slot;
-    feptx_cmd->startSymbol = 0;
-    feptx_cmd->numSymbols =
-        (ru->half_slot_parallelization > 0) ? ru->nr_frame_parms->symbols_per_slot >> 1 : ru->nr_frame_parms->symbols_per_slot;
-
-    task_t t = {.func = nr_feptx, .args = feptx_cmd};
-    pushTpool(ru->threadPool, t);
-    nbfeptx++;
-    if (ru->half_slot_parallelization > 0) {
+  for (int beam = 0; beam < ru->num_beams_period; beam++) {
+    for (int aid = 0; aid < ru->nb_tx; aid++) {
       feptx_cmd_t *feptx_cmd = &arr[nbfeptx];
       feptx_cmd->ans = &ans;
-
+      feptx_cmd->beam = beam;
       feptx_cmd->aid = aid;
       feptx_cmd->ru = ru;
       feptx_cmd->slot = slot;
-      feptx_cmd->startSymbol = ru->nr_frame_parms->symbols_per_slot >> 1;
-      feptx_cmd->numSymbols = ru->nr_frame_parms->symbols_per_slot >> 1;
+      feptx_cmd->startSymbol = 0;
+      feptx_cmd->numSymbols =
+          (ru->half_slot_parallelization > 0) ? ru->nr_frame_parms->symbols_per_slot >> 1 : ru->nr_frame_parms->symbols_per_slot;
 
       task_t t = {.func = nr_feptx, .args = feptx_cmd};
       pushTpool(ru->threadPool, t);
       nbfeptx++;
+      if (ru->half_slot_parallelization > 0) {
+        feptx_cmd_t *feptx_cmd = &arr[nbfeptx];
+        feptx_cmd->ans = &ans;
+        feptx_cmd->beam = beam;
+        feptx_cmd->aid = aid;
+        feptx_cmd->ru = ru;
+        feptx_cmd->slot = slot;
+        feptx_cmd->startSymbol = ru->nr_frame_parms->symbols_per_slot >> 1;
+        feptx_cmd->numSymbols = ru->nr_frame_parms->symbols_per_slot >> 1;
+
+        task_t t = {.func = nr_feptx, .args = feptx_cmd};
+        pushTpool(ru->threadPool, t);
+        nbfeptx++;
+      }
     }
   }
   join_task_ans(&ans);
@@ -347,6 +338,7 @@ void nr_fep(void* arg)
   feprx_cmd_t *feprx_cmd = (feprx_cmd_t *)arg;
   RU_t *ru = feprx_cmd->ru;
   int aid = feprx_cmd->aid;
+  int beam = feprx_cmd->beam;
   int slot = feprx_cmd->slot;
   int startSymbol = feprx_cmd->startSymbol;
   int endSymbol = feprx_cmd->endSymbol;
@@ -356,11 +348,12 @@ void nr_fep(void* arg)
 
   VCD_SIGNAL_DUMPER_DUMP_FUNCTION_BY_NAME(VCD_SIGNAL_DUMPER_FUNCTIONS_PHY_PROCEDURES_RU_FEPRX+aid, 1);
 
+  int idx = aid + beam * ru->nb_rx;
   int offset = (slot % RU_RX_SLOT_DEPTH) * fp->symbols_per_slot * fp->ofdm_symbol_size;
   for (int l = startSymbol; l <= endSymbol; l++) 
       nr_slot_fep_ul(fp,
-                     ru->common.rxdata[aid],
-                     &ru->common.rxdataF[aid][offset],
+                     ru->common.rxdata[idx],
+                     &ru->common.rxdataF[idx][offset],
                      l,
                      slot,
                      ru->N_TA_offset);
@@ -382,34 +375,36 @@ void nr_fep_tp(RU_t *ru, int slot) {
   task_ans_t ans;
   init_task_ans(&ans, sz);
 
-  for (int aid=0;aid<ru->nb_rx;aid++) {
-    feprx_cmd_t *feprx_cmd = &arr[nbfeprx];
-    feprx_cmd->ans = &ans;
-
-    feprx_cmd->aid = aid;
-    feprx_cmd->ru = ru;
-    feprx_cmd->slot = ru->proc.tti_rx;
-    feprx_cmd->startSymbol = 0;
-    feprx_cmd->endSymbol = (ru->half_slot_parallelization > 0) ? (ru->nr_frame_parms->symbols_per_slot >> 1) - 1
-                                                               : (ru->nr_frame_parms->symbols_per_slot - 1);
-
-    task_t t = {.func = nr_fep, .args = feprx_cmd};
-    pushTpool(ru->threadPool, t);
-    nbfeprx++;
-    if (ru->half_slot_parallelization > 0) {
+  for (int beam = 0; beam < ru->num_beams_period; beam++) {
+    for (int aid = 0; aid < ru->nb_rx; aid++) {
       feprx_cmd_t *feprx_cmd = &arr[nbfeprx];
       feprx_cmd->ans = &ans;
-
+      feprx_cmd->beam = beam;
       feprx_cmd->aid = aid;
       feprx_cmd->ru = ru;
       feprx_cmd->slot = ru->proc.tti_rx;
-      feprx_cmd->startSymbol = ru->nr_frame_parms->symbols_per_slot >> 1;
-      feprx_cmd->endSymbol = ru->nr_frame_parms->symbols_per_slot - 1;
+      feprx_cmd->startSymbol = 0;
+      feprx_cmd->endSymbol = (ru->half_slot_parallelization > 0) ? (ru->nr_frame_parms->symbols_per_slot >> 1) - 1
+                                                                 : (ru->nr_frame_parms->symbols_per_slot - 1);
 
       task_t t = {.func = nr_fep, .args = feprx_cmd};
       pushTpool(ru->threadPool, t);
-
       nbfeprx++;
+      if (ru->half_slot_parallelization > 0) {
+        feprx_cmd_t *feprx_cmd = &arr[nbfeprx];
+        feprx_cmd->ans = &ans;
+        feprx_cmd->beam = beam;
+        feprx_cmd->aid = aid;
+        feprx_cmd->ru = ru;
+        feprx_cmd->slot = ru->proc.tti_rx;
+        feprx_cmd->startSymbol = ru->nr_frame_parms->symbols_per_slot >> 1;
+        feprx_cmd->endSymbol = ru->nr_frame_parms->symbols_per_slot - 1;
+
+        task_t t = {.func = nr_fep, .args = feprx_cmd};
+        pushTpool(ru->threadPool, t);
+
+        nbfeprx++;
+      }
     }
   }
   join_task_ans(&ans);

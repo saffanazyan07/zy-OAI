@@ -73,7 +73,7 @@ int16_t find_nr_prach(PHY_VARS_gNB *gNB,int frame, int slot, find_type_t type) {
   return -1;
 }
 
-void nr_fill_prach(PHY_VARS_gNB *gNB, int SFN, int Slot, nfapi_nr_prach_pdu_t *prach_pdu)
+int nr_fill_prach(PHY_VARS_gNB *gNB, int SFN, int Slot, nfapi_nr_prach_pdu_t *prach_pdu)
 {
   int prach_id = find_nr_prach(gNB, SFN, Slot, SEARCH_EXIST_OR_FREE);
   AssertFatal(((prach_id >= 0) && (prach_id < NUMBER_OF_NR_PRACH_MAX)), "illegal or no prach_id found!!! prach_id %d\n", prach_id);
@@ -95,6 +95,7 @@ void nr_fill_prach(PHY_VARS_gNB *gNB, int SFN, int Slot, nfapi_nr_prach_pdu_t *p
   }
   LOG_D(NR_PHY,"Copying prach pdu %d bytes to index %d\n", (int)sizeof(*prach_pdu), prach_id);
   memcpy(&prach->pdu, prach_pdu, sizeof(*prach_pdu));
+  return prach_id;
 }
 
 void init_prach_ru_list(RU_t *ru)
@@ -130,7 +131,7 @@ int16_t find_nr_prach_ru(RU_t *ru,int frame,int slot, find_type_t type)
   return -1;
 }
 
-void nr_fill_prach_ru(RU_t *ru, int SFN, int Slot, nfapi_nr_prach_pdu_t *prach_pdu)
+void nr_fill_prach_ru(RU_t *ru, int SFN, int Slot, nfapi_nr_prach_pdu_t *prach_pdu, int beam_id)
 {
   int prach_id = find_nr_prach_ru(ru, SFN, Slot, SEARCH_EXIST_OR_FREE);
   AssertFatal(((prach_id >= 0) && (prach_id < NUMBER_OF_NR_PRACH_MAX)) || (prach_id < 0),
@@ -142,6 +143,7 @@ void nr_fill_prach_ru(RU_t *ru, int SFN, int Slot, nfapi_nr_prach_pdu_t *prach_p
   ru->prach_list[prach_id].slot = Slot;
   ru->prach_list[prach_id].fmt = prach_pdu->prach_format;
   ru->prach_list[prach_id].numRA = prach_pdu->num_ra;
+  ru->prach_list[prach_id].beam = beam_id;
   ru->prach_list[prach_id].prachStartSymbol = prach_pdu->prach_start_symbol;
   ru->prach_list[prach_id].num_prach_ocas = prach_pdu->num_prach_ocas;
   pthread_mutex_unlock(&ru->prach_list_mutex);
@@ -156,7 +158,7 @@ void free_nr_ru_prach_entry(RU_t *ru, int prach_id)
 }
 
 
-void rx_nr_prach_ru(RU_t *ru, int prachFormat, int numRA, int prachStartSymbol, int prachOccasion, int frame, int slot)
+void rx_nr_prach_ru(RU_t *ru, int prachFormat, int numRA, int beam, int prachStartSymbol, int prachOccasion, int frame, int slot)
 {
   AssertFatal(ru != NULL,"ru is null\n");
 
@@ -198,7 +200,8 @@ void rx_nr_prach_ru(RU_t *ru, int prachFormat, int numRA, int prachStartSymbol, 
   for (int aa = 0; aa < ru->nb_rx; aa++) { 
     if (prach_sequence_length == 0)
       slot2 = (slot / fp->slots_per_subframe) * fp->slots_per_subframe;
-    prach[aa] = (int16_t*)&ru->common.rxdata[aa][fp->get_samples_slot_timestamp(slot2, fp, 0) + sample_offset_slot - ru->N_TA_offset];
+    int idx = aa + beam * ru->nb_rx;
+    prach[aa] = (int16_t*)&ru->common.rxdata[idx][fp->get_samples_slot_timestamp(slot2, fp, 0) + sample_offset_slot - ru->N_TA_offset];
   } 
 
   int reps;

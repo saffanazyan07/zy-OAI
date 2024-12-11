@@ -47,17 +47,21 @@ void nr_phy_init_RU(RU_t *ru)
 
   AssertFatal(ru->nb_log_antennas > 0 && ru->nb_log_antennas < 13, "ru->nb_log_antennas %d ! \n",ru->nb_log_antennas);
 
-  ru->common.beam_id = malloc16_clear(MAX_NUM_BEAM_PERIODS * sizeof(int*));
-  for(int i = 0; i < MAX_NUM_BEAM_PERIODS; i++)
+  nfapi_nr_analog_beamforming_ve_t *analog_config = &cfg->analog_beamforming_ve;
+  ru->num_beams_period = analog_config->analog_bf_vendor_ext.value ? analog_config->num_beams_period_vendor_ext.value : 1;
+  int nb_tx_streams = ru->nb_tx * ru->num_beams_period;
+  int nb_rx_streams = ru->nb_rx * ru->num_beams_period;
+
+  ru->common.beam_id = malloc16_clear(ru->num_beams_period * sizeof(int*));
+  for(int i = 0; i < ru->num_beams_period; i++)
     ru->common.beam_id[i] = malloc16_clear(fp->symbols_per_slot * fp->slots_per_frame * sizeof(int));
 
   if (ru->if_south <= REMOTE_IF5) { // this means REMOTE_IF5 or LOCAL_RF, so allocate memory for time-domain signals 
     // Time-domain signals
-    ru->common.txdata = (int32_t**)malloc16(ru->nb_tx * sizeof(int32_t*));
-    ru->common.rxdata = (int32_t**)malloc16(ru->nb_rx * sizeof(int32_t*));
+    ru->common.txdata = (int32_t**)malloc16(nb_tx_streams * sizeof(int32_t*));
+    ru->common.rxdata = (int32_t**)malloc16(nb_rx_streams * sizeof(int32_t*));
 
-
-    for (int i = 0; i < ru->nb_tx; i++) {
+    for (int i = 0; i < nb_tx_streams; i++) {
       // Allocate 10 subframes of I/Q TX signal data (time) if not
       ru->common.txdata[i] = (int32_t*)malloc16_clear((ru->sf_extension + fp->samples_per_frame) * sizeof(int32_t));
       LOG_D(PHY,
@@ -70,7 +74,7 @@ void nr_phy_init_RU(RU_t *ru)
 
       LOG_D(PHY, "[INIT] common.txdata[%d] = %p \n", i, ru->common.txdata[i]);
     }
-    for (int i = 0; i < ru->nb_rx; i++) {
+    for (int i = 0; i < nb_rx_streams; i++) {
       ru->common.rxdata[i] = (int32_t*)malloc16_clear(fp->samples_per_frame * sizeof(int32_t));
     }
   } // IF5 or local RF
@@ -93,15 +97,15 @@ void nr_phy_init_RU(RU_t *ru)
       ru->common.txdataF[i] = (int32_t*)malloc16_clear(fp->samples_per_frame_wCP * sizeof(int32_t));
 
     // allocate IFFT input buffers (TX)
-    ru->common.txdataF_BF = (int32_t **)malloc16(ru->nb_tx*sizeof(int32_t*));
-    LOG_D(PHY, "[INIT] common.txdata_BF= %p (%lu bytes)\n", ru->common.txdataF_BF, ru->nb_tx * sizeof(int32_t *));
-    for (int i = 0; i < ru->nb_tx; i++) {
+    ru->common.txdataF_BF = (int32_t **)malloc16(nb_tx_streams * sizeof(int32_t*));
+    LOG_D(PHY, "[INIT] common.txdata_BF= %p (%lu bytes)\n", ru->common.txdataF_BF, nb_tx_streams * sizeof(int32_t *));
+    for (int i = 0; i < nb_tx_streams; i++) {
       ru->common.txdataF_BF[i] = (int32_t*)malloc16_clear(fp->samples_per_subframe_wCP * sizeof(int32_t));
       LOG_D(PHY, "txdataF_BF[%d] %p for RU %d\n", i, ru->common.txdataF_BF[i], ru->idx);
     }
     // allocate FFT output buffers (RX)
-    ru->common.rxdataF = (int32_t**)malloc16(ru->nb_rx * sizeof(int32_t*));
-    for (int i = 0; i < ru->nb_rx; i++) {
+    ru->common.rxdataF = (int32_t**)malloc16(nb_rx_streams * sizeof(int32_t*));
+    for (int i = 0; i < nb_rx_streams; i++) {
       // allocate 4 slots of I/Q signal data (frequency)
       int size = RU_RX_SLOT_DEPTH * fp->symbols_per_slot * fp->ofdm_symbol_size;
       ru->common.rxdataF[i] = (int32_t*)malloc16_clear(sizeof(**ru->common.rxdataF) * size);
@@ -132,16 +136,18 @@ void nr_phy_init_RU(RU_t *ru)
 void nr_phy_free_RU(RU_t *ru)
 {
   LOG_D(PHY, "Freeing RU signal buffers (if_south %s) nb_tx %d\n", ru_if_types[ru->if_south], ru->nb_tx);
+  int nb_tx_streams = ru->nb_tx * ru->num_beams_period;
+  int nb_rx_streams = ru->nb_rx * ru->num_beams_period;
 
   if (ru->if_south <= REMOTE_IF5) { // this means REMOTE_IF5 or LOCAL_RF, so free memory for time-domain signals
     // Hack: undo what is done at allocation
-    for (int i = 0; i < ru->nb_tx; i++) {
+    for (int i = 0; i < nb_tx_streams; i++) {
       int32_t *p = &ru->common.txdata[i][-ru->sf_extension];
       free_and_zero(p);
     }
     free_and_zero(ru->common.txdata);
 
-    for (int i = 0; i < ru->nb_rx; i++)
+    for (int i = 0; i < nb_rx_streams; i++)
       free_and_zero(ru->common.rxdata[i]);
     free_and_zero(ru->common.rxdata);
   } // else: IF5 or local RF -> nothing to free()
@@ -157,12 +163,12 @@ void nr_phy_free_RU(RU_t *ru)
     free_and_zero(ru->common.txdataF);
 
     // free IFFT input buffers (TX)
-    for (int i = 0; i < ru->nb_tx; i++)
+    for (int i = 0; i < nb_tx_streams; i++)
       free_and_zero(ru->common.txdataF_BF[i]);
     free_and_zero(ru->common.txdataF_BF);
 
     // free FFT output buffers (RX)
-    for (int i = 0; i < ru->nb_rx; i++)
+    for (int i = 0; i < nb_rx_streams; i++)
       free_and_zero(ru->common.rxdataF[i]);
     free_and_zero(ru->common.rxdataF);
 
@@ -171,7 +177,7 @@ void nr_phy_free_RU(RU_t *ru)
 	free_and_zero(ru->prach_rxsigF[j][i]);
       free_and_zero(ru->prach_rxsigF[j]);
     }
-    for(int i = 0; i < MAX_NUM_BEAM_PERIODS; ++i)
+    for(int i = 0; i < ru->num_beams_period; ++i)
       free_and_zero(ru->common.beam_id[i]);
     free_and_zero(ru->common.beam_id);
   }

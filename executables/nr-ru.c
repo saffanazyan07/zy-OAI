@@ -590,12 +590,13 @@ static void rx_rf(RU_t *ru, int *frame, int *slot)
   RU_proc_t *proc = &ru->proc;
   NR_DL_FRAME_PARMS *fp = ru->nr_frame_parms;
   openair0_config_t *cfg   = &ru->openair0_cfg;
-  uint32_t samples_per_slot = fp->get_samples_per_slot(*slot,fp);
+  uint32_t samples_per_slot = fp->get_samples_per_slot(*slot, fp);
   AssertFatal(*slot < fp->slots_per_frame && *slot >= 0, "slot %d is illegal (%d)\n", *slot, fp->slots_per_frame);
 
   start_meas(&ru->rx_fhaul);
-  void *rxp[ru->nb_rx];
-  for (int i = 0; i < ru->nb_rx; i++)
+  int nb = ru->nb_rx * ru->num_beams_period;
+  void *rxp[nb];
+  for (int i = 0; i < nb; i++)
     rxp[i] = (void *)&ru->common.rxdata[i][fp->get_samples_slot_timestamp(*slot, fp, 0)];
 
   VCD_SIGNAL_DUMPER_DUMP_FUNCTION_BY_NAME(VCD_SIGNAL_DUMPER_FUNCTIONS_TRX_READ, 1);
@@ -610,7 +611,7 @@ static void rx_rf(RU_t *ru, int *frame, int *slot)
     rxs = samples_per_slot;
     ts = old_ts + rxs;
   } else {
-    rxs = ru->rfdevice.trx_read_func(&ru->rfdevice, &ts, rxp, samples_per_slot, ru->nb_rx);
+    rxs = ru->rfdevice.trx_read_func(&ru->rfdevice, &ts, rxp, samples_per_slot, nb);
   }
 
   VCD_SIGNAL_DUMPER_DUMP_FUNCTION_BY_NAME( VCD_SIGNAL_DUMPER_FUNCTIONS_TRX_READ, 0 );
@@ -811,8 +812,9 @@ void tx_rf(RU_t *ru, int frame,int slot, uint64_t timestamp)
   VCD_SIGNAL_DUMPER_DUMP_VARIABLE_BY_NAME(VCD_SIGNAL_DUMPER_VARIABLES_FRAME_NUMBER_TX0_RU, frame);
   VCD_SIGNAL_DUMPER_DUMP_VARIABLE_BY_NAME(VCD_SIGNAL_DUMPER_VARIABLES_TTI_NUMBER_TX0_RU, slot);
 
-  void *txp[ru->nb_tx];
-  for (int i = 0; i < ru->nb_tx; i++)
+  int nt = ru->nb_tx * ru->num_beams_period;
+  void *txp[nt];
+  for (int i = 0; i < nt; i++)
     txp[i] = (void *)&ru->common.txdata[i][fp->get_samples_slot_timestamp(slot, fp, 0)] - sf_extension * sizeof(int32_t);
 
   VCD_SIGNAL_DUMPER_DUMP_VARIABLE_BY_NAME(VCD_SIGNAL_DUMPER_VARIABLES_TRX_TST, (timestamp + ru->ts_offset) & 0xffffffff);
@@ -822,7 +824,7 @@ void tx_rf(RU_t *ru, int frame,int slot, uint64_t timestamp)
                                              timestamp + ru->ts_offset - sf_extension,
                                              txp,
                                              siglen + sf_extension,
-                                             ru->nb_tx,
+                                             nt,
                                              flags);
   LOG_D(PHY,
         "[TXPATH] RU %d tx_rf, writing to TS %llu, %d.%d, unwrapped_frame %d, slot %d, flags %d, siglen+sf_extension %d, "
@@ -1298,6 +1300,7 @@ void *ru_thread(void *param)
             rx_nr_prach_ru(ru,
                            ru->prach_list[prach_id].fmt, //could also use format
                            ru->prach_list[prach_id].numRA,
+                           ru->prach_list[prach_id].beam,
                            prachStartSymbol,
                            prach_oc,
                            proc->frame_rx,

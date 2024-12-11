@@ -771,7 +771,7 @@ int main(int argc, char **argv){
 	  }
 	}
 	
-        rx_nr_prach_ru(ru, prach_format, numRA, prachStartSymbol, prachOccasion, frame, slot);
+        rx_nr_prach_ru(ru, prach_format, numRA, 0, prachStartSymbol, prachOccasion, frame, slot);
 
         for (int i = 0; i < ru->nb_rx; ++i)
           gNB->prach_vars.rxsigF[i] = ru->prach_rxsigF[prachOccasion][i];
