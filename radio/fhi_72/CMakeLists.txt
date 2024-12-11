@@ -9,7 +9,7 @@ endif()
 pkg_check_modules(dpdk REQUIRED libdpdk)
 pkg_check_modules(numa REQUIRED numa)
 
-add_library(oran_fhlib_5g MODULE
+add_library(oran_fhlib_5g SHARED
             oran_isolate.c
             oaioran.c
             oran-config.c
@@ -46,3 +46,7 @@ add_custom_command(TARGET oran_fhlib_5g POST_BUILD
 
 message(STATUS "Temporary added -DOAI_FHI72")
 target_compile_definitions(nr-softmodem PUBLIC OAI_FHI72)
+
+if(OAI_MPLANE)
+  add_subdirectory(mplane)
+endif()

@@ -318,6 +318,10 @@ function main() {
                 TARGET_LIST="$TARGET_LIST $2"
                 CMAKE_CMD="$CMAKE_CMD -DOAI_FHI72=ON"
                 ;;
+              "oran_fhlib_5g_mplane")
+                TARGET_LIST="$TARGET_LIST $2"
+                CMAKE_CMD="$CMAKE_CMD -DOAI_FHI72=ON -DOAI_MPLANE=ON"
+                ;;
               "None")
                 ;;
               *)

@@ -320,11 +320,13 @@ __attribute__((__visibility__("default"))) int transport_init(openair0_device *d
 
   struct xran_fh_init fh_init = {0};
   struct xran_fh_config fh_config[XRAN_PORTS_NUM] = {0};
-#ifndef OAI_MPLANE_SUPPORT
+#ifndef OAI_MPLANE
   bool success = get_xran_config(openair0_cfg, &fh_init, fh_config);
   AssertFatal(success, "cannot get configuration for xran\n");
 #else
-  /* TODO: M-plane integration */
+  ru_session_list_t ru_session_list = {0};
+  int ret = init_mplane(&ru_session_list);
+  AssertFatal(ret == 0, "Cannot initialize M-plane\n");
 #endif
   eth->oran_priv = oai_oran_initialize(&fh_init, fh_config);
   AssertFatal(eth->oran_priv != NULL, "can not initialize fronthaul");
