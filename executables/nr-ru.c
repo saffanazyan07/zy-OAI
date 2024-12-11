@@ -1347,6 +1347,7 @@ void *ru_thread(void *param)
             rx_nr_prach_ru(ru,
                            ru->prach_list[prach_id].fmt, //could also use format
                            ru->prach_list[prach_id].numRA,
+                           ru->prach_list[prach_id].beam,
                            prachStartSymbol,
                            prach_oc,
                            proc->frame_rx,

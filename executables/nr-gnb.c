@@ -389,32 +389,29 @@ void term_gNB_Tpool(int inst) {
 }
 
 /// eNB kept in function name for nffapi calls, TO FIX
-void init_eNB_afterRU(void) {
-  int inst,ru_id,i,aa;
-  PHY_VARS_gNB *gNB;
-
-  for (inst=0; inst<RC.nb_nr_inst; inst++) {
-    gNB = RC.gNB[inst];
-
+void init_eNB_afterRU(void)
+{
+  for (int inst = 0; inst < RC.nb_nr_inst; inst++) {
+    PHY_VARS_gNB *gNB = RC.gNB[inst];
     phy_init_nr_gNB(gNB);
 
     // map antennas and PRACH signals to gNB RX
     if (0) AssertFatal(gNB->num_RU>0,"Number of RU attached to gNB %d is zero\n",gNB->Mod_id);
 
     LOG_D(NR_PHY, "Mapping RX ports from %d RUs to gNB %d\n", gNB->num_RU, gNB->Mod_id);
-
-    for (ru_id=0,aa=0; ru_id<gNB->num_RU; ru_id++) {
+    int aa = 0;
+    for (int ru_id = 0; ru_id < gNB->num_RU; ru_id++) {
       AssertFatal(gNB->RU_list[ru_id]->common.rxdataF != NULL, "RU %d : common.rxdataF is NULL\n", gNB->RU_list[ru_id]->idx);
       AssertFatal(gNB->RU_list[ru_id]->prach_rxsigF != NULL, "RU %d : prach_rxsigF is NULL\n", gNB->RU_list[ru_id]->idx);
-      
-      for (i=0; i<gNB->RU_list[ru_id]->nb_rx; aa++,i++) {
-        LOG_I(PHY,"Attaching RU %d antenna %d to gNB antenna %d\n",gNB->RU_list[ru_id]->idx,i,aa);
+      for (int i = 0; i < gNB->RU_list[ru_id]->nb_rx; aa++,i++) {
+        LOG_I(PHY,"Attaching RU %d antenna %d to gNB antenna %d\n", gNB->RU_list[ru_id]->idx, i, aa);
         gNB->prach_vars.rxsigF[aa] = gNB->RU_list[ru_id]->prach_rxsigF[0][i];
-        // TODO hardcoded beam to 0, still need to understand how to handle this properly
-        gNB->common_vars.rxdataF[0][aa] = (c16_t *)gNB->RU_list[ru_id]->common.rxdataF[i];
+        for (int b = 0; b < gNB->RU_list[ru_id]->num_beams_period; b++) {
+          int idx = i + b * gNB->RU_list[ru_id]->nb_rx;
+          gNB->common_vars.rxdataF[b][aa] = (c16_t *)gNB->RU_list[ru_id]->common.rxdataF[idx];
+        }
       }
     }
-
     /* TODO: review this code, there is something wrong.
      * In monolithic mode, we come here with nb_antennas_rx == 0
      * (not tested in other modes).
@@ -422,7 +419,6 @@ void init_eNB_afterRU(void) {
     //init_precoding_weights(RC.gNB[inst]);
     init_gNB_Tpool(inst);
   }
-
 }
 
 /**
