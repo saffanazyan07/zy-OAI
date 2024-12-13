@@ -1330,12 +1330,15 @@ int nr_ue_dl_indication(nr_downlink_indication_t *dl_info)
   return ret2;
 }
 
-void nr_ue_slot_indication(uint8_t mod_id)
+void nr_ue_slot_indication(uint8_t mod_id, bool is_tx)
 {
   NR_UE_MAC_INST_t *mac = get_mac_inst(mod_id);
   int ret = pthread_mutex_lock(&mac->if_mutex);
   AssertFatal(!ret, "mutex failed %d\n", ret);
-  update_mac_timers(mac);
+  if (is_tx)
+    update_mac_ul_timers(mac);
+  else
+    update_mac_dl_timers(mac);
   ret = pthread_mutex_unlock(&mac->if_mutex);
   AssertFatal(!ret, "mutex failed %d\n", ret);
 }

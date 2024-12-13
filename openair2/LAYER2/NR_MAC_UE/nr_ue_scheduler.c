@@ -188,16 +188,23 @@ void handle_time_alignment_timer_expired(NR_UE_MAC_INST_t *mac)
   // TODO not sure what to do here
 }
 
-void update_mac_timers(NR_UE_MAC_INST_t *mac)
+void update_mac_dl_timers(NR_UE_MAC_INST_t *mac)
+{
+  bool ra_window_expired = nr_timer_tick(&mac->ra.response_window_timer);
+  if (ra_window_expired) // consider the Random Access Response reception not successful
+    nr_rar_not_successful(mac);
+  bool alignment_timer_expired = nr_timer_tick(&mac->time_alignment_timer);
+  if (alignment_timer_expired)
+    handle_time_alignment_timer_expired(mac);
+}
+
+void update_mac_ul_timers(NR_UE_MAC_INST_t *mac)
 {
   if (mac->data_inactivity_timer) {
     bool inactivity_timer_expired = nr_timer_tick(mac->data_inactivity_timer);
     if (inactivity_timer_expired)
       nr_mac_rrc_inactivity_timer_ind(mac->ue_id);
   }
-  bool alignment_timer_expired = nr_timer_tick(&mac->time_alignment_timer);
-  if (alignment_timer_expired)
-    handle_time_alignment_timer_expired(mac);
   bool contention_resolution_expired = nr_timer_tick(&mac->ra.contention_resolution_timer);
   if (contention_resolution_expired)
     nr_ra_contention_resolution_failed(mac);
@@ -244,9 +251,6 @@ void update_mac_timers(NR_UE_MAC_INST_t *mac)
       phr_info->phr_reporting |= (1 << phr_cause_periodic_timer);
     }
   }
-  bool ra_window_expired = nr_timer_tick(&mac->ra.response_window_timer);
-  if (ra_window_expired) // consider the Random Access Response reception not successful
-    nr_rar_not_successful(mac);
   bool ra_backoff_expired = nr_timer_tick(&mac->ra.RA_backoff_timer);
   if (ra_backoff_expired) {
     // perform the Random Access Resource selection procedure after the backoff time
