@@ -1324,7 +1324,9 @@ void RCconfig_nr_macrlc(configmodule_interface_t *cfg)
   paramlist_def_t RUParamList = {CONFIG_STRING_RU_LIST, NULL, 0};
   config_getlist(config_get_if(), &RUParamList, RUParams, sizeofArray(RUParams), NULL);
   int num_tx = 0;
+  bool das = false;
   if (RUParamList.numelt > 0) {
+    das = *(RUParamList.paramarray[j][RU_DAS_CONTROL].uptr);
     for (int i = 0; i < RUParamList.numelt; i++)
       num_tx += *(RUParamList.paramarray[i][RU_NB_TX_IDX].uptr);
     AssertFatal(num_tx >= config.pdsch_AntennaPorts.XP * config.pdsch_AntennaPorts.N1 * config.pdsch_AntennaPorts.N2,
@@ -1394,7 +1396,8 @@ void RCconfig_nr_macrlc(configmodule_interface_t *cfg)
 
   if (config_isparamset(GNBParamList.paramarray[0], GNB_BEAMWEIGHTS_IDX)) {
     int n = GNBParamList.paramarray[0][GNB_BEAMWEIGHTS_IDX].numelt;
-    AssertFatal(n % num_tx == 0, "Error! Number of beam input needs to be multiple of TX antennas\n");
+    if (!das)
+      AssertFatal(n % num_tx == 0, "Error! Number of beam input needs to be multiple of TX antennas\n");
     // each beam is described by a set of weights (one for each antenna)
     // on the other hand in case of analog beamforming an index to the RU beam identifier is provided
     config.nb_bfw[0] = num_tx;  // number of tx antennas

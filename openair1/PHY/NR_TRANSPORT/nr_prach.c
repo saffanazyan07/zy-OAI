@@ -201,6 +201,11 @@ void rx_nr_prach_ru(RU_t *ru, int prachFormat, int numRA, int beam, int prachSta
     if (prach_sequence_length == 0)
       slot2 = (slot / fp->slots_per_subframe) * fp->slots_per_subframe;
     int idx = aa + beam * ru->nb_rx;
+    if (ru->gNB_list[0]->common_vars.analog_bf && ru->das_enabled) {
+      int bb = beam_in_slot(fp->symbols_per_slot, &ru->gNB_list[0]->common_vars.beam_id[beam][slot * fp->symbols_per_slot]);
+      AssertFatal(bb > -1, "Invalid PRACH beam selection\n");
+      idx = aa + bb * ru->nb_rx;
+    }
     prach[aa] = (int16_t*)&ru->common.rxdata[idx][fp->get_samples_slot_timestamp(slot2, fp, 0) + sample_offset_slot - ru->N_TA_offset];
   } 
 

@@ -496,6 +496,8 @@ typedef struct RU_t_s {
   int num_beams_period;
   /// number of logical antennas at TX beamformer input
   int nb_log_antennas;
+  // analog DAS enabled
+  bool das_enabled;
   /// maximum PDSCH RS EPRE
   int max_pdschReferenceSignalPower;
   /// maximum RX gain

@@ -175,6 +175,21 @@ void nr_feptx_ofdm(RU_t *ru,int frame_tx,int tti_tx) {
 
 }
 
+int beam_in_slot(uint16_t symbols_per_slot, int *beam_id)
+{
+  int beam = -1;
+  for (int i = 0; i < symbols_per_slot; i++) {
+    if (beam_id[i] != -1) {
+      if (beam == -1)
+        beam = beam_id[i];
+      AssertFatal(beam == beam_id[i], "Error! Two beams in the same slot for the same index\n");
+    } else {
+      beam = beam_id[i];
+    }
+  }
+  return beam;
+}
+
 void nr_feptx_prec(RU_t *ru, int frame_tx, int tti_tx)
 {
   PHY_VARS_gNB **gNB_list = ru->gNB_list,*gNB;
@@ -252,18 +267,27 @@ void nr_feptx(void *arg)
   if (tx_idx == 0)
     start_meas(&ru->precoding_stats);
 
-  if (ru->gNB_list[0]->common_vars.analog_bf) {
+  if (ru->gNB_list[0]->common_vars.analog_bf && !ru->das_enabled) {
     memcpy(&ru->common.beam_id[bb][slot * fp->symbols_per_slot],
            &ru->gNB_list[0]->common_vars.beam_id[bb][slot * fp->symbols_per_slot],
            (fp->symbols_per_slot) * sizeof(int));
   }
 
   // If there is no digital beamforming we just need to copy the data to RU
-  if (ru->config.dbt_config.num_dig_beams == 0 || ru->gNB_list[0]->common_vars.analog_bf)
-     memcpy((void*)&ru->common.txdataF_BF[tx_idx][txdataF_BF_offset],
-            (void*)&ru->gNB_list[0]->common_vars.txdataF[bb][aa][txdataF_offset],
-            numSamples * sizeof(int32_t));
-  else {
+  if (ru->config.dbt_config.num_dig_beams == 0 || ru->gNB_list[0]->common_vars.analog_bf) {
+    int beam_idx;
+    if (ru->das_enabled) {
+      AssertFatal(ru->gNB_list[0]->common_vars.analog_bf, "DAS implemented only for analog beamforming\n");
+      beam_idx = beam_in_slot(fp->symbols_per_slot, &ru->gNB_list[0]->common_vars.beam_id[bb][slot * fp->symbols_per_slot]);
+      if (beam_idx > -1)
+        beam_idx = aa + beam_idx * ru->nb_tx;
+    } else
+      beam_idx = tx_idx;
+    if (beam_idx > -1)
+      memcpy((void*)&ru->common.txdataF_BF[beam_idx][txdataF_BF_offset],
+             (void*)&ru->gNB_list[0]->common_vars.txdataF[bb][aa][txdataF_offset],
+             numSamples * sizeof(int32_t));
+  } else {
      AssertFatal(false, "This needs to be fixed by using appropriate beams from config\n");
   }
 
@@ -292,6 +316,13 @@ void nr_feptx_tp(RU_t *ru, int frame_tx, int slot)
   AssertFatal(sz < 64, "Please, increase the buffer size");
   feptx_cmd_t arr[64] = {0};
   task_ans_t ans[64] = {0};
+
+  if (ru->das_enabled) {
+    for (int i = 0; i < ru->num_beams_period * ru->nb_tx; i++) {
+      // TODO why is it allocated per subframe?
+      memset(&ru->common.txdataF_BF[i][0], 0, ru->nr_frame_parms->samples_per_subframe_wCP * sizeof(int32_t));
+    }
+  }
 
   int nbfeptx = 0;
   for (int beam = 0; beam < ru->num_beams_period; beam++) {
@@ -343,20 +374,27 @@ void nr_fep(void* arg)
   int startSymbol = feprx_cmd->startSymbol;
   int endSymbol = feprx_cmd->endSymbol;
   NR_DL_FRAME_PARMS *fp = ru->nr_frame_parms;
-  
+
   LOG_D(PHY,"aid %d, frame %d slot %d, startSymbol %d, endSymbol %d\n", aid, ru->proc.frame_rx, slot, startSymbol, endSymbol);
 
   VCD_SIGNAL_DUMPER_DUMP_FUNCTION_BY_NAME(VCD_SIGNAL_DUMPER_FUNCTIONS_PHY_PROCEDURES_RU_FEPRX+aid, 1);
   int idx = aid + beam * ru->nb_rx;
+  int beam_idx = idx;
+  if (ru->gNB_list[0]->common_vars.analog_bf && ru->das_enabled) {
+    int bb = beam_in_slot(fp->symbols_per_slot, &ru->gNB_list[0]->common_vars.beam_id[beam][slot * fp->symbols_per_slot]);
+    beam_idx = bb > -1 ? aid + bb * ru->nb_rx : -1;
+  }
   int offset = (slot % RU_RX_SLOT_DEPTH) * fp->symbols_per_slot * fp->ofdm_symbol_size;
-  for (int l = startSymbol; l <= endSymbol; l++) 
-      nr_slot_fep_ul(fp,
-                     ru->common.rxdata[idx],
-                     &ru->common.rxdataF[idx][offset],
-                     l,
-                     slot,
-                     ru->N_TA_offset);
-  VCD_SIGNAL_DUMPER_DUMP_FUNCTION_BY_NAME(VCD_SIGNAL_DUMPER_FUNCTIONS_PHY_PROCEDURES_RU_FEPRX+aid, 0);
+  if (beam_idx > -1) {
+    for (int l = startSymbol; l <= endSymbol; l++)
+        nr_slot_fep_ul(fp,
+                       ru->common.rxdata[beam_idx],
+                       &ru->common.rxdataF[idx][offset],
+                       l,
+                       slot,
+                       ru->N_TA_offset);
+  }
+  VCD_SIGNAL_DUMPER_DUMP_FUNCTION_BY_NAME(VCD_SIGNAL_DUMPER_FUNCTIONS_PHY_PROCEDURES_RU_FEPRX + aid, 0);
 
   // Task completed in //
   completed_task_ans(feprx_cmd->ans);

@@ -457,7 +457,7 @@ nr_initial_sync_t nr_initial_sync(UE_nr_rxtx_proc_t *proc,
     LOG_I(PHY, "[UE%d] Initial sync failed : Estimated power: %d dB\n", ue->Mod_id, ue->measurements.rx_power_avg_dB[0]);
 #endif
     } else {
-      LOG_A(PHY, "Initial sync successful, PCI: %d\n",fp->Nid_cell);
+      LOG_A(PHY, "Initial sync successful, PCI: %d SSB %d\n", fp->Nid_cell, fp->ssb_index);
     }
   //  exit_fun("debug exit");
   VCD_SIGNAL_DUMPER_DUMP_FUNCTION_BY_NAME(VCD_SIGNAL_DUMPER_FUNCTIONS_NR_INITIAL_UE_SYNC, VCD_FUNCTION_OUT);
