@@ -133,6 +133,7 @@ typedef struct {
 
 typedef struct {
   bool active;
+  bool suspended;
   uint32_t counter;
   uint32_t target;
   uint32_t step;
@@ -148,6 +149,12 @@ void nr_timer_start(NR_timer_t *timer);
  * @param timer Timer to stopped
  */
 void nr_timer_stop(NR_timer_t *timer);
+/**
+ * @brief To suspend/resume a timer
+ * @param timer Timer to be stopped/suspended
+ */
+void nr_timer_suspension(NR_timer_t *timer);
+
 /**
  * @brief If active, it increases timer counter by an amout of units equal to step. It stops timer if expired
  * @param timer Timer to be handled

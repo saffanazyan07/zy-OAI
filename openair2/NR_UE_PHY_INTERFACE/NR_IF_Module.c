@@ -1125,6 +1125,11 @@ static nr_dci_format_t handle_dci(NR_UE_MAC_INST_t *mac,
   if (mac->ra.msg3_C_RNTI && mac->ra.ra_state == nrRA_WAIT_CONTENTION_RESOLUTION)
     nr_ra_succeeded(mac, gNB_index, frame, slot);
 
+  // suspend RAR response window timer
+  // (in RFsim running multiple slot in parallel it might expire while decoding MSG2)
+  if (mac->ra.ra_state == nrRA_WAIT_RAR)
+    nr_timer_suspension(&mac->ra.response_window_timer);
+
   return nr_ue_process_dci_indication_pdu(mac, frame, slot, dci);
 }
 
@@ -1293,8 +1298,11 @@ static uint32_t nr_ue_dl_processing(NR_UE_MAC_INST_t *mac, nr_downlink_indicatio
           break;
         case FAPI_NR_RX_PDU_TYPE_RAR:
           ret_mask |= (handle_dlsch(mac, dl_info, i)) << FAPI_NR_RX_PDU_TYPE_RAR;
-          if (!dl_info->rx_ind->rx_indication_body[i].pdsch_pdu.ack_nack)
+          if (!dl_info->rx_ind->rx_indication_body[i].pdsch_pdu.ack_nack) {
             LOG_W(PHY, "Received a RAR-Msg2 but LDPC decode failed\n");
+            // resume RAR response window timer if MSG2 decoding failed
+            nr_timer_suspension(&mac->ra.response_window_timer);
+          }
           else
             LOG_I(PHY, "RAR-Msg2 decoded\n");
           break;
