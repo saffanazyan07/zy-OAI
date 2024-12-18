@@ -264,6 +264,8 @@ int get_smallest_supported_bandwidth_index(int scs, frequency_range_t frequency_
 unsigned short get_m_srs(int c_srs, int b_srs);
 unsigned short get_N_b_srs(int c_srs, int b_srs);
 int get_ssb_first_sc(const double pointA, const double ssbCenter, const int mu);
+int get_gscn_from_nrarfcn(const int band, const int scs, const uint32_t arfcn);
+double get_ssref_from_gscn(const int gscn);
 
 #define CEILIDIV(a,b) ((a+b-1)/b)
 #define ROUNDIDIV(a,b) (((a<<1)+b)/(b<<1))

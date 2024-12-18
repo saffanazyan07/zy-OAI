@@ -1117,7 +1117,7 @@ static void compute_M_and_N(const int gscn, int *rM, int *rN)
 }
 
 // Section 5.4.3 of 38.101-1 and -2
-static double get_ssref_from_gscn(const int gscn)
+double get_ssref_from_gscn(const int gscn)
 {
   int M, N = -1;
   compute_M_and_N(gscn, &M, &N);
@@ -1134,6 +1134,45 @@ static double get_ssref_from_gscn(const int gscn)
   } else {
     LOG_E(NR_PHY, "Invalid GSCN\n");
     abort();
+  }
+}
+
+static void compute_M_and_N_from_ssref(const uint32_t ssref, int *rM, int *rN)
+{
+  if (ssref < 3000000) {
+    for (int M = 1; M < 6; M += 2) {
+      if (((ssref - M * 50) % 1200) == 0) {
+        *rM = M;
+        *rN = (ssref - M * 50) / 1200;
+        break;
+      }
+    }
+  } else if (ssref >= 3000000 && ssref < 24250000) {
+    *rN = (ssref - 3000000) / 1440;
+  } else if (ssref >= 24250000 && ssref < 100000000) {
+    *rN = (ssref - 24250080) / 17280;
+  } else {
+    AssertFatal(0, "Invalid ssref %u kHz\n", ssref);
+  }
+}
+
+int get_gscn_from_nrarfcn(const int band, const int scs, const uint32_t arfcn)
+{
+  int M, N = -1;
+  const uint32_t ssref = from_nrarfcn(band, scs, arfcn) / 1000;
+  compute_M_and_N_from_ssref(ssref, &M, &N);
+  if (ssref < 3000000) {
+    AssertFatal(N > 0 && N < 2500, "Invalid N\n");
+    AssertFatal(M > 0 && M < 6 && (M & 0x1), "Invalid M\n");
+    return 3 * N + (M - 3) / 2;
+  } else if (ssref >= 3000000 && ssref < 24250000) {
+    AssertFatal(N > -1 && N < 14757, "Invalid N\n");
+    return 7499 + N;
+  } else if (ssref >= 24250000 && ssref < 100000000) {
+    AssertFatal(N > -1 && N < 4382, "Invalid N\n");
+    return 22256 + N;
+  } else {
+    AssertFatal(0, "Invalid ssref %u kHz\n", ssref);
   }
 }
 

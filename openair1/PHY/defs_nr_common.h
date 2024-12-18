@@ -236,6 +236,8 @@ struct NR_DL_FRAME_PARMS {
   //SSB related params
   /// Start in Subcarrier index of the SSB block
   uint16_t ssb_start_subcarrier;
+  /// ssb arfcn
+  uint32_t ssb_arfcn;
   /// SSB type
   nr_ssb_type_e ssb_type;
   /// Max number of SSB in frame

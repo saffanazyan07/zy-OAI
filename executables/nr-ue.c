@@ -589,6 +589,7 @@ static int handle_sync_req_from_mac(PHY_VARS_NR_UE *UE)
       fp->ssb_start_subcarrier = get_ssb_first_sc(cfg->dl_frequency * 1000,
                                                   from_nrarfcn(fp->nr_band, fp->numerology_index, s->ssb_arfcn),
                                                   fp->numerology_index);
+      fp->ssb_arfcn = s->ssb_arfcn;
     }
     UE->target_Nid_cell = UE->synch_request.synch_req.target_Nid_cell;
 
@@ -938,7 +939,14 @@ void *UE_thread(void *arg)
             get_scan_ssb_first_sc(fp->dl_CarrierFreq, fp->N_RB_DL, fp->nr_band, fp->numerology_index, syncMsg->gscnInfo);
       } else {
         LOG_W(PHY, "SSB position provided\n");
-        syncMsg->gscnInfo[0] = (nr_gscn_info_t){.ssbFirstSC = fp->ssb_start_subcarrier};
+        nr_gscn_info_t *g = syncMsg->gscnInfo;
+        g->ssbFirstSC = fp->ssb_start_subcarrier;
+        if (fp->ssb_arfcn) {
+          g->gscn = get_gscn_from_nrarfcn(fp->nr_band, fp->numerology_index, fp->ssb_arfcn);
+          g->ssRef = get_ssref_from_gscn(g->gscn);
+        } else {
+          g->gscn = g->ssRef = 0;
+        }
         syncMsg->numGscn = 1;
       }
       syncMsg->UE = UE;
