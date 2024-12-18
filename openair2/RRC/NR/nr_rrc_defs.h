@@ -59,6 +59,7 @@
 #define NR_RRC_SETUP_DELAY_MS           10
 #define NR_RRC_RECONFIGURATION_DELAY_MS 10
 #define NR_RRC_BWP_SWITCHING_DELAY_MS   6
+#define NR_RRC_MAX_SIBS 10
 
 typedef enum {
   NR_RRC_OK=0,
@@ -267,15 +268,6 @@ typedef struct rrc_gNB_ue_context_s {
 } rrc_gNB_ue_context_t;
 
 typedef struct {
-
-  uint8_t                                   *SIB23;
-  int                                       sizeof_SIB23;
-
-} rrc_gNB_carrier_data_t;
-//---------------------------------------------------
-
-
-typedef struct {
   /* nea0 = 0, nea1 = 1, ... */
   int ciphering_algorithms[4];
   int ciphering_algorithms_count;
@@ -368,6 +360,12 @@ typedef struct nr_rrc_cuup_container_t {
   sctp_assoc_t assoc_id;
 } nr_rrc_cuup_container_t;
 
+typedef struct {
+  uint8_t *SIB_buffer;
+  int SIB_size;
+  int SIB_type;
+} rrc_SIBs_t;
+
 //---NR---(completely change)---------------------
 typedef struct gNB_RRC_INST_s {
 
@@ -376,7 +374,6 @@ typedef struct gNB_RRC_INST_s {
   char                                               *node_name;
   int                                                 module_id;
   eth_params_t                                        eth_params_s;
-  rrc_gNB_carrier_data_t                              carrier;
   uid_allocator_t                                     uid_allocator;
   RB_HEAD(rrc_nr_ue_tree_s, rrc_gNB_ue_context_s) rrc_ue_head; // ue_context tree key search by rnti
   /// NR cell id
@@ -384,6 +381,8 @@ typedef struct gNB_RRC_INST_s {
 
   // RRC configuration
   gNB_RrcConfigurationReq configuration;
+
+  rrc_SIBs_t SIBs[NR_RRC_MAX_SIBS];
 
   // gNB N3 GTPU instance
   instance_t e1_inst;

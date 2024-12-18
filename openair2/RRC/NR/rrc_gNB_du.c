@@ -26,7 +26,6 @@
 #include "F1AP_CauseMisc.h"
 #include "F1AP_CauseProtocol.h"
 #include "F1AP_CauseRadioNetwork.h"
-#include "PHY/defs_common.h"
 #include "T.h"
 #include "asn_codecs.h"
 #include "assertions.h"
@@ -397,6 +396,16 @@ void rrc_gNB_process_f1_setup_req(f1ap_setup_req_t *req, sctp_assoc_t assoc_id)
       .nrpci = cell_info->nr_pci,
       .num_SI = 0,
   };
+
+  for (int i = 0; i < NR_RRC_MAX_SIBS; i++) {
+    if (rrc->SIBs[i].SIB_type != 0) {
+      rrc_SIBs_t *si = &rrc->SIBs[i];
+      cell.SI_msg[cell.num_SI].SI_container = si->SIB_buffer;
+      cell.SI_msg[cell.num_SI].SI_container_length = si->SIB_size;
+      cell.SI_msg[cell.num_SI].SI_type = si->SIB_type;
+      cell.num_SI++;
+    }
+  }
 
   if (du->mib != NULL && du->sib1 != NULL)
     label_intra_frequency_neighbours(rrc, du, cell_info);

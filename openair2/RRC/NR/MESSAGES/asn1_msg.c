@@ -200,21 +200,8 @@ int xer_nr_sprint(char *string, size_t string_size, asn_TYPE_descriptor_t *td, v
 
 //------------------------------------------------------------------------------
 
-int do_SIB23_NR(rrc_gNB_carrier_data_t *carrier)
+int do_SIB2_NR(uint8_t *msg_SIB2)
 {
-  NR_BCCH_DL_SCH_Message_t *sib_message = calloc(1,sizeof(NR_BCCH_DL_SCH_Message_t));
-  sib_message->message.present = NR_BCCH_DL_SCH_MessageType_PR_c1;
-  sib_message->message.choice.c1 = calloc(1,sizeof(struct NR_BCCH_DL_SCH_MessageType__c1));
-  sib_message->message.choice.c1->present = NR_BCCH_DL_SCH_MessageType__c1_PR_systemInformation;
-  sib_message->message.choice.c1->choice.systemInformation = calloc(1,sizeof(struct NR_SystemInformation));
-  
-  struct NR_SystemInformation *sib = sib_message->message.choice.c1->choice.systemInformation;
-  sib->criticalExtensions.present = NR_SystemInformation__criticalExtensions_PR_systemInformation;
-  sib->criticalExtensions.choice.systemInformation = calloc(1, sizeof(struct NR_SystemInformation_IEs));
-
-  struct NR_SystemInformation_IEs *ies = sib->criticalExtensions.choice.systemInformation;
-  SystemInformation_IEs__sib_TypeAndInfo__Member *sib2_ie = calloc(1, sizeof(*sib2_ie));
-  sib2_ie->present = NR_SystemInformation_IEs__sib_TypeAndInfo__Member_PR_sib2;
   NR_SIB2_t *sib2 = calloc(1, sizeof(*sib2));
   sib2->cellReselectionInfoCommon.q_Hyst = NR_SIB2__cellReselectionInfoCommon__q_Hyst_dB0;
   struct NR_SIB2__cellReselectionInfoCommon__speedStateReselectionPars *speed = calloc(1, sizeof(*speed));
@@ -243,26 +230,17 @@ int do_SIB23_NR(rrc_gNB_carrier_data_t *carrier)
   ssbmtc->periodicityAndOffset.present = NR_SSB_MTC__periodicityAndOffset_PR_sf20;
   ssbmtc->periodicityAndOffset.choice.sf20 = 0;
   sib2->intraFreqCellReselectionInfo.smtc = ssbmtc;
-  sib2_ie->choice.sib2 = sib2;
-  asn1cSeqAdd(&ies->sib_TypeAndInfo.list, sib2);
 
-  SystemInformation_IEs__sib_TypeAndInfo__Member *sib3_ie = calloc(1, sizeof(*sib3_ie));
-  sib3_ie->present = NR_SystemInformation_IEs__sib_TypeAndInfo__Member_PR_sib3;
-  sib3_ie->choice.sib3 = calloc(1, sizeof(*sib3_ie->choice.sib3));
-  asn1cSeqAdd(&ies->sib_TypeAndInfo.list, sib3_ie);
-
-  //encode SIB to data
-  // carrier->SIB23 = (uint8_t *) malloc16(128);
-  asn_enc_rval_t enc_rval = uper_encode_to_buffer(&asn_DEF_NR_BCCH_DL_SCH_Message,
+  asn_enc_rval_t enc_rval = uper_encode_to_buffer(&asn_DEF_NR_SIB2,
                                                   NULL,
-                                                  (void *)sib_message,
-                                                  carrier->SIB23,
+                                                  (void *)sib2,
+                                                  msg_SIB2,
                                                   100);
   AssertFatal (enc_rval.encoded > 0,
                "ASN1 message encoding failed (%s, %lu)!\n",
                enc_rval.failed_type->name,
                enc_rval.encoded);
-  ASN_STRUCT_FREE(asn_DEF_NR_BCCH_DL_SCH_Message, sib_message);
+  ASN_STRUCT_FREE(asn_DEF_NR_SIB2, sib2);
   return((enc_rval.encoded + 7) / 8);
 }
 

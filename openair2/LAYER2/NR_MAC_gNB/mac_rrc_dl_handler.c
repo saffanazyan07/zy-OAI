@@ -168,7 +168,9 @@ void f1_setup_response(const f1ap_setup_resp_t *resp)
   AssertFatal(check_plmn_identity(&du_cell->plmn, &cu_cell->plmn), "PLMN mismatch\n");
   AssertFatal(du_cell->nr_pci == cu_cell->nrpci, "PCI mismatch: DU %d vs CU %d\n", du_cell->nr_pci, cu_cell->nrpci);
 
-  AssertFatal(cu_cell->num_SI == 0, "handling of CU-provided SIBs: not implemented\n");
+  for (int i = 0; i < cu_cell->num_SI; i++) {
+    // TODO implement handling reception of SIBs in DU
+  }
 
   mac->f1_config.setup_resp = malloc(sizeof(*mac->f1_config.setup_resp));
   AssertFatal(mac->f1_config.setup_resp != NULL, "out of memory\n");
