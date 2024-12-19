@@ -521,6 +521,43 @@ static FGSRegistrationType set_fgs_ksi(nr_ue_nas_t *nas)
   return 0x0;
 }
 
+/**
+ * @brief Set contents of 5GMM capability
+ * @note  Currently hardcoded, sending min length only (1 octet)
+ */
+static FGMMCapability set_fgmm_capability(nr_ue_nas_t *nas)
+{
+  FGMMCapability cap = {0};
+  cap.iei = REGISTRATION_REQUEST_5GMM_CAPABILITY_IEI;
+  cap.length = 1;
+
+  cap.sgc = 0;
+  cap.iphc_cp_cIoT = 0;
+  cap.n3_data = 0;
+  cap.cp_cIoT = 0;
+  cap.restrict_ec = 0;
+  cap.lpp = 1;
+  cap.ho_attach = 1;
+  cap.s1_mode = 1;
+
+  if (cap.length == 1)
+    return cap; // Send minimum length only, 1 octet
+
+  cap.racs = 0;
+  cap.nssaa = 0;
+  cap.lcs = 0;
+  cap.v2x_cnpc5 = 0;
+  cap.v2x_cepc5 = 0;
+  cap.v2x = 0;
+  cap.up_cIoT = 0;
+  cap.srvcc = 0;
+  cap.ehc_CP_ciot = 0;
+  cap.multiple_eUP = 0;
+  cap.wusa = 0;
+  cap.cag = 0;
+
+  return cap;
+}
 
 static FGSRegistrationType set_fgs_registration_type(nr_ue_nas_t *nas)
 {
@@ -644,10 +681,35 @@ void generateRegistrationRequest(as_nas_info_t *initialNasMsg, nr_ue_nas_t *nas)
   rr->nruesecuritycapability.EEA = 0;
   rr->nruesecuritycapability.EIA = 0;
   size += 10;
-  // encode the message
-  initialNasMsg->nas_data = malloc16_clear(size * sizeof(Byte_t));
+
+  // Allocate memory for Initial NAS message
+  initialNasMsg->nas_data = malloc_or_fail(size * sizeof(*initialNasMsg->nas_data));
+
+  /* Handle non-cleartext IEs
+    create a copy of the cleartext 5GMM message and add non-cleartext IEs */
+  MM_msg full_mm = *mm_msg;
+  registration_request_msg *full_rr = &full_mm.registration_request;
+  int size_nct = size;
+  /* 5GMM Capability (non-cleartext IE) - 24.501 8.2.6.3
+    The UE shall include this IE, unless the UE performs a periodic registration updating procedure. */
+  if (full_rr->fgsregistrationtype != PERIODIC_REGISTRATION_UPDATING) {
+    full_rr->presencemask |= REGISTRATION_REQUEST_5GMM_CAPABILITY_PRESENT;
+    full_rr->fgmmcapability = set_fgmm_capability(nas);
+    FGMMCapability *cap = &full_rr->fgmmcapability;
+    size_nct += sizeof(cap->length) + sizeof(cap->iei) + cap->length;
+  }
+
   if (has_security_context) {
-    // security protected encoding
+    /* The UE includes the entire 5GMM NAS Registration Request (with both cleartext and non-cleartext IEs)
+       in the NAS message container IE. The value of the NAS message container IE is then ciphered.
+       The UE sends a 5GMM NAS Registration Request message containing cleartext IEs and the NAS message container IE. */
+    OctetString *nasmessagecontainercontents = &rr->fgsnasmessagecontainer.nasmessagecontainercontents;
+    nasmessagecontainercontents->value = calloc_or_fail(size_nct, sizeof(*nasmessagecontainercontents->value));
+    nasmessagecontainercontents->length = mm_msg_encode(&full_mm, nasmessagecontainercontents->value, size_nct);
+    size += (nasmessagecontainercontents->length + 2);
+    rr->presencemask |= REGISTRATION_REQUEST_NAS_MESSAGE_CONTAINER_PRESENT;
+
+    // Integrity protected encoding
     int security_header_len = nas_protected_security_header_encode((char *)(initialNasMsg->nas_data), &(nas_msg.header), size);
     initialNasMsg->length =
         security_header_len
@@ -673,13 +735,18 @@ void generateRegistrationRequest(as_nas_info_t *initialNasMsg, nr_ue_nas_t *nas)
     for (int i = 0; i < mac_len; i++) {
       initialNasMsg->nas_data[mac_start_octet + i] = mac[i];
     }
+
   } else {
-    // plain encoding
+    /* If no valid 5G NAS security context exists, the UE sends a cleartext Registration Request.
+       For non-cleartext IEs, the UE includes the full Registration Request in the NAS container IE
+       and sends it within the Security Mode Complete message. (24.501 4.4.6, 23.502 4.2.2.2.2) */
+    // Encode cleartext Registration Request message in Security Mode Complete
+    nas->registration_request_buf = malloc_or_fail(size_nct * sizeof(*nas->registration_request_buf));
+    nas->registration_request_len = mm_msg_encode(&full_mm, nas->registration_request_buf, size_nct);
+    // Plain NAS Registration Request encoding
     initialNasMsg->length = mm_msg_encode(mm_msg, (uint8_t *)(initialNasMsg->nas_data), size);
     LOG_D(NAS, "Plain Initial NAS Message: Registration Request\n");
   }
-  nas->registration_request_buf = initialNasMsg->nas_data;
-  nas->registration_request_len = initialNasMsg->length;
 }
 
 void generateServiceRequest(as_nas_info_t *initialNasMsg, nr_ue_nas_t *nas)
@@ -943,6 +1010,8 @@ static void handle_security_mode_command(nr_ue_nas_t *nas, as_nas_info_t *initia
 
   nas_itti_kgnb_refresh_req(nas->UE_id, nas->security.kgnb);
   generateSecurityModeComplete(nas, initialNasMsg);
+  // free Registration Request message after encoding
+  free(nas->registration_request_buf);
 }
 
 static void decodeRegistrationAccept(const uint8_t *buf, int len, nr_ue_nas_t *nas)
