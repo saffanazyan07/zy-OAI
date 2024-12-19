@@ -234,13 +234,12 @@ void nr_pbch_channel_compensation(struct complex16 rxdataF_ext[][PBCH_MAX_RE_PER
                                   uint8_t output_shift)
 {
   for (int aarx=0; aarx<frame_parms->nb_antennas_rx; aarx++) {
-    simde__m128i *dl_ch128          = (simde__m128i *)dl_ch_estimates_ext[aarx];
-    simde__m128i *rxdataF128        = (simde__m128i *)rxdataF_ext[aarx];
-    simde__m128i *rxdataF_comp128   = (simde__m128i *)rxdataF_comp[aarx];
-
-    for (int re = 0; re < nb_re; re += 4) {
-      *rxdataF_comp128++ = mulByConjugate128(rxdataF128++, dl_ch128++, output_shift);
-    }
+    mult_cpx_conj_vector((int16_t *)dl_ch_estimates_ext[aarx],
+                         (int16_t *)rxdataF_ext[aarx],
+                         (int16_t *)rxdataF_comp[aarx],
+                         nb_re,
+                         output_shift,
+			                   0);
   }
 }
 

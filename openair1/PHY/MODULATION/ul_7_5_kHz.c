@@ -32,7 +32,7 @@ void remove_7_5_kHz(RU_t *ru,uint8_t slot)
   int32_t **rxdata_7_5kHz=ru->common.rxdata_7_5kHz;
   uint16_t len;
   uint32_t *kHz7_5ptr;
-  simde__m128i *rxptr128, *rxptr128_7_5kHz, *kHz7_5ptr128, kHz7_5_2, mmtmp_re, mmtmp_im, mmtmp_re2, mmtmp_im2;
+  simde__m128i *rxptr128, *rxptr128_7_5kHz, *kHz7_5ptr128;
   uint32_t slot_offset,slot_offset2;
   uint8_t aa;
   uint32_t i;
@@ -83,19 +83,7 @@ void remove_7_5_kHz(RU_t *ru,uint8_t slot)
 
     //      if (((slot>>1)&1) == 0) { // apply the sinusoid from the table directly
     for (i=0; i<(len>>2); i++) {
-      kHz7_5_2 = simde_mm_sign_epi16(*kHz7_5ptr128, *(simde__m128i *)&conjugate75_2[0]);
-      mmtmp_re = simde_mm_madd_epi16(*rxptr128, kHz7_5_2);
-      // Real part of complex multiplication (note: 7_5kHz signal is conjugated for this to work)
-      mmtmp_im = simde_mm_shufflelo_epi16(kHz7_5_2, SIMDE_MM_SHUFFLE(2, 3, 0, 1));
-      mmtmp_im = simde_mm_shufflehi_epi16(mmtmp_im, SIMDE_MM_SHUFFLE(2, 3, 0, 1));
-      mmtmp_im = simde_mm_sign_epi16(mmtmp_im, *(simde__m128i *)&conjugate75[0]);
-      mmtmp_im = simde_mm_madd_epi16(mmtmp_im, rxptr128[0]);
-      mmtmp_re = simde_mm_srai_epi32(mmtmp_re, 15);
-      mmtmp_im = simde_mm_srai_epi32(mmtmp_im, 15);
-      mmtmp_re2 = simde_mm_unpacklo_epi32(mmtmp_re, mmtmp_im);
-      mmtmp_im2 = simde_mm_unpackhi_epi32(mmtmp_re, mmtmp_im);
-
-      rxptr128_7_5kHz[0] = simde_mm_packs_epi32(mmtmp_re2, mmtmp_im2);
+      rxptr128_7_5kHz[0] = oai_mm_cpx_mult(kHz7_5ptr128[0], rxptr128[0], 15);
       rxptr128++;
       rxptr128_7_5kHz++;
       kHz7_5ptr128++;

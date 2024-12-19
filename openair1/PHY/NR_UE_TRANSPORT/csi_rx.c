@@ -53,8 +53,6 @@ void nr_det_A_MF_2x2(int32_t *a_mf_00,
                      int32_t *det_fin,
                      const unsigned short nb_rb) {
 
-  int16_t nr_conjug2[8]__attribute__((aligned(16))) = {1,-1,1,-1,1,-1,1,-1} ;
-
   simde__m128i ad_re_128, bc_re_128, det_re_128;
 
   simde__m128i *a_mf_00_128 = (simde__m128i *)a_mf_00;
@@ -67,13 +65,11 @@ void nr_det_A_MF_2x2(int32_t *a_mf_00,
 
     //complex multiplication (I_a+jQ_a)(I_d+jQ_d) = (I_aI_d - Q_aQ_d) + j(Q_aI_d + I_aQ_d)
     //The imag part is often zero, we compute only the real part
-    ad_re_128 = simde_mm_sign_epi16(a_mf_00_128[0],*(simde__m128i*)&nr_conjug2[0]);
-    ad_re_128 = simde_mm_madd_epi16(ad_re_128,a_mf_11_128[0]); //Re: I_a0*I_d0 - Q_a1*Q_d1
+    ad_re_128 = simde_mm_madd_epi16(oai_mm_conj(a_mf_00_128[0]), a_mf_11_128[0]); //Re: I_a0*I_d0 - Q_a1*Q_d1
 
     //complex multiplication (I_b+jQ_b)(I_c+jQ_c) = (I_bI_c - Q_bQ_c) + j(Q_bI_c + I_bQ_c)
     //The imag part is often zero, we compute only the real part
-    bc_re_128 = simde_mm_sign_epi16(a_mf_01_128[0],*(simde__m128i*)&nr_conjug2[0]);
-    bc_re_128 = simde_mm_madd_epi16(bc_re_128,a_mf_10_128[0]); //Re: I_b0*I_c0 - Q_b1*Q_c1
+    bc_re_128 = simde_mm_madd_epi16(oai_mm_conj(a_mf_01_128[0]), a_mf_10_128[0]); //Re: I_b0*I_c0 - Q_b1*Q_c1
 
     det_re_128 = simde_mm_sub_epi32(ad_re_128, bc_re_128);
 

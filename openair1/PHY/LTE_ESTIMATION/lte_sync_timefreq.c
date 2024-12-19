@@ -135,9 +135,7 @@ void lte_sync_timefreq(PHY_VARS_UE *ue,int band,unsigned int DL_freq)
             mmtmp01 = simde_mm_srai_epi32(simde_mm_madd_epi16(((simde__m128i *)pss6144_1)[re], s), 15);
             mmtmp02 = simde_mm_srai_epi32(simde_mm_madd_epi16(((simde__m128i *)pss6144_2)[re], s), 15);
 
-            s = simde_mm_shufflelo_epi16(s, SIMDE_MM_SHUFFLE(2, 3, 0, 1));
-            s = simde_mm_shufflehi_epi16(s, SIMDE_MM_SHUFFLE(2, 3, 0, 1));
-            s = simde_mm_sign_epi16(s, *(simde__m128i *)&conjugate[0]);
+            s = oai_mm_swap(oai_mm_conj(s));
             mmtmp10 = simde_mm_srai_epi32(simde_mm_madd_epi16(((simde__m128i *)pss6144_0)[re], s), 15);
             mmtmp11 = simde_mm_srai_epi32(simde_mm_madd_epi16(((simde__m128i *)pss6144_1)[re], s), 15);
             mmtmp12 = simde_mm_srai_epi32(simde_mm_madd_epi16(((simde__m128i *)pss6144_2)[re], s), 15);
@@ -197,9 +195,7 @@ void lte_sync_timefreq(PHY_VARS_UE *ue,int band,unsigned int DL_freq)
             mmtmp01 = simde_mm_srai_epi32(simde_mm_madd_epi16(((simde__m128i *)pss6144_1)[re], s), 15);
             mmtmp02 = simde_mm_srai_epi32(simde_mm_madd_epi16(((simde__m128i *)pss6144_2)[re], s), 15);
 
-            s = simde_mm_shufflelo_epi16(s, SIMDE_MM_SHUFFLE(2, 3, 0, 1));
-            s = simde_mm_shufflehi_epi16(s, SIMDE_MM_SHUFFLE(2, 3, 0, 1));
-            s = simde_mm_sign_epi16(s, *(simde__m128i *)&conjugate[0]);
+            s = oai_mm_swap(oai_mm_conj(s));
             mmtmp10 = simde_mm_srai_epi32(simde_mm_madd_epi16(((simde__m128i *)pss6144_0)[re], s), 15);
             mmtmp11 = simde_mm_srai_epi32(simde_mm_madd_epi16(((simde__m128i *)pss6144_1)[re], s), 15);
             mmtmp12 = simde_mm_srai_epi32(simde_mm_madd_epi16(((simde__m128i *)pss6144_2)[re], s), 15);
@@ -254,9 +250,7 @@ void lte_sync_timefreq(PHY_VARS_UE *ue,int band,unsigned int DL_freq)
             mmtmp01 = simde_mm_srai_epi32(simde_mm_madd_epi16(((simde__m128i *)pss6144_1)[re], s), 15);
             mmtmp02 = simde_mm_srai_epi32(simde_mm_madd_epi16(((simde__m128i *)pss6144_2)[re], s), 15);
 
-            s = simde_mm_shufflelo_epi16(s, SIMDE_MM_SHUFFLE(2, 3, 0, 1));
-            s = simde_mm_shufflehi_epi16(s, SIMDE_MM_SHUFFLE(2, 3, 0, 1));
-            s = simde_mm_sign_epi16(s, *(simde__m128i *)&conjugate[0]);
+            s = oai_mm_swap(oai_mm_conj(s));
             mmtmp10 = simde_mm_srai_epi32(simde_mm_madd_epi16(((simde__m128i *)pss6144_0)[re], s), 15);
             mmtmp11 = simde_mm_srai_epi32(simde_mm_madd_epi16(((simde__m128i *)pss6144_1)[re], s), 15);
             mmtmp12 = simde_mm_srai_epi32(simde_mm_madd_epi16(((simde__m128i *)pss6144_2)[re], s), 15);

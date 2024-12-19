@@ -302,7 +302,7 @@ void mch_channel_compensation(int **rxdataF_ext,
                               unsigned char output_shift) {
   int aarx, nre, i;
   simde__m128i *dl_ch128, *dl_ch_mag128, *dl_ch_mag128b, *rxdataF128, *rxdataF_comp128;
-  simde__m128i mmtmpD0, mmtmpD1, mmtmpD2, mmtmpD3, QAM_amp128 = {0}, QAM_amp128b = {0};
+  simde__m128i QAM_amp128 = {0}, QAM_amp128b = {0};
 
   if ((symbol == 2) || (symbol == 6) || (symbol == 10))
     nre = frame_parms->N_RB_DL*6;
@@ -326,6 +326,7 @@ void mch_channel_compensation(int **rxdataF_ext,
 
     for (i=0; i<(nre>>2); i+=2) {
       if (mod_order>2) {
+        simde__m128i mmtmpD0, mmtmpD1;
         // get channel amplitude if not QPSK
         mmtmpD0 = simde_mm_madd_epi16(dl_ch128[0], dl_ch128[0]);
         mmtmpD0 = simde_mm_srai_epi32(mmtmpD0, output_shift);
@@ -348,43 +349,17 @@ void mch_channel_compensation(int **rxdataF_ext,
       }
 
       // multiply by conjugated channel
-      mmtmpD0 = simde_mm_madd_epi16(dl_ch128[0], rxdataF128[0]);
-      //  print_ints("re",&mmtmpD0);
-      // mmtmpD0 contains real part of 4 consecutive outputs (32-bit)
-      mmtmpD1 = simde_mm_shufflelo_epi16(dl_ch128[0], SIMDE_MM_SHUFFLE(2, 3, 0, 1));
-      mmtmpD1 = simde_mm_shufflehi_epi16(mmtmpD1, SIMDE_MM_SHUFFLE(2, 3, 0, 1));
-      mmtmpD1 = simde_mm_sign_epi16(mmtmpD1, *(simde__m128i *)&conjugate[0]);
-      //  print_ints("im",&mmtmpD1);
-      mmtmpD1 = simde_mm_madd_epi16(mmtmpD1, rxdataF128[0]);
-      // mmtmpD1 contains imag part of 4 consecutive outputs (32-bit)
-      mmtmpD0 = simde_mm_srai_epi32(mmtmpD0, output_shift);
-      //  print_ints("re(shift)",&mmtmpD0);
-      mmtmpD1 = simde_mm_srai_epi32(mmtmpD1, output_shift);
-      //  print_ints("im(shift)",&mmtmpD1);
-      mmtmpD2 = simde_mm_unpacklo_epi32(mmtmpD0, mmtmpD1);
-      mmtmpD3 = simde_mm_unpackhi_epi32(mmtmpD0, mmtmpD1);
-      //        print_ints("c0",&mmtmpD2);
-      //  print_ints("c1",&mmtmpD3);
-      rxdataF_comp128[0] = simde_mm_packs_epi32(mmtmpD2, mmtmpD3);
-      //  print_shorts("rx:",rxdataF128);
-      //  print_shorts("ch:",dl_ch128);
-      //  print_shorts("pack:",rxdataF_comp128);
+      rxdataF_comp128[0] = oai_mm_cpx_mult_conja(dl_ch128[0], rxdataF128[0], output_shift);
+      // print_shorts("rx:",rxdataF128);
+      // print_shorts("ch:",dl_ch128);
+      // print_shorts("pack:",rxdataF_comp128);
+      
       // multiply by conjugated channel
-      mmtmpD0 = simde_mm_madd_epi16(dl_ch128[1], rxdataF128[1]);
-      // mmtmpD0 contains real part of 4 consecutive outputs (32-bit)
-      mmtmpD1 = simde_mm_shufflelo_epi16(dl_ch128[1], SIMDE_MM_SHUFFLE(2, 3, 0, 1));
-      mmtmpD1 = simde_mm_shufflehi_epi16(mmtmpD1, SIMDE_MM_SHUFFLE(2, 3, 0, 1));
-      mmtmpD1 = simde_mm_sign_epi16(mmtmpD1, *(simde__m128i *)conjugate);
-      mmtmpD1 = simde_mm_madd_epi16(mmtmpD1, rxdataF128[1]);
-      // mmtmpD1 contains imag part of 4 consecutive outputs (32-bit)
-      mmtmpD0 = simde_mm_srai_epi32(mmtmpD0, output_shift);
-      mmtmpD1 = simde_mm_srai_epi32(mmtmpD1, output_shift);
-      mmtmpD2 = simde_mm_unpacklo_epi32(mmtmpD0, mmtmpD1);
-      mmtmpD3 = simde_mm_unpackhi_epi32(mmtmpD0, mmtmpD1);
-      rxdataF_comp128[1] = simde_mm_packs_epi32(mmtmpD2, mmtmpD3);
-      //  print_shorts("rx:",rxdataF128+1);
-      //  print_shorts("ch:",dl_ch128+1);
-      //  print_shorts("pack:",rxdataF_comp128+1);
+      rxdataF_comp128[1] = oai_mm_cpx_mult_conja(dl_ch128[1], rxdataF128[1], output_shift);
+      // print_shorts("rx:",rxdataF128+1);
+      // print_shorts("ch:",dl_ch128+1);
+      // print_shorts("pack:",rxdataF_comp128+1);
+
       dl_ch128+=2;
       dl_ch_mag128+=2;
       dl_ch_mag128b+=2;
@@ -410,7 +385,7 @@ void mch_channel_compensation_khz_1dot25(int **rxdataF_ext,
     unsigned char output_shift) {
   int aarx, nre, i;
   simde__m128i *dl_ch128, *dl_ch_mag128, *dl_ch_mag128b, *rxdataF128, *rxdataF_comp128;
-  simde__m128i mmtmpD0, mmtmpD1, mmtmpD2, mmtmpD3, QAM_amp128 = {0}, QAM_amp128b = {0};
+  simde__m128i QAM_amp128 = {0}, QAM_amp128b = {0};
   /*if ((symbol == 2) || (symbol == 6) || (symbol == 10))
     nre = frame_parms->N_RB_DL*6;
   else
@@ -434,6 +409,7 @@ void mch_channel_compensation_khz_1dot25(int **rxdataF_ext,
 
     for (i=0; i<(nre>>2); i+=2) {
       if (mod_order>2) {
+        simde__m128i mmtmpD0, mmtmpD1;
         // get channel amplitude if not QPSK
         mmtmpD0 = simde_mm_madd_epi16(dl_ch128[0], dl_ch128[0]);
         mmtmpD0 = simde_mm_srai_epi32(mmtmpD0, output_shift);
@@ -456,43 +432,17 @@ void mch_channel_compensation_khz_1dot25(int **rxdataF_ext,
       }
 
       // multiply by conjugated channel
-      mmtmpD0 = simde_mm_madd_epi16(dl_ch128[0], rxdataF128[0]);
-      //  print_ints("re",&mmtmpD0);
-      // mmtmpD0 contains real part of 4 consecutive outputs (32-bit)
-      mmtmpD1 = simde_mm_shufflelo_epi16(dl_ch128[0], SIMDE_MM_SHUFFLE(2, 3, 0, 1));
-      mmtmpD1 = simde_mm_shufflehi_epi16(mmtmpD1, SIMDE_MM_SHUFFLE(2, 3, 0, 1));
-      mmtmpD1 = simde_mm_sign_epi16(mmtmpD1, *(simde__m128i *)&conjugate[0]);
-      //  print_ints("im",&mmtmpD1);
-      mmtmpD1 = simde_mm_madd_epi16(mmtmpD1, rxdataF128[0]);
-      // mmtmpD1 contains imag part of 4 consecutive outputs (32-bit)
-      mmtmpD0 = simde_mm_srai_epi32(mmtmpD0, output_shift);
-      //  print_ints("re(shift)",&mmtmpD0);
-      mmtmpD1 = simde_mm_srai_epi32(mmtmpD1, output_shift);
-      //  print_ints("im(shift)",&mmtmpD1);
-      mmtmpD2 = simde_mm_unpacklo_epi32(mmtmpD0, mmtmpD1);
-      mmtmpD3 = simde_mm_unpackhi_epi32(mmtmpD0, mmtmpD1);
-      //        print_ints("c0",&mmtmpD2);
-      //  print_ints("c1",&mmtmpD3);
-      rxdataF_comp128[0] = simde_mm_packs_epi32(mmtmpD2, mmtmpD3);
-      //  print_shorts("rx:",rxdataF128);
-      //  print_shorts("ch:",dl_ch128);
-      //  print_shorts("pack:",rxdataF_comp128);
+      rxdataF_comp128[0] = oai_mm_cpx_mult_conja(dl_ch128[0], rxdataF128[0], output_shift);
+      // print_shorts("rx:",rxdataF128);
+      // print_shorts("ch:",dl_ch128);
+      // print_shorts("pack:",rxdataF_comp128);
+
       // multiply by conjugated channel
-      mmtmpD0 = simde_mm_madd_epi16(dl_ch128[1], rxdataF128[1]);
-      // mmtmpD0 contains real part of 4 consecutive outputs (32-bit)
-      mmtmpD1 = simde_mm_shufflelo_epi16(dl_ch128[1], SIMDE_MM_SHUFFLE(2, 3, 0, 1));
-      mmtmpD1 = simde_mm_shufflehi_epi16(mmtmpD1, SIMDE_MM_SHUFFLE(2, 3, 0, 1));
-      mmtmpD1 = simde_mm_sign_epi16(mmtmpD1, *(simde__m128i *)conjugate);
-      mmtmpD1 = simde_mm_madd_epi16(mmtmpD1, rxdataF128[1]);
-      // mmtmpD1 contains imag part of 4 consecutive outputs (32-bit)
-      mmtmpD0 = simde_mm_srai_epi32(mmtmpD0, output_shift);
-      mmtmpD1 = simde_mm_srai_epi32(mmtmpD1, output_shift);
-      mmtmpD2 = simde_mm_unpacklo_epi32(mmtmpD0, mmtmpD1);
-      mmtmpD3 = simde_mm_unpackhi_epi32(mmtmpD0, mmtmpD1);
-      rxdataF_comp128[1] = simde_mm_packs_epi32(mmtmpD2, mmtmpD3);
-      //      print_shorts("rx:",rxdataF128+1);
-      //     print_shorts("ch:",dl_ch128+1);
-      //      print_shorts("pack:",rxdataF_comp128+1);
+      rxdataF_comp128[1] = oai_mm_cpx_mult_conja(dl_ch128[1], rxdataF128[1], output_shift);
+      // print_shorts("rx:",rxdataF128+1);
+      // print_shorts("ch:",dl_ch128+1);
+      // print_shorts("pack:",rxdataF_comp128+1);
+
       dl_ch128+=2;
       dl_ch_mag128+=2;
       dl_ch_mag128b+=2;

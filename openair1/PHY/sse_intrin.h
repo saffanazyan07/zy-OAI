@@ -48,7 +48,7 @@
 #ifndef SSE_INTRIN_H
 #define SSE_INTRIN_H
 
-
+#include <simde/simde-common.h>
 #include <simde/x86/avx2.h>
 #include <simde/x86/fma.h>
 #if defined(__x86_64) || defined(__i386__)
@@ -71,38 +71,8 @@
 #include "assertions.h"
 
 /*
- * OAI specific
+ * OAI specific SSE section
  */
-
-static const short minusConjug128[8] __attribute__((aligned(16))) = {-1, 1, -1, 1, -1, 1, -1, 1};
-static inline simde__m128i mulByConjugate128(simde__m128i *a, simde__m128i *b, int8_t output_shift)
-{
-  simde__m128i realPart = simde_mm_madd_epi16(*a, *b);
-  realPart = simde_mm_srai_epi32(realPart, output_shift);
-  simde__m128i imagPart = simde_mm_shufflelo_epi16(*b, SIMDE_MM_SHUFFLE(2, 3, 0, 1));
-  imagPart = simde_mm_shufflehi_epi16(imagPart, SIMDE_MM_SHUFFLE(2, 3, 0, 1));
-  imagPart = simde_mm_sign_epi16(imagPart, *(simde__m128i *)minusConjug128);
-  imagPart = simde_mm_madd_epi16(imagPart, *a);
-  imagPart = simde_mm_srai_epi32(imagPart, output_shift);
-  simde__m128i lowPart = simde_mm_unpacklo_epi32(realPart, imagPart);
-  simde__m128i highPart = simde_mm_unpackhi_epi32(realPart, imagPart);
-  return (simde_mm_packs_epi32(lowPart, highPart));
-}
-
-#define displaySamples128(vect)                                      \
-  {                                                                  \
-    simde__m128i x = vect;                                           \
-    printf("vector: %s = (%hd,%hd) (%hd,%hd) (%hd,%hd) (%hd,%hd)\n", \
-           #vect,                                                    \
-           simde_mm_extract_epi16(x, 0),                             \
-           simde_mm_extract_epi16(x, 1),                             \
-           simde_mm_extract_epi16(x, 2),                             \
-           simde_mm_extract_epi16(x, 3),                             \
-           simde_mm_extract_epi16(x, 4),                             \
-           simde_mm_extract_epi16(x, 5),                             \
-           simde_mm_extract_epi16(x, 6),                             \
-           simde_mm_extract_epi16(x, 7));                            \
-  }
 
 __attribute__((always_inline)) static inline int64_t simde_mm_average_sse(simde__m128i *a, int length, int shift)
 {
@@ -170,5 +140,360 @@ __attribute__((always_inline)) static inline int32_t simde_mm_average(simde__m12
 
   return (uint32_t)(avg / scale);
 }
+
+// TODO can be deleted
+//static const short conjugate[8]  __attribute__((aligned(16))) = {-1,  1, -1,  1, -1,  1, -1,  1};
+//static const short conjugate2[8] __attribute__((aligned(16))) = { 1, -1,  1, -1,  1, -1,  1, -1};
+
+#define oai_mm_displaySamples(vect) {\
+  simde__m128i x = vect;\
+  printf("[%s] SSE vector: %s = (%hd, %hd) (%hd, %hd) (%hd, %hd) (%hd, %hd)\n",\
+    __func__, #vect,\
+    simde_mm_extract_epi16(x, 0), simde_mm_extract_epi16(x, 1),\
+    simde_mm_extract_epi16(x, 2), simde_mm_extract_epi16(x, 3),\
+    simde_mm_extract_epi16(x, 4), simde_mm_extract_epi16(x, 5),\
+    simde_mm_extract_epi16(x, 6), simde_mm_extract_epi16(x, 7)\
+  );\
+}
+
+/**
+ * Perform element-wise conjugation on a 128-bit SIMD vector of 16-bit integers.
+ *
+ * The flips the sign of imaginary part of each complex element in the vector:
+ * Input:  [r0,  i0, ..., r3,  i3]
+ * Output: [r0, -i0, ..., r3, -i3]
+ *
+ * @param 128-bit SIMD vector of 4x complex 16-bit integers.
+ * @return Complex conjugated 128-bit SIMD vector.
+ */
+__attribute__((always_inline)) static inline
+simde__m128i oai_mm_conj(simde__m128i a) {
+   // Initialize neg_imag as a static constant SSE vector
+  static const simde__m128i_private neg_imag = {
+    .i16 = {1, -1, 1, -1, 1, -1, 1, -1}
+  };
+  return simde_mm_sign_epi16(a, neg_imag.n);
+}
+
+/**
+ * Perform element-wise IQ swap on a 128-bit SIMD vector of 16-bit integers.
+ *
+ * The swap imag and real part of each complex element in the vector:
+ * Input:  [r0, i0, ..., r3, i3]
+ * Output: [i0, r0, ..., i3, r3]
+ *
+ * @param 128-bit SIMD vector of 16-bit integers.
+ * @return Swaped 128-bit SIMD vector.
+ */
+__attribute__((always_inline)) static inline
+simde__m128i oai_mm_swap(simde__m128i a)
+{
+#if (1)
+  const int shuffle_mask_swap = SIMDE_MM_SHUFFLE(2, 3, 0, 1); // 0xb1;
+  return simde_mm_shufflehi_epi16(simde_mm_shufflelo_epi16(
+    a, shuffle_mask_swap), shuffle_mask_swap);
+#else
+  // Shuffle mask to swap bytes for IQ swapping
+  static const simde__m128i_private shuffle_mask_swap = {
+    .i8 = {
+       2,  3,  0,  1,  6,  7,  4,  5, // Low bytes
+      10, 11,  8,  9, 14, 15, 12, 13  // High bytes
+    }
+  };
+  return simde_mm_shuffle_epi8(a, shuffle_mask_swap);
+#endif
+}
+
+__attribute__((always_inline)) static inline
+simde__m128i oai_mm_smadd(simde__m128i z1, simde__m128i z2, int shift)
+{
+  return simde_mm_srai_epi32(simde_mm_madd_epi16(z1, z2), shift);
+}
+
+__attribute__((always_inline)) static inline
+simde__m128i oai_mm_pack(simde__m128i a, simde__m128i b)
+{
+  return simde_mm_packs_epi32(
+    simde_mm_unpacklo_epi32(a, b), // real
+    simde_mm_unpackhi_epi32(a, b)  // imag
+  );
+}
+
+/**
+ * Perform a COMPLEX MULTIPLICATION on a 128-bit SIMD vector of complex 16-bit integers.
+ *
+ * Input:  z1 = (a + bi) [ a0,  b0,  ...,  a3,  b3]
+ * Input:  z2 = (c + di) [ c0,  d0,  ...,  c3,  d3]
+ * Output: z3 = (e + fi) [ e0,  f0,  ...,  e3,  f3]
+ *
+ * conj(z1)              [ a0, -b0,  ...,  a3, -b3]
+ * swap(z1)              [ b0,  a0,  ...,  b3,  a3] 
+ * 
+ * z3 = z1 * z2 = + (ac-bd) + (ad+bc)i
+ *
+ * @param 128-bit SIMD vector of four complex 16-bit integers.
+ * @return a 128-bit SIMD vector.
+ */
+__attribute__((always_inline)) static inline
+simde__m128i oai_mm_cpx_mult(simde__m128i z1, simde__m128i z2, int shift)
+{
+  simde__m128i re = oai_mm_smadd(oai_mm_conj(z1), z2, shift);
+  simde__m128i im = oai_mm_smadd(oai_mm_swap(z1), z2, shift);
+  return oai_mm_pack(re, im);
+}
+
+/**
+ * Perform a CONJUGATE DOT PRODUCT on a 128-bit SIMD vector of 16-bit integers.
+ *
+ * Input:  z1 = (a + bi) [ a0,  b0,  ...,  a3,  b3]
+ * Input:  z2 = (c + di) [ c0,  d0,  ...,  c3,  d3]
+ * Output: z3 = (e + fi) [ e0,  f0,  ...,  e3,  f3]
+ * 
+ * swap(conj(z1))        [-b0,  a0,  ..., -b3,  a3]
+ * 
+ * z3 = conj(z1) * z2 = + (ac+bd) + (ad-bc)i 
+ *
+ * @param 128-bit SIMD vector of four complex 16-bit integers.
+ * @return a 128-bit SIMD vector.
+ */
+__attribute__((always_inline)) static inline
+simde__m128i oai_mm_cpx_mult_conja(simde__m128i a, simde__m128i b, int shift)
+{
+  simde__m128i re = oai_mm_smadd(a, b, shift);
+  simde__m128i im = oai_mm_smadd(oai_mm_swap(oai_mm_conj(a)),  b, shift);
+  return oai_mm_pack(re, im);
+}
+
+/**
+ * Perform a DOT PRODUCT on a 128-bit SIMD vector of 16-bit integers.
+ *
+ * Input:  z1 = (a + bi) [ a0,  b0,  ...,  a3,  b3]
+ * Input:  z2 = (c + di) [ c0,  d0,  ...,  c3,  d3]
+ * Output: z3 = (e + fi) [ e0,  f0,  ...,  e3,  f3]
+ * 
+ * swap(conj(z2))        [-d0,  c0,  ..., -d3,  c3]
+ * conj(swap(z1))        [ b0, -a0,  ...,  b3, -a3] // alternative way
+ *
+ * z3 = z1 * conj(z2) = + (ac+bd) + (bc-ad)i 
+ *
+ * @param 128-bit SIMD vector of 16-bit integers.
+ * @return a 128-bit SIMD vector.
+ */
+__attribute__((always_inline)) static inline
+simde__m128i oai_mm_cpx_mult_conjb(simde__m128i a, simde__m128i b, int shift)
+{
+  simde__m128i re = oai_mm_smadd(a, b, shift);
+  simde__m128i im = oai_mm_smadd(a, oai_mm_swap(oai_mm_conj(b)), shift);
+  //simde__m128i im = oai_mm_smadd(oai_mm_conj(oai_mm_swap(a)),  b, shift); // alternative way
+  return oai_mm_pack(re, im);
+}
+
+/*
+ * OAI specific AVX2 section
+ */
+
+//#if defined(__x86_64__) || defined(__i386__) || defined(__arm__) || defined(__aarch64__)
+
+// TODO can be deleted
+//static const short oai_mm256_neg_re[8] __attribute__((aligned(32))) = {-1,  1, -1,  1, -1,  1, -1,  1, -1,  1, -1,  1, -1,  1, -1,  1};
+//static const short oai_mm256_neg_im[8] __attribute__((aligned(32))) = { 1, -1,  1, -1,  1, -1,  1, -1,  1, -1,  1, -1,  1, -1,  1, -1};
+  
+#define oai_mm256_displaySamples(vect) {\
+  simde__m256i x = vect;\
+  printf("[%s] AVX2 vector: %s = (%hd, %hd) (%hd, %hd) (%hd, %hd) (%hd, %hd) (%hd, %hd) (%hd, %hd) (%hd, %hd) (%hd, %hd)\n",\
+    __func__, #vect,\
+    simde_mm256_extract_epi16(x,  0), simde_mm256_extract_epi16(x,  1),\
+    simde_mm256_extract_epi16(x,  2), simde_mm256_extract_epi16(x,  3),\
+    simde_mm256_extract_epi16(x,  4), simde_mm256_extract_epi16(x,  5),\
+    simde_mm256_extract_epi16(x,  6), simde_mm256_extract_epi16(x,  7),\
+    simde_mm256_extract_epi16(x,  8), simde_mm256_extract_epi16(x,  9),\
+    simde_mm256_extract_epi16(x, 10), simde_mm256_extract_epi16(x, 11),\
+    simde_mm256_extract_epi16(x, 12), simde_mm256_extract_epi16(x, 13),\
+    simde_mm256_extract_epi16(x, 14), simde_mm256_extract_epi16(x, 15)\
+  );\
+}
+
+/**
+ * Perform element-wise conjugation on a 256-bit SIMD vector of 16-bit integers.
+ *
+ * The flips the sign of imaginary part of each complex element in the vector:
+ * Input:  [r0,  i0, ..., r7,  i7]
+ * Output: [r0, -i0, ..., r7, -i7]
+ *
+ * @param 256-bit SIMD vector of 8x complex 16-bit integers.
+ * @return Complex conjugated 256-bit SIMD vector.
+ */
+__attribute__((always_inline)) static inline
+simde__m256i oai_mm256_conj(simde__m256i a) {
+   // Initialize neg_imag as a static constant AVX2 vector
+  static const simde__m256i_private neg_imag = {
+    .i16 = {1, -1, 1, -1, 1, -1, 1, -1, 1, -1, 1, -1, 1, -1, 1, -1}
+  };
+  return simde_mm256_sign_epi16(a, neg_imag.n);
+}
+
+/**
+ * Perform element-wise IQ swap on a 256-bit SIMD vector of 16-bit integers.
+ *
+ * This swaps the real and imaginary parts of each complex element in the vector:
+ * Input:  [r0, i0, ..., r7, i7]
+ * Output: [i0, r0, ..., i7, r7]
+ *
+ * @param 256-bit SIMD vector of 16-bit integers.
+ * @return Swapped 256-bit SIMD vector.
+ */
+__attribute__((always_inline)) static inline
+simde__m256i oai_mm256_swap(simde__m256i a) {
+#if(1)
+  // Use shuffle masks for low and high halves of 256-bit vector
+  const int shuffle_mask_swap = SIMDE_MM_SHUFFLE(2, 3, 0, 1); // 0xb1;
+
+  // Perform high and low 128-bit shuffles within the 256-bit register
+  return simde_mm256_shufflehi_epi16(simde_mm256_shufflelo_epi16(
+    a, shuffle_mask_swap), shuffle_mask_swap);
+#else
+  // Shuffle mask to swap bytes for IQ swapping
+  static const simde__m256i_private shuffle_mask_swap = {
+    .i8 = {
+       2,  3,  0,  1,  6,  7,  4,  5, 10, 11,  8,  9, 14, 15, 12, 13, // Low bytes
+      18, 19, 16, 17, 22, 23, 20, 21, 26, 27, 24, 25, 30, 31, 28, 29  // High bytes
+    }
+  };
+  return simde_mm256_shuffle_epi8(a, shuffle_mask_swap.n);
+#endif  
+}
+
+__attribute__((always_inline)) static inline
+simde__m256i oai_mm256_smadd(simde__m256i z1, simde__m256i z2, int shift)
+{
+  return simde_mm256_srai_epi32(simde_mm256_madd_epi16(z1, z2), shift);
+}
+
+__attribute__((always_inline)) static inline
+simde__m256i oai_mm256_pack(simde__m256i a, simde__m256i b)
+{
+  return simde_mm256_packs_epi32(
+    simde_mm256_unpacklo_epi32(a, b), // real
+    simde_mm256_unpackhi_epi32(a, b)  // imag
+  );
+}
+
+/**
+ * Perform a COMPLEX SQUARED on a 256-bit SIMD vector of complex 16-bit integers.
+ *
+ * Input:  z1 = (a + bi) [ a0,  b0,  ...,  a7,  b7 ]
+ * Output: z3 = (e + fi) [ e0,  f0,  ...,  e7,  f7]
+ *
+ * z3 = |z1|^2 = + (a^2+b^2)
+ *
+ * @param 256-bit SIMD vector of eight complex 16-bit integers.
+ * @return a 256-bit SIMD vector.
+ */
+__attribute__((always_inline)) static inline
+simde__m256i oai_mm256_cpx_mag_squared(simde__m256i z1, int shift)
+{
+  return oai_mm256_smadd(z1, z1, shift);
+}
+
+/**
+ * Perform a COMPLEX MULTIPLICATION on a 256-bit SIMD vector of complex 16-bit integers.
+ *
+ * Input:  z1 = (a + bi) [ a0,  b0,  ...,  a7,  b7 ]
+ * Input:  z2 = (c + di) [ c0,  d0,  ...,  c7,  d7 ]
+ * Output: z3 = (e + fi) [ e0,  f0,  ...,  e7,  f7]
+ *
+ * conj(z1)              [ a0, -b0,  ...,  a7, -b7]
+ * swap(z1)              [ b0,  a0,  ...,  b7,  a7] 
+ * 
+ * z3 = z1 * z2 = + (ac-bd) + (ad+bc)i
+ *
+ * @param 256-bit SIMD vector of eight complex 16-bit integers.
+ * @return a 256-bit SIMD vector.
+ */
+__attribute__((always_inline)) static inline
+simde__m256i oai_mm256_cpx_mult(simde__m256i z1, simde__m256i z2, int shift)
+{
+  simde__m256i re = oai_mm256_smadd(oai_mm256_conj(z1), z2, shift);
+  simde__m256i im = oai_mm256_smadd(oai_mm256_swap(z1), z2, shift);
+  return oai_mm256_pack(re, im);
+}
+
+/**
+ * Perform a CONJUGATE DOT PRODUCT on a 256-bit SIMD vector of complex 16-bit integers.
+ *
+ * Input:  z1 = (a + bi) [ a0,  b0,  ...,  a3,  b3]
+ * Input:  z2 = (c + di) [ c0,  d0,  ...,  c3,  d3]
+ * Output: z3 = (e + fi) [ e0,  f0,  ...,  e3,  f3]
+ * 
+ * swap(conj(z1))        [-b0,  a0,  ..., -b3,  a3]
+ * 
+ * z3 = conj(z1) * z2 = + (ac+bd) + (ad-bc)i 
+ *
+ * @param 256-bit SIMD vector of eight complex 16-bit integers.
+ * @return a 256-bit SIMD vector.
+ */
+__attribute__((always_inline)) static inline
+simde__m256i oai_mm256_cpx_mult_conja(simde__m256i a, simde__m256i b, int shift)
+{
+  simde__m256i re = oai_mm256_smadd(a, b, shift);
+  simde__m256i im = oai_mm256_smadd(oai_mm256_swap(oai_mm256_conj(a)),  b, shift);
+  return oai_mm256_pack(re, im);
+}
+
+// Function to perform interleaving and combining re and im to a complex vector
+__attribute__((always_inline)) static inline
+void oai_mm256_combine_vectors(simde__m128i a_re, simde__m128i a_im, simde__m256i *a) {
+    *a = simde_mm256_set_m128i(
+        simde_mm_unpackhi_epi16(a_re, a_im),
+        simde_mm_unpacklo_epi16(a_re, a_im)
+    );
+}
+
+/**
+ * Perform a DOT PRODUCT on a 256-bit SIMD vector of complex 16-bit integers.
+ *
+ * Input:  z1 = (a + bi) [ a0,  b0,  ...,  a3,  b3]
+ * Input:  z2 = (c + di) [ c0,  d0,  ...,  c3,  d3]
+ * Output: z3 = (e + fi) [ e0,  f0,  ...,  e3,  f3]
+ * 
+ * swap(conj(z2))        [-d0,  c0,  ..., -d3,  c3]
+ * conj(swap(z1))        [ b0, -a0,  ...,  b3, -a3] // alternative way
+ * 
+ * z3 = z1 * conj(z2) = + (ac+bd) + (bc-ad)i 
+ * 
+ * @param 256-bit SIMD vector of eight complex 16-bit integers.
+ * @return a 256-bit SIMD vector.
+ */
+
+__attribute__((always_inline)) static inline
+simde__m256i oai_mm256_cpx_mult_conjb(simde__m256i a, simde__m256i b, int shift)
+{
+  simde__m256i re = oai_mm256_smadd(a, b, shift);
+  simde__m256i im = oai_mm256_smadd(a, oai_mm256_swap(oai_mm256_conj(b)), shift);
+  //simde__m256i im = oai_mm256_smadd(oai_mm256_conj(oai_mm256_swap(a)), b, shift); // alternative way
+  return oai_mm256_pack(re, im);
+}
+
+// Function to separate the real and imaginary parts from the combined 256-bit vector
+__attribute__((always_inline)) static inline
+void oai_mm256_separate_vectors(simde__m256i combined, simde__m128i *re, simde__m128i *im) {
+    
+    const int shuffle_mask = SIMDE_MM_SHUFFLE(3, 1, 2, 0); // 0xD8
+    simde__m256i xmm0 = simde_mm256_shuffle_epi32(simde_mm256_shufflehi_epi16(simde_mm256_shufflelo_epi16(combined, shuffle_mask), shuffle_mask), shuffle_mask);
+    
+    // Unpack the low and high parts of the combined vector to extract real and imaginary parts
+    simde__m128i lo = simde_mm256_extractf128_si256(xmm0, 0);  // Extract the lower 128 bits (real part)
+    simde__m128i hi = simde_mm256_extractf128_si256(xmm0, 1);  // Extract the higher 128 bits (imaginary part)
+    
+    // Now we need to separate the real and imaginary parts within each 128-bit part.
+    simde__m128i xmmre = simde_mm_unpacklo_epi16(lo, hi); // Real part of the low half
+    simde__m128i xmmim = simde_mm_unpackhi_epi16(lo, hi); // Imaginary part of the high half
+    
+    *re = simde_mm_shuffle_epi32(simde_mm_shufflehi_epi16(simde_mm_shufflelo_epi16(xmmre, shuffle_mask), shuffle_mask), shuffle_mask);
+    *im = simde_mm_shuffle_epi32(simde_mm_shufflehi_epi16(simde_mm_shufflelo_epi16(xmmim, shuffle_mask), shuffle_mask), shuffle_mask);
+
+}
+
+//#endif
 
 #endif // SSE_INTRIN_H

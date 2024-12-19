@@ -32,12 +32,11 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <assert.h>
+
 #include "PHY/sse_intrin.h"
+
 #include "common/utils/assertions.h"
 #include "common/utils/utils.h"
-#include <simde/simde-common.h>
-#include <simde/x86/sse.h>
-#include <simde/x86/avx2.h>
 #include "common/utils/LOG/log.h"
 
 #define simd_q15_t simde__m128i
@@ -300,7 +299,7 @@ extern "C" {
       const simde__m256i x_mul_alpha_shift15 =simde_mm256_mulhrs_epi16(alpha256, x_duplicate_ordered);
       // Existing multiplication normalization is weird, constant table in alpha need to be doubled
       const simde__m256i x_mul_alpha_x2= simde_mm256_adds_epi16(x_mul_alpha_shift15,x_mul_alpha_shift15);
-      *y128= simde_mm_adds_epi16(simde_mm256_extracti128_si256(x_mul_alpha_x2,0),*y128);
+      *y128 = simde_mm_adds_epi16(simde_mm256_extracti128_si256(x_mul_alpha_x2,0),*y128);
       y128++;
       *y128= simde_mm_adds_epi16(simde_mm256_extracti128_si256(x_mul_alpha_x2,1),*y128);
       y128++;
@@ -462,7 +461,7 @@ void multadd_complex_vector_real_scalar(int16_t *x,
   @param madd - if not zero result is added to output
 */
 
-int mult_cpx_conj_vector(int16_t *x1,
+void mult_cpx_conj_vector(int16_t *x1,
                          int16_t *x2,
                          int16_t *y,
                          uint32_t N,
@@ -481,18 +480,18 @@ int mult_cpx_conj_vector(int16_t *x1,
   @param output_shift  - shift to be applied to generate output
 */
 
-int multadd_cpx_vector(int16_t *x1,
-                       int16_t *x2,
-                       int16_t *y,
-                       uint8_t zero_flag,
-                       uint32_t N,
-                       int output_shift);
+void multadd_cpx_vector(int16_t *x1,
+                        int16_t *x2,
+                        int16_t *y,
+                        uint8_t zero_flag,
+                        uint32_t N,
+                        int output_shift);
 
-int mult_cpx_vector(int16_t *x1,
-                    int16_t  *x2,
-                    int16_t *y,
-                    uint32_t N,
-                    int output_shift);
+void mult_cpx_vector(int16_t *x1,
+                     int16_t  *x2,
+                     int16_t *y,
+                     uint32_t N,
+                     int output_shift);
 
 // lte_dfts.c
 void init_fft(uint16_t size,

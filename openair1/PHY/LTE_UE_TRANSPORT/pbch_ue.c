@@ -211,61 +211,23 @@ void pbch_channel_compensation(int **rxdataF_ext,
       for (rb=0; rb<nb_rb; rb++) {
         // printf("rb %d\n",rb);
         //  multiply by conjugated channel
-        mmtmpP0 = simde_mm_madd_epi16(dl_ch128[0], rxdataF128[0]);
-        //  print_ints("re",&mmtmpP0);
-        // mmtmpP0 contains real part of 4 consecutive outputs (32-bit)
-        mmtmpP1 = simde_mm_shufflelo_epi16(dl_ch128[0], SIMDE_MM_SHUFFLE(2, 3, 0, 1));
-        mmtmpP1 = simde_mm_shufflehi_epi16(mmtmpP1, SIMDE_MM_SHUFFLE(2, 3, 0, 1));
-        mmtmpP1 = simde_mm_sign_epi16(mmtmpP1, *(simde__m128i *)&conjugate[0]);
-        //  print_ints("im",&mmtmpP1);
-        mmtmpP1 = simde_mm_madd_epi16(mmtmpP1, rxdataF128[0]);
-        // mmtmpP1 contains imag part of 4 consecutive outputs (32-bit)
-        mmtmpP0 = simde_mm_srai_epi32(mmtmpP0, output_shift);
-        //  print_ints("re(shift)",&mmtmpP0);
-        mmtmpP1 = simde_mm_srai_epi32(mmtmpP1, output_shift);
-        //  print_ints("im(shift)",&mmtmpP1);
-        mmtmpP2 = simde_mm_unpacklo_epi32(mmtmpP0, mmtmpP1);
-        mmtmpP3 = simde_mm_unpackhi_epi32(mmtmpP0, mmtmpP1);
-        //      print_ints("c0",&mmtmpP2);
-        //  print_ints("c1",&mmtmpP3);
-        rxdataF_comp128[0] = simde_mm_packs_epi32(mmtmpP2, mmtmpP3);
-        //  print_shorts("rx:",rxdataF128);
-        //  print_shorts("ch:",dl_ch128);
-        //  print_shorts("pack:",rxdataF_comp128);
+        rxdataF_comp128[0] = oai_mm_cpx_mult_conja(dl_ch128[0], rxdataF128[0], output_shift);
+        // print_shorts("rx:",rxdataF128);
+        // print_shorts("ch:",dl_ch128);
+        // print_shorts("pack:",rxdataF_comp128);
+
         // multiply by conjugated channel
-        mmtmpP0 = simde_mm_madd_epi16(dl_ch128[1], rxdataF128[1]);
-        // mmtmpP0 contains real part of 4 consecutive outputs (32-bit)
-        mmtmpP1 = simde_mm_shufflelo_epi16(dl_ch128[1], SIMDE_MM_SHUFFLE(2, 3, 0, 1));
-        mmtmpP1 = simde_mm_shufflehi_epi16(mmtmpP1, SIMDE_MM_SHUFFLE(2, 3, 0, 1));
-        mmtmpP1 = simde_mm_sign_epi16(mmtmpP1, *(simde__m128i *)&conjugate[0]);
-        mmtmpP1 = simde_mm_madd_epi16(mmtmpP1, rxdataF128[1]);
-        // mmtmpP1 contains imag part of 4 consecutive outputs (32-bit)
-        mmtmpP0 = simde_mm_srai_epi32(mmtmpP0, output_shift);
-        mmtmpP1 = simde_mm_srai_epi32(mmtmpP1, output_shift);
-        mmtmpP2 = simde_mm_unpacklo_epi32(mmtmpP0, mmtmpP1);
-        mmtmpP3 = simde_mm_unpackhi_epi32(mmtmpP0, mmtmpP1);
-        rxdataF_comp128[1] = simde_mm_packs_epi32(mmtmpP2, mmtmpP3);
-        //  print_shorts("rx:",rxdataF128+1);
-        //  print_shorts("ch:",dl_ch128+1);
-        //  print_shorts("pack:",rxdataF_comp128+1);
+        rxdataF_comp128[1] = oai_mm_cpx_mult_conja(dl_ch128[1], rxdataF128[1], output_shift);
+        // print_shorts("rx:",rxdataF128+1);
+        // print_shorts("ch:",dl_ch128+1);
+        // print_shorts("pack:",rxdataF_comp128+1);
 
         if (symbol_mod>1) {
           // multiply by conjugated channel
-          mmtmpP0 = simde_mm_madd_epi16(dl_ch128[2], rxdataF128[2]);
-          // mmtmpP0 contains real part of 4 consecutive outputs (32-bit)
-          mmtmpP1 = simde_mm_shufflelo_epi16(dl_ch128[2], SIMDE_MM_SHUFFLE(2, 3, 0, 1));
-          mmtmpP1 = simde_mm_shufflehi_epi16(mmtmpP1, SIMDE_MM_SHUFFLE(2, 3, 0, 1));
-          mmtmpP1 = simde_mm_sign_epi16(mmtmpP1, *(simde__m128i *)&conjugate[0]);
-          mmtmpP1 = simde_mm_madd_epi16(mmtmpP1, rxdataF128[2]);
-          // mmtmpP1 contains imag part of 4 consecutive outputs (32-bit)
-          mmtmpP0 = simde_mm_srai_epi32(mmtmpP0, output_shift);
-          mmtmpP1 = simde_mm_srai_epi32(mmtmpP1, output_shift);
-          mmtmpP2 = simde_mm_unpacklo_epi32(mmtmpP0, mmtmpP1);
-          mmtmpP3 = simde_mm_unpackhi_epi32(mmtmpP0, mmtmpP1);
-          rxdataF_comp128[2] = simde_mm_packs_epi32(mmtmpP2, mmtmpP3);
-          //  print_shorts("rx:",rxdataF128+2);
-          //  print_shorts("ch:",dl_ch128+2);
-          //      print_shorts("pack:",rxdataF_comp128+2);
+          rxdataF_comp128[2] = oai_mm_cpx_mult_conja(dl_ch128[2], rxdataF128[2], output_shift);
+          // print_shorts("rx:",rxdataF128+2);
+          // print_shorts("ch:",dl_ch128+2);
+          // print_shorts("pack:",rxdataF_comp128+2);
           dl_ch128+=3;
           rxdataF128+=3;
           rxdataF_comp128+=3;
