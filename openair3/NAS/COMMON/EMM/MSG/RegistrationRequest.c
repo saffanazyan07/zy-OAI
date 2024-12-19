@@ -91,9 +91,7 @@ int encode_registration_request(registration_request_msg *registration_request, 
 
   if ((registration_request->presencemask & REGISTRATION_REQUEST_5GMM_CAPABILITY_PRESENT)
       == REGISTRATION_REQUEST_5GMM_CAPABILITY_PRESENT) {
-    if ((encode_result = encode_5gmm_capability(&registration_request->fgmmcapability,
-                         REGISTRATION_REQUEST_5GMM_CAPABILITY_IEI, buffer + encoded, len -
-                         encoded)) < 0)
+    if ((encode_result = encode_5gmm_capability(buffer + encoded, &registration_request->fgmmcapability, len - encoded)) < 0)
       // Return in case of error
       return encode_result;
     else
