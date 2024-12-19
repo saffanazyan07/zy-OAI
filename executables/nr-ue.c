@@ -573,6 +573,8 @@ static uint64_t get_carrier_frequency(const int N_RB, const int mu, const uint32
   return carrier_freq;
 }
 
+void readFrame(PHY_VARS_NR_UE *UE,  openair0_timestamp *timestamp, bool toTrash);
+
 static int handle_sync_req_from_mac(PHY_VARS_NR_UE *UE)
 {
   NR_DL_FRAME_PARMS *fp = &UE->frame_parms;
@@ -585,7 +587,7 @@ static int handle_sync_req_from_mac(PHY_VARS_NR_UE *UE)
     if (s->ssb_bw_scan)
       UE->UE_scan_carrier = get_nrUE_params()->UE_scan_carrier;
     else {
-      UE->UE_scan_carrier = false;
+      UE->UE_scan_carrier = NO_SCAN;
       fp->ssb_start_subcarrier = get_ssb_first_sc(cfg->dl_frequency,
                                                   from_nrarfcn(fp->nr_band, fp->numerology_index, s->ssb_arfcn) / 1000,
                                                   fp->numerology_index);
@@ -601,6 +603,10 @@ static int handle_sync_req_from_mac(PHY_VARS_NR_UE *UE)
       nr_rf_card_config_freq(&openair0_cfg[UE->rf_map.card], ul_CarrierFreq, dl_CarrierFreq, 0);
       UE->rfdevice.trx_set_freq_func(&UE->rfdevice, &openair0_cfg[0]);
       init_symbol_rotation(fp);
+      // warm up the RF board after changing frequency
+      int64_t tmp;
+      for (int i = 0; i < 50; i++)
+        readFrame(UE, &tmp, true);
     }
 
     /* Clearing UE harq while DL actors are active causes race condition.
@@ -872,6 +878,7 @@ void *UE_thread(void *arg)
   int duration_rx_to_tx = NR_UE_CAPABILITY_SLOT_RX_TO_TX;
   int nr_slot_tx_offset = 0;
   bool update_ntn_system_information = false;
+  int last_scanned_gscn = -1;
 
   while (!oai_exit) {
     nr_slot_tx_offset = 0;
@@ -926,16 +933,31 @@ void *UE_thread(void *arg)
     AssertFatal(!syncRunning, "At this point synchronization can't be running\n");
 
     if (!UE->is_synchronized) {
-      readFrame(UE, &sync_timestamp, false);
       notifiedFIFO_elt_t *Msg = newNotifiedFIFO_elt(sizeof(syncData_t), 0, &nf, UE_synch);
       syncData_t *syncMsg = (syncData_t *)NotifiedFifoData(Msg);
       *syncMsg = (syncData_t){0};
       NR_DL_FRAME_PARMS *fp = &UE->frame_parms;
-      if (UE->UE_scan_carrier) {
+      if (fp->dl_CarrierFreq % 1000)
+        LOG_E(PHY, "Center frequency %lu is not multiple of kHz\n", fp->dl_CarrierFreq);
+      if (UE->UE_scan_carrier == SCAN_BW) {
         // Get list of GSCN in this band for UE's bandwidth and center frequency.
         LOG_W(PHY, "UE set to scan all GSCN in current bandwidth\n");
+        uint32_t dl_freq_khz = fp->dl_CarrierFreq / 1000;
         syncMsg->numGscn =
-            get_scan_ssb_first_sc(fp->dl_CarrierFreq, fp->N_RB_DL, fp->nr_band, fp->numerology_index, syncMsg->gscnInfo);
+            get_scan_ssb_first_sc(&dl_freq_khz, fp->N_RB_DL, fp->nr_band, fp->numerology_index, 0 /*not used*/, syncMsg->gscnInfo);
+      } else if (UE->UE_scan_carrier == SCAN_BAND) {
+        // Get list of GSCN after last scanned GSCN in this band
+        LOG_W(PHY, "UE set to scan full NR band\n");
+        uint32_t dlFreq = 0;
+        syncMsg->numGscn =
+            get_scan_ssb_first_sc(&dlFreq, fp->N_RB_DL, fp->nr_band, fp->numerology_index, last_scanned_gscn, syncMsg->gscnInfo);
+        // save last gscn from current list to continune in next scan
+        last_scanned_gscn = syncMsg->gscnInfo[syncMsg->numGscn - 1].gscn;
+        // set dl freqeuncy for current scan
+        fp->dl_CarrierFreq = dlFreq * 1000;
+        nr_rf_card_config_freq(&openair0_cfg[UE->rf_map.card], 0, fp->dl_CarrierFreq, 0); // no need to set UL freq for cell search
+        UE->rfdevice.trx_set_freq_func(&UE->rfdevice, &openair0_cfg[0]);
+        init_symbol_rotation(fp);
       } else {
         LOG_W(PHY, "SSB position provided\n");
         nr_gscn_info_t *g = syncMsg->gscnInfo;
@@ -948,6 +970,13 @@ void *UE_thread(void *arg)
         }
         syncMsg->numGscn = 1;
       }
+      // warm up the RF board after changing frequency
+      int64_t tmp;
+      for (int i = 0; i < 50; i++)
+        readFrame(UE, &tmp, true);
+
+      // read 2 frames to do initial sync
+      readFrame(UE, &sync_timestamp, false);
       syncMsg->UE = UE;
       memset(&syncMsg->proc, 0, sizeof(syncMsg->proc));
       pushNotifiedFIFO(&UE->sync_actor.fifo, Msg);

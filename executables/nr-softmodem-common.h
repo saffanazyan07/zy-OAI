@@ -42,7 +42,10 @@
 #define CONFIG_HLP_UETXG         "set UE TX gain\n"
 #define CONFIG_HLP_UENANTR       "set UE number of rx antennas\n"
 #define CONFIG_HLP_UENANTT       "set UE number of tx antennas\n"
-#define CONFIG_HLP_UESCAN "set UE to scan all possible GSCN in current bandwidth\n"
+#define CONFIG_HLP_UESCAN        \
+  "0: UE will decode SSB based on --ssb parameter,\n"\
+  "1: UE will scan all possible GSCN in given center frequency & bandwidth,\n"\
+  "2: UE will scan the whole NR band\n"
 #define CONFIG_HLP_UEFO          "set UE to enable estimation and compensation of frequency offset\n"
 #define CONFIG_HLP_DUMPFRAME     "dump UE received frame to rxsig_frame0.dat and exit\n"
 #define CONFIG_HLP_PHYTST        "test UE phy layer, mac disabled\n"

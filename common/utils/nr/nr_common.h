@@ -253,10 +253,11 @@ uint32_t get_ssb_offset_to_pointA(uint32_t absoluteFrequencySSB,
 int get_ssb_subcarrier_offset(uint32_t absoluteFrequencySSB, uint32_t absoluteFrequencyPointA, int scs);
 int get_delay_idx(int delay, int max_delay_comp);
 
-int get_scan_ssb_first_sc(const uint32_t fc,
+int get_scan_ssb_first_sc(uint32_t *fc_khz_p,
                           const int nbRB,
                           const int nrBand,
                           const int mu,
+                          const int lastScannedGscn,
                           nr_gscn_info_t ssbInfo[MAX_GSCN_BAND]);
 
 void check_ssb_raster(uint64_t freq, int band, int scs);

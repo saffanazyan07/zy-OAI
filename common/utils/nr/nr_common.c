@@ -1216,13 +1216,13 @@ int get_ssb_first_sc(const uint32_t pointA_kHz, const uint32_t ssbCenter_kHz, co
 }
 
 /* Returns array of first SCS offset in the scanning window */
-int get_scan_ssb_first_sc(const uint32_t fc, const int nbRB, const int nrBand, const int mu, nr_gscn_info_t ssbInfo[MAX_GSCN_BAND])
+int get_scan_ssb_first_sc(uint32_t *fc_khz_p,
+                          const int nbRB,
+                          const int nrBand,
+                          const int mu,
+                          const int lastScannedGscn,
+                          nr_gscn_info_t ssbInfo[MAX_GSCN_BAND])
 {
-  const uint32_t startFreq = get_start_freq(fc, nbRB, mu);
-  const uint32_t stopFreq = get_stop_freq(fc, nbRB, mu);
-
-  int scanGscnStart = 0;
-  int scanGscnStop = 0;
   const sync_raster_t *tmpRaster = sync_raster;
   const sync_raster_t *end = sync_raster + sizeofArray(sync_raster);
   while (tmpRaster < end && (tmpRaster->band != nrBand || tmpRaster->scs_index != mu))
@@ -1232,9 +1232,32 @@ int get_scan_ssb_first_sc(const uint32_t fc, const int nbRB, const int nrBand, c
     return 0;
   }
 
+  const uint32_t scs = MU_SCS(mu);
+  uint32_t fc_khz = *fc_khz_p;
+  uint32_t startFreq;
+  if (fc_khz != 0) {
+    // center freq provided, return list of GSCN in current bandwidth
+    startFreq = get_start_freq(fc_khz, nbRB, mu);
+  } else {
+    // center freq not provided
+    // compute startFreq from first GSCN to be scanned in this run
+    int first_gscn = (lastScannedGscn == -1) ? tmpRaster->first_gscn : lastScannedGscn + tmpRaster->step_gscn;
+    if (first_gscn > tmpRaster->last_gscn) {
+      // Repeat search
+      first_gscn = tmpRaster->first_gscn;
+    }
+    const uint32_t fistSSRef = get_ssref_from_gscn(first_gscn);
+    const int ssbRBs = 20;
+    startFreq = fistSSRef - (ssbRBs * NR_NB_SC_PER_RB / 2 * scs);
+    fc_khz = startFreq + (nbRB * NR_NB_SC_PER_RB / 2 * scs);
+    // return new center frequency
+    *fc_khz_p = fc_khz;
+  }
+  const uint32_t stopFreq = get_stop_freq(fc_khz, nbRB, mu);
+  int scanGscnStart = 0;
+  int scanGscnStop = 0;
   find_gscn_to_scan(startFreq, stopFreq, *tmpRaster, &scanGscnStart, &scanGscnStop);
 
-  const uint32_t scs = MU_SCS(mu);
   const uint32_t pointA = fc_khz - (nbRB * NR_NB_SC_PER_RB / 2 * scs);
   int numGscn = 0;
   for (int g = scanGscnStart; (g <= scanGscnStop) && (numGscn < MAX_GSCN_BAND); g += tmpRaster->step_gscn) {

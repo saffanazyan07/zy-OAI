@@ -180,6 +180,7 @@ void nr_ue_decode_mib(NR_UE_MAC_INST_t *mac, int cc_id)
     mac->synch_request.Mod_id = mac->ue_id;
     mac->synch_request.CC_id = cc_id;
     mac->synch_request.synch_req.target_Nid_cell = -1;
+    mac->synch_request.synch_req.ssb_bw_scan = true; // scan according to cmd line option
     mac->if_module->synch_request(&mac->synch_request);
     return;
   }
