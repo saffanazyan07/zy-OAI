@@ -1405,6 +1405,17 @@ void RCconfig_nr_macrlc(configmodule_interface_t *cfg)
     }
   }
 
+  config.num_sibs = 0;
+  if (config_isparamset(GNBParamList.paramarray[0], GNB_SIBS_IDX)) {
+    config.num_sibs = GNBParamList.paramarray[0][GNB_SIBS_IDX].numelt;
+    printf("Configuring for transmission of");
+    for (int b = 0; b < config.num_sibs; b++) {
+      config.sib_list[b] = GNBParamList.paramarray[0][GNB_SIBS_IDX].iptr[b];
+      printf(" SIB%d", config.sib_list[b]);
+    }
+    printf("\n");
+  }
+
   NR_ServingCellConfigCommon_t *scc = get_scc_config(cfg, config.minRXTXTIME);
   //xer_fprint(stdout, &asn_DEF_NR_ServingCellConfigCommon, scc);
   NR_ServingCellConfig_t *scd = get_scd_config(cfg);
@@ -1518,11 +1529,8 @@ void RCconfig_nr_macrlc(configmodule_interface_t *cfg)
     f1ap_served_cell_info_t info;
     read_du_cell_info(cfg, NODE_IS_DU(node_type), &gnb_id, &gnb_du_id, &name, &info, 1);
 
-    if (IS_SA_MODE(get_softmodem_params())) {
+    if (IS_SA_MODE(get_softmodem_params()))
       nr_mac_configure_sib1(RC.nrmac[0], &info.plmn, info.nr_cellid, *info.tac);
-      if (scc->ext2 && scc->ext2->ntn_Config_r17)
-        nr_mac_configure_sib19(RC.nrmac[0]);
-    }
     
     // read F1 Setup information from config and generated MIB/SIB1
     // and store it at MAC for sending later

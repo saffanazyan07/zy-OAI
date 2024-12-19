@@ -2218,11 +2218,16 @@ static long get_NR_UE_TimersAndConstants_t319(const nr_mac_timers_t *timer_confi
   }
 }
 
+void add_sib_to_systeminformation(NR_SystemInformation_IEs_t *si, struct NR_SystemInformation_IEs__sib_TypeAndInfo__Member *type)
+{
+  asn1cSeqAdd(&si->sib_TypeAndInfo.list, type);
+}
+
 NR_BCCH_DL_SCH_Message_t *get_SIB1_NR(const NR_ServingCellConfigCommon_t *scc,
                                       const f1ap_plmn_t *plmn,
                                       uint64_t cellID,
                                       int tac,
-                                      const nr_mac_timers_t *timer_config)
+                                      const nr_mac_config_t *config)
 {
   AssertFatal(cellID < (1l << 36), "cellID must fit within 36 bits, but is %lu\n", cellID);
 
@@ -2234,7 +2239,7 @@ NR_BCCH_DL_SCH_Message_t *get_SIB1_NR(const NR_ServingCellConfigCommon_t *scc,
   sib1_message->message.choice.c1->present = NR_BCCH_DL_SCH_MessageType__c1_PR_systemInformationBlockType1;
   sib1_message->message.choice.c1->choice.systemInformationBlockType1 = CALLOC(1,sizeof(struct NR_SIB1));
   AssertFatal(sib1_message->message.choice.c1->choice.systemInformationBlockType1 != NULL, "out of memory\n");
-  struct NR_SIB1 *sib1 = sib1_message->message.choice.c1->choice.systemInformationBlockType1;
+  NR_SIB1_t *sib1 = sib1_message->message.choice.c1->choice.systemInformationBlockType1;
 
   // cellSelectionInfo
   sib1->cellSelectionInfo = CALLOC(1,sizeof(*sib1->cellSelectionInfo));
@@ -2286,57 +2291,63 @@ NR_BCCH_DL_SCH_Message_t *get_SIB1_NR(const NR_ServingCellConfigCommon_t *scc,
   // TODO: add connEstFailureControl
 
   //si-SchedulingInfo
-  /*sib1->si_SchedulingInfo = CALLOC(1,sizeof(struct NR_SI_SchedulingInfo));
-  asn_set_empty(&sib1->si_SchedulingInfo->schedulingInfoList.list);
-  sib1->si_SchedulingInfo->si_WindowLength = NR_SI_SchedulingInfo__si_WindowLength_s40;
-  struct NR_SchedulingInfo *schedulingInfo = CALLOC(1,sizeof(struct NR_SchedulingInfo));
-  schedulingInfo->si_BroadcastStatus = NR_SchedulingInfo__si_BroadcastStatus_broadcasting;
-  schedulingInfo->si_Periodicity = NR_SchedulingInfo__si_Periodicity_rf8;
-  asn_set_empty(&schedulingInfo->sib_MappingInfo.list);
-
-  NR_SIB_TypeInfo_t *sib_type3 = CALLOC(1,sizeof(e_NR_SIB_TypeInfo__type));
-  sib_type3->type = NR_SIB_TypeInfo__type_sibType3;
-  sib_type3->valueTag = CALLOC(1,sizeof(sib_type3->valueTag));
-  asn1cSeqAdd(&schedulingInfo->sib_MappingInfo.list,sib_type3);
-
-  NR_SIB_TypeInfo_t *sib_type5 = CALLOC(1,sizeof(e_NR_SIB_TypeInfo__type));
-  sib_type5->type = NR_SIB_TypeInfo__type_sibType5;
-  sib_type5->valueTag = CALLOC(1,sizeof(sib_type5->valueTag));
-  asn1cSeqAdd(&schedulingInfo->sib_MappingInfo.list,sib_type5);
-
-  NR_SIB_TypeInfo_t *sib_type4 = CALLOC(1,sizeof(e_NR_SIB_TypeInfo__type));
-  sib_type4->type = NR_SIB_TypeInfo__type_sibType4;
-  sib_type4->valueTag = CALLOC(1,sizeof(sib_type4->valueTag));
-  asn1cSeqAdd(&schedulingInfo->sib_MappingInfo.list,sib_type4);
-
-  NR_SIB_TypeInfo_t *sib_type2 = CALLOC(1,sizeof(e_NR_SIB_TypeInfo__type));
-  sib_type2->type = NR_SIB_TypeInfo__type_sibType2;
-  sib_type2->valueTag = CALLOC(1,sizeof(sib_type2->valueTag));
-  asn1cSeqAdd(&schedulingInfo->sib_MappingInfo.list,sib_type2);
-
-  asn1cSeqAdd(&sib1->si_SchedulingInfo->schedulingInfoList.list,schedulingInfo);*/
-
-  // sib19 scheduling info
-  // ensure ntn-config is initialized 
-  if (scc->ext2 && scc->ext2->ntn_Config_r17) {
-    sib1->nonCriticalExtension = CALLOC(1, sizeof(struct NR_SIB1_v1610_IEs));
-    sib1->nonCriticalExtension->nonCriticalExtension = CALLOC(1, sizeof(struct NR_SIB1_v1630_IEs));
-    sib1->nonCriticalExtension->nonCriticalExtension->nonCriticalExtension = CALLOC(1, sizeof(struct NR_SIB1_v1700_IEs));
-
-    struct NR_SI_SchedulingInfo_v1700 *sib_v17_scheduling_info = CALLOC(1, sizeof(struct NR_SI_SchedulingInfo_v1700));
-
-    struct NR_SchedulingInfo2_r17 *si_schedulinginfo2_r17 = CALLOC(1, sizeof(struct NR_SchedulingInfo2_r17));
-    si_schedulinginfo2_r17->si_BroadcastStatus_r17 = NR_SchedulingInfo2_r17__si_BroadcastStatus_r17_broadcasting;
-    si_schedulinginfo2_r17->si_WindowPosition_r17 = 2;
-    si_schedulinginfo2_r17->si_Periodicity_r17 = NR_SchedulingInfo2_r17__si_Periodicity_r17_rf8;
-
-    struct NR_SIB_TypeInfo_v1700 *sib_type_info = CALLOC(1, sizeof(struct NR_SIB_TypeInfo_v1700));
-    sib_type_info->sibType_r17.present = NR_SIB_TypeInfo_v1700__sibType_r17_PR_type1_r17;
-    sib_type_info->sibType_r17.choice.type1_r17 = NR_SIB_TypeInfo_v1700__sibType_r17__type1_r17_sibType19;
-
-    asn1cSeqAdd(&si_schedulinginfo2_r17->sib_MappingInfo_r17.list, sib_type_info);
-    asn1cSeqAdd(&sib_v17_scheduling_info->schedulingInfoList2_r17.list, si_schedulinginfo2_r17);
-    sib1->nonCriticalExtension->nonCriticalExtension->nonCriticalExtension->si_SchedulingInfo_v1700 = sib_v17_scheduling_info;
+  if (config->num_sibs > 0) {
+    NR_SI_SchedulingInfo_t *info = calloc(1, sizeof(*info));
+    info->si_WindowLength = NR_SI_SchedulingInfo__si_WindowLength_s40;
+    NR_SchedulingInfo_t *schedulingInfo = calloc(1, sizeof(*schedulingInfo));
+    schedulingInfo->si_BroadcastStatus = NR_SchedulingInfo__si_BroadcastStatus_broadcasting;
+    schedulingInfo->si_Periodicity = NR_SchedulingInfo__si_Periodicity_rf16;
+    bool reg_sib = false;
+    NR_SI_SchedulingInfo_v1700_t *si_schedulingInfo_v17 = NULL;
+    NR_SchedulingInfo2_r17_t *schedulingInfo2_r17 = NULL;
+    bool v17_sib = false;
+    for (int i = 0; i < config->num_sibs; i++) {
+      int sib_num = config->sib_list[i];
+      AssertFatal(sib_num > 1 && sib_num < 22, "other SIB invalid type\n");
+      if (sib_num < 15) {
+        reg_sib = true;
+        NR_SIB_TypeInfo_t *mapping = calloc(1, sizeof(*mapping));
+        // NR_SIB_TypeInfo__type_sibType2 = 0
+        // NR_SIB_TypeInfo__type_sibType3 = 1
+        // and so on
+        mapping->type = sib_num - 2;
+        // The field is mandatory present if the type is different from SIB6, SIB7 or SIB8. For SIB6, SIB7 and SIB8 it is absent.
+        if (sib_num != 6 && sib_num != 7 && sib_num != 8) {
+          mapping->valueTag = calloc(1, sizeof(*mapping->valueTag));
+          *mapping->valueTag = 0;
+        }
+        asn1cSeqAdd(&schedulingInfo->sib_MappingInfo.list, mapping);
+      } else {
+        if (v17_sib == false) {
+          si_schedulingInfo_v17 = calloc(1, sizeof(*si_schedulingInfo_v17));
+          schedulingInfo2_r17 = calloc(1, sizeof(*schedulingInfo2_r17));
+          schedulingInfo2_r17->si_BroadcastStatus_r17 = NR_SchedulingInfo2_r17__si_BroadcastStatus_r17_broadcasting;
+          schedulingInfo2_r17->si_Periodicity_r17 = NR_SchedulingInfo2_r17__si_Periodicity_r17_rf16;
+          schedulingInfo2_r17->si_WindowPosition_r17 = 2;
+        }
+        NR_SIB_TypeInfo_v1700_t *mapping17 = calloc(1, sizeof(*mapping17));
+        mapping17->sibType_r17.present = NR_SIB_TypeInfo_v1700__sibType_r17_PR_type1_r17;
+        // NR_SIB_TypeInfo_v1700__sibType_r17__type1_r17_sibType15 = 0
+        // and so on
+        mapping17->sibType_r17.choice.type1_r17 = sib_num - 15;
+        mapping17->valueTag_r17 = calloc(1, sizeof(*mapping17->valueTag_r17));
+        *mapping17->valueTag_r17 = 0;
+        asn1cSeqAdd(&schedulingInfo2_r17->sib_MappingInfo_r17.list, mapping17);
+      }
+    }
+    AssertFatal(reg_sib, "At least 1 SIB from SchedulingInfo (index <= 14) is needed\n");
+    asn1cSeqAdd(&info->schedulingInfoList.list, schedulingInfo);
+    sib1->si_SchedulingInfo = info;
+    if (si_schedulingInfo_v17) {
+      asn1cSeqAdd(&si_schedulingInfo_v17->schedulingInfoList2_r17.list, schedulingInfo2_r17);
+      NR_SIB1_v1700_IEs_t *sib1_v17 = calloc(1, sizeof(*sib1_v17));
+      sib1_v17->si_SchedulingInfo_v1700 = si_schedulingInfo_v17;
+      NR_SIB1_v1630_IEs_t *sib1_v1630 = calloc(1, sizeof(*sib1_v1630));
+      sib1_v1630->nonCriticalExtension = sib1_v17;
+      NR_SIB1_v1610_IEs_t *sib1_v1610 = calloc(1, sizeof(*sib1_v1610));
+      sib1_v1610->nonCriticalExtension = sib1_v1630;
+      sib1->nonCriticalExtension = sib1_v1610;
+    }
   }
 
   // servingCellConfigCommon
@@ -2510,6 +2521,7 @@ NR_BCCH_DL_SCH_Message_t *get_SIB1_NR(const NR_ServingCellConfigCommon_t *scc,
   // TODO: add eCallOverIMS-Support
 
   // ue-TimersAndConstants
+  const nr_mac_timers_t *timer_config = &config->timer_config;
   sib1->ue_TimersAndConstants = CALLOC(1,sizeof(struct NR_UE_TimersAndConstants));
   AssertFatal(sib1->ue_TimersAndConstants != NULL, "out of memory\n");
   sib1->ue_TimersAndConstants->t300 = get_NR_UE_TimersAndConstants_t300(timer_config);
@@ -2531,15 +2543,6 @@ NR_BCCH_DL_SCH_Message_t *get_SIB1_NR(const NR_ServingCellConfigCommon_t *scc,
   nr_uac_BarringInfoSet->uac_BarringForAccessIdentity.bits_unused = 1;
   asn1cSeqAdd(&sib1->uac_BarringInfo->uac_BarringInfoSetList, nr_uac_BarringInfoSet);*/
 
-  // useFullResumeID
-  // TODO: add useFullResumeID
-
-  // lateNonCriticalExtension
-  // TODO: add lateNonCriticalExtension
-
-  // nonCriticalExtension
-  // TODO: add nonCriticalExtension
-
   if (LOG_DEBUGFLAG(DEBUG_ASN1)) {
     xer_fprint(stdout, &asn_DEF_NR_BCCH_DL_SCH_Message, sib1_message);
   }
@@ -2552,57 +2555,23 @@ void free_SIB1_NR(NR_BCCH_DL_SCH_Message_t *sib1)
   ASN_STRUCT_FREE(asn_DEF_NR_BCCH_DL_SCH_Message, sib1);
 }
 
-int encode_SIB1_NR(NR_BCCH_DL_SCH_Message_t *sib1, uint8_t *buffer, int max_buffer_size)
+int encode_SIB_NR(NR_BCCH_DL_SCH_Message_t *sib, uint8_t *buffer, int max_buffer_size)
 {
   AssertFatal(max_buffer_size <= NR_MAX_SIB_LENGTH / 8,
-              "%s(): maximum buffer size too large: 3GPP TS 38.331 section 5.2.1 - The physical layer imposes a limit to the "
-              "maximum size a SIB can take. The maximum SIB1 or SI message size is 2976 bits.\n",
-              __func__);
-  asn_enc_rval_t enc_rval = uper_encode_to_buffer(&asn_DEF_NR_BCCH_DL_SCH_Message, NULL, sib1, buffer, max_buffer_size);
+              "Maximum buffer size too large: 3GPP TS 38.331 section 5.2.1 - The physical layer imposes a limit to the "
+              "maximum size a SIB can take. The maximum SIB1 or SI message size is 2976 bits.\n");
+  asn_enc_rval_t enc_rval = uper_encode_to_buffer(&asn_DEF_NR_BCCH_DL_SCH_Message, NULL, sib, buffer, max_buffer_size);
   AssertFatal(enc_rval.encoded > 0 && enc_rval.encoded <= max_buffer_size * 8, "ASN1 message encoding failed (%s, %lu)!\n", enc_rval.failed_type->name, enc_rval.encoded);
   return (enc_rval.encoded + 7) / 8;
 }
 
-NR_BCCH_DL_SCH_Message_t *get_SIB19_NR(const NR_ServingCellConfigCommon_t *scc)
+NR_SIB19_r17_t *get_SIB19_NR(const NR_ServingCellConfigCommon_t *scc)
 {
-  NR_BCCH_DL_SCH_Message_t *sib_message = CALLOC(1, sizeof(NR_BCCH_DL_SCH_Message_t));
-  sib_message->message.present = NR_BCCH_DL_SCH_MessageType_PR_c1;
-  sib_message->message.choice.c1 = CALLOC(1,sizeof(struct NR_BCCH_DL_SCH_MessageType__c1));
-  sib_message->message.choice.c1->present = NR_BCCH_DL_SCH_MessageType__c1_PR_systemInformation;
-  sib_message->message.choice.c1->choice.systemInformation = CALLOC(1,sizeof(struct NR_SystemInformation));
-
-  struct NR_SystemInformation *sib = sib_message->message.choice.c1->choice.systemInformation;
-  sib->criticalExtensions.present = NR_SystemInformation__criticalExtensions_PR_systemInformation;
-  sib->criticalExtensions.choice.systemInformation = CALLOC(1, sizeof(struct NR_SystemInformation_IEs));
-
-  struct NR_SystemInformation_IEs *ies = sib->criticalExtensions.choice.systemInformation;
-
-  SystemInformation_IEs__sib_TypeAndInfo__Member *sib19 = NULL;
-  sib19 = CALLOC(1, sizeof(SystemInformation_IEs__sib_TypeAndInfo__Member));
-  sib19->present = NR_SystemInformation_IEs__sib_TypeAndInfo__Member_PR_sib19_v1700;
-  sib19->choice.sib19_v1700 = CALLOC(1, sizeof(struct NR_SIB19_r17));
-
+  NR_SIB19_r17_t *sib19 = calloc(1, sizeof(*sib19));
   // use ntn-config from NR_ServingCellConfigCommon_t
-  const int copy_result = asn_copy(&asn_DEF_NR_NTN_Config_r17, (void **) &sib19->choice.sib19_v1700->ntn_Config_r17, scc->ext2->ntn_Config_r17);
+  const int copy_result = asn_copy(&asn_DEF_NR_NTN_Config_r17, (void **) &sib19->ntn_Config_r17, scc->ext2->ntn_Config_r17);
   AssertFatal(copy_result == 0, "Was unable to copy ntn_Config_r17 from scc to SIB19 structure\n");
-
-  asn1cSeqAdd(&ies->sib_TypeAndInfo.list, sib19);
-
-  if (LOG_DEBUGFLAG(DEBUG_ASN1)) {
-    xer_fprint(stdout, &asn_DEF_NR_BCCH_DL_SCH_Message, sib_message);
-  }
-
-  return sib_message;
-}
-
-int encode_SIB19_NR(NR_BCCH_DL_SCH_Message_t *sib19, uint8_t *buffer, int max_buffer_size)
-{
-  asn_enc_rval_t enc_rval;
-
-  enc_rval = uper_encode_to_buffer(&asn_DEF_NR_BCCH_DL_SCH_Message, NULL, sib19, buffer, 150);
-  AssertFatal(enc_rval.encoded > 0, "ASN1 message encoding failed (%s, %lu)!\n", enc_rval.failed_type->name, enc_rval.encoded);
-
-  return ((enc_rval.encoded + 7) / 8);
+  return sib19;
 }
 
 void free_SIB19_NR(NR_BCCH_DL_SCH_Message_t *sib19)

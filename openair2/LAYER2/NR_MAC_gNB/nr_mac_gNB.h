@@ -172,6 +172,8 @@ typedef struct nr_mac_config_t {
   /// beamforming weight matrix size
   int nb_bfw[2];
   int32_t *bw_list;
+  int num_sibs;
+  int sib_list[20];
 } nr_mac_config_t;
 
 typedef struct NR_preamble_ue {
@@ -269,7 +271,6 @@ typedef struct {
   frame_type_t frame_type;
   NR_BCCH_BCH_Message_t *mib;
   NR_BCCH_DL_SCH_Message_t *sib1;
-  NR_BCCH_DL_SCH_Message_t *sib19;
   NR_ServingCellConfigCommon_t *ServingCellConfigCommon;
   /// pre-configured ServingCellConfig that is default for every UE
   NR_ServingCellConfig_t *pre_ServingCellConfig;
@@ -278,9 +279,9 @@ typedef struct {
   /// Outgoing BCCH pdu for PHY
   uint8_t sib1_bcch_pdu[NR_MAX_SIB_LENGTH / 8];
   int sib1_bcch_length;
-  /// used for sib19 data
-  uint8_t sib19_bcch_pdu[NR_MAX_SIB_LENGTH / 8];
-  int sib19_bcch_length;
+  /// used for otherSIB data
+  uint8_t other_sib_bcch_pdu[2][NR_MAX_SIB_LENGTH / 8];
+  int other_sib_bcch_length[2];
   /// Template for RA computations
   NR_RA_t ra[NR_NB_RA_PROC_MAX];
   /// VRB map for common channels

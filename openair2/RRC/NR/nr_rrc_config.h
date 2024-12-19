@@ -79,13 +79,11 @@ NR_BCCH_DL_SCH_Message_t *get_SIB1_NR(const NR_ServingCellConfigCommon_t *scc,
                                       const f1ap_plmn_t *plmn,
                                       uint64_t cellID,
                                       int tac,
-                                      const nr_mac_timers_t *timer_config);
+                                      const nr_mac_config_t *config);
 void free_SIB1_NR(NR_BCCH_DL_SCH_Message_t *sib1);
-int encode_SIB1_NR(NR_BCCH_DL_SCH_Message_t *sib1, uint8_t *buffer, int max_buffer_size);
-
-NR_BCCH_DL_SCH_Message_t *get_SIB19_NR(const NR_ServingCellConfigCommon_t *scc);
-int encode_SIB19_NR(NR_BCCH_DL_SCH_Message_t *sib19, uint8_t *buffer, int max_buffer_size);
-void free_SIB19_NR(NR_BCCH_DL_SCH_Message_t *sib19);
+int encode_SIB_NR(NR_BCCH_DL_SCH_Message_t *sib, uint8_t *buffer, int max_buffer_size);
+void add_sib_to_systeminformation(NR_SystemInformation_IEs_t *si, struct NR_SystemInformation_IEs__sib_TypeAndInfo__Member *type);
+NR_SIB19_r17_t *get_SIB19_NR(const NR_ServingCellConfigCommon_t *scc);
 
 NR_CellGroupConfig_t *get_initial_cellGroupConfig(int uid,
                                                   const NR_ServingCellConfigCommon_t *scc,

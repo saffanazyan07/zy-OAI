@@ -215,13 +215,6 @@ void nr_rrc_transfer_protected_rrc_message(const gNB_RRC_INST *rrc,
 
 static void init_NR_SI(gNB_RRC_INST *rrc)
 {
-  if (!NODE_IS_DU(rrc->node_type)) {
-    rrc_SIBs_t SIB2 = { .SIB_type = 2};
-    SIB2.SIB_buffer = calloc(16, sizeof(SIB2.SIB_buffer));
-    SIB2.SIB_size = do_SIB2_NR(SIB2.SIB_buffer);
-    rrc->SIBs[0] = SIB2;
-  }
-
   if (get_softmodem_params()->phy_test > 0 || get_softmodem_params()->do_ra > 0) {
     AssertFatal(NODE_IS_MONOLITHIC(rrc->node_type), "phy_test and do_ra only work in monolithic\n");
     rrc_gNB_ue_context_t *ue_context_p = rrc_gNB_allocate_new_ue_context(rrc);

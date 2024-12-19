@@ -360,12 +360,6 @@ typedef struct nr_rrc_cuup_container_t {
   sctp_assoc_t assoc_id;
 } nr_rrc_cuup_container_t;
 
-typedef struct {
-  uint8_t *SIB_buffer;
-  int SIB_size;
-  int SIB_type;
-} rrc_SIBs_t;
-
 //---NR---(completely change)---------------------
 typedef struct gNB_RRC_INST_s {
 
@@ -381,8 +375,6 @@ typedef struct gNB_RRC_INST_s {
 
   // RRC configuration
   gNB_RrcConfigurationReq configuration;
-
-  rrc_SIBs_t SIBs[NR_RRC_MAX_SIBS];
 
   // gNB N3 GTPU instance
   instance_t e1_inst;

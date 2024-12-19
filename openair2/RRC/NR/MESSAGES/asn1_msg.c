@@ -200,7 +200,7 @@ int xer_nr_sprint(char *string, size_t string_size, asn_TYPE_descriptor_t *td, v
 
 //------------------------------------------------------------------------------
 
-int do_SIB2_NR(uint8_t *msg_SIB2)
+int do_SIB2_NR(uint8_t *msg_SIB2, NR_SSB_MTC_t *ssbmtc)
 {
   NR_SIB2_t *sib2 = calloc(1, sizeof(*sib2));
   sib2->cellReselectionInfoCommon.q_Hyst = NR_SIB2__cellReselectionInfoCommon__q_Hyst_dB0;
@@ -225,10 +225,6 @@ int do_SIB2_NR(uint8_t *msg_SIB2)
   sib2->intraFreqCellReselectionInfo.s_IntraSearchP = 22; // INTEGER (0..31)
   sib2->intraFreqCellReselectionInfo.t_ReselectionNR = 1; // INTEGER (0..7)
   sib2->intraFreqCellReselectionInfo.deriveSSB_IndexFromCell = true;
-  NR_SSB_MTC_t *ssbmtc = calloc(1, sizeof(*ssbmtc));
-  ssbmtc->duration = NR_SSB_MTC__duration_sf5;
-  ssbmtc->periodicityAndOffset.present = NR_SSB_MTC__periodicityAndOffset_PR_sf20;
-  ssbmtc->periodicityAndOffset.choice.sf20 = 0;
   sib2->intraFreqCellReselectionInfo.smtc = ssbmtc;
 
   asn_enc_rval_t enc_rval = uper_encode_to_buffer(&asn_DEF_NR_SIB2,
