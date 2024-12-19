@@ -881,7 +881,6 @@ void *UE_thread(void *arg)
       if (res) {
         syncRunning = false;
         if (UE->is_synchronized) {
-          UE->synch_request.received_synch_request = 0;
           if (UE->sl_mode == SL_MODE2_SUPPORTED)
             decoded_frame_rx = UE->SL_UE_PHY_PARAMS.sync_params.DFN;
           else {
