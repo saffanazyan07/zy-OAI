@@ -465,7 +465,8 @@ void nr_ue_ulsch_procedures(PHY_VARS_NR_UE *UE,
                             const uint32_t frame,
                             const uint8_t slot,
                             nr_phy_data_tx_t *phy_data,
-                            c16_t **txdataF)
+                            c16_t **txdataF,
+                            bool was_symbol_used[14])
 {
 
   int harq_pid = phy_data->ulsch.pusch_pdu.pusch_data.harq_process_id;
@@ -500,6 +501,7 @@ void nr_ue_ulsch_procedures(PHY_VARS_NR_UE *UE,
   uint16_t rnti = pusch_pdu->rnti;
 
   for (int i = start_symbol; i < start_symbol + number_of_symbols; i++) {
+    was_symbol_used[i] = true;
     if ((ul_dmrs_symb_pos >> i) & 0x01)
       number_dmrs_symbols += 1;
   }
@@ -831,37 +833,49 @@ uint8_t nr_ue_pusch_common_procedures(PHY_VARS_NR_UE *UE,
                                       const NR_DL_FRAME_PARMS *frame_parms,
                                       const uint8_t n_antenna_ports,
                                       c16_t **txdataF,
-                                      uint32_t linktype)
+                                      uint32_t linktype,
+                                      bool was_symbol_used[14])
 {
   const int tx_offset = frame_parms->get_samples_slot_timestamp(slot, frame_parms, 0);
 
   int N_RB = (linktype == link_type_sl) ? frame_parms->N_RB_SL : frame_parms->N_RB_UL;
 
   c16_t **txdata = UE->common_vars.txData;
-  for(int ap = 0; ap < n_antenna_ports; ap++) {
-    apply_nr_rotation_TX(frame_parms,
-                         txdataF[ap],
-                         frame_parms->symbol_rotation[linktype],
-                         slot,
-                         N_RB,
-                         0,
-                         NR_NUMBER_OF_SYMBOLS_PER_SLOT);
+  for (int i = 0; i < 14; i++) {
+    if (was_symbol_used[i] == false)
+      continue;
+    for(int ap = 0; ap < n_antenna_ports; ap++) {
+      apply_nr_rotation_TX(frame_parms,
+                          txdataF[ap],
+                          frame_parms->symbol_rotation[linktype],
+                          slot,
+                          N_RB,
+                          i,
+                          1);
+    }
   }
+
 
   for (int ap = 0; ap < n_antenna_ports; ap++) {
     if (frame_parms->Ncp == 1) { // extended cyclic prefix
-      PHY_ofdm_mod((int *)txdataF[ap],
-                   (int *)&txdata[ap][tx_offset],
-                   frame_parms->ofdm_symbol_size,
-                   12,
-                   frame_parms->nb_prefix_samples,
-                   CYCLIC_PREFIX);
+      for (int i = 0; i < 14; i++) {
+        if (was_symbol_used[i] == false) {
+          continue;
+        }
+        PHY_ofdm_mod((int *)&txdataF[ap][frame_parms->ofdm_symbol_size * i],
+                    (int *)&txdata[ap][tx_offset + frame_parms->ofdm_symbol_size * i],
+                    frame_parms->ofdm_symbol_size,
+                    1,
+                    frame_parms->nb_prefix_samples,
+                    CYCLIC_PREFIX);
+      }
     } else { // normal cyclic prefix
       nr_normal_prefix_mod(txdataF[ap],
                            &txdata[ap][tx_offset],
                            14,
                            frame_parms,
-                           slot);
+                           slot,
+                           was_symbol_used);
     }
   }
 

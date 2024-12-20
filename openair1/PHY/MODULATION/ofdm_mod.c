@@ -64,31 +64,50 @@ void normal_prefix_mod(int32_t *txdataF,int32_t *txdata,uint8_t nsymb,LTE_DL_FRA
   
 }
 
-void nr_normal_prefix_mod(c16_t *txdataF, c16_t *txdata, uint8_t nsymb, const NR_DL_FRAME_PARMS *frame_parms, uint32_t slot)
+void nr_normal_prefix_mod(c16_t *txdataF, c16_t *txdata, uint8_t nsymb, const NR_DL_FRAME_PARMS *frame_parms, uint32_t slot, bool was_symbol_used[14])
 {
   // This function works only slot wise. For more generic symbol generation refer nr_feptx0()
   if (frame_parms->numerology_index != 0) { // case where numerology != 0
     if (!(slot%(frame_parms->slots_per_subframe/2))) {
-      PHY_ofdm_mod((int *)txdataF,
-                   (int *)txdata,
-                   frame_parms->ofdm_symbol_size,
-                   1,
-                   frame_parms->nb_prefix_samples0,
-                   CYCLIC_PREFIX);
-      PHY_ofdm_mod((int *)txdataF + frame_parms->ofdm_symbol_size,
-                   (int *)txdata + frame_parms->ofdm_symbol_size + frame_parms->nb_prefix_samples0,
-                   frame_parms->ofdm_symbol_size,
-                   nsymb - 1,
-                   frame_parms->nb_prefix_samples,
-                   CYCLIC_PREFIX);
+      if (was_symbol_used[0]) {
+        PHY_ofdm_mod((int *)txdataF,
+                    (int *)txdata,
+                    frame_parms->ofdm_symbol_size,
+                    1,
+                    frame_parms->nb_prefix_samples0,
+                    CYCLIC_PREFIX);
+      } else {
+        memset(txdata, 0, (frame_parms->nb_prefix_samples0 +  frame_parms->ofdm_symbol_size) * sizeof(c16_t));
+      }
+      for (int i = 1; i < nsymb; i++) {
+        c16_t* tx_data_ptr = txdata + (i - 1) * (frame_parms->ofdm_symbol_size + frame_parms->nb_prefix_samples) +
+                            frame_parms->ofdm_symbol_size + frame_parms->nb_prefix_samples0;
+        if (was_symbol_used[i]) {
+          PHY_ofdm_mod((int *)txdataF + frame_parms->ofdm_symbol_size * i,
+                      (int *)tx_data_ptr,
+                      frame_parms->ofdm_symbol_size,
+                      1,
+                      frame_parms->nb_prefix_samples,
+                      CYCLIC_PREFIX);
+        } else {
+          memset(tx_data_ptr, 0, (frame_parms->nb_prefix_samples + frame_parms->ofdm_symbol_size) * sizeof(c16_t));
+        }
+      }
     }
     else {
-      PHY_ofdm_mod((int *)txdataF,
-                   (int *)txdata,
-                   frame_parms->ofdm_symbol_size,
-                   nsymb,
-                   frame_parms->nb_prefix_samples,
-                   CYCLIC_PREFIX);
+      for (int i = 0; i < nsymb; i++) {
+        c16_t* tx_data_ptr = txdata + i * (frame_parms->ofdm_symbol_size + frame_parms->nb_prefix_samples);
+        if (was_symbol_used[i]) {
+          PHY_ofdm_mod((int *)txdataF + frame_parms->ofdm_symbol_size * i,
+                      (int *)tx_data_ptr,
+                      frame_parms->ofdm_symbol_size,
+                      1,
+                      frame_parms->nb_prefix_samples,
+                      CYCLIC_PREFIX);
+        } else {
+          memset(tx_data_ptr, 0, (frame_parms->nb_prefix_samples + frame_parms->ofdm_symbol_size) * sizeof(c16_t));
+        }
+      }
     }
   }
   else { // numerology = 0, longer CP for every 7th symbol

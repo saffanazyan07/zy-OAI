@@ -1548,7 +1548,7 @@ int main(int argc, char *argv[])
       printStatIndent(&gNB->ulsch_decoding_stats,"ULSCH total decoding time");
 
       printf("\nUE TX\n");
-      for (int i = PHY_PROC_TX; i <= ULSCH_ENCODING_STATS; i++) {
+      for (int i = PHY_PROC_TX; i <= OFDM_MOD_STATS; i++) {
         printStatIndent(&UE->phy_cpu_stats.cpu_time_stats[i], UE->phy_cpu_stats.cpu_time_stats[i].meas_name);
       }
       printStatIndent(&gNB->rx_srs_stats,"RX SRS time");

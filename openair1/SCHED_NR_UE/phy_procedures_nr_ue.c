@@ -284,14 +284,15 @@ void phy_procedures_nrUE_TX(PHY_VARS_NR_UE *ue, const UE_nr_rxtx_proc_t *proc, n
     txdataF[i] = &txdataF_buf[i * samplesF_per_slot];
 
   LOG_D(PHY,"****** start TX-Chain for AbsSubframe %d.%d ******\n", frame_tx, slot_tx);
+  bool was_symbol_used[14] = {0};
 
   start_meas_nr_ue_phy(ue, PHY_PROC_TX);
 
-  nr_ue_ulsch_procedures(ue, frame_tx, slot_tx, phy_data, (c16_t **)&txdataF);
+  nr_ue_ulsch_procedures(ue, frame_tx, slot_tx, phy_data, (c16_t **)&txdataF, was_symbol_used);
 
-  ue_srs_procedures_nr(ue, proc, (c16_t **)&txdataF);
+  ue_srs_procedures_nr(ue, proc, (c16_t **)&txdataF, was_symbol_used);
 
-  pucch_procedures_ue_nr(ue, proc, phy_data, (c16_t **)&txdataF);
+  pucch_procedures_ue_nr(ue, proc, phy_data, (c16_t **)&txdataF, was_symbol_used);
 
   LOG_D(PHY, "Sending Uplink data \n");
   start_meas_nr_ue_phy(ue, OFDM_MOD_STATS);
@@ -300,7 +301,8 @@ void phy_procedures_nrUE_TX(PHY_VARS_NR_UE *ue, const UE_nr_rxtx_proc_t *proc, n
                                 &ue->frame_parms,
                                 ue->frame_parms.nb_antennas_tx,
                                 (c16_t **)txdataF,
-                                link_type_ul);
+                                link_type_ul,
+                                was_symbol_used);
   stop_meas_nr_ue_phy(ue, OFDM_MOD_STATS);
 
   nr_ue_prach_procedures(ue, proc);

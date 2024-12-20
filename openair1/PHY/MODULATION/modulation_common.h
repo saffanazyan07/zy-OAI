@@ -48,7 +48,7 @@ void PHY_ofdm_mod(int *input,
 
 
 void normal_prefix_mod(int32_t *txdataF,int32_t *txdata,uint8_t nsymb,LTE_DL_FRAME_PARMS *frame_parms);
-void nr_normal_prefix_mod(c16_t *txdataF, c16_t *txdata, uint8_t nsymb, const NR_DL_FRAME_PARMS *frame_parms, uint32_t slot);
+void nr_normal_prefix_mod(c16_t *txdataF, c16_t *txdata, uint8_t nsymb, const NR_DL_FRAME_PARMS *frame_parms, uint32_t slot, bool was_symbol_used[14]);
 
 void do_OFDM_mod(c16_t **txdataF, c16_t **txdata, uint32_t frame,uint16_t next_slot, LTE_DL_FRAME_PARMS *frame_parms);
 

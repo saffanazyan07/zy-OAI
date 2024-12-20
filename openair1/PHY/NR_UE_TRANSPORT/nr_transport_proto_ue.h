@@ -144,7 +144,8 @@ void nr_ue_ulsch_procedures(PHY_VARS_NR_UE *UE,
                             const uint32_t frame,
                             const uint8_t slot,
                             nr_phy_data_tx_t *phy_data,
-                            c16_t **txdataF);
+                            c16_t **txdataF,
+                            bool was_symbol_used[14]);
 
 /** \brief This function does IFFT for PUSCH
 */
@@ -154,7 +155,8 @@ uint8_t nr_ue_pusch_common_procedures(PHY_VARS_NR_UE *UE,
                                       const NR_DL_FRAME_PARMS *frame_parms,
                                       const uint8_t n_antenna_ports,
                                       c16_t **txdataF,
-                                      uint32_t linktype);
+                                      uint32_t linktype,
+                                      bool was_symbol_used[14]);
 
 void clean_UE_harq(PHY_VARS_NR_UE *UE);
 

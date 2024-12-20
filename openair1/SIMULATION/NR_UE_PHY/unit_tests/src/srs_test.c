@@ -209,6 +209,7 @@ int test_srs_periodicity(PHY_VARS_NR_UE *ue, UE_nr_rxtx_proc_t *proc)
   NR_DL_FRAME_PARMS *frame_parms = &(ue->frame_parms);
   SRS_Resource_t *p_srs_resource = frame_parms->srs_nr.p_SRS_ResourceSetList[0]->p_srs_ResourceList[0];
 
+  bool was_symbol_used[14] = {0};
   for (int test_index = 0; test_index < NB_SRS_PERIOD; test_index++) {
     p_srs_resource->SRS_Periodicity = test_index;
     int srs_current_period = srs_period[p_srs_resource->SRS_Periodicity];
@@ -227,7 +228,7 @@ int test_srs_periodicity(PHY_VARS_NR_UE *ue, UE_nr_rxtx_proc_t *proc)
         for (int slot_tx = 0; slot_tx < frame_parms->slots_per_frame; slot_tx++) {
           proc->frame_tx   = frame_tx;
           proc->nr_slot_tx = slot_tx;
-          if (ue_srs_procedures_nr( ue, proc, 0) == 0)  {
+          if (ue_srs_procedures_nr( ue, proc, 0, was_symbol_used) == 0)  {
             printf("test_srs_periodicity srs at frame %d slot %d \n", frame_tx, slot_tx);
           }
         }
