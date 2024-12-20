@@ -57,9 +57,8 @@ int beam_index_allocation(int fapi_beam_index,
   int idx = -1;
   int ru_beam_idx = cfg->dbt_config.dig_beam_list[fapi_beam_index].txru_list[0].dig_beam_weight_Re;
   for (int j = 0; j < common_vars->num_beams_period; j++) {
+    // L2 analog beam implementation is slot based, so we need to verify occupancy for the whole slot
     for (int i = 0; i < symbols_per_slot; i++) {
-      if (((bitmap_symbols >> i) & 0x01) == 0)
-        continue;
       int current_beam = common_vars->beam_id[j][slot * symbols_per_slot + i];
       if (current_beam == -1 || current_beam == ru_beam_idx)
         idx = j;
