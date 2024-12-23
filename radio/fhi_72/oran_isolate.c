@@ -39,6 +39,11 @@
 // line and the use of VERSIONX further below. It is relative to phy/fhi_lib/lib/api
 #include "../../app/src/common.h"
 
+#ifdef OAI_MPLANE
+#include "mplane/init-mplane.h"
+#include "mplane/connect-mplane.h"
+#endif
+
 typedef struct {
   eth_state_t e;
   rru_config_msg_type_t last_msg;
@@ -327,6 +332,13 @@ __attribute__((__visibility__("default"))) int transport_init(openair0_device *d
   ru_session_list_t ru_session_list = {0};
   int ret = init_mplane(&ru_session_list);
   AssertFatal(ret == 0, "Cannot initialize M-plane\n");
+
+  for (size_t i = 0; i < ru_session_list.num_rus; i++) {
+    ret = connect_mplane(&ru_session_list.ru_session[i]);
+    if (ret != 0) {
+      continue;
+    }
+  }
 #endif
   eth->oran_priv = oai_oran_initialize(&fh_init, fh_config);
   AssertFatal(eth->oran_priv != NULL, "can not initialize fronthaul");

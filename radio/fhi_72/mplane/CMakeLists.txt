@@ -1,5 +1,6 @@
 add_library(oran_fhlib_5g_mplane MODULE
             init-mplane.c
+            connect-mplane.c
 )
 
 set(MPLANE_PATH  "/usr/local" CACHE STRING "M-plane: libyang and libnetconf2 path") # can be in /opt/ directory, if multiple versions exist
