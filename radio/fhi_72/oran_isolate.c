@@ -42,6 +42,7 @@
 #ifdef OAI_MPLANE
 #include "mplane/init-mplane.h"
 #include "mplane/connect-mplane.h"
+#include "mplane/get-mplane.h"
 #endif
 
 typedef struct {
@@ -338,6 +339,10 @@ __attribute__((__visibility__("default"))) int transport_init(openair0_device *d
     if (ret != 0) {
       continue;
     }
+
+    char *operational_ds = NULL;
+    ret = get_mplane(&ru_session_list.ru_session[i], &operational_ds);
+    AssertFatal(ret == 0, "Unable to continue with CU-planes configuration.\n");
   }
 #endif
   eth->oran_priv = oai_oran_initialize(&fh_init, fh_config);
