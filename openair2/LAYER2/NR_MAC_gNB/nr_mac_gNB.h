@@ -679,19 +679,6 @@ typedef struct {
 } NR_UE_sched_ctrl_t;
 
 typedef struct {
-  NR_SearchSpace_t *search_space;
-  NR_ControlResourceSet_t *coreset;
-
-  NR_sched_pdcch_t sched_pdcch;
-  NR_sched_pdsch_t sched_pdsch;
-
-  uint32_t num_total_bytes;
-
-  int cce_index;
-  uint8_t aggregation_level;
-} NR_UE_sched_osi_ctrl_t;
-
-typedef struct {
   uicc_t *uicc;
 } NRUEcontext_t;
 
@@ -921,9 +908,8 @@ typedef struct gNB_MAC_INST_s {
 
   nr_mac_config_t radio_config;
 
-  NR_UE_sched_osi_ctrl_t *sched_osi;
   NR_UE_sched_ctrl_t *sched_ctrlCommon;
-
+  NR_sched_pdcch_t *sched_pdcch_otherSI;
   uint16_t cset0_bwp_start;
   uint16_t cset0_bwp_size;
   NR_Type0_PDCCH_CSS_config_t type0_PDCCH_CSS_config[64];

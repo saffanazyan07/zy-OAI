@@ -726,27 +726,7 @@ void nr_mac_config_scc(gNB_MAC_INST *nrmac, NR_ServingCellConfigCommon_t *scc, c
     NR_RA_t *ra = &cc->ra[n];
     nr_clear_ra_proc(ra);
   }
-
-  nr_fill_sched_osi(nrmac, scc->downlinkConfigCommon->initialDownlinkBWP->pdcch_ConfigCommon);
   NR_SCHED_UNLOCK(&nrmac->sched_lock);
-}
-
-void nr_fill_sched_osi(gNB_MAC_INST *nrmac, const struct NR_SetupRelease_PDCCH_ConfigCommon *pdcch_ConfigCommon)
-{
-  NR_SearchSpaceId_t *osi_SearchSpace = pdcch_ConfigCommon->choice.setup->searchSpaceOtherSystemInformation;
-  if (osi_SearchSpace) {
-    nrmac->sched_osi = CALLOC(1, sizeof(*nrmac->sched_osi));
-
-    struct NR_PDCCH_ConfigCommon__commonSearchSpaceList *commonSearchSpaceList =
-        pdcch_ConfigCommon->choice.setup->commonSearchSpaceList;
-    AssertFatal(commonSearchSpaceList->list.count > 0, "common SearchSpace list has 0 elements\n");
-    for (int i = 0; i < commonSearchSpaceList->list.count; i++) {
-      NR_SearchSpace_t *ss = commonSearchSpaceList->list.array[i];
-      if (ss->searchSpaceId == *osi_SearchSpace)
-        nrmac->sched_osi->search_space = ss;
-    }
-    AssertFatal(nrmac->sched_osi->search_space != NULL, "SearchSpace cannot be null for OSI\n");
-  }
 }
 
 static int encode_sysinfo_ie(NR_SystemInformation_IEs_t *sysInfo, uint8_t *buf, int len)

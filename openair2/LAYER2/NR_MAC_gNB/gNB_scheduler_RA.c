@@ -864,7 +864,7 @@ static void nr_generate_Msg3_retransmission(module_id_t module_idP,
       ul_dci_request_pdu->PDUSize = (uint8_t)(2+sizeof(nfapi_nr_dl_tti_pdcch_pdu));
       pdcch_pdu_rel15 = &ul_dci_request_pdu->pdcch_pdu.pdcch_pdu_rel15;
       ul_dci_req->numPdus += 1;
-      nr_configure_pdcch(pdcch_pdu_rel15, coreset, &ra->sched_pdcch, false);
+      nr_configure_pdcch(pdcch_pdu_rel15, coreset, &ra->sched_pdcch);
       nr_mac->pdcch_pdu_idx[CC_id][coresetid] = pdcch_pdu_rel15;
     }
 
@@ -1236,83 +1236,13 @@ static void nr_add_msg3(module_id_t module_idP, int CC_id, frame_t frameP, sub_f
   nr_fill_rar(module_idP, ra, RAR_pdu, pusch_pdu);
 }
 
-
-static void find_monitoring_periodicity_offset_common(const NR_SearchSpace_t *ss, uint16_t *slot_period, uint16_t *offset)
-{
-  switch (ss->monitoringSlotPeriodicityAndOffset->present) {
-    case NR_SearchSpace__monitoringSlotPeriodicityAndOffset_PR_sl1:
-      *slot_period = 1;
-      *offset = 0;
-      break;
-    case NR_SearchSpace__monitoringSlotPeriodicityAndOffset_PR_sl2:
-      *slot_period = 2;
-      *offset = ss->monitoringSlotPeriodicityAndOffset->choice.sl2;
-      break;
-    case NR_SearchSpace__monitoringSlotPeriodicityAndOffset_PR_sl4:
-      *slot_period = 4;
-      *offset = ss->monitoringSlotPeriodicityAndOffset->choice.sl4;
-      break;
-    case NR_SearchSpace__monitoringSlotPeriodicityAndOffset_PR_sl5:
-      *slot_period = 5;
-      *offset = ss->monitoringSlotPeriodicityAndOffset->choice.sl5;
-      break;
-    case NR_SearchSpace__monitoringSlotPeriodicityAndOffset_PR_sl8:
-      *slot_period = 8;
-      *offset = ss->monitoringSlotPeriodicityAndOffset->choice.sl8;
-      break;
-    case NR_SearchSpace__monitoringSlotPeriodicityAndOffset_PR_sl10:
-      *slot_period = 10;
-      *offset = ss->monitoringSlotPeriodicityAndOffset->choice.sl10;
-      break;
-    case NR_SearchSpace__monitoringSlotPeriodicityAndOffset_PR_sl16:
-      *slot_period = 16;
-      *offset = ss->monitoringSlotPeriodicityAndOffset->choice.sl16;
-      break;
-    case NR_SearchSpace__monitoringSlotPeriodicityAndOffset_PR_sl20:
-      *slot_period = 20;
-      *offset = ss->monitoringSlotPeriodicityAndOffset->choice.sl20;
-      break;
-    case NR_SearchSpace__monitoringSlotPeriodicityAndOffset_PR_sl40:
-      *slot_period = 40;
-      *offset = ss->monitoringSlotPeriodicityAndOffset->choice.sl40;
-      break;
-    case NR_SearchSpace__monitoringSlotPeriodicityAndOffset_PR_sl80:
-      *slot_period = 80;
-      *offset = ss->monitoringSlotPeriodicityAndOffset->choice.sl80;
-      break;
-    case NR_SearchSpace__monitoringSlotPeriodicityAndOffset_PR_sl160:
-      *slot_period = 160;
-      *offset = ss->monitoringSlotPeriodicityAndOffset->choice.sl160;
-      break;
-    case NR_SearchSpace__monitoringSlotPeriodicityAndOffset_PR_sl320:
-      *slot_period = 320;
-      *offset = ss->monitoringSlotPeriodicityAndOffset->choice.sl320;
-      break;
-    case NR_SearchSpace__monitoringSlotPeriodicityAndOffset_PR_sl640:
-      *slot_period = 640;
-      *offset = ss->monitoringSlotPeriodicityAndOffset->choice.sl640;
-      break;
-    case NR_SearchSpace__monitoringSlotPeriodicityAndOffset_PR_sl1280:
-      *slot_period = 1280;
-      *offset = ss->monitoringSlotPeriodicityAndOffset->choice.sl1280;
-      break;
-    case NR_SearchSpace__monitoringSlotPeriodicityAndOffset_PR_sl2560:
-      *slot_period = 2560;
-      *offset = ss->monitoringSlotPeriodicityAndOffset->choice.sl2560;
-      break;
-    default:
-      AssertFatal(1 == 0, "Invalid monitoring slot periodicity and offset value\n");
-      break;
-  }
-}
-
 static bool check_msg2_monitoring(const NR_RA_t *ra, int mu, int current_frame, int current_slot)
 {
   int n = nr_slots_per_frame[mu];
 
   // check if the slot is not among the PDCCH monitored ones (38.213 10.1)
-  uint16_t monitoring_slot_period, monitoring_offset;
-  find_monitoring_periodicity_offset_common(ra->ra_ss, &monitoring_slot_period, &monitoring_offset);
+  int monitoring_slot_period, monitoring_offset;
+  get_monitoring_period_offset(ra->ra_ss, &monitoring_slot_period, &monitoring_offset);
   if ((current_frame * n + current_slot - monitoring_offset) % monitoring_slot_period != 0)
     return false;
   return true;
@@ -1521,7 +1451,7 @@ static void nr_generate_Msg2(module_id_t module_idP,
     dl_tti_pdcch_pdu->PDUSize = (uint8_t)(2 + sizeof(nfapi_nr_dl_tti_pdcch_pdu));
     dl_req->nPDUs += 1;
     pdcch_pdu_rel15 = &dl_tti_pdcch_pdu->pdcch_pdu.pdcch_pdu_rel15;
-    nr_configure_pdcch(pdcch_pdu_rel15, coreset, &ra->sched_pdcch, false);
+    nr_configure_pdcch(pdcch_pdu_rel15, coreset, &ra->sched_pdcch);
     nr_mac->pdcch_pdu_idx[CC_id][coresetid] = pdcch_pdu_rel15;
   }
 
@@ -1777,7 +1707,7 @@ static void prepare_dl_pdus(gNB_MAC_INST *nr_mac,
     dl_tti_pdcch_pdu->PDUSize = (uint8_t)(2 + sizeof(nfapi_nr_dl_tti_pdcch_pdu));
     dl_req->nPDUs += 1;
     pdcch_pdu_rel15 = &dl_tti_pdcch_pdu->pdcch_pdu.pdcch_pdu_rel15;
-    nr_configure_pdcch(pdcch_pdu_rel15, coreset, &ra->sched_pdcch, false);
+    nr_configure_pdcch(pdcch_pdu_rel15, coreset, &ra->sched_pdcch);
     nr_mac->pdcch_pdu_idx[CC_id][coresetid] = pdcch_pdu_rel15;
   }
 

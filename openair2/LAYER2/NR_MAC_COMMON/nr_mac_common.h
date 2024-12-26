@@ -207,6 +207,7 @@ uint8_t nr_get_Qm_ul(uint8_t Imcs, uint8_t table_idx);
 uint32_t nr_get_code_rate_ul(uint8_t Imcs, uint8_t table_idx);
 
 uint16_t get_nr_srs_offset(NR_SRS_PeriodicityAndOffset_t periodicityAndOffset);
+void get_monitoring_period_offset(const NR_SearchSpace_t *ss, int *period, int *offset);
 
 uint32_t nr_compute_tbslbrm(uint16_t table,
 			    uint16_t nb_rb,

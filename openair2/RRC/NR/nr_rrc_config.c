@@ -2293,7 +2293,9 @@ NR_BCCH_DL_SCH_Message_t *get_SIB1_NR(const NR_ServingCellConfigCommon_t *scc,
   //si-SchedulingInfo
   if (config->num_sibs > 0) {
     NR_SI_SchedulingInfo_t *info = calloc(1, sizeof(*info));
-    info->si_WindowLength = NR_SI_SchedulingInfo__si_WindowLength_s40;
+    // TODO need to compute optimal SI-windowlength automatically
+    //      based on the number of SSBs, TDD configuration and SS configuration
+    info->si_WindowLength = NR_SI_SchedulingInfo__si_WindowLength_s10;
     NR_SchedulingInfo_t *schedulingInfo = calloc(1, sizeof(*schedulingInfo));
     schedulingInfo->si_BroadcastStatus = NR_SchedulingInfo__si_BroadcastStatus_broadcasting;
     schedulingInfo->si_Periodicity = NR_SchedulingInfo__si_Periodicity_rf16;
