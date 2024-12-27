@@ -427,7 +427,6 @@ bool monitor_dci_for_other_SI(NR_UE_MAC_INST_t *mac,
           if ((frame % T == floor(x / slots_per_frame)) && (slot == x % slots_per_frame))
             mac->si_SchedInfo.si_window_start = abs_slot;
         }
-        window_slots = 10; // TODO window length hardcoded to 10 at gNB for NTN
         check_valid = is_window_valid(mac, window_slots, abs_slot);
         if (check_valid && (config->si_WindowPosition - 1) == slot)
           return search_space_monitoring_ocasion_other_si(mac, ss, abs_slot, frame, slot, slots_per_frame, bwp_id);
