@@ -278,72 +278,71 @@ void schedule_nr_mib(module_id_t module_idP, frame_t frameP, sub_frame_t slotP, 
   }
 }
 
-uint32_t get_tbs(NR_Type0_PDCCH_CSS_config_t *type0_PDCCH_CSS_config,
-                 NR_sched_pdsch_t *pdsch,
-                 uint32_t num_total_bytes,
-                 uint16_t *vrb_map)
+static uint32_t get_tbs_bch(NR_Type0_PDCCH_CSS_config_t *type0_PDCCH_CSS_config,
+                            NR_sched_pdsch_t *pdsch,
+                            uint32_t num_total_bytes,
+                            uint16_t *vrb_map)
 {
   NR_tda_info_t *tda_info = &pdsch->tda_info;
 
-  const uint16_t bwpSize = type0_PDCCH_CSS_config->num_rbs;
-  int rbStart = type0_PDCCH_CSS_config->cset_start_rb;
-
   // Calculate number of PRB_DMRS
   uint8_t N_PRB_DMRS = pdsch->dmrs_parms.N_PRB_DMRS;
-  uint16_t dmrs_length = pdsch->dmrs_parms.N_DMRS_SLOT;
   LOG_D(MAC, "dlDmrsSymbPos %x\n", pdsch->dmrs_parms.dl_dmrs_symb_pos);
   int mcsTableIdx = 0;
-  int rbSize = 0;
   uint32_t TBS = 0;
-  do {
-    if (rbSize < bwpSize && !(vrb_map[rbStart + rbSize] & SL_to_bitmap(tda_info->startSymbolIndex, tda_info->nrOfSymbols)))
-      rbSize++;
+  const uint16_t slbitmap = SL_to_bitmap(tda_info->startSymbolIndex, tda_info->nrOfSymbols);
+  int bwpSize = type0_PDCCH_CSS_config->num_rbs;
+  int bwpStart = type0_PDCCH_CSS_config->cset_start_rb;
+  int rbStop = bwpSize - 1;
+  int rbStart = 0;
+  uint16_t rbSize = 0;
+  while (rbStart < rbStop) {
+    if (vrb_map[rbStart + bwpStart] & slbitmap)
+      rbStart++;
     else {
-      if (pdsch->mcs < 10)
-        pdsch->mcs++;
-      else
-        break;
-    }
-    TBS = nr_compute_tbs(nr_get_Qm_dl(pdsch->mcs, mcsTableIdx),
-                         nr_get_code_rate_dl(pdsch->mcs, mcsTableIdx),
-                         rbSize,
-                         tda_info->nrOfSymbols,
-                         N_PRB_DMRS * dmrs_length,
-                         0,
-                         0,
-                         1)
-          >> 3;
-  } while (TBS < num_total_bytes);
+      int max_rbSize = 0;
+      while (rbStart + max_rbSize <= rbStop && !(vrb_map[rbStart + max_rbSize + bwpStart] & slbitmap))
+        max_rbSize++;
 
-  if (TBS < num_total_bytes) {
-    for (int rb = 0; rb < bwpSize; rb++)
-      LOG_I(NR_MAC, "vrb_map[%d] %x\n", rbStart + rb, vrb_map[rbStart + rb]);
+      bool res = false;
+      while (res == false && pdsch->mcs < 10) {
+        res = nr_find_nb_rb(nr_get_Qm_dl(pdsch->mcs, mcsTableIdx),
+                            nr_get_code_rate_dl(pdsch->mcs, mcsTableIdx),
+                            1, // no transform precoding for DL
+                            1, // single layer
+                            tda_info->nrOfSymbols,
+                            pdsch->dmrs_parms.N_PRB_DMRS * pdsch->dmrs_parms.N_DMRS_SLOT,
+                            num_total_bytes,
+                            1, // min_rbSize
+                            max_rbSize,
+                            &TBS,
+                            &rbSize);
+        if (!res)
+          pdsch->mcs++;
+      }
+      break;
+    }
   }
-  AssertFatal(
-      TBS >= num_total_bytes,
-      "Couldn't allocate enough resources for %d bytes in SIB PDSCH (rbStart %d, rbSize %d, bwpSize %d SLmask %x - [%d,%d])\n",
-      num_total_bytes,
-      rbStart,
-      rbSize,
-      bwpSize,
-      SL_to_bitmap(tda_info->startSymbolIndex, tda_info->nrOfSymbols),
-      tda_info->startSymbolIndex,
-      tda_info->nrOfSymbols);
+  AssertFatal(TBS >= num_total_bytes,
+              "Couldn't allocate enough resources for %d bytes in SIB PDSCH (rbStart %d, rbSize %d, bwpSize %d)\n",
+              num_total_bytes,
+              rbStart,
+              rbSize,
+              bwpSize);
 
   pdsch->rbSize = rbSize;
-  pdsch->rbStart = 0;
+  pdsch->rbStart = rbStart;
 
-  LOG_D(
-      NR_MAC,
-      "mcs=%i, startSymbolIndex = %i, nrOfSymbols = %i, rbSize = %i, TBS = %i, dmrs_length %d, N_PRB_DMRS = %d, mappingtype = %d\n",
-      pdsch->mcs,
-      tda_info->startSymbolIndex,
-      tda_info->nrOfSymbols,
-      pdsch->rbSize,
-      TBS,
-      dmrs_length,
-      N_PRB_DMRS,
-      tda_info->mapping_type);
+  LOG_D(NR_MAC,
+        "mcs=%i, startSymbolIndex = %i, nrOfSymbols = %i, rbSize = %i, TBS = %i, dmrs_length %d, N_PRB_DMRS = %d, mappingtype = %d\n",
+        pdsch->mcs,
+        tda_info->startSymbolIndex,
+        tda_info->nrOfSymbols,
+        rbSize,
+        TBS,
+        pdsch->dmrs_parms.N_DMRS_SLOT,
+        N_PRB_DMRS,
+        tda_info->mapping_type);
   return TBS;
 }
 
@@ -406,7 +405,10 @@ static uint32_t schedule_control_sib1(module_id_t module_id,
 
   AssertFatal(gNB_mac->sched_ctrlCommon->cce_index >= 0, "Could not find CCE for coreset0\n");
 
-  uint32_t TBS = get_tbs(type0_PDCCH_CSS_config, &gNB_mac->sched_ctrlCommon->sched_pdsch, gNB_mac->sched_ctrlCommon->num_total_bytes, vrb_map);
+  uint32_t TBS = get_tbs_bch(type0_PDCCH_CSS_config,
+                             &gNB_mac->sched_ctrlCommon->sched_pdsch,
+                             gNB_mac->sched_ctrlCommon->num_total_bytes,
+                             vrb_map);
 
   // Mark the corresponding RBs as used
   fill_pdcch_vrb_map(gNB_mac,
@@ -779,7 +781,7 @@ static void other_sib_sched_control(module_id_t module_idP,
   uint16_t *vrb_map = cc->vrb_map[beam.idx];
   uint8_t *sib_bcch_pdu = cc->other_sib_bcch_pdu[payload_idx];
   int num_total_bytes = cc->other_sib_bcch_length[payload_idx];
-  uint32_t TBS = get_tbs(type0_PDCCH_CSS_config, &sched_pdsch_otherSI, num_total_bytes, vrb_map);
+  uint32_t TBS = get_tbs_bch(type0_PDCCH_CSS_config, &sched_pdsch_otherSI, num_total_bytes, vrb_map);
 
   for (int rb = 0; rb < sched_pdsch_otherSI.rbSize; rb++) {
     vrb_map[rb + type0_PDCCH_CSS_config->cset_start_rb] |= SL_to_bitmap(tda_info.startSymbolIndex, tda_info.nrOfSymbols);
