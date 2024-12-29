@@ -3023,7 +3023,7 @@ static void extract_10_ra_rnti(dci_pdu_rel15_t *dci_pdu_rel15, const uint8_t *dc
   EXTRACT_DCI_ITEM(dci_pdu_rel15->tb_scaling, 2);
 }
 
-static void extract_10_si_rnti(dci_pdu_rel15_t *dci_pdu_rel15, const uint8_t *dci_pdu, int pos, const int N_RB)
+static uint8_t extract_10_si_rnti(dci_pdu_rel15_t *dci_pdu_rel15, const uint8_t *dci_pdu, int pos, const int N_RB)
 {
   LOG_D(NR_MAC_DCI, "Received dci 1_0 SI rnti\n");
 
@@ -3039,6 +3039,7 @@ static void extract_10_si_rnti(dci_pdu_rel15_t *dci_pdu_rel15, const uint8_t *dc
   EXTRACT_DCI_ITEM(dci_pdu_rel15->rv, 2);
   // System information indicator 1 bit
   EXTRACT_DCI_ITEM(dci_pdu_rel15->system_info_indicator, 1);
+  return dci_pdu_rel15->system_info_indicator;
 }
 
 static void extract_10_c_rnti(dci_pdu_rel15_t *dci_pdu_rel15, const uint8_t *dci_pdu, int pos, const int N_RB)
@@ -3336,7 +3337,10 @@ static nr_dci_format_t nr_extract_dci_00_10(NR_UE_MAC_INST_t *mac,
       n_RB = get_nrb_for_dci(mac, format, ss_type);
       if (n_RB == 0)
         return NR_DCI_NONE;
-      extract_10_si_rnti(dci_pdu_rel15, dci_pdu, pos, n_RB);
+      uint8_t sys_info = extract_10_si_rnti(dci_pdu_rel15, dci_pdu, pos, n_RB);
+      // sys info = 0 for SIB1 and 1 for other SIB
+      if (mac->get_sib1 == 0 && sys_info == 0)
+        return NR_DCI_NONE;
       break;
     case TYPE_C_RNTI_ :
       // Identifier for DCI formats
