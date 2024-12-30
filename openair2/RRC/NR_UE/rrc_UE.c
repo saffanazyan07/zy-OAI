@@ -280,28 +280,34 @@ static void nr_rrc_ue_prepare_RRCSetupRequest(NR_UE_RRC_INST_t *rrc)
 }
 
 static void nr_rrc_configure_default_SI(NR_UE_RRC_SI_INFO *SI_info,
-                                        struct NR_SI_SchedulingInfo *si_SchedulingInfo,
-                                        struct NR_SI_SchedulingInfo_v1700 *si_SchedulingInfo_v1700)
+                                        NR_SI_SchedulingInfo_t *si_SchedulingInfo,
+                                        NR_SI_SchedulingInfo_v1700_t *si_SchedulingInfo_v1700)
 {
+  for (int i = 0; i < MAX_SI_GROUPS; i++)
+    SI_info->default_otherSI_map[i] = 0;
+  int nb_groups = 0;
   if (si_SchedulingInfo) {
-    SI_info->default_otherSI_map = 0;
-    for (int i = 0; i < si_SchedulingInfo->schedulingInfoList.list.count; i++) {
-      struct NR_SchedulingInfo *schedulingInfo = si_SchedulingInfo->schedulingInfoList.list.array[i];
+    nb_groups = si_SchedulingInfo->schedulingInfoList.list.count;
+    AssertFatal(nb_groups <= MAX_SI_GROUPS, "Exceeding max number of SI groups configured\n");
+    for (int i = 0; i < nb_groups; i++) {
+      NR_SchedulingInfo_t *schedulingInfo = si_SchedulingInfo->schedulingInfoList.list.array[i];
       for (int j = 0; j < schedulingInfo->sib_MappingInfo.list.count; j++) {
-        struct NR_SIB_TypeInfo *sib_Type = schedulingInfo->sib_MappingInfo.list.array[j];
-        SI_info->default_otherSI_map |= 1 << sib_Type->type;
+        NR_SIB_TypeInfo_t *sib_Type = schedulingInfo->sib_MappingInfo.list.array[j];
+        SI_info->default_otherSI_map[i] |= 1 << sib_Type->type;
       }
     }
   }
 
   if (si_SchedulingInfo_v1700) {
-    SI_info->SInfo_r17.default_otherSI_map_r17 = 0;
+    int start_idx = nb_groups;
+    nb_groups += si_SchedulingInfo_v1700->schedulingInfoList2_r17.list.count;
+    AssertFatal(nb_groups <= MAX_SI_GROUPS, "Exceeding max number of SI groups configured\n");
     for (int i = 0; i < si_SchedulingInfo_v1700->schedulingInfoList2_r17.list.count; i++) {
-      struct NR_SchedulingInfo2_r17 *schedulingInfo2 = si_SchedulingInfo_v1700->schedulingInfoList2_r17.list.array[i];
+      NR_SchedulingInfo2_r17_t *schedulingInfo2 = si_SchedulingInfo_v1700->schedulingInfoList2_r17.list.array[i];
       for (int j = 0; j < schedulingInfo2->sib_MappingInfo_r17.list.count; j++) {
-        struct NR_SIB_TypeInfo_v1700 *sib_TypeInfo_v1700 = schedulingInfo2->sib_MappingInfo_r17.list.array[j];
+        NR_SIB_TypeInfo_v1700_t *sib_TypeInfo_v1700 = schedulingInfo2->sib_MappingInfo_r17.list.array[j];
         if (sib_TypeInfo_v1700->sibType_r17.present == NR_SIB_TypeInfo_v1700__sibType_r17_PR_type1_r17) {
-          SI_info->SInfo_r17.default_otherSI_map_r17 |= 1 << sib_TypeInfo_v1700->sibType_r17.choice.type1_r17;
+          SI_info->default_otherSI_map[start_idx + i] |= 1 << (sib_TypeInfo_v1700->sibType_r17.choice.type1_r17 + 13);
         }
       }
     }
@@ -760,7 +766,7 @@ bool check_si_validity_r17(NR_UE_RRC_SI_INFO_r17 *SI_info, int si_type)
   return true;
 }
 
-int check_si_status(NR_UE_RRC_SI_INFO *SI_info)
+static int check_si_status(NR_UE_RRC_SI_INFO *SI_info)
 {
   // schedule reception of SIB1 if RRC doesn't have it
   if (SI_info->sib1_validity == SIB_NOT_VALID) {
@@ -768,31 +774,22 @@ int check_si_status(NR_UE_RRC_SI_INFO *SI_info)
     return 1;
   }
   else {
-    if (SI_info->default_otherSI_map) {
+    for (int j = 0; j < MAX_SI_GROUPS; j++) {
+      if (!SI_info->default_otherSI_map[j])
+        continue;
       // Check if RRC has configured default SI
-      // from SIB2 to SIB14 as current ASN1 version
       // TODO can be used for on demand SI when (if) implemented
-      for (int i = 2; i < 15; i++) {
-        int si_index = i - 2;
-        if ((SI_info->default_otherSI_map >> si_index) & 0x01) {
-          // if RRC has no valid version of one of the default configured SI
-          // Then schedule reception of otherSI
-          if (!check_si_validity(SI_info, si_index))
-            return 2;
-        }
-      }
-    }
-
-    // Check if RRC has configured default SI
-    // from SIB15 to SIB21 as current r17 version
-    if (SI_info->SInfo_r17.default_otherSI_map_r17) {
-      for (int i = 15; i < 22; i++) {
-        int si_index = i - 15;
-        if ((SI_info->SInfo_r17.default_otherSI_map_r17 >> si_index) & 0x01) {
-          // if RRC has no valid version of one of the default configured SI
-          // Then schedule reception of otherSI
-          if (!check_si_validity_r17(&SI_info->SInfo_r17, si_index))
-            return 2;
+      for (int i = 2; i < 22; i++) {
+        if (!((SI_info->default_otherSI_map[j] >> (i - 2)) & 0x01))
+          continue;
+        // if RRC has no valid version of one of the default configured SI
+        // Then schedule reception of otherSI
+        if (i < 15) {
+          if (!check_si_validity(SI_info, i - 2))
+            return 2 + j;
+        } else {
+          if (!check_si_validity_r17(&SI_info->SInfo_r17, i - 15))
+            return 2 + j;
         }
       }
     }
@@ -848,8 +845,10 @@ static void nr_rrc_ue_decode_NR_BCCH_BCH_Message(NR_UE_RRC_INST_t *rrc,
   }
 
   int get_sib = 0;
-  if (IS_SA_MODE(get_softmodem_params()) && bcch_message->message.present == NR_BCCH_BCH_MessageType_PR_mib
-      && bcch_message->message.choice.mib->cellBarred == NR_MIB__cellBarred_notBarred && rrc->nrRrcState != RRC_STATE_DETACH_NR) {
+  if (IS_SA_MODE(get_softmodem_params())
+      && bcch_message->message.present == NR_BCCH_BCH_MessageType_PR_mib
+      && bcch_message->message.choice.mib->cellBarred == NR_MIB__cellBarred_notBarred
+      && rrc->nrRrcState != RRC_STATE_DETACH_NR) {
     NR_UE_RRC_SI_INFO *SI_info = &rrc->perNB[gNB_index].SInfo;
     // to schedule MAC to get SI if required
     get_sib = check_si_status(SI_info);

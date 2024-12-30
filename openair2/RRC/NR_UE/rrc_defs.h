@@ -111,7 +111,6 @@ typedef enum {
 } SIB_validity_t;
 
 typedef struct UE_RRC_SI_INFO_NR_r17_s {
-  uint32_t default_otherSI_map_r17;
   SIB_validity_t sib15_validity;
   NR_timer_t sib15_timer;
   SIB_validity_t sib16_validity;
@@ -129,7 +128,7 @@ typedef struct UE_RRC_SI_INFO_NR_r17_s {
 } NR_UE_RRC_SI_INFO_r17;
 
 typedef struct UE_RRC_SI_INFO_NR_s {
-  uint32_t default_otherSI_map;
+  uint32_t default_otherSI_map[MAX_SI_GROUPS];
   SIB_validity_t sib1_validity;
   NR_timer_t sib1_timer;
   SIB_validity_t sib2_validity;

@@ -292,8 +292,12 @@ int8_t nr_ue_decode_BCCH_DL_SCH(NR_UE_MAC_INST_t *mac,
   if(ack_nack) {
     LOG_D(NR_MAC, "Decoding NR-BCCH-DL-SCH-Message (SIB1 or SI)\n");
     nr_mac_rrc_data_ind_ue(mac->ue_id, cc_id, gNB_index, 0, 0, 0, mac->physCellId, 0, NR_BCCH_DL_SCH, (uint8_t *) pduP, pdu_len);
-    mac->get_sib1 = false;
-    mac->get_otherSI = false;
+    if (mac->get_sib1)
+      mac->get_sib1 = false;
+    for (int i = 0; i < MAX_SI_GROUPS; i++) {
+      if (mac->get_otherSI[i])
+        mac->get_otherSI[i] = false;
+    }
     T(T_NRUE_MAC_DL_PDU_WITH_DATA,
       T_INT(SI_RNTI),
       T_INT(-1 /* frame, unavailable here */),
@@ -723,8 +727,16 @@ static int nr_ue_process_dci_dl_10(NR_UE_MAC_INST_t *mac,
     LOG_W(MAC, "[%d.%d] Invalid frequency_domain_assignment. Possibly due to false DCI. Ignoring DCI!\n", frame, slot);
     return -1;
   }
+
   dlsch_pdu->rb_offset = dlsch_pdu->start_rb + dlsch_pdu->BWPStart;
-  if (mac->get_sib1 || mac->get_otherSI)
+  bool otherSI = false;
+  for (int i = 0; i < MAX_SI_GROUPS; i++) {
+    if (mac->get_otherSI[i]) {
+      otherSI = true;
+      break;
+    }
+  }
+  if (mac->get_sib1 || otherSI)
     dlsch_pdu->rb_offset -= dlsch_pdu->BWPStart;
 
   /* TIME_DOM_RESOURCE_ASSIGNMENT */

@@ -919,10 +919,7 @@ static void update_mib_conf(NR_MIB_t *target, NR_MIB_t *source)
   target->intraFreqReselection = source->intraFreqReselection;
 }
 
-void nr_rrc_mac_config_req_mib(module_id_t module_id,
-                               int cc_idP,
-                               NR_MIB_t *mib,
-                               int sched_sib)
+void nr_rrc_mac_config_req_mib(module_id_t module_id, int cc_idP, NR_MIB_t *mib, int sched_sib)
 {
   NR_UE_MAC_INST_t *mac = get_mac_inst(module_id);
   int ret = pthread_mutex_lock(&mac->if_mutex);
@@ -935,8 +932,8 @@ void nr_rrc_mac_config_req_mib(module_id_t module_id,
   mac->phy_config.CC_id = cc_idP;
   if (sched_sib == 1)
     mac->get_sib1 = true;
-  else if (sched_sib == 2)
-    mac->get_otherSI = true;
+  else if (sched_sib > 1)
+    mac->get_otherSI[sched_sib - 2] = true;
   nr_ue_decode_mib(mac, cc_idP);
   ret = pthread_mutex_unlock(&mac->if_mutex);
   AssertFatal(!ret, "mutex failed %d\n", ret);
