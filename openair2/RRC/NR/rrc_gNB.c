@@ -1048,6 +1048,13 @@ static void rrc_handle_RRCSetupRequest(gNB_RRC_INST *rrc,
     return;
   }
 
+  // If the DU to CU RRC Container IE is not included in the INITIAL UL RRC MESSAGE TRANSFER,
+  // the gNB-CU should reject the UE under the assumption that the gNB-DU is not able to serve such UE
+  if (msg->du2cu_rrc_container == NULL) {
+    // TODO shouldn't we remove ue context when rejecting the UE
+    rrc_gNB_generate_RRCReject(0, ue_context_p);
+    return;
+  }
   NR_CellGroupConfig_t *cellGroupConfig = NULL;
   asn_dec_rval_t dec_rval = uper_decode_complete(NULL,
                                                  &asn_DEF_NR_CellGroupConfig,
