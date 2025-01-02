@@ -3270,8 +3270,16 @@ void send_initial_ul_rrc_message(int rnti, const uint8_t *sdu, sdu_size_t sdu_le
   NR_UE_info_t *UE = (NR_UE_info_t *)data;
   NR_SCHED_ENSURE_LOCKED(&mac->sched_lock);
 
-  uint8_t du2cu[1024];
-  int encoded = encode_cellGroupConfig(UE->CellGroup, du2cu, sizeof(du2cu));
+  int encoded_len = 0;
+  uint8_t *buf = NULL;
+  if (UE->CellGroup) {
+    uint8_t du2cu[1024];
+    encoded_len = encode_cellGroupConfig(UE->CellGroup, du2cu, sizeof(du2cu));
+    buf = (uint8_t *) du2cu;
+  } else {
+    // if CellGroup is NULL the DU is not able to serve such UE
+    mac_remove_nr_ue(mac, rnti);
+  }
 
   DevAssert(mac->f1_config.setup_req != NULL);
   AssertFatal(mac->f1_config.setup_req->num_cells_available == 1, "can handle only one cell\n");
@@ -3282,8 +3290,8 @@ void send_initial_ul_rrc_message(int rnti, const uint8_t *sdu, sdu_size_t sdu_le
     .crnti = rnti,
     .rrc_container = (uint8_t *) sdu,
     .rrc_container_length = sdu_len,
-    .du2cu_rrc_container = (uint8_t *) du2cu,
-    .du2cu_rrc_container_length = encoded
+    .du2cu_rrc_container = buf,
+    .du2cu_rrc_container_length = encoded_len
   };
   mac->mac_rrc.initial_ul_rrc_message_transfer(0, &ul_rrc_msg);
 }

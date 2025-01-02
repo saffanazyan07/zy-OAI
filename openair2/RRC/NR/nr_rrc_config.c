@@ -3120,6 +3120,10 @@ NR_CellGroupConfig_t *get_initial_cellGroupConfig(int uid,
                                                   const NR_ServingCellConfig_t *servingcellconfigdedicated,
                                                   const nr_mac_config_t *configuration)
 {
+  NR_SpCellConfig_t *spCellConfig = get_initial_SpCellConfig(uid, scc, servingcellconfigdedicated, configuration);
+  if (!spCellConfig)
+    return NULL;
+
   NR_CellGroupConfig_t *cellGroupConfig = calloc(1, sizeof(*cellGroupConfig));
   cellGroupConfig->cellGroupId = 0;
 
@@ -3137,7 +3141,7 @@ NR_CellGroupConfig_t *get_initial_cellGroupConfig(int uid,
 
   cellGroupConfig->physicalCellGroupConfig = configure_phy_cellgroup();
 
-  cellGroupConfig->spCellConfig = get_initial_SpCellConfig(uid, scc, servingcellconfigdedicated, configuration);
+  cellGroupConfig->spCellConfig = spCellConfig;
 
   cellGroupConfig->sCellToAddModList = NULL;
   cellGroupConfig->sCellToReleaseList = NULL;
