@@ -253,6 +253,7 @@ typedef struct nrLDPC_coding_interface_s {
   nrLDPC_coding_shutdown_t *nrLDPC_coding_shutdown;
   nrLDPC_coding_decoder_t *nrLDPC_coding_decoder;
   nrLDPC_coding_encoder_t *nrLDPC_coding_encoder;
+  char version[64];
 } nrLDPC_coding_interface_t;
 
 int load_nrLDPC_coding_interface(char *version, nrLDPC_coding_interface_t *interface);

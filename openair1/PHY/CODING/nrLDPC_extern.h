@@ -29,6 +29,7 @@ typedef struct ldpc_interface_s {
   LDPC_shutdownfunc_t *LDPCshutdown;
   LDPC_decoderfunc_t *LDPCdecoder;
   LDPC_encoderfunc_t *LDPCencoder;
+  char version[64];
 } ldpc_interface_t;
 
 // Global var to limit the rework of the dirty legacy code
