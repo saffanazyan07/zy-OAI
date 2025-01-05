@@ -44,9 +44,13 @@
 //#define DEBUG_DLSCH
 //#define DEBUG_DLSCH_MAPPING
 
-static void nr_pdsch_codeword_scrambling(uint8_t *in, uint32_t size, uint8_t q, uint32_t Nid, uint32_t n_RNTI, uint32_t *out)
+static void nr_pdsch_codeword_scrambling(uint8_t *in, uint32_t size, uint8_t q, uint32_t Nid, uint32_t n_RNTI, uint32_t *out, char *ldpc_version)
 {
-  nr_codeword_scrambling(in, size, q, Nid, n_RNTI, out);
+  if (strcmp(ldpc_version, "_t2") == 0) {
+    nr_codeword_scrambling_t2(in, size, q, Nid, n_RNTI, out);
+  } else {
+    nr_codeword_scrambling(in, size, q, Nid, n_RNTI, out);
+  }
 }
 
 void nr_generate_pdsch(processingData_L1tx_t *msgTx, int frame, int slot)
@@ -187,7 +191,7 @@ void nr_generate_pdsch(processingData_L1tx_t *msgTx, int frame, int slot)
       uint32_t scrambled_output[(encoded_length>>5)+4]; // modulator acces by 4 bytes in some cases
       memset(scrambled_output, 0, sizeof(scrambled_output));
       if ( encoded_length > rel15->rbSize * NR_SYMBOLS_PER_SLOT * NR_NB_SC_PER_RB * Qm * rel15->nrOfLayers) abort();
-      nr_pdsch_codeword_scrambling(&output[offset_output], encoded_length, codeWord, rel15->dataScramblingId, rel15->rnti, scrambled_output);
+      nr_pdsch_codeword_scrambling(&output[offset_output], encoded_length, codeWord, rel15->dataScramblingId, rel15->rnti, scrambled_output, gNB->nrLDPC_coding_interface.version);
 
 #ifdef DEBUG_DLSCH
       printf("PDSCH scrambling:\n");

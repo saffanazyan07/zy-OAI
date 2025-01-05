@@ -24,6 +24,27 @@
 #include "common/utils/LOG/vcd_signal_dumper.h"
 #define DEBUG_SCRAMBLING(a)
 //#define DEBUG_SCRAMBLING(a) a
+
+void nr_codeword_scrambling_t2(uint8_t *in,
+                             uint32_t size,
+                             uint8_t q,
+                             uint32_t Nid,
+                             uint32_t n_RNTI,
+                             uint32_t* out)
+{
+  int numBytes = (size + 7) / 8;
+  const int roundedSz = (numBytes + 3) / 4;
+  uint32_t *seq = gold_cache((n_RNTI << 15) + (q << 14) + Nid, roundedSz);  // Gold sequence for scrambling
+  for (int i = 0; i < roundedSz; i++) {
+    uint32_t in32 = 0;
+    in32 |= ((uint32_t)*in++ << (0 * 8));
+    in32 |= ((uint32_t)*in++ << (1 * 8));
+    in32 |= ((uint32_t)*in++ << (2 * 8));
+    in32 |= ((uint32_t)*in++ << (3 * 8));
+    out[i] = in32 ^ *seq++;
+  }
+}
+
 void nr_codeword_scrambling(uint8_t *in,
                             uint32_t size,
                             uint8_t q,

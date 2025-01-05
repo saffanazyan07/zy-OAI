@@ -640,25 +640,40 @@ static int
 retrieve_ldpc_enc_op(struct rte_bbdev_enc_op **ops,
                      nrLDPC_slot_encoding_parameters_t *nrLDPC_slot_encoding_parameters)
 {
+  uint8_t *p_out = NULL;
   unsigned int j = 0;
   for (unsigned int h = 0; h < nrLDPC_slot_encoding_parameters->nb_TBs; ++h){
+    int E_sum = 0;
+    int bit_offset = 0;
+    int byte_offset = 0;
+    p_out = nrLDPC_slot_encoding_parameters->TBs[h].segments[0].output;
     for (unsigned int i = 0; i < nrLDPC_slot_encoding_parameters->TBs[h].C; ++i) {
       struct rte_bbdev_op_data *output = &ops[j]->ldpc_enc.output;
       struct rte_mbuf *m = output->data;
       uint16_t data_len = rte_pktmbuf_data_len(m) - output->offset;
-      uint8_t *out = nrLDPC_slot_encoding_parameters->TBs[h].segments[i].output;
       const char *data = m->buf_addr + m->data_off;
-      const char *end = data + data_len;
-      while (data < end) {
-        uint8_t byte = *data++; // get the current byte
-        for (int bit = 7; bit >= 0; --bit) {
-          *out++ = (byte >> bit) & 1; // extract each bit
+      if (bit_offset == 0) {
+        memcpy(&p_out[byte_offset], data, data_len);
+      } else {
+        uint8_t carry = 0;
+        p_out[byte_offset - 1] |= data[0] >> bit_offset;
+        for (size_t i = 0; i < data_len; i++) {
+          uint8_t current = *data++;
+          p_out[byte_offset + i] = (current << (8 - bit_offset));
+          if (i != 0) {
+            carry = current >> bit_offset;
+            p_out[byte_offset + i - 1] |= carry;
+          }
         }
       }
+      E_sum += nrLDPC_slot_encoding_parameters->TBs[h].segments[i].E;
+      byte_offset = (E_sum + 7) / 8;
+      bit_offset = E_sum % 8;
       rte_pktmbuf_free(m);
       rte_pktmbuf_free(ops[j]->ldpc_enc.input.data);
       ++j;
     }
+    reverse_bits_u8(p_out, byte_offset, p_out);
   }
   return 0;
 }
