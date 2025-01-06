@@ -588,10 +588,16 @@ static int handle_sync_req_from_mac(PHY_VARS_NR_UE *UE)
       UE->UE_scan_carrier = get_nrUE_params()->UE_scan_carrier;
     else {
       UE->UE_scan_carrier = NO_SCAN;
-      fp->ssb_start_subcarrier = get_ssb_first_sc(cfg->dl_frequency,
-                                                  from_nrarfcn(fp->nr_band, fp->numerology_index, s->ssb_arfcn) / 1000,
-                                                  fp->numerology_index);
-      fp->ssb_arfcn = s->ssb_arfcn;
+      if (s->ssb_arfcn == 0) {
+        LOG_E(PHY,
+              "Received sync request without BW scan and no SSB position. Either one should be provided. Attempting sync with "
+              "default SSB position\n");
+      } else {
+        fp->ssb_start_subcarrier = get_ssb_first_sc(cfg->dl_frequency,
+                                                    from_nrarfcn(fp->nr_band, fp->numerology_index, s->ssb_arfcn) / 1000,
+                                                    fp->numerology_index);
+        fp->ssb_arfcn = s->ssb_arfcn;
+      }
     }
     UE->target_Nid_cell = UE->synch_request.synch_req.target_Nid_cell;
 
