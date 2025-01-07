@@ -134,7 +134,7 @@ int16_t find_nr_prach_ru(RU_t *ru,int frame,int slot, find_type_t type)
 void nr_fill_prach_ru(RU_t *ru, int SFN, int Slot, nfapi_nr_prach_pdu_t *prach_pdu, int beam_id)
 {
   int prach_id = find_nr_prach_ru(ru, SFN, Slot, SEARCH_EXIST_OR_FREE);
-  AssertFatal(((prach_id >= 0) && (prach_id < NUMBER_OF_NR_PRACH_MAX)) || (prach_id < 0),
+  AssertFatal((prach_id >= 0) && (prach_id < NUMBER_OF_NR_PRACH_MAX),
               "illegal or no prach_id found!!! prach_id %d\n",
               prach_id);
 
