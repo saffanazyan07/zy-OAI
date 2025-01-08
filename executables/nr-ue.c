@@ -485,9 +485,10 @@ static void RU_write(nr_rxtx_thread_data_t *rxtxD, bool sl_tx_action)
 
   openair0_timestamp writeTimestamp = proc->timestamp_tx;
   int writeBlockSize = rxtxD->writeBlockSize;
-  if ( writeBlockSize > fp->get_samples_per_slot(proc->nr_slot_tx, fp)) {
-    // if writeBlockSize gets longer that slot size, fill with dummy
-    const int dummyBlockSize = writeBlockSize - fp->get_samples_per_slot(proc->nr_slot_tx, fp);
+  // if writeBlockSize gets longer that slot size, fill with dummy
+  const int maxWriteBlockSize = fp->get_samples_per_slot(proc->nr_slot_tx, fp);
+  while (writeBlockSize > maxWriteBlockSize) {
+    const int dummyBlockSize = min(writeBlockSize - maxWriteBlockSize, maxWriteBlockSize);
     int tmp = openair0_write_reorder(&UE->rfdevice, writeTimestamp, txp, dummyBlockSize, fp->nb_antennas_tx, flags);
     AssertFatal(tmp == dummyBlockSize, "");
 
@@ -734,29 +735,32 @@ void readFrame(PHY_VARS_NR_UE *UE,  openair0_timestamp *timestamp, bool toTrash)
   }
 
   void *rxp[NB_ANTENNAS_RX];
+  if (toTrash)
+    for (int i = 0; i < fp->nb_antennas_rx; i++)
+      rxp[i] = malloc16(fp->samples_per_slot0 * 4);
 
   for (int x = 0; x < num_frames * NR_NUMBER_OF_SUBFRAMES_PER_FRAME; x++) { // two frames for initial sync
     for (int slot = 0; slot < fp->slots_per_subframe; slot++) {
-      for (int i = 0; i < fp->nb_antennas_rx; i++) {
-        if (toTrash)
-          rxp[i] = malloc16(fp->get_samples_per_slot(slot, fp) * 4);
-        else
+      if (!toTrash)
+        for (int i = 0; i < fp->nb_antennas_rx; i++)
           rxp[i] = ((void *)&UE->common_vars.rxdata[i][0])
                    + 4 * ((x * fp->samples_per_subframe) + fp->get_samples_slot_timestamp(slot, fp, 0));
-      }
 
       int read_block_size = fp->get_samples_per_slot(slot, fp);
       int tmp = UE->rfdevice.trx_read_func(&UE->rfdevice, timestamp, rxp, read_block_size, fp->nb_antennas_rx);
       UEscopeCopy(UE, ueTimeDomainSamplesBeforeSync, rxp[0], sizeof(c16_t), 1, read_block_size, 0);
       AssertFatal(read_block_size == tmp, "");
 
-      if (IS_SOFTMODEM_RFSIM)
-        dummyWrite(UE, *timestamp, fp->get_samples_per_slot(slot, fp));
-      if (toTrash)
-        for (int i = 0; i < fp->nb_antennas_rx; i++)
-          free(rxp[i]);
+      if (IS_SOFTMODEM_RFSIM) {
+        const openair0_timestamp writeTimestamp = *timestamp + fp->get_samples_slot_timestamp(slot, fp, NR_UE_CAPABILITY_SLOT_RX_TO_TX) - UE->N_TA_offset;
+        dummyWrite(UE, writeTimestamp, fp->get_samples_per_slot(slot, fp));
+      }
     }
   }
+
+  if (toTrash)
+    for (int i = 0; i < fp->nb_antennas_rx; i++)
+      free(rxp[i]);
 }
 
 static void syncInFrame(PHY_VARS_NR_UE *UE, openair0_timestamp *timestamp, openair0_timestamp rx_offset)
@@ -767,27 +771,18 @@ static void syncInFrame(PHY_VARS_NR_UE *UE, openair0_timestamp *timestamp, opena
 
   LOG_I(PHY, "Resynchronizing RX by %ld samples\n", rx_offset);
 
-  if (IS_SOFTMODEM_IQPLAYER || IS_SOFTMODEM_IQRECORDER) {
-    // Resynchonize by slot (will work with numerology 1 only)
-    for (int size = rx_offset; size > 0; size -= fp->samples_per_subframe / 2) {
-      int unitTransfer = size > fp->samples_per_subframe / 2 ? fp->samples_per_subframe / 2 : size;
-      int tmp =
-          UE->rfdevice.trx_read_func(&UE->rfdevice, timestamp, (void **)UE->common_vars.rxdata, unitTransfer, fp->nb_antennas_rx);
-      DevAssert(unitTransfer == tmp);
+  int slot = 0;
+  int size = rx_offset;
+  while (size > 0) {
+    const int unitTransfer = min(fp->get_samples_per_slot(slot, fp), size);
+    const int res = UE->rfdevice.trx_read_func(&UE->rfdevice, timestamp, (void **)UE->common_vars.rxdata, unitTransfer, fp->nb_antennas_rx);
+    DevAssert(unitTransfer == res);
+    if (IS_SOFTMODEM_RFSIM) {
+      const openair0_timestamp writeTimestamp = *timestamp + fp->get_samples_slot_timestamp(slot, fp, NR_UE_CAPABILITY_SLOT_RX_TO_TX) - UE->N_TA_offset;
+      dummyWrite(UE, writeTimestamp, unitTransfer);
     }
-  } else {
-    *timestamp += fp->get_samples_per_slot(1, fp);
-    for (int size = rx_offset; size > 0; size -= fp->samples_per_subframe) {
-      int unitTransfer = size > fp->samples_per_subframe ? fp->samples_per_subframe : size;
-      // we write before read because gNB waits for UE to write and both executions halt
-      // this happens here as the read size is samples_per_subframe which is very much larger than samp_per_slot
-      if (IS_SOFTMODEM_RFSIM)
-        dummyWrite(UE, *timestamp, unitTransfer);
-      int res =
-          UE->rfdevice.trx_read_func(&UE->rfdevice, timestamp, (void **)UE->common_vars.rxdata, unitTransfer, fp->nb_antennas_rx);
-      DevAssert(unitTransfer == res);
-      *timestamp += unitTransfer; // this does not affect the read but needed for RFSIM write
-    }
+    slot = (slot + 1) % fp->slots_per_subframe;
+    size -= unitTransfer;
   }
 }
 
