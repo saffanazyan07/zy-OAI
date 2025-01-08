@@ -12,6 +12,7 @@
 #define  CONFIG_HLP_MAX_LDPC_ITERATIONS    "Maximum LDPC decoder iterations\n"
 #define  CONFIG_HLP_TIME_SYNC_P            "coefficient for Proportional part of time sync PI controller\n"
 #define  CONFIG_HLP_TIME_SYNC_I            "coefficient for Integrating part of time sync PI controller\n"
+#define  CONFIG_HLP_NTN_TA_COMMONDRIFT     "NTN ta-CommonDrift, but given in µs/s\n"
 #define  CONFIG_HLP_AUTONOMOUS_TA          "Autonomously update TA based on DL drift (useful if main contribution to DL drift is movement, e.g. LEO satellite)\n"
 #define  CONFIG_HLP_AGC                    "Rx Gain control used for UE\n"
 
@@ -63,6 +64,7 @@
   {"num-ues",                      NULL,                       0,               .iptr=&(NB_UE_INST),                         .defuintval=1,     TYPE_INT,      0}, \
   {"time-sync-P",                  CONFIG_HLP_TIME_SYNC_P,     0,               .dblptr=&(nrUE_params.time_sync_P),          .defdblval=0.5,    TYPE_DOUBLE,   0}, \
   {"time-sync-I",                  CONFIG_HLP_TIME_SYNC_I,     0,               .dblptr=&(nrUE_params.time_sync_I),          .defdblval=0.0,    TYPE_DOUBLE,   0}, \
+  {"ntn-ta-commondrift",           CONFIG_HLP_NTN_TA_COMMONDRIFT, 0,            .dblptr=&(nrUE_params.ntn_ta_commondrift),   .defdblval=0.0,    TYPE_DOUBLE,   0}, \
   {"autonomous-ta",                CONFIG_HLP_AUTONOMOUS_TA,   PARAMFLAG_BOOL,  .iptr=&(nrUE_params.autonomous_ta),          .defintval=0,      TYPE_INT,      0}, \
   {"agc",                          CONFIG_HLP_AGC,             PARAMFLAG_BOOL,  .iptr=&(nrUE_params.agc),                    .defintval=0,      TYPE_INT,      0}, \
 }
@@ -86,6 +88,7 @@ typedef struct {
   int ssb_start_subcarrier;
   double time_sync_P;
   double time_sync_I;
+  double ntn_ta_commondrift;
   int autonomous_ta;
   int agc;
   char *usrp_args;

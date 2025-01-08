@@ -862,7 +862,7 @@ void *UE_thread(void *arg)
       readFrame(UE, &tmp, true);
   }
 
-  double ntn_ta_commondrift = 0;
+  double ntn_ta_commondrift = get_nrUE_params()->ntn_ta_commondrift;
   int ntn_koffset = 0;
 
   int duration_rx_to_tx = NR_UE_CAPABILITY_SLOT_RX_TO_TX;
