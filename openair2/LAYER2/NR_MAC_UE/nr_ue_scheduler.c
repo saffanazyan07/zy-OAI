@@ -3615,6 +3615,7 @@ static void schedule_ntn_config_command(fapi_nr_dl_config_request_t *dl_config, 
 {
   fapi_nr_dl_ntn_config_command_pdu *ntn_config_command_pdu = &dl_config->dl_config_list[dl_config->number_pdus].ntn_config_command_pdu;
   ntn_config_command_pdu->cell_specific_k_offset = mac->ntn_ta.cell_specific_k_offset;
+  ntn_config_command_pdu->ntn_ta_commondrift = mac->ntn_ta.ntn_ta_commondrift;
   ntn_config_command_pdu->N_common_ta_adj = mac->ntn_ta.N_common_ta_adj;
   ntn_config_command_pdu->N_UE_TA_adj = mac->ntn_ta.N_UE_TA_adj;
   ntn_config_command_pdu->ntn_total_time_advance_ms = (mac->ntn_ta.N_common_ta_adj + mac->ntn_ta.N_UE_TA_adj) * 2;

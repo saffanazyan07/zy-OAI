@@ -862,7 +862,7 @@ void *UE_thread(void *arg)
       readFrame(UE, &tmp, true);
   }
 
-  double ntn_ta_common = 0;
+  double ntn_ta_commondrift = 0;
   int ntn_koffset = 0;
 
   int duration_rx_to_tx = NR_UE_CAPABILITY_SLOT_RX_TO_TX;
@@ -952,7 +952,7 @@ void *UE_thread(void *arg)
       openair0_write_reorder_clear_context(&UE->rfdevice);
       if (get_nrUE_params()->time_sync_I)
         // ntn_ta_commondrift is in µs/s, max_pos_acc * time_sync_I is in samples/frame
-        UE->max_pos_acc = mac->ntn_ta.ntn_ta_commondrift * 1e-6 * fp->samples_per_frame / get_nrUE_params()->time_sync_I;
+        UE->max_pos_acc = ntn_ta_commondrift * 1e-6 * fp->samples_per_frame / get_nrUE_params()->time_sync_I;
       else
         UE->max_pos_acc = 0;
       shiftForNextFrame = -(UE->init_sync_frame + trashed_frames + 2) * UE->max_pos_acc * get_nrUE_params()->time_sync_I; // compensate for the time drift that happened during initial sync
@@ -992,16 +992,6 @@ void *UE_thread(void *arg)
     // start of normal case, the UE is in sync
     absolute_slot++;
     TracyCFrameMark;
-
-    if (update_ntn_system_information) {
-      update_ntn_system_information = false;
-      int ta_offset = UE->frame_parms.samples_per_subframe * (UE->ntn_config_message->ntn_config_params.ntn_total_time_advance_ms - ntn_ta_common);
-
-      UE->timing_advance += ta_offset;
-      ntn_ta_common = UE->ntn_config_message->ntn_config_params.ntn_total_time_advance_ms;
-      ntn_koffset = UE->ntn_config_message->ntn_config_params.cell_specific_k_offset;
-      timing_advance = ntn_koffset * (UE->frame_parms.samples_per_subframe >> mac->current_UL_BWP->scs);
-    }
 
     if (UE->ntn_config_message->update) {
       UE->ntn_config_message->update = false;
@@ -1111,9 +1101,19 @@ void *UE_thread(void *arg)
                            newTx);
     stream_status = STREAM_STATUS_SYNCED;
     tx_wait_for_dlsch[slot] = 0;
+
     // apply new duration next run to avoid thread dead lock
     if (update_ntn_system_information) {
+      update_ntn_system_information = false;
+
       duration_rx_to_tx = NR_UE_CAPABILITY_SLOT_RX_TO_TX + UE->ntn_config_message->ntn_config_params.cell_specific_k_offset;
+      UE->timing_advance = fp->samples_per_subframe * UE->ntn_config_message->ntn_config_params.ntn_total_time_advance_ms;
+      timing_advance += fp->get_samples_slot_timestamp(slot_nr, fp, UE->ntn_config_message->ntn_config_params.cell_specific_k_offset - ntn_koffset);
+
+      ntn_ta_commondrift = UE->ntn_config_message->ntn_config_params.ntn_ta_commondrift;
+      ntn_koffset = UE->ntn_config_message->ntn_config_params.cell_specific_k_offset;
+
+      LOG_I(PHY, "cell_specific_k_offset = %d ms, ntn_total_time_advance_ms = %f ms (%d samples)\n", ntn_koffset, UE->ntn_config_message->ntn_config_params.ntn_total_time_advance_ms, UE->timing_advance);
     }
   }
 
