@@ -13,28 +13,56 @@ add_library(ldpc_orig MODULE
             nrLDPC_encoder/ldpc_encoder.c
 )
 set_target_properties(ldpc_orig PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
-target_link_libraries(ldpc_orig PRIVATE ldpc_gen_HEADERS)
+target_link_libraries(ldpc_orig PRIVATE
+                      nr_coding_segment_decoder
+                      nr_coding_segment_encoder
+                      nr_coding_segment_utils
+                      ldpc_gen_HEADERS
+)
 
 add_library(ldpc_optim MODULE
             nrLDPC_decoder/nrLDPC_decoder.c
             nrLDPC_encoder/ldpc_encoder_optim.c
 )
 set_target_properties(ldpc_optim PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
-target_link_libraries(ldpc_optim PRIVATE ldpc_gen_HEADERS)
+target_link_libraries(ldpc_optim PRIVATE
+                      nr_coding_segment_decoder
+                      nr_coding_segment_encoder
+                      nr_coding_segment_utils
+                      ldpc_gen_HEADERS
+)
 
 add_library(ldpc_optim8seg MODULE
             nrLDPC_decoder/nrLDPC_decoder.c
             nrLDPC_encoder/ldpc_encoder_optim8seg.c
 )
 set_target_properties(ldpc_optim8seg PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
-target_link_libraries(ldpc_optim8seg PRIVATE ldpc_gen_HEADERS)
+target_link_libraries(ldpc_optim8seg PRIVATE
+                      nr_coding_segment_decoder
+                      nr_coding_segment_encoder
+                      nr_coding_segment_utils
+                      ldpc_gen_HEADERS
+)
 
-add_library(ldpc_optim8segmulti MODULE
+add_library(ldpc MODULE
             nrLDPC_decoder/nrLDPC_decoder.c
             nrLDPC_encoder/ldpc_encoder_optim8segmulti.c
 )
-set_target_properties(ldpc_optim8segmulti PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
-target_link_libraries(ldpc_optim8segmulti PRIVATE ldpc_gen_HEADERS)
+set_target_properties(ldpc PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+target_link_libraries(ldpc PRIVATE
+                      nr_coding_segment_decoder
+                      nr_coding_segment_encoder
+                      nr_coding_segment_utils
+                      ldpc_gen_HEADERS
+)
+
+add_dependencies(ldpctest ldpc ldpc_orig ldpc_optim ldpc_optim8seg)
+add_dependencies(nr-softmodem ldpc ldpc_orig ldpc_optim ldpc_optim8seg)
+add_dependencies(nr-uesoftmodem ldpc ldpc_orig ldpc_optim ldpc_optim8seg)
+add_dependencies(nr_ulsim ldpc ldpc_orig ldpc_optim ldpc_optim8seg)
+add_dependencies(nr_ulschsim ldpc ldpc_orig ldpc_optim ldpc_optim8seg)
+add_dependencies(nr_dlsim ldpc ldpc_orig ldpc_optim ldpc_optim8seg)
+add_dependencies(nr_dlschsim ldpc ldpc_orig ldpc_optim ldpc_optim8seg)
 
 add_custom_target(nrLDPC_decoder_kernels_CL
                   COMMAND gcc nrLDPC_decoder/nrLDPC_decoder_CL.c -dD -DNRLDPC_KERNEL_SOURCE -E -o ${CMAKE_CURRENT_BINARY_DIR}/nrLDPC_decoder_kernels_CL.clc
@@ -46,7 +74,12 @@ add_library(ldpc_cl MODULE
             nrLDPC_encoder/ldpc_encoder_optim8segmulti.c
 )
 set_target_properties(ldpc_cl PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
-target_link_libraries(ldpc_cl PRIVATE OpenCL)
+target_link_libraries(ldpc_cl PRIVATE
+                      nr_coding_segment_decoder
+                      nr_coding_segment_encoder
+                      nr_coding_segment_utils
+                      OpenCL
+)
 add_dependencies(ldpc_cl nrLDPC_decoder_kernels_CL)
 
 ##############################################
@@ -64,14 +97,24 @@ if (ENABLE_LDPC_CUDA)
   cuda_add_library(ldpc_cuda MODULE
                    nrLDPC_decoder_LYC/nrLDPC_decoder_LYC.cu
                    nrLDPC_encoder/ldpc_encoder_optim8segmulti.c
+                   # The slot coding layer cannot be linked with
+                   # target_link_libraries like above
+                   # because of cuda_add_library
+                   # which already uses target_link_libraries
+                   nrLDPC_coding/nrLDPC_coding_segment/nrLDPC_coding_segment_decoder.c
+                   nrLDPC_coding/nrLDPC_coding_segment/nrLDPC_coding_segment_encoder.c
+                   nrLDPC_coding/nrLDPC_coding_segment/nr_rate_matching.c
   )
   set_target_properties(ldpc_cuda PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
   set_target_properties(ldpc_cuda PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
-endif()
 
-add_dependencies(ldpctest ldpc_orig ldpc_optim ldpc_optim8seg ldpc_optim8segmulti)
-if (ENABLE_LDPC_CUDA)
   add_dependencies(ldpctest ldpc_cuda)
+  add_dependencies(nr-softmodem ldpc_cuda)
+  add_dependencies(nr-uesoftmodem ldpc_cuda)
+  add_dependencies(nr_ulsim ldpc_cuda)
+  add_dependencies(nr_ulschsim ldpc_cuda)
+  add_dependencies(nr_dlsim ldpc_cuda)
+  add_dependencies(nr_dlschsim ldpc_cuda)
 endif()
 
 add_subdirectory(nrLDPC_coding)

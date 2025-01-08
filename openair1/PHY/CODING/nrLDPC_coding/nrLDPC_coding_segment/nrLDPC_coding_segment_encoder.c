@@ -44,8 +44,6 @@
 // #define DEBUG_LDPC_ENCODING
 // #define DEBUG_LDPC_ENCODING_FREE 1
 
-extern ldpc_interface_t ldpc_interface_segment;
-
 typedef struct ldpc8blocks_args_s {
   nrLDPC_TB_encoding_parameters_t *nrLDPC_TB_encoding_parameters;
   encoder_implemparams_t impp;
@@ -75,7 +73,7 @@ static void ldpc8blocks_coding_segment(void *p)
   for (int r = 0; r < nrLDPC_TB_encoding_parameters->C; r++)
     c[r] = nrLDPC_TB_encoding_parameters->segments[r].c;
   start_meas(&nrLDPC_TB_encoding_parameters->segments[impp->macro_num * 8].ts_ldpc_encode);
-  ldpc_interface_segment.LDPCencoder(c, d, impp);
+  LDPCencoder(c, d, impp);
   stop_meas(&nrLDPC_TB_encoding_parameters->segments[impp->macro_num * 8].ts_ldpc_encode);
   // Compute where to place in output buffer that is concatenation of all segments
 

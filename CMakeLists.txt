@@ -2055,6 +2055,7 @@ target_link_libraries(smallblocktest PRIVATE
 
 add_executable(ldpctest
    ${OPENAIR1_DIR}/PHY/CODING/TESTBENCH/ldpctest.c
+   ${OPENAIR1_DIR}/PHY/CODING/nrLDPC_load.c
    )
 target_link_libraries(ldpctest PRIVATE
   -Wl,--start-group UTIL SIMU PHY_COMMON PHY_NR_COMMON -Wl,--end-group

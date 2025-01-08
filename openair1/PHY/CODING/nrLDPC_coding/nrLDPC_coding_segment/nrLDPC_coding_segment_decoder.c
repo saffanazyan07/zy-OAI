@@ -120,9 +120,6 @@ typedef struct nrLDPC_decoding_parameters_s {
   time_stats_t *p_ts_ldpc_decode;
 } nrLDPC_decoding_parameters_t;
 
-// Global var to limit the rework of the dirty legacy code
-ldpc_interface_t ldpc_interface_segment;
-
 static void nr_process_decode_segment(void *arg)
 {
   nrLDPC_decoding_parameters_t *rdata = (nrLDPC_decoding_parameters_t *)arg;
@@ -219,7 +216,7 @@ static void nr_process_decode_segment(void *arg)
 
   ////////////////////////////////// pl =====> llrProcBuf //////////////////////////////////
   int decodeIterations =
-      ldpc_interface_segment.LDPCdecoder(p_decoderParms, 0, 0, 0, l, llrProcBuf, p_procTime, rdata->abort_decode);
+      LDPCdecoder(p_decoderParms, 0, 0, 0, l, llrProcBuf, p_procTime, rdata->abort_decode);
 
   if (decodeIterations <= p_decoderParms->numMaxIter) {
     memcpy(rdata->c, llrProcBuf, K >> 3);
@@ -285,19 +282,11 @@ int nrLDPC_prepare_TB_decoding(nrLDPC_slot_decoding_parameters_t *nrLDPC_slot_de
 
 int32_t nrLDPC_coding_init(void)
 {
-  char *segment_shlibversion = NULL;
-  paramdef_t LoaderParams[] = {
-      {"segment_shlibversion", NULL, 0, .strptr = &segment_shlibversion, .defstrval = "_optim8segmulti", TYPE_STRING, 0, NULL}};
-  config_get(config_get_if(), LoaderParams, sizeofArray(LoaderParams), "nrLDPC_coding_segment");
-  load_LDPClib(segment_shlibversion, &ldpc_interface_segment);
-
   return 0;
 }
 
 int32_t nrLDPC_coding_shutdown(void)
 {
-  free_LDPClib(&ldpc_interface_segment);
-
   return 0;
 }
 
