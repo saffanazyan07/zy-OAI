@@ -141,10 +141,6 @@ __attribute__((always_inline)) static inline int32_t simde_mm_average(simde__m12
   return (uint32_t)(avg / scale);
 }
 
-// TODO can be deleted
-//static const short conjugate[8]  __attribute__((aligned(16))) = {-1,  1, -1,  1, -1,  1, -1,  1};
-//static const short conjugate2[8] __attribute__((aligned(16))) = { 1, -1,  1, -1,  1, -1,  1, -1};
-
 #define oai_mm_displaySamples(vect) {\
   simde__m128i x = vect;\
   printf("[%s] SSE vector: %s = (%hd, %hd) (%hd, %hd) (%hd, %hd) (%hd, %hd)\n",\
@@ -168,11 +164,16 @@ __attribute__((always_inline)) static inline int32_t simde_mm_average(simde__m12
  */
 __attribute__((always_inline)) static inline
 simde__m128i oai_mm_conj(simde__m128i a) {
-   // Initialize neg_imag as a static constant SSE vector
-  static const simde__m128i_private neg_imag = {
+
+  // Use simde__m128i_private for static constant initialization
+  static const simde__m128i_private neg_imag_private = {
     .i16 = {1, -1, 1, -1, 1, -1, 1, -1}
   };
-  return simde_mm_sign_epi16(a, neg_imag.n);
+
+  // Convert to simde__m128i using SIMDe's helper function
+  simde__m128i neg_imag = simde__m128i_from_private(neg_imag_private);
+
+  return simde_mm_sign_epi16(a, neg_imag);
 }
 
 /**
@@ -194,12 +195,16 @@ simde__m128i oai_mm_swap(simde__m128i a)
     a, shuffle_mask_swap), shuffle_mask_swap);
 #else
   // Shuffle mask to swap bytes for IQ swapping
-  static const simde__m128i_private shuffle_mask_swap = {
+  static const simde__m128i_private shuffle_mask_swap_private = {
     .i8 = {
        2,  3,  0,  1,  6,  7,  4,  5, // Low bytes
       10, 11,  8,  9, 14, 15, 12, 13  // High bytes
     }
   };
+
+  // Convert to simde__m128i using SIMDe's helper function
+  simde__m128i shuffle_mask_swap = simde__m128i_from_private(shuffle_mask_swap_private);
+
   return simde_mm_shuffle_epi8(a, shuffle_mask_swap);
 #endif
 }
@@ -294,10 +299,6 @@ simde__m128i oai_mm_cpx_mult_conjb(simde__m128i a, simde__m128i b, int shift)
 
 //#if defined(__x86_64__) || defined(__i386__) || defined(__arm__) || defined(__aarch64__)
 
-// TODO can be deleted
-//static const short oai_mm256_neg_re[8] __attribute__((aligned(32))) = {-1,  1, -1,  1, -1,  1, -1,  1, -1,  1, -1,  1, -1,  1, -1,  1};
-//static const short oai_mm256_neg_im[8] __attribute__((aligned(32))) = { 1, -1,  1, -1,  1, -1,  1, -1,  1, -1,  1, -1,  1, -1,  1, -1};
-  
 #define oai_mm256_displaySamples(vect) {\
   simde__m256i x = vect;\
   printf("[%s] AVX2 vector: %s = (%hd, %hd) (%hd, %hd) (%hd, %hd) (%hd, %hd) (%hd, %hd) (%hd, %hd) (%hd, %hd) (%hd, %hd)\n",\
@@ -325,11 +326,15 @@ simde__m128i oai_mm_cpx_mult_conjb(simde__m128i a, simde__m128i b, int shift)
  */
 __attribute__((always_inline)) static inline
 simde__m256i oai_mm256_conj(simde__m256i a) {
-   // Initialize neg_imag as a static constant AVX2 vector
-  static const simde__m256i_private neg_imag = {
+  // Use simde__m256i_private for static constant initialization
+  static const simde__m256i_private neg_imag_private = {
     .i16 = {1, -1, 1, -1, 1, -1, 1, -1, 1, -1, 1, -1, 1, -1, 1, -1}
   };
-  return simde_mm256_sign_epi16(a, neg_imag.n);
+
+  // Convert to simde__m256i using SIMDe's helper function
+  simde__m256i neg_imag = simde__m256i_from_private(neg_imag_private);
+
+  return simde_mm256_sign_epi16(a, neg_imag);
 }
 
 /**
@@ -353,14 +358,18 @@ simde__m256i oai_mm256_swap(simde__m256i a) {
     a, shuffle_mask_swap), shuffle_mask_swap);
 #else
   // Shuffle mask to swap bytes for IQ swapping
-  static const simde__m256i_private shuffle_mask_swap = {
+  static const simde__m256i_private shuffle_mask_swap_private = {
     .i8 = {
        2,  3,  0,  1,  6,  7,  4,  5, 10, 11,  8,  9, 14, 15, 12, 13, // Low bytes
       18, 19, 16, 17, 22, 23, 20, 21, 26, 27, 24, 25, 30, 31, 28, 29  // High bytes
     }
   };
-  return simde_mm256_shuffle_epi8(a, shuffle_mask_swap.n);
-#endif  
+
+  // Convert from private to simde__m256i
+  simde__m256i shuffle_mask_swap = simde__m256i_from_private(shuffle_mask_swap_private);
+
+  return simde_mm256_shuffle_epi8(a, shuffle_mask_swap);
+#endif
 }
 
 __attribute__((always_inline)) static inline
