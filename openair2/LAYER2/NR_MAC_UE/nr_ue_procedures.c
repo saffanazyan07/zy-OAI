@@ -228,7 +228,7 @@ void nr_ue_decode_mib(NR_UE_MAC_INST_t *mac, int cc_id)
   if(get_softmodem_params()->phy_test)
     mac->state = UE_CONNECTED;
   else if(mac->state == UE_NOT_SYNC)
-    mac->state = UE_SYNC;
+    mac->state = UE_RECEIVING_SIB;
 }
 
 static void configure_ratematching_csi(fapi_nr_dl_config_dlsch_pdu_rel15_t *dlsch_pdu,
