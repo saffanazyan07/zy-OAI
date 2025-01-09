@@ -190,9 +190,10 @@ __attribute__((always_inline)) static inline
 simde__m128i oai_mm_swap(simde__m128i a)
 {
 #if (1)
-  const int shuffle_mask_swap = SIMDE_MM_SHUFFLE(2, 3, 0, 1); // 0xb1;
+  #define SHUFFLE_MASK_SWAP SIMDE_MM_SHUFFLE(2, 3, 0, 1) // 0xb1
   return simde_mm_shufflehi_epi16(simde_mm_shufflelo_epi16(
-    a, shuffle_mask_swap), shuffle_mask_swap);
+    a, SHUFFLE_MASK_SWAP), SHUFFLE_MASK_SWAP);
+  #undef SHUFFLE_MASK_SWAP
 #else
   // Shuffle mask to swap bytes for IQ swapping
   static const simde__m128i_private shuffle_mask_swap_private = {
@@ -350,12 +351,11 @@ simde__m256i oai_mm256_conj(simde__m256i a) {
 __attribute__((always_inline)) static inline
 simde__m256i oai_mm256_swap(simde__m256i a) {
 #if(1)
-  // Use shuffle masks for low and high halves of 256-bit vector
-  const int shuffle_mask_swap = SIMDE_MM_SHUFFLE(2, 3, 0, 1); // 0xb1;
-
+  #define SHUFFLE_MASK_SWAP SIMDE_MM_SHUFFLE(2, 3, 0, 1) // 0xb1
   // Perform high and low 128-bit shuffles within the 256-bit register
   return simde_mm256_shufflehi_epi16(simde_mm256_shufflelo_epi16(
-    a, shuffle_mask_swap), shuffle_mask_swap);
+    a, SHUFFLE_MASK_SWAP), SHUFFLE_MASK_SWAP);
+  #undef SHUFFLE_MASK_SWAP
 #else
   // Shuffle mask to swap bytes for IQ swapping
   static const simde__m256i_private shuffle_mask_swap_private = {
@@ -487,8 +487,9 @@ simde__m256i oai_mm256_cpx_mult_conjb(simde__m256i a, simde__m256i b, int shift)
 __attribute__((always_inline)) static inline
 void oai_mm256_separate_vectors(simde__m256i combined, simde__m128i *re, simde__m128i *im) {
     
-    const int shuffle_mask = SIMDE_MM_SHUFFLE(3, 1, 2, 0); // 0xD8
-    simde__m256i xmm0 = simde_mm256_shuffle_epi32(simde_mm256_shufflehi_epi16(simde_mm256_shufflelo_epi16(combined, shuffle_mask), shuffle_mask), shuffle_mask);
+    #define SHUFFLE_MASK SIMDE_MM_SHUFFLE(3, 1, 2, 0) // 0xD8
+
+    simde__m256i xmm0 = simde_mm256_shuffle_epi32(simde_mm256_shufflehi_epi16(simde_mm256_shufflelo_epi16(combined, SHUFFLE_MASK), SHUFFLE_MASK), SHUFFLE_MASK);
     
     // Unpack the low and high parts of the combined vector to extract real and imaginary parts
     simde__m128i lo = simde_mm256_extractf128_si256(xmm0, 0);  // Extract the lower 128 bits (real part)
@@ -498,9 +499,10 @@ void oai_mm256_separate_vectors(simde__m256i combined, simde__m128i *re, simde__
     simde__m128i xmmre = simde_mm_unpacklo_epi16(lo, hi); // Real part of the low half
     simde__m128i xmmim = simde_mm_unpackhi_epi16(lo, hi); // Imaginary part of the high half
     
-    *re = simde_mm_shuffle_epi32(simde_mm_shufflehi_epi16(simde_mm_shufflelo_epi16(xmmre, shuffle_mask), shuffle_mask), shuffle_mask);
-    *im = simde_mm_shuffle_epi32(simde_mm_shufflehi_epi16(simde_mm_shufflelo_epi16(xmmim, shuffle_mask), shuffle_mask), shuffle_mask);
+    *re = simde_mm_shuffle_epi32(simde_mm_shufflehi_epi16(simde_mm_shufflelo_epi16(xmmre, SHUFFLE_MASK), SHUFFLE_MASK), SHUFFLE_MASK);
+    *im = simde_mm_shuffle_epi32(simde_mm_shufflehi_epi16(simde_mm_shufflelo_epi16(xmmim, SHUFFLE_MASK), SHUFFLE_MASK), SHUFFLE_MASK);
 
+    #undef SHUFFLE_MASK
 }
 
 //#endif
