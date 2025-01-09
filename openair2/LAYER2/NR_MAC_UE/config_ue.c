@@ -1636,7 +1636,7 @@ void nr_rrc_mac_config_req_reset(module_id_t module_id, NR_UE_MAC_reset_cause_t 
       release_mac_configuration(mac, cause);
       mac->state = UE_DETACHING;
       break;
-    case T300_EXPIRY:
+    case T30X_EXPIRY:
       reset_ra(mac, false);
       reset_mac_inst(mac);
       mac->state = UE_SYNC; // still in sync but need to restart RA

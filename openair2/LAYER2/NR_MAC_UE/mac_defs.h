@@ -195,7 +195,7 @@ typedef struct {
 typedef enum {
   GO_TO_IDLE,
   DETACH,
-  T300_EXPIRY,
+  T30X_EXPIRY,
   RE_ESTABLISHMENT
 } NR_UE_MAC_reset_cause_t;
 
