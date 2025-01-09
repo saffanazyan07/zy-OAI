@@ -56,7 +56,7 @@ void rxAddInput(const c16_t *input_sig,
        - The ground station is located at the North Pole (positive Zaxis), and the satellite starts from the initial elevation angle 0° in the second quadrant of the YZplane.
        - Satellite moves in the clockwise direction in its circular orbit.
     */
-    const double radius_earth = 6371e3; // m
+    const double radius_earth = 6377900; // m
     const double radius_sat = radius_earth + channelDesc->sat_height;
     const double GM_earth = 3.986e14; // m^3/s^2
     const double w_sat = sqrt(GM_earth / (radius_sat * radius_sat * radius_sat)); // rad/s
