@@ -37,6 +37,8 @@
 
 #include "oran-config.h" // for g_kbar
 
+#include "common/utils/threadPool/notified_fifo.h"
+
 #define USE_POLLING 1
 // Declare variable useful for the send buffer function
 volatile uint8_t first_call_set = 0;
@@ -124,19 +126,17 @@ void oai_xran_fh_rx_callback(void *pCallbackTag, xran_status_t status)
         if (last_slot == -1 || slot2 != last_slot) {
 #ifndef USE_POLLING
           notifiedFIFO_elt_t *req = newNotifiedFIFO_elt(sizeof(oran_sync_info_t), 0, &oran_sync_fifo, NULL);
-          oran_sync_info_t *info = (oran_sync_info_t *)NotifiedFifoData(req);
+          oran_sync_info_t *info = NotifiedFifoData(req);
+          info->tti = tti;
           info->sl = slot2;
           info->f = frame;
           LOG_D(PHY, "Push %d.%d.%d (slot %d, subframe %d,last_slot %d)\n", frame, info->sl, slot, ru_id, subframe, last_slot);
+          pushNotifiedFIFO(&oran_sync_fifo, req);
 #else
           LOG_D(PHY, "Writing %d.%d.%d (slot %d, subframe %d,last_slot %d)\n", frame, slot2, ru_id, slot, subframe, last_slot);
           oran_sync_info.tti = tti;
           oran_sync_info.sl = slot2;
           oran_sync_info.f = frame;
-#endif
-#ifndef USE_POLLING
-          pushNotifiedFIFO(&oran_sync_fifo, req);
-#else
 #endif
         } else
           LOG_E(PHY, "Cannot Push %d.%d.%d (slot %d, subframe %d,last_slot %d)\n", frame, slot2, ru_id, slot, subframe, last_slot);
@@ -269,7 +269,6 @@ int xran_fh_rx_read_slot(ru_info_t *ru, int *frame, int *slot)
   void *ptr = NULL;
   int32_t *pos = NULL;
   int idx = 0;
-  static int last_slot = -1;
   first_read_set = 1;
 
   static int64_t old_rx_counter[XRAN_PORTS_NUM] = {0};
@@ -278,11 +277,8 @@ int xran_fh_rx_read_slot(ru_info_t *ru, int *frame, int *slot)
   static int outcnt = 0;
 #ifndef USE_POLLING
   // pull next even from oran_sync_fifo
-  notifiedFIFO_elt_t *res = pollNotifiedFIFO(&oran_sync_fifo);
-  while (res == NULL) {
-    res = pollNotifiedFIFO(&oran_sync_fifo);
-  }
-  oran_sync_info_t *info = (oran_sync_info_t *)NotifiedFifoData(res);
+  notifiedFIFO_elt_t *res = pullNotifiedFIFO(&oran_sync_fifo);
+  oran_sync_info_t *info = NotifiedFifoData(res);
 
   *slot = info->sl;
   *frame = info->f;
@@ -296,6 +292,7 @@ int xran_fh_rx_read_slot(ru_info_t *ru, int *frame, int *slot)
   *frame = oran_sync_info.f;
   uint32_t tti_in = oran_sync_info.tti;
 
+  static int last_slot = -1;
   LOG_D(PHY, "oran slot %d, last_slot %d\n", *slot, last_slot);
   int cnt = 0;
   // while (*slot == last_slot)  {
