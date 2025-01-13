@@ -39,7 +39,7 @@
 
 #include "common/utils/threadPool/notified_fifo.h"
 
-#define USE_POLLING 1
+//#define USE_POLLING 1
 // Declare variable useful for the send buffer function
 volatile uint8_t first_call_set = 0;
 volatile uint8_t first_rx_set = 0;
