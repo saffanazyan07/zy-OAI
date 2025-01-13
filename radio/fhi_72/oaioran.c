@@ -43,21 +43,6 @@ volatile uint8_t first_call_set = 0;
 volatile uint8_t first_rx_set = 0;
 volatile int first_read_set = 0;
 
-// Variable declaration useful for fill IQ samples from file
-#define IQ_PLAYBACK_BUFFER_BYTES (XRAN_NUM_OF_SLOT_IN_TDD_LOOP * N_SYM_PER_SLOT * XRAN_MAX_PRBS * N_SC_PER_PRB * 4L)
-/*
-int rx_tti;
-int rx_sym;
-volatile uint32_t rx_cb_tti = 0;
-volatile uint32_t rx_cb_frame = 0;
-volatile uint32_t rx_cb_subframe = 0;
-volatile uint32_t rx_cb_slot = 0;
-*/
-
-#define GetFrameNum(tti, SFNatSecStart, numSubFramePerSystemFrame, numSlotPerSubFrame) \
-  ((((uint32_t)tti / ((uint32_t)numSubFramePerSystemFrame * (uint32_t)numSlotPerSubFrame)) + SFNatSecStart) & 0x3FF)
-#define GetSlotNum(tti, numSlotPerSfn) ((uint32_t)tti % ((uint32_t)numSlotPerSfn))
-
 int xran_is_prach_slot(uint8_t PortId, uint32_t subframe_id, uint32_t slot_id);
 #include "common/utils/LOG/log.h"
 
