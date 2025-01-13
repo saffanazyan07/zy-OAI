@@ -23,6 +23,7 @@
 #define NOTIFIED_FIFO_H
 #include "pthread_utils.h"
 #include <stdint.h>
+#include <malloc.h>
 #include <pthread.h>
 #include "time_meas.h"
 #include <memory.h>
