@@ -646,6 +646,11 @@ int main( int argc, char **argv ) {
   // start the main threads
   number_of_cards = 1;
 
+{
+extern uint8_t mac_mem[200000000];
+memset(mac_mem, 0, 200000000);
+}
+
   wait_gNBs();
   int sl_ahead = NFAPI_MODE == NFAPI_MODE_AERIAL ? 0 : 6;
   if (RC.nb_RU >0) {
