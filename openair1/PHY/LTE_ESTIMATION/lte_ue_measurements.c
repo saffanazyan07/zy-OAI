@@ -470,17 +470,14 @@ void conjch0_mult_ch1(int *ch0,
 
   for (rb=0; rb<3*nb_rb; rb++) {
 
-    mmtmpD0 = simde_mm_madd_epi16(dl_ch0_128[0],dl_ch1_128[0]);
-    mmtmpD1 = simde_mm_shufflelo_epi16(dl_ch0_128[0], SIMDE_MM_SHUFFLE(2,3,0,1));
-    mmtmpD1 = simde_mm_shufflehi_epi16(mmtmpD1, SIMDE_MM_SHUFFLE(2,3,0,1));
-    mmtmpD1 = simde_mm_sign_epi16(mmtmpD1,*(simde__m128i*)&conjugate[0]);
-    mmtmpD1 = simde_mm_madd_epi16(mmtmpD1,dl_ch1_128[0]);
-    mmtmpD0 = simde_mm_srai_epi32(mmtmpD0,output_shift0);
-    mmtmpD1 = simde_mm_srai_epi32(mmtmpD1,output_shift0);
-    mmtmpD2 = simde_mm_unpacklo_epi32(mmtmpD0,mmtmpD1);
-    mmtmpD3 = simde_mm_unpackhi_epi32(mmtmpD0,mmtmpD1);
+    mmtmpD0 = simde_mm_madd_epi16(dl_ch0_128[0], dl_ch1_128[0]);
+    mmtmpD1 = simde_mm_madd_epi16(oai_mm_swap(oai_mm_conj(dl_ch0_128[0])), dl_ch1_128[0]);
+    mmtmpD0 = simde_mm_srai_epi32(mmtmpD0, output_shift0);
+    mmtmpD1 = simde_mm_srai_epi32(mmtmpD1, output_shift0);
+    mmtmpD2 = simde_mm_unpacklo_epi32(mmtmpD0, mmtmpD1);
+    mmtmpD3 = simde_mm_unpackhi_epi32(mmtmpD0, mmtmpD1);
 
-    ch0conj_ch1_128[0] = simde_mm_packs_epi32(mmtmpD2,mmtmpD3);
+    ch0conj_ch1_128[0] = simde_mm_packs_epi32(mmtmpD2, mmtmpD3);
 
 #ifdef DEBUG_RANK_EST
     printf("\n Computing conjugates \n");
@@ -1235,16 +1232,9 @@ void lte_ue_measurements(PHY_VARS_UE *ue,
             // multiply by conjugated channel
                 //  print_ints("ch0",&dl_ch0_128[0]);
                 //  print_ints("ch1",&dl_ch1_128[0]);
-
             mmtmpPMI0 = simde_mm_madd_epi16(dl_ch0_128[0],dl_ch1_128[0]);
                  //  print_ints("re",&mmtmpPMI0);
-            mmtmpPMI1 = simde_mm_shufflelo_epi16(dl_ch1_128[0], SIMDE_MM_SHUFFLE(2,3,0,1));
-              //  print_ints("_mm_shufflelo_epi16",&mmtmpPMI1);
-            mmtmpPMI1 = simde_mm_shufflehi_epi16(mmtmpPMI1, SIMDE_MM_SHUFFLE(2,3,0,1));
-                //  print_ints("_mm_shufflehi_epi16",&mmtmpPMI1);
-            mmtmpPMI1 = simde_mm_sign_epi16(mmtmpPMI1,*(simde__m128i*)&conjugate[0]);
-               //  print_ints("_mm_sign_epi16",&mmtmpPMI1);
-            mmtmpPMI1 = simde_mm_madd_epi16(mmtmpPMI1,dl_ch0_128[0]);
+            mmtmpPMI1 = simde_mm_madd_epi16(oai_mm_swap(oai_mm_conj(dl_ch1_128[0])),dl_ch0_128[0]);
                //   print_ints("mm_madd_epi16",&mmtmpPMI1);
             // mmtmpPMI1 contains imag part of 4 consecutive outputs (32-bit)
             pmi128_re = simde_mm_add_epi32(pmi128_re,mmtmpPMI0);

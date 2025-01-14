@@ -29,9 +29,6 @@
 
 extern int number_of_cards;
 
-static const short conjugate[8] __attribute__((aligned(16))) = {-1, 1, -1, 1, -1, 1, -1, 1};
-static const short conjugate2[8] __attribute__((aligned(16))) = {1, -1, 1, -1, 1, -1, 1, -1};
-
 static const short primary_synch0[144] = {
     0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      32767,  0,      -26120, -19785, 11971,  -30502,
     -24020, -22288, 32117,  6492,   31311,  9658,   -16384, -28378, 25100,  -21063, -7292,  -31946, 20429,  25618,  14948,  29158,
