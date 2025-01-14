@@ -28,9 +28,6 @@ shlib_path libldpc.so
 `libldpc.so` has its decoder implemented in [nrLDPC_coding_segment_decoder.c](file://../nrLDPC_coding/nrLDPC_coding_segment/nrLDPC_coding_segment_decoder.c).\
 Its encoder is implemented in [nrLDPC_coding_segment_encoder.c](file://../nrLDPC_coding/nrLDPC_coding_segment/nrLDPC_coding_segment_encoder.c).
 
-*Note: The segment coding library `libldpc.so` is an adaptation layer between the slot coding interface and a segment coding library.*
-*The segment coding library is `libldpc_optim8segmulti.so` by default but it can be chosen with option `--nrLDPC_coding_segment.segment_shlibversion` followed by the library version - like with `--loader.ldpc.shlibversion` in the slot coding case -*
-
 loading `libldpc_t2.so` instead of `libldpc.so`:
 
 `make ldpc_t2`
@@ -114,28 +111,29 @@ Libraries implementing the slotwise LDPC coding must be named `libldpc<_version>
 The interface of the library is defined in [nrLDPC_defs.h](file://../nrLDPC_defs.h).
 The code loading the LDPC library is in [nrLDPC_load.c](file://../nrLDPC_load.c), in function `load_nrLDPClib`, which must be called at init time.
 
-*Note: LDPC segment coding libraries are not loaded directly by OAI but by the intermediate library `libldpc.so` which is implementing the LDPC slot coding interface using a LDPC segment coding library.*
+LDPC segment coding libraries are not loaded directly by OAI but are statically linked in libraries implementing the LDPC slot coding interface using an adaptation layer between the slot coding interface and the segment coding interface.  
+This way, these libraries can be loaded to implement the slot coding interface as well as the segment coding interface in `ldpctest`.
 
 ### Selecting the LDPC library at run time
 
-By default the function `int load_nrLDPClib(void)` looks for `libldpc_optim8segmulti.so`, this default behavior can be changed using the oai loader configuration options in the configuration file or from the command line as shown below:
+By default the function `int load_nrLDPClib(void)` looks for `libldpc.so`, this default behavior can be changed using the oai loader configuration options in the configuration file or from the command line as shown below:
 
 #### Examples of ldpc shared lib selection when running nr softmodem's:
 
-loading `libldpc_optim8seg.so` instead of `libldpc_optim8segmulti.so`:
+loading `libldpc_optim8seg.so` instead of `libldpc.so`:
 
 ```
-./nr-softmodem -O libconfig:gnb.band78.tm1.106PRB.usrpx300.conf:dbgl5  --nrLDPC_coding_segment.segment_shlibversion _optim8seg
+./nr-softmodem -O libconfig:gnb.band78.tm1.106PRB.usrpx300.conf:dbgl5  --loader.ldpc.shlibversion _optim8seg
 .......................
-[CONFIG] nrLDPC_coding_segment.segment_shlibversion set to default value "_optim8segmulti"
-[LIBCONFIG] nrLDPC_coding_segment: 1/1 parameters successfully set, (0 to default value)
-[CONFIG] segment_shlibversion set to  _optim8seg from command line
-[CONFIG] nrLDPC_coding_segment 1 options set from command line
+[CONFIG] loader.ldpc.shlibversion set to default value ""
+[LIBCONFIG] loader.ldpc: 2/2 parameters successfully set, (1 to default value)
+[CONFIG] shlibversion set to  _optim8seg from command line
+[CONFIG] loader.ldpc 1 options set from command line
 [LOADER] library libldpc_optim8seg.so successfully loaded
 ........................
 ```
 
-loading `libldpc_cl.so` instead of `libldpc_optim8segmulti.so`:
+loading `libldpc_cl.so` instead of `libldpc.so`:
 
 `make ldpc_cl`
 
@@ -161,7 +159,7 @@ Built target ldpc_cl
 
 At runtime, to successfully use hardware acceleration via OpenCL, you need to install vendor specific packages which deliver the required drivers and tools to make use of their GPU (Nvidia, Intel...) , fpga (Xilinx, Intel) or CPU (Intel, AMD, ARM...) through OpenCL. 
 
-`./nr-softmodem -O  libconfig:gnb.band78.sa.fr1.106PRB.usrpb210.conf:dbgl5 --rfsim --rfsimulator.serveraddr server  --log_config.gtpu_log_level info  --nrLDPC_coding_segment.segment_shlibversion _cl`
+`./nr-softmodem -O  libconfig:gnb.band78.sa.fr1.106PRB.usrpb210.conf:dbgl5 --rfsim --rfsimulator.serveraddr server  --log_config.gtpu_log_level info  --loader.ldpc.shlibversion _cl`
 
 ``` 
 ------------------------------------------------
@@ -196,12 +194,12 @@ At runtime, to successfully use hardware acceleration via OpenCL, you need to in
 -----------------------------------------------------------------
 ```
 
-`./nr-uesoftmodem -r 106 --numerology 1 --band 78 -C 3619200000 --rfsim -O libconfig:/usr/local/oai/conf/nrue_sim.conf:dbgl5 --nrLDPC_coding_segment.segment_shlibversion _cl --log_config.hw_log_level info`
+`./nr-uesoftmodem -r 106 --numerology 1 --band 78 -C 3619200000 --rfsim -O libconfig:/usr/local/oai/conf/nrue_sim.conf:dbgl5 --loader.ldpc.shlibversion _cl --log_config.hw_log_level info`
 
 ```
 ............................................................
 [CONFIG] segment_shlibversion set to  _cl from command line
-[CONFIG] nrLDPC_coding_segment 1 options set from command line
+[CONFIG] loader.ldpc 1 options set from command line
 [LOADER] library libldpc_cl.so successfully loaded
 [HW]   Platform 0, OpenCL profile FULL_PROFILE
 [HW]   Platform 0, OpenCL version OpenCL 2.1 LINUX
@@ -254,7 +252,7 @@ SNR0 -2.000000:
 [CONFIG] log_config: 16/16 parameters successfully set 
 log init done
 [CONFIG] loader: 2/2 parameters successfully set 
-[CONFIG] loader.ldpc: 1/2 parameters successfully set 
+[CONFIG] loader.ldpc: 2/2 parameters successfully set 
 [LOADER] library libldpc_cuda.so successfully loaded
 ...................................
 ```
