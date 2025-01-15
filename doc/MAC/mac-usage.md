@@ -48,6 +48,10 @@ variable if no feedback is detected and decrement the variable when feedback is 
 The value of `pdcch_cl_adjust` is clamped to range <0,1>, the increment value is 0.05 while
 the decrement value is 0.01.
 
+The possible values of aggregation level on UE SS can be configured via `uess_agg_levels` cofiguration
+option. By default the gNB uses only aggregation level 2 which translates to `uess_agg_levels` set to
+`[0, 1, 0, 0, 0]`. For example, to enable aggregation level 2 and 4 set `uess_agg_levels` to `[0, 1, 1, 0, 0]`.
+
 ### Examples:
 #### Example 1:
 Say we have 90% PDCCH success rate at aggregation level 1, `pdcch_cl_adjust` will stay at 0

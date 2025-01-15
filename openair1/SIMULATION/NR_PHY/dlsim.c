@@ -669,7 +669,8 @@ int main(int argc, char **argv)
                                 .timer_config.n310 = 10,
                                 .timer_config.t311 = 3000,
                                 .timer_config.n311 = 1,
-                                .timer_config.t319 = 400};
+                                .timer_config.t319 = 400,
+                                .num_agg_level_candidates = {0, 0, 1, 1, 0}};
 
   RC.nb_nr_macrlc_inst = 1;
   RC.nb_nr_mac_CC = (int*)malloc(RC.nb_nr_macrlc_inst*sizeof(int));

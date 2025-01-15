@@ -180,6 +180,7 @@ typedef struct nr_mac_config_t {
   /// beamforming weight matrix size
   int nb_bfw[2];
   int32_t *bw_list;
+  int num_agg_level_candidates[NUM_PDCCH_AGG_LEVELS];
 } nr_mac_config_t;
 
 typedef struct NR_preamble_ue {

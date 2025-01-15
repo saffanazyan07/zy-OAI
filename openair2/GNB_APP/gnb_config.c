@@ -1033,11 +1033,25 @@ static NR_ServingCellConfigCommon_t *get_scc_config(configmodule_interface_t *cf
   AssertFatal(pcc != NULL && pcc->commonSearchSpaceList == NULL, "memory leak\n");
   pcc->commonSearchSpaceList = calloc_or_fail(1, sizeof(*pcc->commonSearchSpaceList));
 
-  NR_SearchSpace_t *ss1 = rrc_searchspace_config(true, 1, 0);
+  // TODO: Make CSS aggregation levels configurable
+  int css_num_agg_level_candidates[NUM_PDCCH_AGG_LEVELS];
+  css_num_agg_level_candidates[PDCCH_AGG_LEVEL1] = NR_SearchSpace__nrofCandidates__aggregationLevel1_n0;
+  if (get_softmodem_params()->usim_test) {
+    css_num_agg_level_candidates[PDCCH_AGG_LEVEL2] = NR_SearchSpace__nrofCandidates__aggregationLevel2_n0;
+    css_num_agg_level_candidates[PDCCH_AGG_LEVEL4] = NR_SearchSpace__nrofCandidates__aggregationLevel4_n1;
+    css_num_agg_level_candidates[PDCCH_AGG_LEVEL8] = NR_SearchSpace__nrofCandidates__aggregationLevel8_n1;
+  } else {
+    css_num_agg_level_candidates[PDCCH_AGG_LEVEL2] = NR_SearchSpace__nrofCandidates__aggregationLevel2_n0;
+    css_num_agg_level_candidates[PDCCH_AGG_LEVEL4] = NR_SearchSpace__nrofCandidates__aggregationLevel4_n1;
+    css_num_agg_level_candidates[PDCCH_AGG_LEVEL8] = NR_SearchSpace__nrofCandidates__aggregationLevel8_n0;
+  }
+  css_num_agg_level_candidates[PDCCH_AGG_LEVEL16] = NR_SearchSpace__nrofCandidates__aggregationLevel16_n0;
+
+  NR_SearchSpace_t *ss1 = rrc_searchspace_config(true, 1, 0, css_num_agg_level_candidates);
   asn1cSeqAdd(&pcc->commonSearchSpaceList->list, ss1);
-  NR_SearchSpace_t *ss2 = rrc_searchspace_config(true, 2, 0);
+  NR_SearchSpace_t *ss2 = rrc_searchspace_config(true, 2, 0, css_num_agg_level_candidates);
   asn1cSeqAdd(&pcc->commonSearchSpaceList->list, ss2);
-  NR_SearchSpace_t *ss3 = rrc_searchspace_config(true, 3, 0);
+  NR_SearchSpace_t *ss3 = rrc_searchspace_config(true, 3, 0, css_num_agg_level_candidates);
   asn1cSeqAdd(&pcc->commonSearchSpaceList->list, ss3);
 
   asn1cCallocOne(pcc->searchSpaceSIB1,  0);
@@ -1404,6 +1418,34 @@ void RCconfig_nr_macrlc(configmodule_interface_t *cfg)
       config.bw_list[b] = GNBParamList.paramarray[0][GNB_BEAMWEIGHTS_IDX].iptr[b];
     }
   }
+
+  // Construct default aggragation level list or read from config
+  int uess_num_agg_level_candidates[NUM_PDCCH_AGG_LEVELS];
+  uess_num_agg_level_candidates[PDCCH_AGG_LEVEL1] = NR_SearchSpace__nrofCandidates__aggregationLevel1_n0;
+  if (get_softmodem_params()->usim_test) {
+    uess_num_agg_level_candidates[PDCCH_AGG_LEVEL2] = NR_SearchSpace__nrofCandidates__aggregationLevel2_n0;
+    uess_num_agg_level_candidates[PDCCH_AGG_LEVEL4] = NR_SearchSpace__nrofCandidates__aggregationLevel4_n1;
+    uess_num_agg_level_candidates[PDCCH_AGG_LEVEL8] = NR_SearchSpace__nrofCandidates__aggregationLevel8_n1;
+  } else {
+    uess_num_agg_level_candidates[PDCCH_AGG_LEVEL2] = NR_SearchSpace__nrofCandidates__aggregationLevel2_n2;
+    uess_num_agg_level_candidates[PDCCH_AGG_LEVEL4] = NR_SearchSpace__nrofCandidates__aggregationLevel4_n0;
+    uess_num_agg_level_candidates[PDCCH_AGG_LEVEL8] = NR_SearchSpace__nrofCandidates__aggregationLevel8_n0;
+  }
+  uess_num_agg_level_candidates[PDCCH_AGG_LEVEL16] = NR_SearchSpace__nrofCandidates__aggregationLevel16_n0;
+  int* agg_level_list = uess_num_agg_level_candidates;
+  int num_agg_levels = 5;
+  if (GNBParamList.paramarray[0][GNB_UESS_AGG_LEVEL_LIST_IDX].numelt > 0) {
+    agg_level_list = GNBParamList.paramarray[0][GNB_UESS_AGG_LEVEL_LIST_IDX].iptr;
+    num_agg_levels = GNBParamList.paramarray[0][GNB_UESS_AGG_LEVEL_LIST_IDX].numelt;
+  }
+  memcpy(config.num_agg_level_candidates, agg_level_list, sizeof(int) * num_agg_levels);
+  LOG_I(NR_MAC,
+        "Candidates per PDCCH aggregation level on UESS: L1: %d, L2: %d, L4: %d, L8: %d, L16: %d\n",
+        config.num_agg_level_candidates[PDCCH_AGG_LEVEL1],
+        config.num_agg_level_candidates[PDCCH_AGG_LEVEL2],
+        config.num_agg_level_candidates[PDCCH_AGG_LEVEL4],
+        config.num_agg_level_candidates[PDCCH_AGG_LEVEL8],
+        config.num_agg_level_candidates[PDCCH_AGG_LEVEL16]);
 
   NR_ServingCellConfigCommon_t *scc = get_scc_config(cfg, config.minRXTXTIME);
   //xer_fprint(stdout, &asn_DEF_NR_ServingCellConfigCommon, scc);
