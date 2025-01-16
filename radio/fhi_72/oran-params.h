@@ -33,6 +33,7 @@
 #define ORAN_CONFIG_WORKER_CORES "worker_cores"
 #define ORAN_CONFIG_DU_KEYPAIR "du_key_pair" // only needed for M-plane
 #define ORAN_CONFIG_DU_ADDR "du_addr" // only needed for M-plane
+#define ORAN_FH_CONFIG_VLAN_TAG "vlan_tag" // only needed for M-plane
 #define ORAN_CONFIG_RU_ADDR "ru_addr" // not needed if M-plane used
 #define ORAN_CONFIG_RU_IP_ADDR "ru_ip_addr" // only needed for M-plane
 #define ORAN_CONFIG_MTU "mtu" // not needed if M-plane used
@@ -53,6 +54,7 @@
   {ORAN_CONFIG_WORKER_CORES,    "CPU Cores to use for workers\n",           PARAMFLAG_MANDATORY, .uptr=NULL,       .defintarrayval=NULL,TYPE_UINTARRAY,  0}, \
   {ORAN_CONFIG_DU_KEYPAIR,      "DU keypair for RU authentication\n",       PARAMFLAG_MANDATORY, .strlistptr=NULL, .defstrlistval=NULL, TYPE_STRINGLIST, 0}, \
   {ORAN_CONFIG_DU_ADDR,         "Ether addr of DU\n",                       PARAMFLAG_MANDATORY, .strlistptr=NULL, .defstrlistval=NULL, TYPE_STRINGLIST, 0}, \
+  {ORAN_FH_CONFIG_VLAN_TAG,     "VLAN tag\n",                               PARAMFLAG_MANDATORY, .uptr=NULL,       .defintarrayval=0,   TYPE_UINTARRAY,  0}, \
   {ORAN_CONFIG_RU_ADDR,         "Ether addr of RU\n",                       PARAMFLAG_MANDATORY, .strlistptr=NULL, .defstrlistval=NULL, TYPE_STRINGLIST, 0}, \
   {ORAN_CONFIG_RU_IP_ADDR,      "IP addr of RU\n",                          PARAMFLAG_MANDATORY, .strlistptr=NULL, .defstrlistval=NULL, TYPE_STRINGLIST, 0}, \
   {ORAN_CONFIG_MTU,             "MTU of Eth interface\n",                   0,                   .uptr=NULL,       .defuintval=1500,    TYPE_UINT,       0}, \
@@ -94,7 +96,6 @@
 #define ORAN_FH_CONFIG_T1A_CP_UL "T1a_cp_ul"
 #define ORAN_FH_CONFIG_T1A_UP "T1a_up"
 #define ORAN_FH_CONFIG_TA4 "Ta4"
-#define ORAN_FH_CONFIG_VLAN_TAG "vlan_tag" // only needed for M-plane
 
 #define ORAN_FH_HLP_CPLT " parameter of RU in list form (Min&Max, length 2!)\n"
 
@@ -104,7 +105,6 @@
   {ORAN_FH_CONFIG_T1A_CP_UL,    "T1a_cp_ul" ORAN_FH_HLP_CPLT,  PARAMFLAG_MANDATORY, .uptr=NULL, .defintarrayval=0, TYPE_UINTARRAY, 0}, \
   {ORAN_FH_CONFIG_T1A_UP,       "T1a_up" ORAN_FH_HLP_CPLT,     PARAMFLAG_MANDATORY, .uptr=NULL, .defintarrayval=0, TYPE_UINTARRAY, 0}, \
   {ORAN_FH_CONFIG_TA4,          "Ta4" ORAN_FH_HLP_CPLT,        PARAMFLAG_MANDATORY, .uptr=NULL, .defintarrayval=0, TYPE_UINTARRAY, 0}, \
-  {ORAN_FH_CONFIG_VLAN_TAG,     "VLAN tag",                    PARAMFLAG_MANDATORY, .uptr=NULL, .defintarrayval=0, TYPE_UINTARRAY, 0}, \
 }
 // clang-format on
 
