@@ -344,6 +344,10 @@ __attribute__((__visibility__("default"))) int transport_init(openair0_device *d
     ret = get_mplane(&ru_session_list.ru_session[i], &operational_ds);
     AssertFatal(ret == 0, "Unable to continue with CU-planes configuration.\n");
   }
+
+  // the following is just temporary
+  bool success = get_xran_config(openair0_cfg, &fh_init, fh_config);
+  AssertFatal(success, "cannot get configuration for xran\n");
 #endif
   eth->oran_priv = oai_oran_initialize(&fh_init, fh_config);
   AssertFatal(eth->oran_priv != NULL, "can not initialize fronthaul");
