@@ -278,6 +278,16 @@ int xran_fh_rx_read_slot(ru_info_t *ru, int *frame, int *slot)
 #ifndef USE_POLLING
   // pull next even from oran_sync_fifo
   notifiedFIFO_elt_t *res = pullNotifiedFIFO(&oran_sync_fifo);
+
+  notifiedFIFO_elt_t *f;
+  while ((f = pollNotifiedFIFO(&oran_sync_fifo)) != NULL) {
+    oran_sync_info_t *old_info = NotifiedFifoData(res);
+    oran_sync_info_t *new_info = NotifiedFifoData(f);
+    LOG_E(PHY, "Detected double sync message %d.%d => %d.%d\n", old_info->f, old_info->sl, new_info->f, new_info->sl);
+    delNotifiedFIFO_elt(res);
+    res = f;
+  }
+
   oran_sync_info_t *info = NotifiedFifoData(res);
 
   *slot = info->sl;
