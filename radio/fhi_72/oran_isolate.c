@@ -43,6 +43,7 @@
 #include "mplane/init-mplane.h"
 #include "mplane/connect-mplane.h"
 #include "mplane/get-mplane.h"
+#include "mplane/xml/get-xml.h"
 #endif
 
 typedef struct {
@@ -343,6 +344,8 @@ __attribute__((__visibility__("default"))) int transport_init(openair0_device *d
     char *operational_ds = NULL;
     ret = get_mplane(&ru_session_list.ru_session[i], &operational_ds);
     AssertFatal(ret == 0, "Unable to continue with CU-planes configuration.\n");
+
+    bool synced = get_ptp_sync_status(operational_ds);
   }
 
   // the following is just temporary
