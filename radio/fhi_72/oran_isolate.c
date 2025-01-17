@@ -43,6 +43,7 @@
 #include "mplane/init-mplane.h"
 #include "mplane/connect-mplane.h"
 #include "mplane/get-mplane.h"
+#include "mplane/subscribe-mplane.h"
 #include "mplane/xml/get-xml.h"
 #endif
 
@@ -345,7 +346,21 @@ __attribute__((__visibility__("default"))) int transport_init(openair0_device *d
     ret = get_mplane(&ru_session_list.ru_session[i], &operational_ds);
     AssertFatal(ret == 0, "Unable to continue with CU-planes configuration.\n");
 
+    /* deviation for Benetel: RU must be in supervised mode before activating the carriers */
+    const char *supervision = "/o-ran-supervision:supervision-notification";
+    ret = subscribe_mplane(&ru_session_list.ru_session[i], supervision, NULL);
+    AssertFatal(ret == 0, "Unable to subscribe to %s\n", supervision);
+
     bool synced = get_ptp_sync_status(operational_ds);
+
+    const char *ptp_filter = "/o-ran-sync:synchronization-state-change";
+    bool ptp_state = synced;
+    ret = subscribe_mplane(&ru_session_list.ru_session[i], ptp_filter, &ptp_state);
+    AssertFatal(ret == 0, "Unable to subscribe to %s\n", ptp_filter);
+
+    if (ptp_state) {
+
+    }
   }
 
   // the following is just temporary

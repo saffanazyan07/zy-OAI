@@ -3,6 +3,7 @@ add_library(oran_fhlib_5g_mplane MODULE
             connect-mplane.c
             rpc-send-recv.c
             get-mplane.c
+            subscribe-mplane.c
             xml/get-xml.c
 )
 
