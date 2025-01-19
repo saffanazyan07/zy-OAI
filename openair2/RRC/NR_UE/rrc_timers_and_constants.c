@@ -94,6 +94,13 @@ void nr_rrc_handle_timers(NR_UE_RRC_INST_t *rrc)
     nr_rrc_going_to_IDLE(rrc, RRC_CONNECTION_FAILURE, NULL);
   }
 
+  bool t302_expired = nr_timer_tick(&timers->T302);
+  // 5.3.14.4 in 38.331
+  // consider the barring for this Access Category to be alleviated
+  if (t302_expired) {
+    handle_302_expired_stopped(rrc);
+  }
+
   bool t304_expired = nr_timer_tick(&timers->T304);
   if(t304_expired) {
     LOG_W(NR_RRC, "Timer T304 expired\n");

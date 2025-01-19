@@ -64,6 +64,7 @@ void *rrc_nrue(void *args_p);
 
 void nr_rrc_handle_timers(NR_UE_RRC_INST_t *rrc);
 void handle_rlf_detection(NR_UE_RRC_INST_t *rrc);
+void handle_302_expired_stopped(NR_UE_RRC_INST_t *rrc);
 
 /**\brief RRC NSA UE task.
    \param void *args_p Pointer on arguments to start the task. */

@@ -205,7 +205,7 @@ typedef struct rrcPerNB {
 typedef struct NR_UE_RRC_INST_s {
   instance_t ue_id;
   rrcPerNB_t perNB[NB_CNX_UE];
-
+  bool access_barred;
   rnti_t rnti;
   uint32_t phyCellID;
   long arfcn_ssb;
