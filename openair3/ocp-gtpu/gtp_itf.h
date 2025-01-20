@@ -1,14 +1,40 @@
 #ifndef __GTPUNEW_ITF_H__
 #define __GTPUNEW_ITF_H__
 
+#include <stdint.h>
+#include <limits.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+
 #define GTPNOK -1
 
 # define GTPU_HEADER_OVERHEAD_MAX 64
 
+#include "common/platform_types.h"
 #include "common/utils/hashtable/hashtable.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/* forward declaration */
+struct protocol_ctxt_s;
+typedef struct protocol_ctxt_s protocol_ctxt_t;
+struct gtpv1u_enb_create_tunnel_req_s;
+typedef struct gtpv1u_enb_create_tunnel_req_s gtpv1u_enb_create_tunnel_req_t;
+struct gtpv1u_enb_create_tunnel_resp_s;
+typedef struct gtpv1u_enb_create_tunnel_resp_s gtpv1u_enb_create_tunnel_resp_t;
+struct gtpv1u_enb_delete_tunnel_req_s;
+typedef struct gtpv1u_enb_delete_tunnel_req_s gtpv1u_enb_delete_tunnel_req_t;
+struct gtpv1u_enb_create_x2u_tunnel_req_s;
+typedef struct gtpv1u_enb_create_x2u_tunnel_req_s gtpv1u_enb_create_x2u_tunnel_req_t;
+struct gtpv1u_enb_create_x2u_tunnel_resp_s;
+typedef struct gtpv1u_enb_create_x2u_tunnel_resp_s gtpv1u_enb_create_x2u_tunnel_resp_t;
+struct gtpv1u_gnb_create_tunnel_req_s;
+typedef struct gtpv1u_gnb_create_tunnel_req_s gtpv1u_gnb_create_tunnel_req_t;
+struct gtpv1u_gnb_create_tunnel_resp_s;
+typedef struct gtpv1u_gnb_create_tunnel_resp_s gtpv1u_gnb_create_tunnel_resp_t;
+struct gtpv1u_gnb_delete_tunnel_req_s;
+typedef struct gtpv1u_gnb_delete_tunnel_req_s gtpv1u_gnb_delete_tunnel_req_t;
 
   typedef bool (*gtpCallback)(protocol_ctxt_t  *ctxt_pP,
                               const srb_flag_t     srb_flagP,
@@ -115,7 +141,7 @@ extern "C" {
     hash_table_t         *ue_mapping;
   } gtpv1u_data_t;
 #define GTPV1U_BEARER_OFFSET 3
-#define GTPV1U_MAX_BEARERS_ID     (max_val_LTE_DRB_Identity - GTPV1U_BEARER_OFFSET)
+#define GTPV1U_MAX_BEARERS_ID     (32 - GTPV1U_BEARER_OFFSET) /* max_val_LTE_DRB_Identity */
   typedef enum {
     BEARER_DOWN = 0,
     BEARER_IN_CONFIG,
