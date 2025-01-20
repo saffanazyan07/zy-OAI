@@ -53,11 +53,10 @@
   </testCase>
 
   <testCase id="110000">
-    <class>Pull_Cluster_Image</class>
-    <desc>Pull Images from Cluster</desc>
-    <oc_project>oaicicd-ran</oc_project>
+    <class>Pull_Local_Registry</class>
+    <desc>Pull Images from Local Registry</desc>
+    <svr_id>0</svr_id>
     <images>oai-gnb-fhi72</images>
-    <node>cacofonix</node>
   </testCase>
 
   <testCase id="800813">

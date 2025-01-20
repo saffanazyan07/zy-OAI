@@ -64,21 +64,21 @@ adb_ue_2:
 oc-cn5g:
   Host: avra
   Namespace: "oaicicd-core-for-ci-ran"
-  CNPath: "/opt/oai-cn5g-fed-develop-2024-april-00102"
+  CNPath: "/opt/oai-cn5g-fed-develop-2025-jan"
   NetworkScript: echo "inet 172.21.6.102"
   RunIperf3Server: False
 
 oc-cn5g-20897:
   Host: cacofonix
   Namespace: "oaicicd-core-for-fhi72"
-  CNPath: "/opt/oai-cn5g-fed-develop-2024-april-20897"
+  CNPath: "/opt/oai-cn5g-fed-develop-2025-jan"
   NetworkScript: echo "inet 172.21.6.105"
   RunIperf3Server: False
 
 oc-cn5g-20897-aerial2:
   Host: aerial2
-  Namespace: "oaicicd-core-for-fhi72"
-  CNPath: "/opt/oai-cn5g-fed-develop-2024-april-20897"
+  Namespace: "oaicicd-core-for-nvidia-aerial"
+  CNPath: "/opt/oai-cn5g-fed-develop-2025-jan"
   NetworkScript: echo "inet 172.21.6.105"
   RunIperf3Server: False
 

@@ -129,19 +129,9 @@ class Cluster:
 
 	def _recreate_entitlements(self):
 		# recreating entitlements, don't care if deletion fails
-		self.cmd.run('oc delete secret etc-pki-entitlement')
-		ret = self.cmd.run('ls /etc/pki/entitlement/???????????????????.pem | tail -1', silent=True)
-		regres1 = re.search(r"/etc/pki/entitlement/[0-9]+.pem", ret.stdout)
-		ret = self.cmd.run('ls /etc/pki/entitlement/???????????????????-key.pem | tail -1', silent=True)
-		regres2 = re.search(r"/etc/pki/entitlement/[0-9]+-key.pem", ret.stdout)
-		if regres1 is None or regres2 is None:
-			logging.error("could not find entitlements")
-			return False
-		file1 = regres1.group(0)
-		file2 = regres2.group(0)
-		ret = self.cmd.run(f'oc create secret generic etc-pki-entitlement --from-file {file1} --from-file {file2}')
-		regres = re.search(r"secret/etc-pki-entitlement created", ret.stdout)
-		if ret.returncode != 0 or regres is None:
+		self.cmd.run(f'oc delete secret etc-pki-entitlement')
+		ret = self.cmd.run(f"oc get secret etc-pki-entitlement -n openshift-config-managed -o json | jq 'del(.metadata.resourceVersion)' | jq 'del(.metadata.creationTimestamp)' | jq 'del(.metadata.uid)' | jq 'del(.metadata.namespace)' | oc create -f -", silent=True)
+		if ret.returncode != 0:
 			logging.error("could not create secret/etc-pki-entitlement")
 			return False
 		return True

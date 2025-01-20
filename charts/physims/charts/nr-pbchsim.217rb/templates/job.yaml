@@ -18,6 +18,11 @@ spec:
       - name: physim
         image: "{{ .Values.global.image.repository }}:{{ .Values.global.image.version }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
+        {{- if .Values.global.resources.define}}
+        resources:
+          requests:
+            cpu: {{ .Values.global.resources.requests.cpu | quote }}
+        {{- end}}
         securityContext:
           {{- toYaml .Values.securityContext | nindent 12 }}
         env:
@@ -37,6 +42,6 @@ spec:
       nodeSelector:
          {{- toYaml .Values.global.nodeSelector | nindent 12 }}
       {{- end }}
-      {{- if .Values.global.nodeName.nrpbchsim217rb}}
+      {{- if .Values.global.nodeName}}
       nodeName: {{ .Values.global.nodeName.nrpbchsim217rb }}
       {{- end }}

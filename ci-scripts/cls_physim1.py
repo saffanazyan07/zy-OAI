@@ -137,9 +137,7 @@ class PhySim:
 			logging.debug(f'\u001B[1m   Now using project {ocProjectName}\u001B[0m')
 
 		# Using helm charts deployment
-		mySSH.command(f'grep -rl OAICICD_PROJECT ./charts/ | xargs sed -i -e "s#OAICICD_PROJECT#{ocProjectName}#"', '\$', 30)
-		mySSH.command(f'sed -i -e "s#TAG#{imageTag}#g" ./charts/physims/values.yaml', '\$', 6)
-		mySSH.command('helm install physim ./charts/physims/ --wait 2>&1 | tee -a cmake_targets/log/physim_helm_summary.txt', '\$', 30)
+		mySSH.command(f'helm install physim ./charts/physims/ --set global.image.version={imageTag} --wait 2>&1 | tee -a cmake_targets/log/physim_helm_summary.txt', '\$', 30)
 		if mySSH.getBefore().count('STATUS: deployed') == 0:
 			logging.error('\u001B[1m Deploying PhySim Failed using helm chart on OC Cluster\u001B[0m')
 			mySSH.command('helm uninstall physim | tee -a cmake_targets/log/physim_helm_summary.txt 2>&1', '\$', 30)
