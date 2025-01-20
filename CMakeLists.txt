@@ -1959,7 +1959,6 @@ target_link_libraries(nr-softmodem PRIVATE
 add_executable(nr-cuup
   executables/nr-cuup.c
   executables/softmodem-common.c
-  ${NR_RRC_DIR}/rrc_gNB_UE_context.c
   ${OPENAIR2_DIR}/E1AP/e1ap_setup.c
   ${NR_PDCP_SRC}
   ${NR_SDAP_SRC}
