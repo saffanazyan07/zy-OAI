@@ -25,6 +25,8 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-bool get_ptp_sync_status(const char *buffer);
+void *get_ru_xml_node(const char *buffer, const char *filter);
+
+void get_ru_xml_list(const char *buffer, const char *filter, char ***match_list, size_t *count);
 
 #endif /* GET_MPLANE_INFO_XML_H */

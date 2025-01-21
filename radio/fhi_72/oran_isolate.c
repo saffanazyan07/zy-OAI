@@ -52,6 +52,7 @@ typedef struct {
   rru_config_msg_type_t last_msg;
   int capabilities_sent;
   void *oran_priv;
+  void *mplane_priv;
 } oran_eth_state_t;
 
 notifiedFIFO_t oran_sync_fifo;
@@ -84,6 +85,10 @@ int trx_oran_stop(openair0_device *device)
   printf("ORAN: %s\n", __FUNCTION__);
   oran_eth_state_t *s = device->priv;
   xran_stop(s->oran_priv);
+#ifdef OAI_MPLANE
+  printf("[MPLANE] Stopping M-plane.\n");
+  disconnect_mplane(s->mplane_priv);
+#endif
   return (0);
 }
 
@@ -288,7 +293,76 @@ __attribute__((__visibility__("default"))) int transport_init(openair0_device *d
                                                               openair0_config_t *openair0_cfg,
                                                               eth_params_t *eth_params)
 {
-  oran_eth_state_t *eth;
+  oran_eth_state_t *eth =(oran_eth_state_t *)calloc(1, sizeof(oran_eth_state_t));
+  if (eth == NULL) {
+    AssertFatal(0 == 1, "out of memory\n");
+  }
+
+  struct xran_fh_init fh_init = {0};
+  struct xran_fh_config fh_config[XRAN_PORTS_NUM] = {0};
+
+#ifdef OAI_MPLANE
+  ru_session_list_t ru_session_list = {0};
+  int ret = init_mplane(&ru_session_list);
+  AssertFatal(ret == 0, "Cannot initialize M-plane\n");
+
+  for (size_t i = 0; i < ru_session_list.num_rus; i++) {
+    ru_session_t *ru_session = &ru_session_list.ru_session[i];
+    ret = connect_mplane(ru_session);
+    if (ret != 0) {
+      continue;
+    }
+
+    char *operational_ds = NULL;
+    ret = get_mplane(ru_session, &operational_ds);
+    AssertFatal(ret == 0, "Unable to continue with CU-planes configuration.\n");
+
+    bool ptp_state = false;
+    const char *sync_state = (char *)get_ru_xml_node(operational_ds, "sync-state");
+    if (strcmp(sync_state, "LOCKED") == 0) {
+      printf("[MPLANE] RU is already PTP synchronized.\n");
+      ptp_state = true;
+    }
+
+    /* 1) as per M-plane spec, RU must be in supervised mode,
+          where stream = NULL && filter = "/o-ran-supervision:supervision-notification";
+       2) additionally, we want to subscribe to PTP state change,
+          where stream = NULL && filter = "/o-ran-sync:synchronization-state-change";
+      => since more than one subscription at the time within one session is not possible, we will subscribe to all notifications */
+    const char *stream = "NETCONF";
+    const char *filter = NULL;
+    ru_session->ru_notif.ptp_state = ptp_state;
+    ret = subscribe_mplane(ru_session, stream, filter, (void *)&ru_session->ru_notif);
+
+    const int max_num_ant = RTE_MAX(openair0_cfg->tx_num_channels, openair0_cfg->rx_num_channels) / ru_session_list.num_rus;
+    ret = get_config_for_xran(operational_ds, max_num_ant, &ru_session->xran_mplane);
+
+    if (ru_session->ru_notif.ptp_state) {
+
+    }
+  }
+
+  eth->mplane_priv = (void *)&ru_session_list;
+
+  // the following is just temporary
+  bool success = get_xran_config(openair0_cfg, &fh_init, fh_config);
+  AssertFatal(success, "cannot get configuration for xran\n");
+#else
+  bool success = get_xran_config(openair0_cfg, &fh_init, fh_config);
+  AssertFatal(success, "cannot get configuration for xran\n");
+#endif
+
+  LOG_I(HW, "Initializing O-RAN 7.2 FH interface through xran library (compiled against headers of %s)\n", VERSIONX);
+  eth->oran_priv = oai_oran_initialize(&fh_init, fh_config);
+  AssertFatal(eth->oran_priv != NULL, "can not initialize fronthaul");
+  // create message queues for ORAN sync
+
+  initNotifiedFIFO(&oran_sync_fifo);
+
+  eth->e.flags = ETH_RAW_IF4p5_MODE;
+  eth->e.compression = NO_COMPRESS;
+  eth->e.if_name = eth_params->local_if_name;
+  eth->last_msg = (rru_config_msg_type_t)-1;
 
   device->Mod_id = 0;
   device->transp_type = ETHERNET_TP;
@@ -299,76 +373,13 @@ __attribute__((__visibility__("default"))) int transport_init(openair0_device *d
   device->trx_stop_func = trx_oran_stop;
   device->trx_set_freq_func = trx_oran_set_freq;
   device->trx_set_gains_func = trx_oran_set_gains;
-
   device->trx_write_func = trx_oran_write_raw;
   device->trx_read_func = trx_oran_read_raw;
-
   device->trx_ctlsend_func = trx_oran_ctlsend;
   device->trx_ctlrecv_func = trx_oran_ctlrecv;
-
   device->get_internal_parameter = get_internal_parameter;
-
-  eth = (oran_eth_state_t *)calloc(1, sizeof(oran_eth_state_t));
-  if (eth == NULL) {
-    AssertFatal(0 == 1, "out of memory\n");
-  }
-
-  eth->e.flags = ETH_RAW_IF4p5_MODE;
-  eth->e.compression = NO_COMPRESS;
-  eth->e.if_name = eth_params->local_if_name;
-  eth->oran_priv = NULL; // define_oran_pointer();
   device->priv = eth;
   device->openair0_cfg = &openair0_cfg[0];
 
-  eth->last_msg = (rru_config_msg_type_t)-1;
-
-  LOG_I(HW, "Initializing O-RAN 7.2 FH interface through xran library (compiled against headers of %s)\n", VERSIONX);
-
-  initNotifiedFIFO(&oran_sync_fifo);
-
-  struct xran_fh_init fh_init = {0};
-  struct xran_fh_config fh_config[XRAN_PORTS_NUM] = {0};
-#ifndef OAI_MPLANE
-  bool success = get_xran_config(openair0_cfg, &fh_init, fh_config);
-  AssertFatal(success, "cannot get configuration for xran\n");
-#else
-  ru_session_list_t ru_session_list = {0};
-  int ret = init_mplane(&ru_session_list);
-  AssertFatal(ret == 0, "Cannot initialize M-plane\n");
-
-  for (size_t i = 0; i < ru_session_list.num_rus; i++) {
-    ret = connect_mplane(&ru_session_list.ru_session[i]);
-    if (ret != 0) {
-      continue;
-    }
-
-    char *operational_ds = NULL;
-    ret = get_mplane(&ru_session_list.ru_session[i], &operational_ds);
-    AssertFatal(ret == 0, "Unable to continue with CU-planes configuration.\n");
-
-    /* deviation for Benetel: RU must be in supervised mode before activating the carriers */
-    const char *supervision = "/o-ran-supervision:supervision-notification";
-    ret = subscribe_mplane(&ru_session_list.ru_session[i], supervision, NULL);
-    AssertFatal(ret == 0, "Unable to subscribe to %s\n", supervision);
-
-    bool synced = get_ptp_sync_status(operational_ds);
-
-    const char *ptp_filter = "/o-ran-sync:synchronization-state-change";
-    bool ptp_state = synced;
-    ret = subscribe_mplane(&ru_session_list.ru_session[i], ptp_filter, &ptp_state);
-    AssertFatal(ret == 0, "Unable to subscribe to %s\n", ptp_filter);
-
-    if (ptp_state) {
-
-    }
-  }
-
-  // the following is just temporary
-  bool success = get_xran_config(openair0_cfg, &fh_init, fh_config);
-  AssertFatal(success, "cannot get configuration for xran\n");
-#endif
-  eth->oran_priv = oai_oran_initialize(&fh_init, fh_config);
-  AssertFatal(eth->oran_priv != NULL, "can not initialize fronthaul");
-  // create message queues for ORAN sync
   return 0;
 }

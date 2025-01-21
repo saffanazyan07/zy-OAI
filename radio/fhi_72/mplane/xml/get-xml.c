@@ -24,16 +24,12 @@
 #include <libxml/parser.h>
 #include <string.h>
 
-static bool find_ptp_status(xmlNode *node)
+static void *find_ru_xml_node(xmlNode *node, const char *filter)
 {
   for (xmlNode *cur_node = node; cur_node; cur_node = cur_node->next) {
     if (cur_node->type == XML_ELEMENT_NODE) {
-      if (strcmp((const char *)cur_node->name, "sync-state") == 0 && strcmp((char *)xmlNodeGetContent(cur_node), "LOCKED") == 0) {
-        printf("RU is already PTP synchronized\n");
-        return true;
-      }
-      if (find_ptp_status(cur_node->children)) {
-        return true;
+      if (strcmp((const char *)cur_node->name, filter) == 0) {
+        return (void *)xmlNodeGetContent(cur_node);
       }
       void *answer = find_ru_xml_node(cur_node->children, filter);
       if (answer != NULL) {
@@ -41,15 +37,40 @@ static bool find_ptp_status(xmlNode *node)
       }
     }
   }
-  return false;
+  return NULL;
 }
 
-bool get_ptp_sync_status(const char *buffer)
+void *get_ru_xml_node(const char *buffer, const char *filter)
 {
   // Initialize the xml file
   size_t len = strlen(buffer) + 1;
   xmlDoc *doc = xmlReadMemory(buffer, len, NULL, NULL, 0);
   xmlNode *root_element = xmlDocGetRootElement(doc);
 
-  return find_ptp_status(root_element->children);
+  return find_ru_xml_node(root_element->children, filter);
+}
+
+static void find_ru_xml_list(xmlNode *node, const char *filter, char ***match_list, size_t *count)
+{
+  for (xmlNode *cur_node = node; cur_node; cur_node = cur_node->next) {
+    if (cur_node->type == XML_ELEMENT_NODE) {
+      if (strcmp((const char *)cur_node->name, filter) == 0) {
+        *match_list = realloc(*match_list, (*count + 1) * sizeof(char *));
+        *match_list[*count] = (char *)xmlNodeGetContent(cur_node);
+        (*count)++;
+      } else {
+        find_ru_xml_list(cur_node->children, filter, match_list, count);
+      }
+    }
+  }
+}
+
+void get_ru_xml_list(const char *buffer, const char *filter, char ***match_list, size_t *count)
+{
+  // Initialize the xml file
+  size_t len = strlen(buffer) + 1;
+  xmlDoc *doc = xmlReadMemory(buffer, len, NULL, NULL, 0);
+  xmlNode *root_element = xmlDocGetRootElement(doc);
+
+  find_ru_xml_list(root_element->children, filter, match_list, count);
 }

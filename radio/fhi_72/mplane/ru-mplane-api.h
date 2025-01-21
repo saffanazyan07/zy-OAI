@@ -24,11 +24,18 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <stdbool.h>
+
+typedef struct {
+  bool ptp_state;
+  // to be extended with any notification callback
+
+} ru_notif_t;
 
 typedef struct {
   char *ru_mac_addr;
-  uint8_t mtu;
-  uint8_t iq_width;
+  uint32_t mtu;
+  int16_t iq_width;
   uint8_t prach_offset;
 
 } xran_mplane_t;
@@ -46,6 +53,7 @@ typedef struct {
   ru_mplane_config_t ru_mplane_config;
   void *session;
   xran_mplane_t xran_mplane;
+  ru_notif_t ru_notif;
 
 } ru_session_t;
 
@@ -55,5 +63,7 @@ typedef struct {
   char **du_key_pair;
 
 } ru_session_list_t;
+
+int get_config_for_xran(const char *buffer, const int max_num_ant, xran_mplane_t *xran_mplane);
 
 #endif /* RU_MPLANE_API_H */
