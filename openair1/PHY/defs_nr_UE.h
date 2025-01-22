@@ -631,8 +631,6 @@ typedef struct nr_rxtx_thread_data_s {
   PHY_VARS_NR_UE    *UE;
   int writeBlockSize;
   nr_phy_data_t phy_data;
-  int tx_wait_for_dlsch;
-  int rx_offset;
 } nr_rxtx_thread_data_t;
 
 typedef struct LDPCDecode_ue_s {

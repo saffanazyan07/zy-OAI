@@ -66,7 +66,6 @@ typedef struct {
   uint32_t Zc;
   /// Number of "Filler" bits
   uint32_t F;
-  void *harq;
   /// Encoder BG
   uint8_t BG;
   /// Interleaver outputs

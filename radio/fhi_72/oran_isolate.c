@@ -203,7 +203,6 @@ void oran_fh_if4p5_south_in(RU_t *ru, int *frame, int *slot)
   ru_info.prach_buf = ru->prach_rxsigF[0]; // index: [prach_oca][ant_id]
 
   RU_proc_t *proc = &ru->proc;
-  extern int sl_ahead;
   int f, sl;
   LOG_D(PHY, "Read rxdataF %p,%p\n", ru_info.rxdataF[0], ru_info.rxdataF[1]);
   start_meas(&ru->rx_fhaul);
@@ -217,8 +216,8 @@ void oran_fh_if4p5_south_in(RU_t *ru, int *frame, int *slot)
   int slots_per_frame = 10 << (ru->openair0_cfg.nr_scs_for_raster);
   proc->tti_rx = sl;
   proc->frame_rx = f;
-  proc->tti_tx = (sl + sl_ahead) % slots_per_frame;
-  proc->frame_tx = (sl > (slots_per_frame - 1 - sl_ahead)) ? (f + 1) & 1023 : f;
+  proc->tti_tx = (sl + ru->sl_ahead) % slots_per_frame;
+  proc->frame_tx = (sl > (slots_per_frame - 1 - ru->sl_ahead)) ? (f + 1) & 1023 : f;
 
   if (proc->first_rx == 0) {
     if (proc->tti_rx != *slot) {

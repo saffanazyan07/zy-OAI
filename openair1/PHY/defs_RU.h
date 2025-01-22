@@ -39,7 +39,6 @@
 #include "time_meas.h"
 #include "defs_common.h"
 #include "nfapi_nr_interface_scf.h"
-#include <executables/rt_profiling.h>
 #include "common/utils/threadPool/task_ans.h"
 #include "common/utils/threadPool/thread-pool.h"
 
@@ -663,8 +662,6 @@ typedef struct RU_t_s {
   int tpcores[16];
   /// number of cores for RU ThreadPool
   int num_tpcores;
-  /// structure for analyzing high-level RT measurements
-  rt_ru_profiling_t rt_ru_profiling;
   void* scopeData;
 } RU_t;
 

@@ -36,7 +36,6 @@
 #include "assertions.h"
 #include <common/utils/LOG/log.h>
 #include <common/utils/system.h>
-#include "rt_profiling.h"
 
 #include "PHY/types.h"
 
@@ -91,12 +90,6 @@ static void tx_func(processingData_L1tx_t *info)
   int slot_tx = info->slot;
   int frame_rx = info->frame_rx;
   int slot_rx = info->slot_rx;
-  int64_t absslot_tx = info->timestamp_tx / info->gNB->frame_parms.get_samples_per_slot(slot_tx, &info->gNB->frame_parms);
-  int64_t absslot_rx = absslot_tx - info->gNB->RU_list[0]->sl_ahead;
-  if (absslot_rx < 0) {
-    LOG_W(NR_PHY, "Slot ahead %d is larger than absslot_tx %ld. Cannot start TX yet.\n", info->gNB->RU_list[0]->sl_ahead, absslot_tx);
-    return;
-  }
   LOG_D(NR_PHY, "%d.%d running tx_func\n", frame_tx, slot_tx);
   PHY_VARS_gNB *gNB = info->gNB;
   module_id_t module_id = gNB->Mod_id;
@@ -134,8 +127,6 @@ static void tx_func(processingData_L1tx_t *info)
   if (tx_slot_type == NR_DOWNLINK_SLOT || tx_slot_type == NR_MIXED_SLOT || get_softmodem_params()->continuous_tx) {
     start_meas(&info->gNB->phy_proc_tx);
     phy_procedures_gNB_TX(info, frame_tx, slot_tx, 1);
-    const int rt_prof_idx = absslot_rx % RT_PROF_DEPTH;
-    clock_gettime(CLOCK_MONOTONIC, &info->gNB->rt_L1_profiling.return_L1_TX[rt_prof_idx]);
 
     PHY_VARS_gNB *gNB = info->gNB;
     processingData_RU_t syncMsgRU;
@@ -187,15 +178,6 @@ static void rx_func(processingData_L1_t *info)
   int frame_rx = info->frame_rx;
   int slot_rx = info->slot_rx;
   nfapi_nr_config_request_scf_t *cfg = &gNB->gNB_config;
-  int cumul_samples = gNB->frame_parms.get_samples_per_slot(0, &gNB->frame_parms);
-  int i = 1;
-  for (; i < gNB->frame_parms.slots_per_subframe / 2; i++)
-    cumul_samples += gNB->frame_parms.get_samples_per_slot(i, &gNB->frame_parms);
-  int samples = cumul_samples / i;
-  int64_t absslot_tx = info->timestamp_tx / samples;
-  int64_t absslot_rx = absslot_tx - gNB->RU_list[0]->sl_ahead;
-  int rt_prof_idx = absslot_rx % RT_PROF_DEPTH;
-  clock_gettime(CLOCK_MONOTONIC, &info->gNB->rt_L1_profiling.start_L1_RX[rt_prof_idx]);
 
   // *******************************************************************
 
@@ -253,7 +235,6 @@ static void rx_func(processingData_L1_t *info)
 #endif
   }
 
-  clock_gettime(CLOCK_MONOTONIC, &info->gNB->rt_L1_profiling.return_L1_RX[rt_prof_idx]);
 }
 
 static size_t dump_L1_meas_stats(PHY_VARS_gNB *gNB, RU_t *ru, char *output, size_t outputlen) {
