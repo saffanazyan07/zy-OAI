@@ -25,7 +25,9 @@
 #
 #---------------------------------------------------------------------
 
-FROM ran-base:latest AS ran-build
+FROM ran-build:latest AS ran-build-prev
+FROM ran-base:latest AS ran-base
+
 ARG BUILD_OPTION
 
 ARG E2AP_VERSION=E2AP_V3
@@ -34,12 +36,13 @@ ARG KPM_VERSION=KPM_V3_00
 RUN rm -Rf /oai-ran
 WORKDIR /oai-ran
 COPY . .
+COPY --from=ran-build-prev /oai-ran/cmake_targets/ran_build/build /oai-ran/cmake_targets/ran_build/build
 
 # build all targets so final targets can be created afterwards
 RUN /bin/sh oaienv && \
     cd cmake_targets && \
     mkdir -p log && \
-    ./build_oai -c --ninja \
+    ./build_oai --ninja \
       --eNB --gNB --RU --UE --nrUE \
       --build-lib "telnetsrv enbscope uescope nrscope" \
       -w USRP -t Ethernet \

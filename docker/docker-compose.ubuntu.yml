@@ -1,0 +1,67 @@
+services:
+  ran-base:
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile.base.ubuntu22
+      tags:
+        - ran-base:${OAI_BASE_TAG:-latest}
+  ran-build:
+    image: ${OAI_BUILD_BASE:-ran-base}:${OAI_BASE_TAG:-latest}
+    user: $${UID_GID:0:0}
+    environment:
+      - CCACHE_DIR=/ccache
+    volumes:
+      - /etc/passwd:/etc/passwd:ro
+      - /etc/group:/etc/group:ro
+      - ${CCACHE_LOCATION:-/tmp}:/ccache/
+      - ../:/oai-ran/
+      - ./ran-build.sh:/oai-ran/ran-build.sh
+    command: bash -c "/oai-ran/ran-build.sh ${BUILD_OPTS:-}"
+  ran-build-incr-init:
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile.build.init
+      tags:
+        - ran-build:${OAI_BASE_TAG:-latest}
+  ran-build-incr:
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile.build.ubuntu22
+      tags:
+        - ran-build:${OAI_BASE_TAG:-latest}
+  oai-gnb:
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile.gNB.ubuntu22
+      tags:
+        - ${REGISTRY:-}oai-gnb:${OAI_TAG:-latest}
+  oai-enb:
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile.eNB.ubuntu22
+      tags:
+        - ${REGISTRY:-}oai-enb:${OAI_TAG:-latest}
+  oai-nr-ue:
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile.nrUE.ubuntu22
+      tags:
+        - ${REGISTRY:-}oai-nr-ue:${OAI_TAG:-latest}
+  oai-lte-ue:
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile.nrUE.ubuntu22
+      tags:
+        - ${REGISTRY:-}oai-lte-ue:${OAI_TAG:-latest}
+  oai-lte-ru:
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile.lteRU.ubuntu22
+      tags:
+        - ${REGISTRY:-}oai-lte-ru:${OAI_TAG:-latest}
+  oai-nr-cuup:
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile.nr-cuup.ubuntu22
+      tags:
+        - ${REGISTRY:-}oai-nr-cuup:${OAI_TAG:-latest}
