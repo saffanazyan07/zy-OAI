@@ -314,6 +314,16 @@ int nr_dlsch_encoding(PHY_VARS_gNB *gNB,
 
   gNB->nrLDPC_coding_interface.nrLDPC_coding_encoder(&slot_parameters);
 
+  for (int dlsch_id=0; dlsch_id<msgTx->num_pdsch_slot; dlsch_id++) {
+    nrLDPC_TB_encoding_parameters_t *TB_parameters = &TBs[dlsch_id];
+    for (int r = 0; r < TB_parameters->C; r++) {
+      nrLDPC_segment_encoding_parameters_t *segment_parameters = &TB_parameters->segments[r];
+      merge_meas(dlsch_interleaving_stats, &segment_parameters->ts_interleave);
+      merge_meas(dlsch_rate_matching_stats, &segment_parameters->ts_rate_match);
+      // merge_meas(, &segment_parameters->ts_ldpc_encode);
+    }
+  }
+
   VCD_SIGNAL_DUMPER_DUMP_FUNCTION_BY_NAME(VCD_SIGNAL_DUMPER_FUNCTIONS_gNB_DLSCH_ENCODING, VCD_FUNCTION_OUT);
   return 0;
 }
