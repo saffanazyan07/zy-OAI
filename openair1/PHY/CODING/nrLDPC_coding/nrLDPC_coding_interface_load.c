@@ -70,5 +70,9 @@ int load_nrLDPC_coding_interface(char *version, nrLDPC_coding_interface_t *itf)
 
 int free_nrLDPC_coding_interface(nrLDPC_coding_interface_t *interface)
 {
-  return interface->nrLDPC_coding_shutdown();
+  if (interface->nrLDPC_coding_shutdown) {
+    return interface->nrLDPC_coding_shutdown();
+  } else {
+    return -1;
+  }
 }

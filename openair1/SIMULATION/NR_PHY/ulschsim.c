@@ -603,8 +603,6 @@ int main(int argc, char **argv)
     free(gNB->gNB_config.tdd_table.max_tdd_periodicity_list[i].max_num_of_symbol_per_slot_list);
   free(gNB->gNB_config.tdd_table.max_tdd_periodicity_list);
 
-  free_nrLDPC_coding_interface(&gNB->nrLDPC_coding_interface);
-
   term_nr_ue_signal(UE, 1);
   free(UE);
 

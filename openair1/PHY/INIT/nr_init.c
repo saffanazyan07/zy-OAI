@@ -292,6 +292,9 @@ void phy_free_nr_gNB(PHY_VARS_gNB *gNB)
     free_and_zero(pusch_vars->llr);
   } // ULSCH_id
   free(gNB->pusch_vars);
+
+  free_nrLDPC_coding_interface(&gNB->nrLDPC_coding_interface);
+
 }
 
 //Adding nr_schedule_handler

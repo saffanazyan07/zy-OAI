@@ -573,6 +573,7 @@ int main(int argc, char **argv)
     }
   }
 
+  free_nrLDPC_coding_interface(&nrLDPC_coding_interface);
   free(pckg);
   return 0;
 }
