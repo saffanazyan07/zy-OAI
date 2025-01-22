@@ -208,7 +208,7 @@ class Cluster:
 			return -1
 		return int(result.group("size"))
 
-	def _deploy_pod(self, filename, timeout = 30):
+	def _deploy_pod(self, filename, timeout = 120):
 		ret = self.cmd.run(f'oc create -f {filename}')
 		result = re.search(f'pod/(?P<pod>[a-zA-Z0-9_\-]+) created', ret.stdout)
 		if result is None:
@@ -216,11 +216,9 @@ class Cluster:
 			return None
 		pod = result.group("pod")
 		logging.debug(f'checking if pod {pod} is in Running state')
-		while timeout > 0:
-			ret = self.cmd.run(f'oc get pod {pod} -o json | jq -Mc .status.phase', silent=True)
-			if re.search('"Running"', ret.stdout) is not None: return pod
-			timeout -= 1
-			time.sleep(1)
+		ret = self.cmd.run(f'oc wait --for=condition=ready pod {pod} --timeout={timeout}s', silent=True)
+		if ret.returncode == 0:
+			return pod
 		logging.error(f'pod {pod} did not reach Running state')
 		self._undeploy_pod(filename)
 		return None
