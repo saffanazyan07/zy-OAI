@@ -816,9 +816,17 @@ static void cuup_notify_reestablishment(gNB_RRC_INST *rrc, gNB_RRC_UE_t *ue_p)
     /* increase DRB to modify counter */
     pdu_e1->numDRB2Modify += 1;
   }
+
+#if 0
+  /* According to current understanding of E1 specifications, it is not needed
+   * to send security information because this does not change.
+   * But let's keep the code here in case it's needed.
+   */
   // Always send security information
   req.secInfo = malloc_or_fail(sizeof(*req.secInfo));
   fill_security_info(rrc, ue_p, req.secInfo);
+#endif
+
   /* Send E1 Bearer Context Modification Request (3GPP TS 38.463) */
   sctp_assoc_t assoc_id = get_existing_cuup_for_ue(rrc, ue_p);
   rrc->cucp_cuup.bearer_context_mod(assoc_id, &req);
