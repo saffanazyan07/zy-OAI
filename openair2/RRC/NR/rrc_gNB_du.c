@@ -429,10 +429,8 @@ static int invalidate_du_connections(gNB_RRC_INST *rrc, sctp_assoc_t assoc_id)
       cu_remove_f1_ue_data(ue_id);
       ue_data.du_assoc_id = 0;
       cu_add_f1_ue_data(ue_id, &ue_data);
-      rrc_gNB_send_NGAP_UE_CONTEXT_RELEASE_REQ(0,
-                                               ue_context_p,
-                                               NGAP_CAUSE_RADIO_NETWORK,
-                                               NGAP_CAUSE_RADIO_NETWORK_RADIO_CONNECTION_WITH_UE_LOST);
+      ngap_cause_t cause = {.type = NGAP_CAUSE_RADIO_NETWORK, .value = NGAP_CAUSE_RADIO_NETWORK_RADIO_CONNECTION_WITH_UE_LOST};
+      rrc_gNB_send_NGAP_UE_CONTEXT_RELEASE_REQ(0, ue_context_p, cause);
       count++;
     }
   }

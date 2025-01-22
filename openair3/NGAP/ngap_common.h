@@ -36,10 +36,10 @@
 #ifndef NGAP_COMMON_H_
 #define NGAP_COMMON_H_
 
-#include <netinet/sctp.h>
 #include "common/utils/LOG/log.h"
 #include "oai_asn1.h"
 #include "ngap_msg_includes.h"
+#include "openair2/COMMON/ngap_messages_types.h"
 
 /* Checking version of ASN1C compiler */
 #if (ASN1C_ENVIRONMENT_VERSION < ASN1C_MINIMUM_VERSION)
@@ -83,6 +83,8 @@ extern int asn1_xer_print;
 /** \brief Function callback prototype.
  **/
 typedef int (*ngap_message_decoded_callback)(sctp_assoc_t assoc_id, uint32_t stream, NGAP_NGAP_PDU_t *pdu);
+
+void encode_ngap_cause(NGAP_Cause_t *out, const ngap_cause_t *in);
 
 /** @}*/
 

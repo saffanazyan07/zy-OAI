@@ -90,6 +90,16 @@ static const nr_rrc_cuup_container_t *select_cuup_round_robin(size_t n_t, const 
   return NULL;
 }
 
+bool is_cuup_associated(gNB_RRC_INST *rrc)
+{
+  nr_rrc_cuup_container_t *cuup = NULL;
+  RB_FOREACH(cuup, rrc_cuup_tree, &rrc->cuups) {
+    return true;
+  }
+  LOG_W(NR_RRC, "no CU-UP associated to CU-CP\n");
+  return false;
+}
+
 bool ue_associated_to_cuup(const gNB_RRC_INST *rrc, const gNB_RRC_UE_t *ue)
 {
   f1_ue_data_t ue_data = cu_get_f1_ue_data(ue->rrc_ue_id);

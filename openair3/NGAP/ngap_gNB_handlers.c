@@ -1141,8 +1141,8 @@ static int ngap_gNB_handle_pdusession_modify_request(sctp_assoc_t assoc_id, uint
         item_p = (NGAP_PDUSessionResourceModifyItemModReq_t *)ie->value.choice.PDUSessionResourceModifyListModReq.list.array[nb_of_pdusessions_failed];
         pdusession_failed_t *tmp = &msg->pdusessions_failed[nb_of_pdusessions_failed];
         tmp->pdusession_id = item_p->pDUSessionID;
-        tmp->cause = NGAP_CAUSE_RADIO_NETWORK;
-        tmp->cause_value = NGAP_CauseRadioNetwork_unknown_local_UE_NGAP_ID;
+        tmp->cause.type = NGAP_CAUSE_RADIO_NETWORK;
+        tmp->cause.value = NGAP_CauseRadioNetwork_unknown_local_UE_NGAP_ID;
       }
     msg->nb_of_pdusessions_failed = ie->value.choice.PDUSessionResourceModifyListModReq.list.count;
     ngap_gNB_pdusession_modify_resp(amf_desc_p->ngap_gNB_instance->instance,msg);

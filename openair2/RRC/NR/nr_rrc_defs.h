@@ -116,8 +116,7 @@ typedef struct pdu_session_param_s {
   pdusession_t param;
   pdu_session_status_t status;
   uint8_t xid; // transaction_id
-  ngap_Cause_t cause;
-  uint8_t cause_value;
+  ngap_cause_t cause;
 } rrc_pdu_session_param_t;
 
 /**

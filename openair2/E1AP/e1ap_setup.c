@@ -67,6 +67,17 @@ static void get_NGU_S1U_addr(char **addr, uint16_t *port)
   return;
 }
 
+/**
+ * @brief Prepares an E1AP_REGISTER_REQ message for gNB-CU-UP/CP registration
+ *
+ * This function creates and populates an E1AP_REGISTER_REQ message using system
+ * configuration parameters. It supports both integrated CU-CP/UP and E1 splits,
+ * fetching RAN, PLMN, NSSAIs, and network configuration.
+ *
+ * @param entity Specifies the entity type (CU-CP or CU-UP. If NULL, assumes integrated CU-CP/UP
+ *
+ * @return A pointer to the E1AP_REGISTER_REQ message or NULL on allocation failure
+ */
 MessageDef *RCconfig_NR_CU_E1(const E1_t *entity)
 {
   MessageDef *msgConfig = itti_alloc_new_message(TASK_GNB_APP, 0, E1AP_REGISTER_REQ);

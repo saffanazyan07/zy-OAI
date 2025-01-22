@@ -1281,6 +1281,13 @@ static void e1apCUUP_send_SETUP_REQUEST(sctp_assoc_t assoc_id, e1ap_setup_req_t 
   e1ap_encode_send(UPtype, assoc_id, &pdu, 0, __func__);
 }
 
+/**
+ * @brief SCTP association response handler (CU-CP to/from CU-UP)
+ * it behaves differently depending on the type of E1 instance,
+ * CUCP: informs RRC of E1 connection loss with CU-UP
+ * CUUP: triggers a new SCTP association request by sending an ITTI to the CU-UP task
+ * @param type indicates whether the handler is for the CU-CP or CU-UP
+ */
 static void e1_task_handle_sctp_association_resp(E1_t type,
                                                  instance_t instance,
                                                  sctp_new_association_resp_t *sctp_new_association_resp)
@@ -1288,24 +1295,26 @@ static void e1_task_handle_sctp_association_resp(E1_t type,
   DevAssert(sctp_new_association_resp != NULL);
   getCxtE1(instance)->sockState = sctp_new_association_resp->sctp_state;
 
-  if (sctp_new_association_resp->sctp_state == SCTP_STATE_SHUTDOWN) {
-    LOG_I(E1AP, "Received SCTP shutdown for assoc_id %d, removing CUCP endpoint\n", sctp_new_association_resp->assoc_id);
-    /* inform RRC that the CU-UP is gone */
-    MessageDef *message_p = itti_alloc_new_message(TASK_CUCP_E1, 0, E1AP_LOST_CONNECTION);
-    message_p->ittiMsgHeader.originInstance = sctp_new_association_resp->assoc_id;
-    itti_send_msg_to_task(TASK_RRC_GNB, instance, message_p);
-    return;
-  }
-
+  // Handle SCTP establishment failure
   if (sctp_new_association_resp->sctp_state != SCTP_STATE_ESTABLISHED) {
-    LOG_W(E1AP,
-          "Received unsuccessful result for SCTP association (%u), instance "
-          "%ld, cnx_id %u\n",
-          sctp_new_association_resp->sctp_state,
-          instance,
-          sctp_new_association_resp->ulp_cnx_id);
-    long timer_id; // if we want to cancel timer
-    timer_setup(1, 0, TASK_CUUP_E1, 0, TIMER_ONE_SHOT, NULL, &timer_id);
+    if (type == CPtype) {
+      // Inform RRC that the CU-UP is gone
+      LOG_W(E1AP,
+            "Lost connection (%s) with CU-UP (assoc_id %d)\n",
+            sctp_state_s[sctp_new_association_resp->sctp_state],
+            sctp_new_association_resp->assoc_id);
+      MessageDef *message_p = itti_alloc_new_message(TASK_CUCP_E1, 0, E1AP_LOST_CONNECTION);
+      message_p->ittiMsgHeader.originInstance = sctp_new_association_resp->assoc_id;
+      itti_send_msg_to_task(TASK_RRC_GNB, instance, message_p);
+    } else if (type == UPtype) {
+      // Trigger new E1 association when no CU-CP is connected
+      LOG_W(E1AP,
+            "Lost connection (%s) with CU-CP (assoc_id %d): trigger new E1 association\n",
+            sctp_state_s[sctp_new_association_resp->sctp_state],
+            sctp_new_association_resp->assoc_id);
+      long timer_id;
+      timer_setup(1, 0, TASK_CUUP_E1, 0, TIMER_ONE_SHOT, NULL, &timer_id);
+    }
     return;
   }
 
@@ -1373,7 +1382,11 @@ void e1_task_handle_sctp_association_ind(E1_t type, instance_t instance, sctp_ne
     inst->cuup.assoc_id = sctp_new_ind->assoc_id;
 }
 
-void e1apHandleTimer(instance_t myInstance)
+/**
+ * @brief Handle the timer triggered by a connection loss with CU-CP
+ *        it uses a stored network configuration and send a new SCTP association request
+ */
+static void e1apHandleTimer(instance_t myInstance)
 {
   LOG_W(E1AP, "Try to reconnect to CP\n");
   if (getCxtE1(myInstance)->sockState != SCTP_STATE_ESTABLISHED)
@@ -1483,6 +1496,8 @@ void *E1AP_CUUP_task(void *arg)
     LOG_D(E1AP, "CUUP received %s for instance %ld\n", messages_info[msgType].name, myInstance);
     switch (msgType) {
       case E1AP_REGISTER_REQ: {
+        /* E1AP Register Request triggered at startup
+        create a new E1 instance and send the first association request */
         e1ap_register_req_t *reg_req = &E1AP_REGISTER_REQ(msg);
         createE1inst(UPtype, myInstance, reg_req->gnb_id, &reg_req->net_config, &reg_req->setup_req);
         e1_task_send_sctp_association_req(TASK_CUUP_E1, myInstance, &reg_req->net_config);
@@ -1490,6 +1505,8 @@ void *E1AP_CUUP_task(void *arg)
 
       case SCTP_NEW_ASSOCIATION_RESP:
         e1_task_handle_sctp_association_resp(UPtype, myInstance, &msg->ittiMsg.sctp_new_association_resp);
+        if (getCxtE1(myInstance)->sockState == SCTP_STATE_ESTABLISHED)
+          LOG_A(E1AP, "E1 connection established (%s)\n", sctp_state_s[getCxtE1(myInstance)->sockState]);
         break;
 
       case SCTP_DATA_IND:
@@ -1497,6 +1514,7 @@ void *E1AP_CUUP_task(void *arg)
         break;
 
       case TIMER_HAS_EXPIRED:
+        // Timer triggered by a connection loss with CU-CP
         e1apHandleTimer(myInstance);
         break;
 

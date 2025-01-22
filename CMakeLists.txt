@@ -346,6 +346,7 @@ set(NGAP_DIR ${OPENAIR3_DIR}/NGAP)
 include_directories ("${NGAP_DIR}")
 add_library(ngap
   ${NGAP_DIR}/ngap_gNB.c
+  ${NGAP_DIR}/ngap_common.c
   ${NGAP_DIR}/ngap_gNB_context_management_procedures.c
   ${NGAP_DIR}/ngap_gNB_decoder.c
   ${NGAP_DIR}/ngap_gNB_encoder.c
