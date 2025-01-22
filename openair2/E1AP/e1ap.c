@@ -451,6 +451,21 @@ static int fill_BEARER_CONTEXT_MODIFICATION_REQUEST(e1ap_bearer_mod_req_t *const
   ieC2->criticality                = E1AP_Criticality_reject;
   ieC2->value.present              = E1AP_BearerContextModificationRequestIEs__value_PR_GNB_CU_UP_UE_E1AP_ID;
   ieC2->value.choice.GNB_CU_UP_UE_E1AP_ID = bearerCxt->gNB_cu_up_ue_id;
+   /* optional */
+  /* Security Information */
+  if (bearerCxt->secInfo) {
+    asn1cSequenceAdd(out->protocolIEs.list, E1AP_BearerContextModificationRequestIEs_t, ie);
+    ie->id = E1AP_ProtocolIE_ID_id_SecurityInformation;
+    ie->criticality = E1AP_Criticality_reject;
+    ie->value.present = E1AP_BearerContextModificationRequestIEs__value_PR_SecurityInformation;
+    E1AP_SecurityAlgorithm_t *securityAlgorithm = &ie->value.choice.SecurityInformation.securityAlgorithm;
+    E1AP_UPSecuritykey_t *uPSecuritykey = &ie->value.choice.SecurityInformation.uPSecuritykey;
+    securityAlgorithm->cipheringAlgorithm = bearerCxt->secInfo->cipheringAlgorithm;
+    OCTET_STRING_fromBuf(&uPSecuritykey->encryptionKey, bearerCxt->secInfo->encryptionKey, E1AP_SECURITY_KEY_SIZE);
+    asn1cCallocOne(securityAlgorithm->integrityProtectionAlgorithm, bearerCxt->secInfo->integrityProtectionAlgorithm);
+    asn1cCalloc(uPSecuritykey->integrityProtectionKey, protKey);
+    OCTET_STRING_fromBuf(protKey, bearerCxt->secInfo->integrityProtectionKey, E1AP_SECURITY_KEY_SIZE);
+  }
   /* optional */
   /* c3. E1AP_ProtocolIE_ID_id_System_BearerContextModificationRequest */
   asn1cSequenceAdd(out->protocolIEs.list, E1AP_BearerContextModificationRequestIEs_t, ieC3);
@@ -605,6 +620,26 @@ static void extract_BEARER_CONTEXT_MODIFICATION_REQUEST(const E1AP_E1AP_PDU_t *p
         DevAssert(ie->value.present == E1AP_BearerContextModificationRequestIEs__value_PR_GNB_CU_UP_UE_E1AP_ID);
         bearerCxt->gNB_cu_up_ue_id = ie->value.choice.GNB_CU_UP_UE_E1AP_ID;
         break;
+
+      case E1AP_ProtocolIE_ID_id_SecurityInformation: {
+        DevAssert(ie->criticality == E1AP_Criticality_reject);
+        DevAssert(ie->value.present == E1AP_BearerContextModificationRequestIEs__value_PR_SecurityInformation);
+        E1AP_SecurityInformation_t *sec = &ie->value.choice.SecurityInformation;
+        DevAssert(sec->uPSecuritykey.encryptionKey.size == E1AP_SECURITY_KEY_SIZE);
+        DevAssert(sec->uPSecuritykey.integrityProtectionKey == NULL
+                  || sec->uPSecuritykey.integrityProtectionKey->size == E1AP_SECURITY_KEY_SIZE);
+        bearerCxt->secInfo = malloc_or_fail(sizeof(*bearerCxt->secInfo));
+        bearerCxt->secInfo->cipheringAlgorithm = sec->securityAlgorithm.cipheringAlgorithm;
+        bearerCxt->secInfo->integrityProtectionAlgorithm = sec->securityAlgorithm.integrityProtectionAlgorithm == NULL
+                                                ? 0
+                                                : *sec->securityAlgorithm.integrityProtectionAlgorithm;
+        memcpy(bearerCxt->secInfo->encryptionKey, sec->uPSecuritykey.encryptionKey.buf, E1AP_SECURITY_KEY_SIZE);
+        if (sec->securityAlgorithm.integrityProtectionAlgorithm == NULL)
+          memset(bearerCxt->secInfo->integrityProtectionKey, 0, E1AP_SECURITY_KEY_SIZE);
+        else
+          memcpy(bearerCxt->secInfo->integrityProtectionKey, sec->uPSecuritykey.integrityProtectionKey->buf, E1AP_SECURITY_KEY_SIZE);
+        break;
+      }
 
       case E1AP_ProtocolIE_ID_id_System_BearerContextModificationRequest:
         DevAssert(ie->criticality == E1AP_Criticality_reject);
