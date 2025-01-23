@@ -1538,15 +1538,25 @@ static void nr_generate_Msg2(module_id_t module_idP,
   pdsch_pdu_rel15->precodingAndBeamforming.prgs_list[0].pm_idx = 0;
   pdsch_pdu_rel15->precodingAndBeamforming.prgs_list[0].dig_bf_interface_list[0].beam_idx = ra->beam_id;
 
+  // Distance calculation according to SCF222.10.02 RACH.indication (table 3-74) and 38.213 4.2/38.211 4.3.1
+  // T_c according to 38.211 4.1
+  float T_c_ns = 0.509;
+  int numerology = ra->UL_BWP.scs;
+  float rtt_ns = T_c_ns * 16 * 64 / (1 << numerology) * ra->timing_offset;
+  float speed_of_light_in_meters_per_second = 299792458.0f;
+  float distance_in_meters = speed_of_light_in_meters_per_second * rtt_ns / 1000 / 1000 / 1000 / 2;
   LOG_A(NR_MAC,
-        "UE %04x: %d.%d Generating RA-Msg2 DCI, RA RNTI 0x%x, state %d, CoreSetType %d, RAPID %d\n",
+        "UE %04x: %d.%d Generating RA-Msg2 DCI, RA RNTI 0x%x, state %d, CoreSetType %d, preamble_index(RAPID) %d, "
+        "timing_offset = %d (estimated distance %.1f [m])\n",
         ra->rnti,
         frameP,
         slotP,
         ra->RA_rnti,
         ra->ra_state,
         pdcch_pdu_rel15->CoreSetType,
-        ra->preamble_index);
+        ra->preamble_index,
+        ra->timing_offset,
+        distance_in_meters);
 
   // SCF222: PDU index incremented for each PDSCH PDU sent in TX control message. This is used to associate control
   // information to data and is reset every slot.
