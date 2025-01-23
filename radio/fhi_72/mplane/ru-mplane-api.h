@@ -41,10 +41,18 @@ typedef struct {
 } xran_mplane_t;
 
 typedef struct {
+  size_t num;
+  char **name;
+} uplane_info_t;
+
+typedef struct {
   char *du_mac_addr[2]; // [0] -> U-plane; [1] -> C-plane
   uint32_t vlan_tag[2]; // [0] -> U-plane; [1] -> C-plane
-  // store BW, SCS,..., from openair0_config_t
-  // store interface name, low-level-tx/rx-endpoint names, tx/rx-carrier name,..., from RU operational datastore
+  char *interface_name;
+  uplane_info_t tx_endpoints;
+  uplane_info_t rx_endpoints;
+  uplane_info_t tx_carriers;
+  uplane_info_t rx_carriers;
 
 } ru_mplane_config_t;
 
@@ -65,5 +73,7 @@ typedef struct {
 } ru_session_list_t;
 
 int get_config_for_xran(const char *buffer, const int max_num_ant, xran_mplane_t *xran_mplane);
+
+int get_uplane_info(const char *buffer, ru_mplane_config_t *ru_mplane_config);
 
 #endif /* RU_MPLANE_API_H */

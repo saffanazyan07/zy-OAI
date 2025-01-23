@@ -29,6 +29,9 @@ static void *find_ru_xml_node(xmlNode *node, const char *filter)
   for (xmlNode *cur_node = node; cur_node; cur_node = cur_node->next) {
     if (cur_node->type == XML_ELEMENT_NODE) {
       if (strcmp((const char *)cur_node->name, filter) == 0) {
+        if (/* cur_node->children->name != NULL && */ strcmp((const char *)cur_node->children->name, "name") == 0) {
+          cur_node = cur_node->children;
+        }
         return (void *)xmlNodeGetContent(cur_node);
       }
       void *answer = find_ru_xml_node(cur_node->children, filter);
@@ -55,6 +58,9 @@ static void find_ru_xml_list(xmlNode *node, const char *filter, char ***match_li
   for (xmlNode *cur_node = node; cur_node; cur_node = cur_node->next) {
     if (cur_node->type == XML_ELEMENT_NODE) {
       if (strcmp((const char *)cur_node->name, filter) == 0) {
+        if (/* cur_node->children->name != NULL && */ strcmp((const char *)cur_node->children->name, "name") == 0) {
+          cur_node = cur_node->children;
+        }
         *match_list = realloc(*match_list, (*count + 1) * sizeof(char *));
         *match_list[*count] = (char *)xmlNodeGetContent(cur_node);
         (*count)++;

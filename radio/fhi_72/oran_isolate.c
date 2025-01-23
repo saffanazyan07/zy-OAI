@@ -341,6 +341,9 @@ __attribute__((__visibility__("default"))) int transport_init(openair0_device *d
     const int max_num_ant = RTE_MAX(openair0_cfg->tx_num_channels, openair0_cfg->rx_num_channels) / ru_session_list.num_rus;
     ret = get_config_for_xran(operational_ds, max_num_ant, &ru_session->xran_mplane);
 
+    // save the U-plane info
+    ret = get_uplane_info(operational_ds, &ru_session->ru_mplane_config);
+
     if (ru_session->ru_notif.ptp_state) {
 
     }
