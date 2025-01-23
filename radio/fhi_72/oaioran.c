@@ -263,6 +263,22 @@ int read_prach_data(ru_info_t *ru, int frame, int slot)
   return (0);
 }
 
+static bool is_tdd_ul_symbol(const struct xran_frame_config *frame_conf, int slot, int sym_idx)
+{
+  /* in FDD, every symbol is also UL */
+  if (frame_conf->nFrameDuplexType == XRAN_FDD)
+    return true;
+  int tdd_period = frame_conf->nTddPeriod;
+  int slot_in_period = slot % tdd_period;
+  /* check if symbol is UL */
+  return frame_conf->sSlotConfig[slot_in_period].nSymbolType[sym_idx] == 1 /* UL */;
+}
+
+static bool is_tdd_dl_guard_slot(const struct xran_frame_config *frame_conf, int slot)
+{
+  return !is_tdd_ul_symbol(frame_conf, slot, XRAN_NUM_OF_SYMBOL_PER_SLOT - 1);
+}
+
 int xran_fh_rx_read_slot(ru_info_t *ru, int *frame, int *slot)
 {
   void *ptr = NULL;
@@ -328,18 +344,15 @@ int xran_fh_rx_read_slot(ru_info_t *ru, int *frame, int *slot)
       rx_data = (uint8_t *)ru->rxdataF[ant_id];
       start_ptr = rx_data + (slot_size * slot_offset_rxdata);
       xran_ctx = xran_dev_get_ctx_by_id(ant_id / nb_rx_per_ru);
-      const struct xran_fh_config *fh_config = &xran_ctx->fh_cfg;
-      int tdd_period = fh_config->frame_conf.nTddPeriod;
-      int slot_in_period = *slot % tdd_period;
-      if (fh_config->frame_conf.sSlotConfig[slot_in_period].nSymbolType[XRAN_NUM_OF_SYMBOL_PER_SLOT - 1] == 0)
+      const struct xran_frame_config *frame_conf = &xran_ctx->fh_cfg.frame_conf;
+      // skip processing this slot is TX (no RX in this slot)
+      if (is_tdd_dl_guard_slot(frame_conf, *slot))
         continue;
-      // skip processing this slot if the last symbol in the slot is TX
-      // (no RX in this slot)
       // This loop would better be more inner to avoid confusion and maybe also errors.
       for (int32_t sym_idx = 0; sym_idx < XRAN_NUM_OF_SYMBOL_PER_SLOT; sym_idx++) {
         /* the callback is for mixed and UL slots. In mixed, we have to
          * skip DL and guard symbols. */
-        if (fh_config->frame_conf.sSlotConfig[slot_in_period].nSymbolType[sym_idx] != 1 /* UL */)
+        if (!is_tdd_ul_symbol(frame_conf, *slot, sym_idx))
           continue;
 
         uint8_t *pData;
