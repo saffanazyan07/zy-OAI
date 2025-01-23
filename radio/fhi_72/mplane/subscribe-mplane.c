@@ -100,8 +100,29 @@ int subscribe_mplane(ru_session_t *ru_session, const char *stream, const char *f
   ret = rpc_send_recv((struct nc_session *)ru_session->session, rpc, wd, timeout, NULL);
   AssertError(ret == 0, return EXIT_FAILURE, "Failed to subscribe to: stream = %s, filter = %s\n", stream, filter);
 
-  free(start_time);
-  free(stop_time);
+  nc_rpc_free(rpc);
+
+  return EXIT_SUCCESS;
+}
+
+int update_timer_mplane(ru_session_t *ru_session)
+{
+  int timeout = CLI_RPC_REPLY_TIMEOUT;
+  struct nc_rpc *rpc;
+  NC_WD_MODE wd = NC_WD_UNKNOWN;
+  NC_PARAMTYPE param = NC_PARAMTYPE_CONST;
+  const char *content = "<supervision-watchdog-reset xmlns=\"urn:o-ran:supervision:1.0\">\n\
+                           <supervision-notification-interval>65535</supervision-notification-interval>\n\
+                           <guard-timer-overhead>65535</guard-timer-overhead>\n\
+                         </supervision-watchdog-reset>";
+  
+  rpc = nc_rpc_act_generic_xml(content, param);
+  AssertError(rpc != NULL, return EXIT_FAILURE, "<supervision-watchdog-reset> RPC creation failed.\n");
+
+
+  int ret = rpc_send_recv((struct nc_session *)ru_session->session, rpc, wd, timeout, NULL);
+  AssertError(ret == 0, return EXIT_FAILURE, "Failed to update the watchdog timer.\n");
+
   nc_rpc_free(rpc);
 
   return EXIT_SUCCESS;

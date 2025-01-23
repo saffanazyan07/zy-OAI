@@ -334,6 +334,10 @@ __attribute__((__visibility__("default"))) int transport_init(openair0_device *d
     ru_session->ru_notif.ptp_state = ptp_state;
     ret = subscribe_mplane(ru_session, stream, filter, (void *)&ru_session->ru_notif);
 
+    // when subscribed to the supervision notification, the watchdog timer needs to be updated
+    ret = update_timer_mplane(ru_session);
+
+    // save RU info for xran
     const int max_num_ant = RTE_MAX(openair0_cfg->tx_num_channels, openair0_cfg->rx_num_channels) / ru_session_list.num_rus;
     ret = get_config_for_xran(operational_ds, max_num_ant, &ru_session->xran_mplane);
 
