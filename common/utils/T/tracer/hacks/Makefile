@@ -25,4 +25,4 @@ multi-rru-clean: ../utils.o ../database.o ../event.o ../configuration.o multi-rr
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 clean:
-	rm -f *.o core dump_nack_signal time_meas timeplot
+	rm -f *.o core dump_nack_signal time_meas timeplot multi-rru-clean
