@@ -989,7 +989,7 @@ int main(int argc, char **argv) {
   set_glog_onlinelog(true);
   // enable these lines if you need debug info
   set_glog(loglvl);
-  SET_LOG_DEBUG(UE_TIMING);
+  set_log_debug("UE_TIMING", true);
   // moreover you need to init itti with the following line
   // however itti will catch all signals, so ctrl-c won't work anymore
   // alternatively you can disable ITTI completely in CMakeLists.txt

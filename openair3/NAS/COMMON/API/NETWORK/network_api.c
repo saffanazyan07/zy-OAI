@@ -129,13 +129,7 @@ int network_api_initialize(const char* host, const char* port)
   _network_api_id.send  = socket_send;
   _network_api_id.close = socket_close;
   /* Initialize UDP communication channel with the network layer */
-#ifdef NAS_UE
   _network_api_id.endpoint = NETWORK_API_OPEN(SOCKET_CLIENT, host, port);
-#endif
-#ifdef NAS_MME
-  _network_api_id.endpoint = NETWORK_API_OPEN(SOCKET_SERVER, NULL, port);
-#endif
-
   if (_network_api_id.endpoint == NULL) {
     LOG_TRACE(ERROR, "NET-API   - Failed to open connection endpoint, %s",
               ((errno < 0) ? gai_strerror(errno) : strerror(errno)));

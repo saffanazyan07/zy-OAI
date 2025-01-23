@@ -228,6 +228,10 @@ It can also be retrieved when using the telnet server, as explained  [below](###
 | `<flag>_debug` | `boolean` | 0 = false | Triggers the activation of conditional code identified by the specified flag.
 | `<flag>_dump` | `boolean` | 0 = false| Triggers buffer dump, on the console in text form or in a file in matlab format, depending on the developper choice and forcasted usage|
 
+Example: dump all ASN.1 structures during operation with
+`--log_config.ASN1_debug`. To get a list of all flag/dump options, provide an
+invalid flag, e.g. `--log_config.HELP_debug`.
+
 ### Using the configuration file to configure the logging facility
 The following example sets all components log level to info, exept for hw,phy,mac,rlc,pdcp,rrc which log levels are set to error or warning.
 ```bash

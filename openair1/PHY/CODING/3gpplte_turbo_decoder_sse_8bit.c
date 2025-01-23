@@ -50,10 +50,6 @@
   #include <string.h>
 #endif
 
-#ifdef MEX
-  #include "mex.h"
-#endif
-
 #include "common/ran_context.h"
 
 #define SHUFFLE16(a, b, c, d, e, f, g, h)     \
@@ -858,19 +854,11 @@ void init_td8(void) {
 
   for (ind=0; ind<188; ind++) {
     n = f1f2mat[ind].nb_bits;
-    base_interleaver=il_tb+f1f2mat[ind].beg_index;
-#ifdef MEX
-    // This is needed for the Mex implementation to make the memory persistent
-    pi2tab8[ind] = mxMalloc((n+8)*sizeof(int));
-    pi5tab8[ind] = mxMalloc((n+8)*sizeof(int));
-    pi4tab8[ind] = mxMalloc((n+8)*sizeof(int));
-    pi6tab8[ind] = mxMalloc((n+8)*sizeof(int));
-#else
+    base_interleaver = il_tb + f1f2mat[ind].beg_index;
     pi2tab8[ind] = malloc((n+8)*sizeof(int));
     pi5tab8[ind] = malloc((n+8)*sizeof(int));
     pi4tab8[ind] = malloc((n+8)*sizeof(int));
-    pi6tab8[ind] = malloc((n+8)*sizeof(int));
-#endif
+    pi6tab8[ind] = malloc((n + 8) * sizeof(int));
 
     if ((n&15)>0) {
       n2 = n+8;

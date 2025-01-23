@@ -56,16 +56,12 @@
 #include "actor.h"
 //#include "openair1/SCHED_NR_UE/defs.h"
 
-#ifdef MEX
-  #define msg mexPrintf
-#else
-    #if ENABLE_RAL
-      #include "common/utils/hashtable/hashtable.h"
-      #include "COMMON/ral_messages_types.h"
-      #include "UTIL/queue.h"
-    #endif
-    #define msg(aRGS...) LOG_D(PHY, ##aRGS)
+#if ENABLE_RAL
+#include "common/utils/hashtable/hashtable.h"
+#include "COMMON/ral_messages_types.h"
+#include "UTIL/queue.h"
 #endif
+#define msg(aRGS...) LOG_D(PHY, ##aRGS)
 // use msg in the real-time thread context
 #define msg_nrt printf
 // use msg_nrt in the non real-time context (for initialization, ...)

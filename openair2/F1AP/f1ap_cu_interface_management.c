@@ -160,7 +160,7 @@ int CU_send_gNB_DU_CONFIGURATION_UPDATE_ACKNOWLEDGE(sctp_assoc_t assoc_id, f1ap_
     LOG_E(F1AP, "Failed to encode F1 gNB-DU Configuration Update Acknowledge\n");
     return -1;
   }
-  LOG_DUMPMSG(F1AP, LOG_DUMP_CHAR, buffer, len, "F1AP gNB-DU CONFIGURATION UPDATE : ");
+  LOG_DUMPMSG(F1AP, DEBUG_F1AP, buffer, len, "F1AP gNB-DU CONFIGURATION UPDATE : ");
   ASN_STRUCT_FREE(asn_DEF_F1AP_F1AP_PDU, pdu);
   f1ap_itti_send_sctp_data_req(assoc_id, buffer, len);
   return 0;
@@ -185,7 +185,7 @@ int CU_send_gNB_CU_CONFIGURATION_UPDATE(sctp_assoc_t assoc_id, f1ap_gnb_cu_confi
     LOG_E(F1AP, "Failed to encode F1 gNB-CU Configuration Update\n");
     return -1;
   }
-  LOG_DUMPMSG(F1AP, LOG_DUMP_CHAR, buffer, len, "F1AP gNB-CU CONFIGURATION UPDATE : ");
+  LOG_DUMPMSG(F1AP, DEBUG_F1AP, buffer, len, "F1AP gNB-CU CONFIGURATION UPDATE : ");
   ASN_STRUCT_FREE(asn_DEF_F1AP_F1AP_PDU, pdu);
   f1ap_itti_send_sctp_data_req(assoc_id, buffer, len);
   return 0;

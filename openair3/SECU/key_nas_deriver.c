@@ -139,7 +139,6 @@ void nr_derive_key(algorithm_type_dist_t alg_type, uint8_t alg_id, const uint8_t
  * NOTE: knas is dynamically allocated by the KDF function
  */
 
-#ifndef NAS_UE
 void derive_keNB(const uint8_t kasme[32], const uint32_t nas_count, uint8_t *keNB)
 {
   uint8_t s[7] = {0};
@@ -159,7 +158,6 @@ void derive_keNB(const uint8_t kasme[32], const uint32_t nas_count, uint8_t *keN
   byte_array_t data = {.buf = s, .len = 7};
   kdf(kasme, data, 32, keNB);
 }
-#endif
 
 void derive_keNB_star(const uint8_t *kenb_32,
                       const uint16_t pci,

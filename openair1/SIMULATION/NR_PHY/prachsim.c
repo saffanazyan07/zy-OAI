@@ -403,7 +403,7 @@ int main(int argc, char **argv){
   // Configure log
   logInit();
   set_glog(loglvl);
-  SET_LOG_DEBUG(PRACH); 
+  SET_LOG_DEBUG(DEBUG_PRACH);
 
   // Configure gNB and RU
   RC.gNB = (PHY_VARS_gNB**) malloc(2*sizeof(PHY_VARS_gNB *));
