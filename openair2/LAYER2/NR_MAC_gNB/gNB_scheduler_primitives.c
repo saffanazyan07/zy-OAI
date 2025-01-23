@@ -2082,7 +2082,7 @@ void delete_nr_ue_data(NR_UE_info_t *UE, NR_COMMON_channels_t *ccPtr, uid_alloca
   free_sched_pucch_list(sched_ctrl);
   uid_linear_allocator_free(uia, UE->uid);
   LOG_I(NR_MAC, "Remove NR rnti 0x%04x\n", UE->rnti);
-  free(UE);
+  //free(UE);
 }
 
 
@@ -2443,6 +2443,8 @@ void reset_srs_stats(NR_UE_info_t *UE) {
   }
 }
 
+uint8_t mac_mem[200000000];
+static int mac_mem_size = 0;
 //------------------------------------------------------------------------------
 NR_UE_info_t *add_new_nr_ue(gNB_MAC_INST *nr_mac, rnti_t rntiP, NR_CellGroupConfig_t *CellGroup)
 {
@@ -2453,7 +2455,10 @@ NR_UE_info_t *add_new_nr_ue(gNB_MAC_INST *nr_mac, rnti_t rntiP, NR_CellGroupConf
 
   // We will attach at the end, to mitigate race conditions
   // This is not good, but we will fix it progressively
-  NR_UE_info_t *UE = calloc(1, sizeof(NR_UE_info_t));
+//  NR_UE_info_t *UE = calloc(1, sizeof(NR_UE_info_t));
+NR_UE_info_t *UE = (void *)&mac_mem[mac_mem_size];
+mac_mem_size += sizeof(NR_UE_info_t);
+mac_mem_size = (mac_mem_size + 31) & ~32;
   if(!UE) {
     LOG_E(NR_MAC,"want to add UE %04x but the fixed allocated size is full\n",rntiP);
     return NULL;
