@@ -347,6 +347,7 @@ __attribute__((__visibility__("default"))) int transport_init(openair0_device *d
 
     if (ru_session->ru_notif.ptp_state) {
       ret = edit_config_mplane(ru_session);
+      ret = validate_config_mplane(ru_session);
     }
   }
 

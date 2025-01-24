@@ -60,3 +60,23 @@ int edit_config_mplane(ru_session_t *ru_session)
 
   return EXIT_SUCCESS;
 }
+
+int validate_config_mplane(ru_session_t *ru_session)
+{
+  int timeout = CLI_RPC_REPLY_TIMEOUT;
+  struct nc_rpc *rpc;
+  NC_WD_MODE wd = NC_WD_UNKNOWN;
+  NC_PARAMTYPE param = NC_PARAMTYPE_CONST;
+  char *src_start = NULL;
+  NC_DATASTORE source = NC_DATASTORE_CANDIDATE;
+
+  rpc = nc_rpc_validate(source, src_start, param);
+  AssertError(rpc != NULL, return EXIT_FAILURE, "<validate> RPC creation failed.\n");
+
+  int ret = rpc_send_recv((struct nc_session *)ru_session->session, rpc, wd, timeout, NULL);
+  AssertError(ret == 0, return EXIT_FAILURE, "Failed to validate candidate datastore.\n");
+
+  nc_rpc_free(rpc);
+
+  return EXIT_SUCCESS;
+}
