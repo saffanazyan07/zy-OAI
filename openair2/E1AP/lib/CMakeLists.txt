@@ -1,5 +1,6 @@
 add_library(e1ap_lib OBJECT
             e1ap_bearer_context_management.c
+            e1ap_interface_management.c
 )
 
 target_link_libraries(e1ap_lib PRIVATE asn1_e1ap)

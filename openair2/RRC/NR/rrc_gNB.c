@@ -95,6 +95,7 @@
 #include "x2ap_messages_types.h"
 #include "xer_encoder.h"
 #include "E1AP/lib/e1ap_bearer_context_management.h"
+#include "E1AP/lib/e1ap_interface_management.h"
 
 #ifdef E2_AGENT
 #include "openair2/E2AP/RAN_FUNCTION/O-RAN/ran_func_rc_extern.h"
@@ -2618,6 +2619,7 @@ void *rrc_gnb_task(void *args_p) {
 
       case E1AP_SETUP_REQ:
         rrc_gNB_process_e1_setup_req(msg_p->ittiMsgHeader.originInstance, &E1AP_SETUP_REQ(msg_p));
+        free_e1ap_cuup_setup_request(&E1AP_SETUP_REQ(msg_p));
         break;
 
       case E1AP_BEARER_CONTEXT_SETUP_RESP:

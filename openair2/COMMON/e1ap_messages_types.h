@@ -40,6 +40,9 @@
 #define E1AP_MAX_NUM_DRBS 32
 #define E1AP_MAX_NUM_UP_PARAM 4
 #define E1AP_SECURITY_KEY_SIZE 16 // keys have 128 bits length
+#define E1AP_MAX_TL_ADDRESSES 16
+#define E1AP_MAX_GTP_TL_ADDRESSES 16
+#define E1AP_MAX_NUM_ERRORS 256
 
 #define E1AP_REGISTER_REQ(mSGpTR)                         (mSGpTR)->ittiMsg.e1ap_register_req
 #define E1AP_SETUP_REQ(mSGpTR)                            (mSGpTR)->ittiMsg.e1ap_setup_req
@@ -54,6 +57,80 @@
 #define E1AP_LOST_CONNECTION(mSGpTR)                      (mSGpTR)->ittiMsg.e1ap_lost_connection
 
 typedef net_ip_address_t e1ap_net_ip_address_t;
+
+typedef enum {
+    E1AP_RADIO_CAUSE_UNSPECIFIED = 0,
+    E1AP_RADIO_CAUSE_UNKNOWN_ALREADY_ALLOCATED_GNB_CU_CP_UE_E1AP_ID,
+    E1AP_RADIO_CAUSE_UNKNOWN_ALREADY_ALLOCATED_GNB_CU_UP_UE_E1AP_ID,
+    E1AP_RADIO_CAUSE_UNKNOWN_INCONSISTENT_PAIR_UE_E1AP_ID,
+    E1AP_RADIO_CAUSE_INTERACTION_WITH_OTHER_PROCEDURE,
+    E1AP_RADIO_CAUSE_PDCP_COUNT_WRAP_AROUND,
+    E1AP_RADIO_CAUSE_UNSUPPORTED_QCI_VALUE,
+    E1AP_RADIO_CAUSE_UNSUPPORTED_5QI_VALUE,
+    E1AP_RADIO_CAUSE_ENCRYPTION_ALGORITHMS_NOT_SUPPORTED,
+    E1AP_RADIO_CAUSE_INTEGRITY_PROTECTION_ALGORITHMS_NOT_SUPPORTED,
+    E1AP_RADIO_CAUSE_UP_INTEGRITY_PROTECTION_NOT_POSSIBLE,
+    E1AP_RADIO_CAUSE_UP_CONFIDENTIALITY_PROTECTION_NOT_POSSIBLE,
+    E1AP_RADIO_CAUSE_MULTIPLE_PDU_SESSION_ID_INSTANCES,
+    E1AP_RADIO_CAUSE_UNKNOWN_PDU_SESSION_ID,
+    E1AP_RADIO_CAUSE_MULTIPLE_QOS_FLOW_ID_INSTANCES,
+    E1AP_RADIO_CAUSE_UNKNOWN_QOS_FLOW_ID,
+    E1AP_RADIO_CAUSE_MULTIPLE_DRB_ID_INSTANCES,
+    E1AP_RADIO_CAUSE_UNKNOWN_DRB_ID,
+    E1AP_RADIO_CAUSE_INVALID_QOS_COMBINATION,
+    E1AP_RADIO_CAUSE_PROCEDURE_CANCELLED,
+    E1AP_RADIO_CAUSE_NORMAL_RELEASE,
+    E1AP_RADIO_CAUSE_NO_RADIO_RESOURCES_AVAILABLE,
+    E1AP_RADIO_CAUSE_ACTION_DESIRABLE_FOR_RADIO_REASONS,
+    E1AP_RADIO_CAUSE_RESOURCES_NOT_AVAILABLE_FOR_SLICE,
+    E1AP_RADIO_CAUSE_PDCP_CONFIG_NOT_SUPPORTED,
+    E1AP_RADIO_CAUSE_UE_DL_MAX_INTEGRITY_PROTECTED_DATA_RATE_REASON,
+    E1AP_RADIO_CAUSE_UP_INTEGRITY_PROTECTION_FAILURE,
+    E1AP_RADIO_CAUSE_RELEASE_DUE_TO_PREEMPTION,
+    E1AP_RADIO_CAUSE_RSN_NOT_AVAILABLE_FOR_UP,
+    E1AP_RADIO_CAUSE_NPN_NOT_SUPPORTED,
+    E1AP_RADIO_CAUSE_OTHER
+} e1ap_cause_radio_t;
+
+typedef enum {
+    E1AP_TRANSPORT_CAUSE_UNSPECIFIED = 0,
+    E1AP_TRANSPORT_CAUSE_RESOURCE_UNAVAILABLE,
+    E1AP_TRANSPORT_CAUSE_UNKNOWN_TNL_ADDRESS_FOR_IAB,
+    E1AP_TRANSPORT_CAUSE_OTHER
+} e1ap_cause_transport_t;
+
+typedef enum {
+    E1AP_PROTOCOL_CAUSE_TRANSFER_SYNTAX_ERROR = 0,
+    E1AP_PROTOCOL_CAUSE_ABSTRACT_SYNTAX_ERROR_REJECT,
+    E1AP_PROTOCOL_CAUSE_ABSTRACT_SYNTAX_ERROR_IGNORE_NOTIFY,
+    E1AP_PROTOCOL_CAUSE_MESSAGE_NOT_COMPATIBLE_WITH_RECEIVER_STATE,
+    E1AP_PROTOCOL_CAUSE_SEMANTIC_ERROR,
+    E1AP_PROTOCOL_CAUSE_ABSTRACT_SYNTAX_ERROR_FALSELY_CONSTRUCTED_MESSAGE,
+    E1AP_PROTOCOL_CAUSE_UNSPECIFIED,
+    E1AP_PROTOCOL_CAUSE_OTHER
+} e1ap_cause_protocol_t;
+
+typedef enum {
+    E1AP_MISC_CAUSE_CONTROL_PROCESSING_OVERLOAD,
+    E1AP_MISC_CAUSE_NOT_ENOUGH_USER_PLANE_PROCESSING_RESOURCES,
+    E1AP_MISC_CAUSE_HARDWARE_FAILURE,
+    E1AP_MISC_CAUSE_OM_INTERVENTION,
+    E1AP_MISC_CAUSE_UNSPECIFIED,
+    E1AP_MISC_CAUSE_OTHER
+} e1ap_cause_misc_t;
+
+typedef enum e1ap_cause_group_e {
+  E1AP_CAUSE_NOTHING,
+  E1AP_CAUSE_RADIO_NETWORK,
+  E1AP_CAUSE_TRANSPORT,
+  E1AP_CAUSE_PROTOCOL,
+  E1AP_CAUSE_MISC
+} e1ap_cause_group_t;
+
+typedef struct e1ap_cause_s {
+  e1ap_cause_group_t type;
+  uint8_t value;
+} e1ap_cause_t;
 
 typedef enum BEARER_CONTEXT_STATUS_e {
   BEARER_ACTIVE = 0,
@@ -72,11 +149,58 @@ typedef enum cell_group_id_e {
   SCG,
 } cell_group_id_t;
 
+typedef enum CN_Support_e {
+  cn_support_EPC = 0,
+  cn_support_5GC,
+} cn_Support_t;
+
 typedef struct PLMN_ID_s {
   int mcc;
   int mnc;
   int mnc_digit_length;
 } PLMN_ID_t;
+
+typedef enum { CRITICALITY_REJECT = 0, CRITICALITY_IGNORE, CRITICALITY_NOTIFY } criticality_t;
+
+typedef enum {
+  ERROR_TYPE_NOT_UNDERSTOOD = 0,
+  ERROR_TYPE_MISSING,
+} error_type_t;
+
+typedef enum {
+  TRIGGERING_MSG_INITIATING = 0,
+  TRIGGERING_MSG_SUCCESSFUL_OUTCOME,
+  TRIGGERING_MSG_UNSUCCESSFUL_OUTCOME
+} triggering_msg_t;
+
+typedef struct criticality_diagnostics_ie_s {
+  criticality_t criticality;
+  int ie_id;
+  error_type_t error_type;
+} criticality_diagnostics_ie_t;
+
+typedef struct criticality_diagnostics_s {
+  int *procedure_code;
+  triggering_msg_t *triggering_msg;
+  criticality_t *procedure_criticality;
+  int num_errors;
+  criticality_diagnostics_ie_t errors[E1AP_MAX_NUM_ERRORS];
+} criticality_diagnostics_t;
+
+typedef struct {
+  in_addr_t ipsec_tl_address;
+  uint8_t num_gtp_tl_addresses;
+  in_addr_t gtp_tl_addresses[E1AP_MAX_GTP_TL_ADDRESSES];
+} tnl_address_info_item_t;
+
+typedef struct {
+  // Transport UP LayerAddresses Info to Add List
+  tnl_address_info_item_t addresses_to_add[E1AP_MAX_TL_ADDRESSES];
+  uint8_t num_addresses_to_add;
+  // Transport UP Layer Addresses Info to Remove List
+  tnl_address_info_item_t addresses_to_remove[E1AP_MAX_TL_ADDRESSES];
+  uint8_t num_addresses_to_remove;
+} tnl_address_info_t;
 
 typedef nssai_t e1ap_nssai_t;
 
@@ -91,17 +215,25 @@ typedef struct e1ap_net_config_t {
   uint16_t remotePortN3;
 } e1ap_net_config_t;
 
+/* GNB-CU-UP E1 Setup Request */
 typedef struct e1ap_setup_req_s {
   uint64_t              gNB_cu_up_id;
   char *                gNB_cu_up_name;
   uint64_t              transac_id;
   int                   supported_plmns;
+  // CN Support
+  cn_Support_t cn_support;
   struct {
     PLMN_ID_t id;
     int supported_slices;
     e1ap_nssai_t *slice;
   } plmn[E1AP_MAX_NUM_PLMNS];
 } e1ap_setup_req_t;
+
+typedef struct e1ap_cucp_setup_req_s {
+  char* gNB_cu_cp_name;
+  uint64_t transac_id;
+} e1ap_cucp_setup_req_t;
 
 typedef struct e1ap_register_req_t {
   e1ap_setup_req_t setup_req;
@@ -110,12 +242,20 @@ typedef struct e1ap_register_req_t {
 } e1ap_register_req_t;
 
 typedef struct e1ap_setup_resp_s {
+  // Transaction ID
   long transac_id;
+  // gNB-CU-CP Name
+  char* gNB_cu_cp_name;
+  // Transport Network Layer Address Info
+  tnl_address_info_t* tnla_info;
 } e1ap_setup_resp_t;
 
 /* E1AP Setup Failure */
 typedef struct e1ap_setup_fail_s {
   long transac_id;
+  e1ap_cause_t cause;
+  long *time_to_wait;
+  criticality_diagnostics_t *crit_diag;
 } e1ap_setup_fail_t;
 
 typedef struct up_params_s {

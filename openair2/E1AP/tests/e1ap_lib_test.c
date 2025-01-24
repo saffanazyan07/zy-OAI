@@ -30,8 +30,10 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include "E1AP/lib/e1ap_bearer_context_management.h"
-#include "E1AP/lib/e1ap_lib_includes.h"
+#include "common/utils/utils.h"
+#include "e1ap_bearer_context_management.h"
+#include "e1ap_interface_management.h"
+#include "e1ap_lib_includes.h"
 #include "common/utils/assertions.h"
 
 void exit_function(const char *file, const char *function, const int line, const char *s, const int assert)
@@ -216,10 +218,131 @@ static void test_bearer_context_setup_response(void)
   free_e1ap_context_setup_response(&orig);
 }
 
+/**
+ * @brief Test CU-UP Setup Request encoding/decoding
+ */
+static void test_e1_cuup_setup_request(void)
+{
+  e1ap_setup_req_t orig = {.gNB_cu_up_id = 1234,
+                           .gNB_cu_up_name = strdup("OAI CU-UP"),
+                           .transac_id = 42,
+                           .supported_plmns = 1,
+                           .cn_support = cn_support_5GC,
+                           .plmn[0] = {.id = {.mcc = 001, .mnc = 01, .mnc_digit_length = 2},
+                                       .supported_slices = 1}};
+  orig.plmn[0].slice = malloc_or_fail(sizeof(*orig.plmn[0].slice));
+  orig.plmn[0].slice->sst = 0x01;
+  orig.plmn[0].slice->sd = 0x01;
+
+  E1AP_E1AP_PDU_t *encoded = encode_e1ap_cuup_setup_request(&orig);
+  E1AP_E1AP_PDU_t *decoded_msg = e1ap_encode_decode(encoded);
+  e1ap_msg_free(encoded);
+
+  e1ap_setup_req_t decoded = {0};
+  bool ret = decode_e1ap_cuup_setup_request(decoded_msg, &decoded);
+  AssertFatal(ret, "Failed to decode setup request");
+  e1ap_msg_free(decoded_msg);
+
+  ret = eq_e1ap_cuup_setup_request(&orig, &decoded);
+  AssertFatal(ret, "Decoded setup request doesn't match original");
+  free_e1ap_cuup_setup_request(&decoded);
+
+  e1ap_setup_req_t cp = cp_e1ap_cuup_setup_request(&orig);
+  ret = eq_e1ap_cuup_setup_request(&orig, &cp);
+  AssertFatal(ret, "eq_e1ap_cuup_setup_request(): copied message doesn't match\n");
+
+  free_e1ap_cuup_setup_request(&orig);
+  free_e1ap_cuup_setup_request(&cp);
+}
+
+/**
+ * @brief Test CU-UP Setup Response encoding/decoding
+ */
+static void test_e1_cuup_setup_response(void)
+{
+  e1ap_setup_resp_t orig = {.transac_id = 42,
+                            .gNB_cu_cp_name = strdup("OAI CU-CP"),
+                            .tnla_info = malloc(sizeof(tnl_address_info_t))};
+  orig.tnla_info->num_addresses_to_add = 1;
+  orig.tnla_info->num_addresses_to_remove = 1;
+  orig.tnla_info->addresses_to_add[0].num_gtp_tl_addresses = 1;
+  orig.tnla_info->addresses_to_add[0].ipsec_tl_address = 0xC0A80001;
+  orig.tnla_info->addresses_to_add[0].gtp_tl_addresses[0] = 0xC0A80002;
+  orig.tnla_info->num_addresses_to_remove = 1;
+  orig.tnla_info->addresses_to_remove[0].num_gtp_tl_addresses = 1;
+  orig.tnla_info->addresses_to_remove[0].ipsec_tl_address = 0xC0A80003;
+  orig.tnla_info->addresses_to_remove[0].gtp_tl_addresses[0] = 0xC0A80004;
+
+  E1AP_E1AP_PDU_t *encoded = encode_e1ap_cuup_setup_response(&orig);
+  E1AP_E1AP_PDU_t *decoded_msg = e1ap_encode_decode(encoded);
+  e1ap_msg_free(encoded);
+
+  e1ap_setup_resp_t decoded = {0};
+  bool ret = decode_e1ap_cuup_setup_response(decoded_msg, &decoded);
+  AssertFatal(ret, "Failed to decode setup response");
+  e1ap_msg_free(decoded_msg);
+
+  ret = eq_e1ap_cuup_setup_response(&orig, &decoded);
+  AssertFatal(ret, "Decoded setup response doesn't match original");
+  free_e1ap_cuup_setup_response(&decoded);
+
+  e1ap_setup_resp_t cp = cp_e1ap_cuup_setup_response(&orig);
+  ret = eq_e1ap_cuup_setup_response(&orig, &cp);
+  AssertFatal(ret, "eq_e1ap_cuup_setup_response(): copied message doesn't match\n");
+
+  free_e1ap_cuup_setup_response(&orig);
+  free_e1ap_cuup_setup_response(&cp);
+}
+
+// Test for E1AP CU-UP Setup Failure
+static void test_e1_cuup_setup_failure(void)
+{
+  e1ap_setup_fail_t orig = {.transac_id = 42,
+                            .cause.type = E1AP_CAUSE_RADIO_NETWORK,
+                            .cause.value = E1AP_RADIO_CAUSE_NORMAL_RELEASE,
+                            .time_to_wait = malloc_or_fail(sizeof(long)),
+                            .crit_diag = malloc_or_fail(sizeof(criticality_diagnostics_t))};
+  *orig.time_to_wait = 5;
+  orig.crit_diag->procedure_code = malloc_or_fail(sizeof(*orig.crit_diag->procedure_code));
+  *orig.crit_diag->procedure_code = 99;
+  orig.crit_diag->triggering_msg = malloc_or_fail(sizeof(*orig.crit_diag->triggering_msg));
+  *orig.crit_diag->triggering_msg = TRIGGERING_MSG_SUCCESSFUL_OUTCOME;
+  orig.crit_diag->procedure_criticality = malloc_or_fail(sizeof(*orig.crit_diag->procedure_criticality));
+  *orig.crit_diag->procedure_criticality = CRITICALITY_IGNORE;
+  orig.crit_diag->num_errors = 1;
+  orig.crit_diag->errors[0].ie_id = 66;
+  orig.crit_diag->errors[0].error_type = ERROR_TYPE_MISSING;
+  orig.crit_diag->errors[0].criticality = CRITICALITY_IGNORE;
+
+  E1AP_E1AP_PDU_t *encoded = encode_e1ap_cuup_setup_failure(&orig);
+  E1AP_E1AP_PDU_t *decoded_msg = e1ap_encode_decode(encoded);
+  e1ap_msg_free(encoded);
+
+  e1ap_setup_fail_t decoded = {0};
+  bool ret = decode_e1ap_cuup_setup_failure(decoded_msg, &decoded);
+  AssertFatal(ret, "Failed to decode setup failure");
+  e1ap_msg_free(decoded_msg);
+
+  ret = eq_e1ap_cuup_setup_failure(&orig, &decoded);
+  AssertFatal(ret, "Decoded setup failure doesn't match original");
+  free_e1ap_cuup_setup_failure(&decoded);
+
+  e1ap_setup_fail_t cp = cp_e1ap_cuup_setup_failure(&orig);
+  ret = eq_e1ap_cuup_setup_failure(&orig, &cp);
+  AssertFatal(ret, "eq_e1ap_cuup_setup_failure(): copied message doesn't match\n");
+
+  free_e1ap_cuup_setup_failure(&cp);
+  free_e1ap_cuup_setup_failure(&orig);
+}
+
 int main()
 {
   // E1 Bearer Context Setup
   test_bearer_context_setup_request();
   test_bearer_context_setup_response();
+  // E1 Interface Management
+  test_e1_cuup_setup_request();
+  test_e1_cuup_setup_response();
+  test_e1_cuup_setup_failure();
   return 0;
 }

@@ -90,6 +90,9 @@ MessageDef *RCconfig_NR_CU_E1(const E1_t *entity)
     if (*gnbParms[GNB_GNB_NAME_IDX].strptr)
       e1Setup->gNB_cu_up_name = *(gnbParms[GNB_GNB_NAME_IDX].strptr);
 
+    // Only 5GC supported
+    e1Setup->cn_support = cn_support_5GC;
+
     paramdef_t PLMNParams[] = GNBPLMNPARAMS_DESC;
     paramlist_def_t PLMNParamList = {GNB_CONFIG_STRING_PLMN_LIST, NULL, 0};
     /* map parameter checking array instances to parameter definition array instances */
