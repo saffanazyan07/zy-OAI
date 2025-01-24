@@ -44,6 +44,7 @@
 #include "mplane/connect-mplane.h"
 #include "mplane/get-mplane.h"
 #include "mplane/subscribe-mplane.h"
+#include "mplane/config-mplane.h"
 #include "mplane/xml/get-xml.h"
 #endif
 
@@ -345,7 +346,7 @@ __attribute__((__visibility__("default"))) int transport_init(openair0_device *d
     ret = get_uplane_info(operational_ds, &ru_session->ru_mplane_config);
 
     if (ru_session->ru_notif.ptp_state) {
-
+      ret = edit_config_mplane(ru_session);
     }
   }
 
