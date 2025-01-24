@@ -28,4 +28,6 @@ int edit_config_mplane(ru_session_t *ru_session);
 
 int validate_config_mplane(ru_session_t *ru_session);
 
+int commit_config_mplane(ru_session_t *ru_session);
+
 #endif /* CONFIGURE_MPLANE_H */

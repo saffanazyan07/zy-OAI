@@ -80,3 +80,24 @@ int validate_config_mplane(ru_session_t *ru_session)
 
   return EXIT_SUCCESS;
 }
+
+int commit_config_mplane(ru_session_t *ru_session)
+{
+  int timeout = CLI_RPC_REPLY_TIMEOUT;
+  struct nc_rpc *rpc;
+  NC_WD_MODE wd = NC_WD_UNKNOWN;
+  NC_PARAMTYPE param = NC_PARAMTYPE_CONST;
+  int confirmed = 0;
+  int32_t confirm_timeout = 0;
+  char *persist = NULL, *persist_id = NULL;
+
+  rpc = nc_rpc_commit(confirmed, confirm_timeout, persist, persist_id, param);
+  AssertError(rpc != NULL, return EXIT_FAILURE, "<commit> RPC creation failed.\n");
+
+  int ret = rpc_send_recv((struct nc_session *)ru_session->session, rpc, wd, timeout, NULL);
+  AssertError(ret == 0, return EXIT_FAILURE, "Failed to commit candidate datastore.\n");
+
+  nc_rpc_free(rpc);
+
+  return EXIT_SUCCESS;
+}
