@@ -936,3 +936,113 @@ void copy_error_indication(const nfapi_nr_error_indication_scf_t *src, nfapi_nr_
   dst->message_id = src->message_id;
   dst->error_code = src->error_code;
 }
+
+static void dump_p5_message_header(const nfapi_nr_p4_p5_message_header_t *hdr, int depth)
+{
+  INDENTED_PRINTF("Message ID = 0x%02x\n", hdr->message_id);
+  INDENTED_PRINTF("Message Length = 0x%02x\n", hdr->message_length);
+}
+
+void dump_param_request(const nfapi_nr_param_request_scf_t *msg)
+{
+  int depth = 0;
+  dump_p5_message_header(&msg->header,depth);
+}
+
+void dump_param_response(const nfapi_nr_param_response_scf_t *msg)
+{
+  int depth = 0;
+  dump_p5_message_header(&msg->header,depth);
+  depth++;
+  INDENTED_PRINTF("Error Code = 0x%02x\n", msg->error_code);
+  INDENTED_PRINTF("Number of TLVs = 0x%02x\n", msg->num_tlv);
+  /* dump all TLVs from each table */
+  depth--;
+}
+
+void dump_config_request(const nfapi_nr_config_request_scf_t *msg)
+{
+  int depth = 0;
+  dump_p5_message_header(&msg->header,depth);
+  depth++;
+  INDENTED_PRINTF("Number of TLVs = 0x%02x\n", msg->num_tlv);
+  /* dump all TLVs from each table */
+  depth--;
+}
+
+void dump_config_response(const nfapi_nr_config_response_scf_t *msg)
+{
+  int depth = 0;
+  dump_p5_message_header(&msg->header,depth);
+  depth++;
+  INDENTED_PRINTF("Error Code = 0x%02x\n", msg->error_code);
+  INDENTED_PRINTF("Number of Invalid or Unsupported TLVs = 0x%02x\n", msg->num_invalid_tlvs);
+  INDENTED_PRINTF("Number of Invalid TLVs that can be configured in IDLE = 0x%02x\n", msg->num_invalid_tlvs_configured_in_idle);
+  INDENTED_PRINTF("Number of Invalid TLVs that can be configured in RUNNING = 0x%02x\n",
+                  msg->num_invalid_tlvs_configured_in_running);
+  INDENTED_PRINTF("Number of Missing TLVs = 0x%02x\n", msg->num_missing_tlvs);
+  /* dump all TLVs from each table */
+  depth--;
+}
+
+void dump_start_request(const nfapi_nr_start_request_scf_t *msg)
+{
+  int depth = 0;
+  dump_p5_message_header(&msg->header,depth);
+}
+
+void dump_start_response(const nfapi_nr_start_response_scf_t *msg)
+{
+  int depth = 0;
+  dump_p5_message_header(&msg->header,depth);
+}
+
+void dump_stop_request(const nfapi_nr_stop_request_scf_t *msg)
+{
+  int depth = 0;
+  dump_p5_message_header(&msg->header,depth);
+}
+
+void dump_stop_indication(const nfapi_nr_stop_indication_scf_t *msg)
+{
+  int depth = 0;
+  dump_p5_message_header(&msg->header,depth);
+}
+
+static char *error_code_to_str(uint8_t error_code)
+{
+  switch (error_code) {
+    case NFAPI_NR_PHY_API_MSG_OK:
+      return "NFAPI_NR_PHY_API_MSG_OK";
+    case NFAPI_NR_PHY_API_MSG_INVALID_STATE:
+      return "NFAPI_NR_PHY_API_MSG_INVALID_STATE";
+    case NFAPI_NR_PHY_API_MSG_INVALID_CONFIG:
+      return "NFAPI_NR_PHY_API_MSG_INVALID_CONFIG";
+    case NFAPI_NR_PHY_API_SFN_OUT_OF_SYNC:
+      return "NFAPI_NR_PHY_API_SFN_OUT_OF_SYNC";
+    case NFAPI_NR_PHY_API_MSG_SLOR_ERR:
+      return "NFAPI_NR_PHY_API_MSG_SLOR_ERR";
+    case NFAPI_NR_PHY_API_MSG_BCH_MISSING:
+      return "NFAPI_NR_PHY_API_MSG_BCH_MISSING";
+    case NFAPI_NR_PHY_API_MSG_INVALID_SFN:
+      return "NFAPI_NR_PHY_API_MSG_INVALID_SFN";
+    case NFAPI_NR_PHY_API_MSG_UL_DCI_ERR:
+      return "NFAPI_NR_PHY_API_MSG_UL_DCI_ERR";
+    case NFAPI_NR_PHY_API_MSG_TX_ERR:
+      return "NFAPI_NR_PHY_API_MSG_TX_ERR";
+    default:
+      return "Unknown Error code";
+  }
+}
+
+void dump_error_indication(const nfapi_nr_error_indication_scf_t *msg)
+{
+  int depth = 0;
+  dump_p5_message_header(&msg->header,depth);
+  depth++;
+  INDENTED_PRINTF("SFN = 0x%02x (%d)\n", msg->sfn, msg->sfn);
+  INDENTED_PRINTF("Slot = 0x%02x (%d)\n", msg->slot, msg->slot);
+  INDENTED_PRINTF("Message ID = 0x%02x\n", msg->message_id);
+  INDENTED_PRINTF("Error Code = 0x%02x (%s) \n", msg->error_code, error_code_to_str(msg->error_code));
+  depth--;
+}

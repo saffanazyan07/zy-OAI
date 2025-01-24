@@ -34,6 +34,8 @@
 #include "assertions.h"
 #include "debug.h"
 
+#define INDENTED_PRINTF(format, ...) printf("%*s" format, depth * 2, "", ##__VA_ARGS__)
+
 #define EQ_TLV(_tlv_a, _tlv_b)        \
   do {                                \
     EQ(_tlv_a.tl.tag, _tlv_b.tl.tag); \

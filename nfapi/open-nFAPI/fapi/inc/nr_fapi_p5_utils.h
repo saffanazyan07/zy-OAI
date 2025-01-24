@@ -56,4 +56,15 @@ void copy_stop_request(const nfapi_nr_stop_request_scf_t *src, nfapi_nr_stop_req
 void copy_stop_indication(const nfapi_nr_stop_indication_scf_t *src, nfapi_nr_stop_indication_scf_t *dst);
 void copy_error_indication(const nfapi_nr_error_indication_scf_t *src, nfapi_nr_error_indication_scf_t *dst);
 
+void dump_param_request(const nfapi_nr_param_request_scf_t *msg);
+void dump_param_response(const nfapi_nr_param_response_scf_t *msg);
+void dump_config_request(const nfapi_nr_config_request_scf_t *msg);
+void dump_config_response(const nfapi_nr_config_response_scf_t *msg);
+void dump_start_request(const nfapi_nr_start_request_scf_t *msg);
+void dump_start_response(const nfapi_nr_start_response_scf_t *msg);
+void dump_stop_request(const nfapi_nr_stop_request_scf_t *msg);
+void dump_stop_indication(const nfapi_nr_stop_indication_scf_t *msg);
+void dump_error_indication(const nfapi_nr_error_indication_scf_t *msg);
+
+
 #endif // OPENAIRINTERFACE_NR_FAPI_P5_UTILS_H
