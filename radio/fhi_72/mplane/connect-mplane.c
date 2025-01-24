@@ -25,8 +25,6 @@
 #include <libyang/libyang.h>
 #include <nc_client.h>
 
-#define HOME_DIR (getenv("HOME"))
-
 static int my_auth_hostkey_check(const char *hostname, ssh_session session, void *priv)
 {
   (void)hostname;
@@ -36,22 +34,18 @@ static int my_auth_hostkey_check(const char *hostname, ssh_session session, void
   return 0;
 }
 
-int connect_mplane(ru_session_t *ru_session)
+int connect_mplane(ru_session_t *ru_session, const char ***du_key_pair)
 {
   int port = NC_PORT_SSH;
   char *user = "oranbenetel";
 
   nc_client_ssh_set_username(user);
 
-  nc_client_ssh_set_auth_pref(NC_SSH_AUTH_PASSWORD, -1);
   nc_client_ssh_set_auth_pref(NC_SSH_AUTH_PUBLICKEY, 1);  // ssh-key identification
+  nc_client_ssh_set_auth_pref(NC_SSH_AUTH_PASSWORD, -1);
   nc_client_ssh_set_auth_pref(NC_SSH_AUTH_INTERACTIVE, -1);
 
-  char pub_key[64], priv_key[64];
-  sprintf(pub_key, "%s%s", HOME_DIR, "/.ssh/id_rsa.pub");
-  sprintf(priv_key, "%s%s", HOME_DIR, "/.ssh/id_rsa");
-  printf("pub_key = %s, prv_key = %s\n", pub_key, priv_key);
-  int keypair_ret = nc_client_ssh_add_keypair(pub_key, priv_key);
+  int keypair_ret = nc_client_ssh_add_keypair(&du_key_pair[0], &du_key_pair[1]);
   AssertError(keypair_ret == 0, return EXIT_FAILURE, "Unable to authenticate RU with IP address %s\n", ru_session->ru_ip_add);
   nc_client_ssh_set_auth_hostkey_check_clb(my_auth_hostkey_check, "DATA");  // host-key identification
 

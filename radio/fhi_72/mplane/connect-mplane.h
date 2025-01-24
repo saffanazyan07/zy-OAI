@@ -24,7 +24,7 @@
 
 #include "ru-mplane-api.h"
 
-int connect_mplane(ru_session_t *ru_session);
+int connect_mplane(ru_session_t *ru_session, const char ***du_key_pair);
 
 void disconnect_mplane(void *rus_disconnect);
 
