@@ -460,7 +460,7 @@ int *oai_oran_initialize(struct xran_fh_init *xran_fh_init, struct xran_fh_confi
     pi->prach_tag = tag;
     pi->pusch_tag = tag;
 #ifdef E_RELEASE
-    LOG_W(PHY, "Please be aware that E release support will be removed by the end of January 2025. Instead, F release will be mandatory.\n");
+    LOG_W(HW, "Please be aware that E release support will be removed by the end of January 2025. Instead, F release will be mandatory.\n");
     oran_allocate_buffers(gxran_handle, o_xu_id, 1, pi, &xran_fh_config[o_xu_id]);
 #elif defined F_RELEASE
     oran_allocate_buffers(gxran_handle, o_xu_id, 1, pi, xran_fh_init->mtu, &xran_fh_config[o_xu_id]);

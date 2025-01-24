@@ -93,7 +93,7 @@ void oai_xran_fh_rx_callback(void *pCallbackTag, xran_status_t status)
   rx_sym = callback_tag->symbol & 0xFF;
   uint32_t ru_id = callback_tag->oXuId;
 
-  LOG_D(NR_PHY,
+  LOG_D(HW,
         "rx_callback frame %d, subframe %d, slot %d, second %lld, rx_sym %d ru_id %d\n",
         frame,
         subframe,
@@ -120,7 +120,7 @@ void oai_xran_fh_rx_callback(void *pCallbackTag, xran_status_t status)
 #endif
     if (first_call_set) {
       if (!first_rx_set) {
-        LOG_I(NR_PHY, "first_rx is set (num_ports %d), first_read_set %d\n", num_ports, first_read_set);
+        LOG_I(HW, "first_rx is set (num_ports %d), first_read_set %d\n", num_ports, first_read_set);
       }
       first_rx_set = 1;
       if (first_read_set == 1) {
@@ -128,7 +128,7 @@ void oai_xran_fh_rx_callback(void *pCallbackTag, xran_status_t status)
         rx_RU[ru_id][slot2] = 1;
         if (last_frame > 0 && frame > 0
             && ((slot2 > 0 && last_frame != frame) || (slot2 == 0 && last_frame != ((1024 + frame - 1) & 1023))))
-          LOG_E(PHY, "Jump in frame counter last_frame %d => %d, slot %d\n", last_frame, frame, slot2);
+          LOG_E(HW, "Jump in frame counter last_frame %d => %d, slot %d\n", last_frame, frame, slot2);
         for (int i = 0; i < num_ports; i++) {
           if (rx_RU[i][slot2] == 0)
             return;
@@ -142,9 +142,9 @@ void oai_xran_fh_rx_callback(void *pCallbackTag, xran_status_t status)
           oran_sync_info_t *info = (oran_sync_info_t *)NotifiedFifoData(req);
           info->sl = slot2;
           info->f = frame;
-          LOG_D(PHY, "Push %d.%d.%d (slot %d, subframe %d,last_slot %d)\n", frame, info->sl, slot, ru_id, subframe, last_slot);
+          LOG_D(HW, "Push %d.%d.%d (slot %d, subframe %d,last_slot %d)\n", frame, info->sl, slot, ru_id, subframe, last_slot);
 #else
-          LOG_D(PHY, "Writing %d.%d.%d (slot %d, subframe %d,last_slot %d)\n", frame, slot2, ru_id, slot, subframe, last_slot);
+          LOG_D(HW, "Writing %d.%d.%d (slot %d, subframe %d,last_slot %d)\n", frame, slot2, ru_id, slot, subframe, last_slot);
           oran_sync_info.tti = tti;
           oran_sync_info.sl = slot2;
           oran_sync_info.f = frame;
@@ -154,7 +154,7 @@ void oai_xran_fh_rx_callback(void *pCallbackTag, xran_status_t status)
 #else
 #endif
         } else
-          LOG_E(PHY, "Cannot Push %d.%d.%d (slot %d, subframe %d,last_slot %d)\n", frame, slot2, ru_id, slot, subframe, last_slot);
+          LOG_E(HW, "Cannot Push %d.%d.%d (slot %d, subframe %d,last_slot %d)\n", frame, slot2, ru_id, slot, subframe, last_slot);
         last_slot = slot2;
         last_frame = frame;
       } // first_read_set == 1
@@ -287,7 +287,7 @@ int xran_fh_rx_read_slot(ru_info_t *ru, int *frame, int *slot)
   *frame = info->f;
   delNotifiedFIFO_elt(res);
 #else
-  LOG_D(PHY, "In  xran_fh_rx_read_slot, first_rx_set %d\n", first_rx_set);
+  LOG_D(HW, "In  xran_fh_rx_read_slot, first_rx_set %d\n", first_rx_set);
   while (first_rx_set == 0) {
   }
 
@@ -295,14 +295,14 @@ int xran_fh_rx_read_slot(ru_info_t *ru, int *frame, int *slot)
   *frame = oran_sync_info.f;
   uint32_t tti_in = oran_sync_info.tti;
 
-  LOG_D(PHY, "oran slot %d, last_slot %d\n", *slot, last_slot);
+  LOG_D(HW, "oran slot %d, last_slot %d\n", *slot, last_slot);
   int cnt = 0;
   // while (*slot == last_slot)  {
   while (tti_in == oran_sync_info.tti) {
     //*slot = oran_sync_info.sl;
     cnt++;
   }
-  LOG_D(PHY, "cnt %d, Reading %d.%d\n", cnt, *frame, *slot);
+  LOG_D(HW, "cnt %d, Reading %d.%d\n", cnt, *frame, *slot);
   last_slot = *slot;
 #endif
   // return(0);
@@ -373,9 +373,9 @@ int xran_fh_rx_read_slot(ru_info_t *ru, int *frame, int *slot)
         int16_t payload_len = 0;
 
 
-        LOG_D(PHY, "pRbMap->nPrbElm %d\n", pRbMap->nPrbElm);
+        LOG_D(HW, "pRbMap->nPrbElm %d\n", pRbMap->nPrbElm);
         for (idxElm = 0; idxElm < pRbMap->nPrbElm; idxElm++) {
-          LOG_D(PHY,
+          LOG_D(HW,
                 "prbMap[%d] : PRBstart %d nPRBs %d\n",
                 idxElm,
                 pRbMap->prbMap[idxElm].nRBStart,
@@ -433,7 +433,7 @@ int xran_fh_rx_read_slot(ru_info_t *ru, int *frame, int *slot)
   } // vv_inf
   if ((*frame & 0x7f) == 0 && *slot == 0 && xran_get_common_counters(gxran_handle, &x_counters[0]) == XRAN_STATUS_SUCCESS) {
     for (int o_xu_id = 0; o_xu_id < fh_init->xran_ports; o_xu_id++) {
-      LOG_I(NR_PHY,
+      LOG_I(HW,
             "[%s%d][rx %7ld pps %7ld kbps %7ld][tx %7ld pps %7ld kbps %7ld][Total Msgs_Rcvd %ld]\n",
             "o-du ",
             o_xu_id,
@@ -445,7 +445,7 @@ int xran_fh_rx_read_slot(ru_info_t *ru, int *frame, int *slot)
             x_counters[o_xu_id].tx_bytes_per_sec * 8 / 1000L,
             x_counters[o_xu_id].Total_msgs_rcvd);
       for (int rxant = 0; rxant < ru->nb_rx / fh_init->xran_ports; rxant++)
-        LOG_I(NR_PHY,
+        LOG_I(HW,
               "[%s%d][pusch%d %7ld prach%d %7ld]\n",
               "o_du",
               o_xu_id,
