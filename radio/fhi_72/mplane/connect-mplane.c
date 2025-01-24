@@ -46,14 +46,14 @@ int connect_mplane(ru_session_t *ru_session, char ***du_key_pair)
   nc_client_ssh_set_auth_pref(NC_SSH_AUTH_INTERACTIVE, -1);
 
   int keypair_ret = nc_client_ssh_add_keypair(&du_key_pair[0], &du_key_pair[1]);
-  AssertError(keypair_ret == 0, return EXIT_FAILURE, "Unable to authenticate RU with IP address %s\n", ru_session->ru_ip_add);
+  AssertError(keypair_ret == 0, return EXIT_FAILURE, "[MPLANE] Unable to authenticate RU with IP address %s\n", ru_session->ru_ip_add);
   nc_client_ssh_set_auth_hostkey_check_clb(my_auth_hostkey_check, "DATA");  // host-key identification
 
   /* create the session */
   ru_session->session = nc_connect_ssh(ru_session->ru_ip_add, port, NULL);
-  AssertError(ru_session->session != NULL, return EXIT_FAILURE, "RU IP address %s unreachable.\n", ru_session->ru_ip_add);
+  AssertError(ru_session->session != NULL, return EXIT_FAILURE, "[MPLANE] RU IP address %s unreachable.\n", ru_session->ru_ip_add);
 
-  printf("Successfuly connected to RU with IP address %s\n", ru_session->ru_ip_add);
+  LOG_I(HW, "[MPLANE] Successfuly connected to RU with IP address %s\n", ru_session->ru_ip_add);
 
   return EXIT_SUCCESS;
 }
@@ -66,7 +66,7 @@ void disconnect_mplane(void *rus_disconnect)
     ru_session_t *ru_session = &ru_session_list->ru_session[i];
     if (ru_session->session == NULL)
       continue;
-    printf("[MPLANE] Disconnecting from RU with IP %s\n.", ru_session->ru_ip_add);
+    LOG_I(HW, "[MPLANE] Disconnecting from RU with IP %s\n.", ru_session->ru_ip_add);
     nc_session_free(ru_session->session, NULL);
     ru_session->session = NULL;
   }

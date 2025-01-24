@@ -45,20 +45,20 @@ int edit_config_mplane(ru_session_t *ru_session)
   fseek(f, 0, SEEK_SET);
   char *content = calloc(len + 1, sizeof(char));
   int ret2 = fread(content, 1, len, f);
-  AssertError(ret2 == 0, return EXIT_FAILURE, "Just temp");
+  AssertError(ret2 == 0, return EXIT_FAILURE, "[MPLANE] Just temp");
   content[len] = '\0';
   fclose(f);
 
   rpc = nc_rpc_edit(target, op, test, err, content, param);
-  AssertError(rpc != NULL, return EXIT_FAILURE, "<edit-config> RPC creation failed.\n");
+  AssertError(rpc != NULL, return EXIT_FAILURE, "[MPLANE] <edit-config> RPC creation failed.\n");
 
   int ret = rpc_send_recv((struct nc_session *)ru_session->session, rpc, wd, timeout, NULL);
-  AssertError(ret == 0, return EXIT_FAILURE, "Failed to edit configuration for the candidate datastore.\n");
+  AssertError(ret == 0, return EXIT_FAILURE, "[MPLANE] Failed to edit configuration for the candidate datastore.\n");
 
   nc_rpc_free(rpc);
   free(content);
 
-  printf("[MPLANE] Successfully edited the RU configuration\n");
+  LOG_I(HW, "[MPLANE] Successfully edited the RU configuration\n");
 
   return EXIT_SUCCESS;
 }
@@ -73,14 +73,14 @@ int validate_config_mplane(ru_session_t *ru_session)
   NC_DATASTORE source = NC_DATASTORE_CANDIDATE;
 
   rpc = nc_rpc_validate(source, src_start, param);
-  AssertError(rpc != NULL, return EXIT_FAILURE, "<validate> RPC creation failed.\n");
+  AssertError(rpc != NULL, return EXIT_FAILURE, "[MPLANE] <validate> RPC creation failed.\n");
 
   int ret = rpc_send_recv((struct nc_session *)ru_session->session, rpc, wd, timeout, NULL);
-  AssertError(ret == 0, return EXIT_FAILURE, "Failed to validate candidate datastore.\n");
+  AssertError(ret == 0, return EXIT_FAILURE, "[MPLANE] Failed to validate candidate datastore.\n");
 
   nc_rpc_free(rpc);
 
-  printf("[MPLANE] Successfully validated the RU configuration\n");
+  LOG_I(HW, "[MPLANE] Successfully validated the RU configuration\n");
 
   return EXIT_SUCCESS;
 }
@@ -96,14 +96,14 @@ int commit_config_mplane(ru_session_t *ru_session)
   char *persist = NULL, *persist_id = NULL;
 
   rpc = nc_rpc_commit(confirmed, confirm_timeout, persist, persist_id, param);
-  AssertError(rpc != NULL, return EXIT_FAILURE, "<commit> RPC creation failed.\n");
+  AssertError(rpc != NULL, return EXIT_FAILURE, "[MPLANE] <commit> RPC creation failed.\n");
 
   int ret = rpc_send_recv((struct nc_session *)ru_session->session, rpc, wd, timeout, NULL);
-  AssertError(ret == 0, return EXIT_FAILURE, "Failed to commit candidate datastore.\n");
+  AssertError(ret == 0, return EXIT_FAILURE, "[MPLANE] Failed to commit candidate datastore.\n");
 
   nc_rpc_free(rpc);
 
-  printf("[MPLANE] Successfully commited the RU configuration. The RU is now in working state.\n");
+  LOG_I(HW, "[MPLANE] Successfully commited the RU configuration. The RU is now in working state.\n");
 
   return EXIT_SUCCESS;
 }

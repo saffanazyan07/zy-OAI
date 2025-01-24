@@ -41,15 +41,15 @@ static int recv_v1(struct nc_session *session, struct nc_rpc *rpc, NC_MSG_TYPE m
     msgtype = nc_recv_reply(session, rpc, msgid, timeout_s * 1000,
                             LYD_OPT_DESTRUCT | LYD_OPT_NOSIBLINGS, &reply);
     if (msgtype == NC_MSG_ERROR) {
-      AssertError(false, return EXIT_FAILURE, "Failed to receive a reply.");
+      AssertError(false, return EXIT_FAILURE, "[MPLANE] Failed to receive a reply.");
     } else if (msgtype == NC_MSG_WOULDBLOCK) {
-      AssertError(false, return EXIT_FAILURE, "Timeout for receiving a reply expired.");
+      AssertError(false, return EXIT_FAILURE, "[MPLANE] Timeout for receiving a reply expired.");
     } else if (msgtype == NC_MSG_NOTIF) {
       /* read again */
       continue;
     } else if (msgtype == NC_MSG_REPLY_ERR_MSGID) {
       /* unexpected message, try reading again to get the correct reply */
-      printf("Unexpected reply received - ignoring and waiting for the correct reply.\n");
+      LOG_I(HW, "[MPLANE] Unexpected reply received - ignoring and waiting for the correct reply.\n");
       nc_reply_free(reply);
       continue;
     }
@@ -58,14 +58,14 @@ static int recv_v1(struct nc_session *session, struct nc_rpc *rpc, NC_MSG_TYPE m
 
   switch (reply->type) {
     case NC_RPL_OK:
-      printf("RPC reply = OK\n");
+      LOG_I(HW, "[MPLANE] RPC reply = OK\n");
       break;
     case NC_RPL_DATA:
       data_rpl = (struct nc_reply_data *)reply;
 
       if (nc_rpc_get_type(rpc) == NC_RPC_GETSCHEMA) {
         AssertError((!data_rpl->data || (data_rpl->data->schema->nodetype != LYS_RPC) || (data_rpl->data->child == NULL)
-               || (data_rpl->data->child->schema->nodetype != LYS_ANYXML)), return EXIT_FAILURE, "Cannot get schema");
+               || (data_rpl->data->child->schema->nodetype != LYS_ANYXML)), return EXIT_FAILURE, "[MPLANE] Cannot get schema");
 
         struct lyd_node_anydata *any = (struct lyd_node_anydata *)data_rpl->data->child;
         switch (any->value_type) {
@@ -80,7 +80,7 @@ static int recv_v1(struct nc_session *session, struct nc_rpc *rpc, NC_MSG_TYPE m
             lyxml_print_mem(answer, any->value.xml, LYXML_PRINT_SIBLINGS);
             break;
           default:
-            AssertError(false, return EXIT_FAILURE, "Unknown yang type.\n");
+            AssertError(false, return EXIT_FAILURE, "[MPLANE] Unknown yang type.\n");
           }
           break;
       } else if (nc_rpc_get_type(rpc) == NC_RPC_GETCONFIG) {
@@ -99,7 +99,7 @@ static int recv_v1(struct nc_session *session, struct nc_rpc *rpc, NC_MSG_TYPE m
       
       break;
     case NC_RPL_ERROR:
-      printf("ERROR\n");
+      LOG_I(HW, "[MPLANE] ERROR\n");
       error = (struct nc_reply_error *)reply;
       for (int i = 0; i < error->count; ++i) {
         if (error->err[i].type) {
@@ -139,10 +139,10 @@ static int recv_v1(struct nc_session *session, struct nc_rpc *rpc, NC_MSG_TYPE m
         }
         printf("\n");
       }
-      AssertError(false, return EXIT_FAILURE, "Unable to continue.\n");
+      AssertError(false, return EXIT_FAILURE, "[MPLANE] Unable to continue.\n");
       break;
     default:
-      AssertError(false, return EXIT_FAILURE, "Internal error.\n");
+      AssertError(false, return EXIT_FAILURE, "[MPLANE] Internal error.\n");
       nc_reply_free(reply);
   }
   nc_reply_free(reply);
@@ -162,15 +162,15 @@ static int recv_v2(struct nc_session *session, struct nc_rpc *rpc, NC_MSG_TYPE m
   while(1){
     msgtype = nc_recv_reply(session, rpc, msgid, timeout_s * 1000, &envp, &op);
     if (msgtype == NC_MSG_ERROR) {
-      AssertError(false, return EXIT_FAILURE, "Failed to receive a reply.");
+      AssertError(false, return EXIT_FAILURE, "[MPLANE] Failed to receive a reply.");
     } else if (msgtype == NC_MSG_WOULDBLOCK) {
-      AssertError(false, return EXIT_FAILURE, "Timeout for receiving a reply for RPC expired.");
+      AssertError(false, return EXIT_FAILURE, "[MPLANE] Timeout for receiving a reply for RPC expired.");
     } else if (msgtype == NC_MSG_NOTIF) {    // for SUBSCRIBE 
       /* read again */
       continue;
     } else if (msgtype == NC_MSG_REPLY_ERR_MSGID) {
       /* unexpected message, try reading again to get the correct reply */
-      printf("[MPLANE] Unexpected reply received - ignoring and waiting for the correct reply.\n");
+      LOG_I(HW, "[MPLANE] Unexpected reply received - ignoring and waiting for the correct reply.\n");
       lyd_free_tree(envp);
       lyd_free_tree(op);
       continue;
@@ -184,7 +184,7 @@ static int recv_v2(struct nc_session *session, struct nc_rpc *rpc, NC_MSG_TYPE m
     if (nc_rpc_get_type(rpc) == NC_RPC_GETSCHEMA) {
       /* special case */
       if (!lyd_child(op) || (lyd_child(op)->schema->nodetype != LYS_ANYXML)) {
-        AssertError(false, return EXIT_FAILURE, "Cannot get schema.");
+        AssertError(false, return EXIT_FAILURE, "[MPLANE] Cannot get schema.");
       }
       struct lyd_node_any *any = (struct lyd_node_any *)lyd_child(op);
       switch (any->value_type) {
@@ -196,7 +196,7 @@ static int recv_v2(struct nc_session *session, struct nc_rpc *rpc, NC_MSG_TYPE m
         lyd_print_mem(answer, any->value.tree, LYD_XML, LYD_PRINT_WITHSIBLINGS);
         break;
       default:
-        AssertError(false, return EXIT_FAILURE, "Unexpected yang type.");
+        AssertError(false, return EXIT_FAILURE, "[MPLANE] Unexpected yang type.");
       }
     } else {
 
@@ -224,12 +224,12 @@ static int recv_v2(struct nc_session *session, struct nc_rpc *rpc, NC_MSG_TYPE m
     }
   /* edit/validate/commit functionalities */
   } else if (!strcmp(LYD_NAME(lyd_child(envp)), "ok")) {
-    printf("RPC reply = OK\n");
+    LOG_I(HW, "[MPLANE] RPC reply = OK\n");
   } else {
     //assert(!strcmp(LYD_NAME(lyd_child(envp)), "rpc-error")); check why
 
     /* make sure the following code is correct, and try to make it shorter? */
-    printf("ERROR\n");
+    LOG_I(HW, "[MPLANE] ERROR\n");
     LY_LIST_FOR(lyd_child(envp), err) {
       lyd_find_sibling_opaq_next(lyd_child(err), "error-type", &node);
       if (node) {
@@ -265,7 +265,7 @@ static int recv_v2(struct nc_session *session, struct nc_rpc *rpc, NC_MSG_TYPE m
       }
       printf("\n");
     }
-    AssertError(false, return EXIT_FAILURE, "Unable to continue.\n");
+    AssertError(false, return EXIT_FAILURE, "[MPLANE] Unable to continue.\n");
   }
 
   lyd_free_tree(envp);
@@ -292,6 +292,6 @@ int rpc_send_recv(struct nc_session *session, struct nc_rpc *rpc, NC_WD_MODE wd_
 #elif defined MPLANE_V2
   return recv_v2(session, rpc, msgtype, msgid, timeout_s, answer);
 #else
-  AssertError(false, return EXIT_FAILURE, "Unknown M-plane version found. Tried MPLANE_V1 and MPLANE_V2.\n");
+  AssertError(false, return EXIT_FAILURE, "[MPLANE] Unknown M-plane version found. Tried MPLANE_V1 and MPLANE_V2.\n");
 #endif
 }

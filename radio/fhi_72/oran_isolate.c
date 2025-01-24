@@ -301,7 +301,7 @@ __attribute__((__visibility__("default"))) int transport_init(openair0_device *d
 #ifdef OAI_MPLANE
   ru_session_list_t ru_session_list = {0};
   int ret = init_mplane(&ru_session_list);
-  AssertFatal(ret == 0, "Cannot initialize M-plane\n");
+  AssertFatal(ret == 0, "[MPLANE] Cannot initialize M-plane\n");
 
   bool ru_configured[ru_session_list.num_rus];
   for (size_t i = 0; i < ru_session_list.num_rus; i++) {
@@ -317,7 +317,7 @@ __attribute__((__visibility__("default"))) int transport_init(openair0_device *d
   bool all_ok = true;
   for (size_t i = 0; i < ru_session_list.num_rus; i++) {
     if (!ru_configured[i]) {
-      printf("[MPLANE] RU with IP %s could not be configured.\n", ru_session_list.ru_session[i].ru_ip_add);
+      LOG_I(HW, "[MPLANE] RU with IP %s couldn't be configured.\n", ru_session_list.ru_session[i].ru_ip_add);
       all_ok = false;
     }
   }

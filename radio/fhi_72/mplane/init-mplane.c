@@ -82,7 +82,7 @@ int init_mplane(ru_session_list_t *ru_session_list)
   int nump = sizeofArray(fhip);
   int ret = config_get(config_get_if(), fhip, nump, CONFIG_STRING_ORAN);
   if (ret <= 0) {
-    printf("problem reading section \"%s\"\n", CONFIG_STRING_ORAN);
+    LOG_I(HW, "[MPLANE] problem reading section \"%s\"\n", CONFIG_STRING_ORAN);
     return false;
   }
 
@@ -97,7 +97,7 @@ int init_mplane(ru_session_list_t *ru_session_list)
   uint32_t *vlan_tag = gpd(fhip, nump, ORAN_FH_CONFIG_VLAN_TAG)->uptr;
   int num_vlan_tags = gpd(fhip, nump, ORAN_FH_CONFIG_VLAN_TAG)->numelt;
 
-  AssertError(num_dus == num_vlan_tags, return EXIT_FAILURE, "Number of DU MAC addresses should be equal to the number of VLAN tags.");
+  AssertError(num_dus == num_vlan_tags, return EXIT_FAILURE, "[MPLANE] Number of DU MAC addresses should be equal to the number of VLAN tags.");
  
   int num_cu_planes = num_dus / num_rus;
 
@@ -137,7 +137,7 @@ bool manage_ru(ru_session_t *ru_session, const openair0_config_t *oai, const siz
   bool ptp_state = false;
   const char *sync_state = (char *)get_ru_xml_node(operational_ds, "sync-state");
   if (strcmp(sync_state, "LOCKED") == 0) {
-    printf("[MPLANE] RU is already PTP synchronized.\n");
+    MP_LOG_I("[MPLANE] RU is already PTP synchronized.\n");
     ptp_state = true;
   }
 

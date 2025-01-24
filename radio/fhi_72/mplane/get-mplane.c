@@ -34,11 +34,11 @@ int get_mplane(ru_session_t *ru_session, char **answer)
 
   /* create request */
   rpc = nc_rpc_get(filter, wd, param);
-  AssertError(rpc != NULL, return EXIT_FAILURE, "<get> RPC creation failed.\n");
+  AssertError(rpc != NULL, return EXIT_FAILURE, "[MPLANE] <get> RPC creation failed.\n");
 
   int ret = rpc_send_recv((struct nc_session *)ru_session->session, rpc, wd, timeout, answer);
-  AssertError(ret == 0, return EXIT_FAILURE, "Unable to retreive operational datastore\n.");
-  printf("Successfully retreived operational datastore\n");
+  AssertError(ret == 0, return EXIT_FAILURE, "[MPLANE] Unable to retreive operational datastore\n.");
+  LOG_I(HW, "[MPLANE] Successfully retreived operational datastore\n");
 
   nc_rpc_free(rpc);
 

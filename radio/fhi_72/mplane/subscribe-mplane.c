@@ -35,7 +35,7 @@ static void notif_clb_v1(struct nc_session *session, const struct nc_notif *noti
 
   char *subs_reply = NULL;
   lyd_print_mem(&subs_reply, notif->tree, output_format, LYP_WITHSIBLINGS | output_flag);
-  printf("\nReceived notification at (%s)\n%s\n", notif->datetime, subs_reply);
+  LOG_I(HW, "[MPLANE] \nReceived notification at (%s)\n%s\n", notif->datetime, subs_reply);
 
   // only for ptp-state-change subscription
   const char *node_name = notif->tree->child->attr->name;
@@ -57,7 +57,7 @@ static void notif_clb_v2(struct nc_session *session, const struct lyd_node *envp
 
   char *subs_reply = NULL;
   lyd_print_mem(&subs_reply, op, output_format, LYD_PRINT_WITHSIBLINGS | output_flag);
-  printf("\nReceived notification at (%s)\n%s\n", ((struct lyd_node_opaq *)lyd_child(envp))->value, subs_reply);
+  LOG_I(HW, "[MPLANE] \nReceived notification at (%s)\n%s\n", ((struct lyd_node_opaq *)lyd_child(envp))->value, subs_reply);
 
   // only for ptp-state-change subscription
   const char *node_name = ((struct lyd_node_inner *)op)->child->schema->name;
@@ -82,7 +82,7 @@ int subscribe_mplane(ru_session_t *ru_session, const char *stream, const char *f
 
   /* create requests */
   rpc = nc_rpc_subscribe(stream, NULL, start_time, stop_time, param);
-  AssertError(rpc != NULL, return EXIT_FAILURE, "<subscribe> RPC creation failed.\n");
+  AssertError(rpc != NULL, return EXIT_FAILURE, "[MPLANE] <subscribe> RPC creation failed.\n");
 
   /* create notification thread so that notifications can immediately be received */
   int ret = 0;
@@ -90,19 +90,19 @@ int subscribe_mplane(ru_session_t *ru_session, const char *stream, const char *f
   if (!nc_session_ntf_thread_running(ru_session->session)) {
     nc_session_set_data(ru_session->session, answer);
     ret = nc_recv_notif_dispatch(ru_session->session, notif_clb_v1);
-    AssertError(ret == 0, return EXIT_FAILURE, "Failed to create notification thread.\n");
+    AssertError(ret == 0, return EXIT_FAILURE, "[MPLANE] Failed to create notification thread.\n");
   }
 #elif V2
   ret = nc_recv_notif_dispatch_data(ru_session->session, notif_clb_v2, answer, NULL);
-  AssertError(ret == 0, return EXIT_FAILURE, "Failed to create notification thread.\n");
+  AssertError(ret == 0, return EXIT_FAILURE, "[MPLANE] Failed to create notification thread.\n");
 #endif
 
   ret = rpc_send_recv((struct nc_session *)ru_session->session, rpc, wd, timeout, NULL);
-  AssertError(ret == 0, return EXIT_FAILURE, "Failed to subscribe to: stream = %s, filter = %s\n", stream, filter);
+  AssertError(ret == 0, return EXIT_FAILURE, "[MPLANE] Failed to subscribe to: stream = %s, filter = %s\n", stream, filter);
 
   nc_rpc_free(rpc);
 
-  printf("[MPLANE] Successfully subscribed to all notifications.\n");
+  LOG_I(HW, "[MPLANE] Successfully subscribed to all notifications.\n");
 
   return EXIT_SUCCESS;
 }
@@ -119,15 +119,15 @@ int update_timer_mplane(ru_session_t *ru_session)
                          </supervision-watchdog-reset>";
   
   rpc = nc_rpc_act_generic_xml(content, param);
-  AssertError(rpc != NULL, return EXIT_FAILURE, "<supervision-watchdog-reset> RPC creation failed.\n");
+  AssertError(rpc != NULL, return EXIT_FAILURE, "[MPLANE] <supervision-watchdog-reset> RPC creation failed.\n");
 
 
   int ret = rpc_send_recv((struct nc_session *)ru_session->session, rpc, wd, timeout, NULL);
-  AssertError(ret == 0, return EXIT_FAILURE, "Failed to update the watchdog timer.\n");
+  AssertError(ret == 0, return EXIT_FAILURE, "[MPLANE] Failed to update the watchdog timer.\n");
 
   nc_rpc_free(rpc);
 
-  printf("[MPLANE] Successfully updated timer watchdog.\n");
+  LOG_I(HW, "[MPLANE] Successfully updated timer watchdog.\n");
 
   return EXIT_SUCCESS;
 }

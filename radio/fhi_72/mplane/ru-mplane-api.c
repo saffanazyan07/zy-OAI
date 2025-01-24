@@ -47,14 +47,14 @@ int get_config_for_xran(const char *buffer, const int max_num_ant, xran_mplane_t
 
   if (strcmp(ru_vendor, "BENETEL") == 0 /* || strcmp(ru_vendor, "VVDN-LPRU") == 0 || strcmp(ru_vendor, "Metanoia") == 0 */) {
     if (interface_mtu == 1500) {
-      printf("[MPLANE] Interface MTU %d not reliable, hardcoding to 9600.\n", interface_mtu);
+      LOG_I(HW, "[MPLANE] Interface MTU %d not reliable, hardcoding to 9600.\n", interface_mtu);
       xran_mplane->mtu = 9600;
     } else {
       xran_mplane->mtu = interface_mtu;
     }
 
     if (first_iq_width != 9) {
-      printf("[MPLANE] IQ bitwidth %d not reliable, hardcoding to 9.\n", first_iq_width);
+      LOG_I(HW, "[MPLANE] IQ bitwidth %d not reliable, hardcoding to 9.\n", first_iq_width);
       xran_mplane->iq_width = 9;
     } else {
       xran_mplane->iq_width = first_iq_width;
@@ -65,8 +65,8 @@ int get_config_for_xran(const char *buffer, const int max_num_ant, xran_mplane_t
     AssertError(false, return EXIT_FAILURE, "[MPLANE] %s RU currently not supported.\n", ru_vendor);
   }
 
-  printf("[MPLANE] Storing the following information to forward to xran\n");
-  printf("\
+  LOG_I(HW, "[MPLANE] Storing the following information to forward to xran\n");
+  LOG_I(HW, "[MPLANE] \
     RU vendor name %s\n\
     RU MAC address %s\n\
     MTU %d\n\
@@ -102,7 +102,7 @@ int get_uplane_info(const char *buffer, ru_mplane_config_t *ru_mplane_config)
   get_ru_xml_list(buffer, "rx-arrays", &ru_mplane_config->rx_carriers.name, &ru_mplane_config->rx_carriers.num);
   AssertError(ru_mplane_config->rx_carriers.name != NULL, return EXIT_FAILURE, "[MPLANE] Cannot get RX carrier names.\n");
 
-  printf("[MPLANE] Successfully retreived all the U-plane info");
+  LOG_I(HW, "[MPLANE] Successfully retreived all the U-plane info");
 
   return EXIT_SUCCESS;
 }

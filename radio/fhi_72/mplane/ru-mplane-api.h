@@ -26,6 +26,11 @@
 #include <stddef.h>
 #include <stdbool.h>
 
+#include "common/utils/LOG/log.h"
+
+#define MP_LOG_I(x, args...) LOG_I(HW, "[MPLANE] " x, ##args)
+#define MP_LOG_W(x, args...) LOG_W(HW, "[MPLANE] " x, ##args)
+
 typedef struct {
   bool ptp_state;
   // to be extended with any notification callback
