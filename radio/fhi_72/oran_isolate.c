@@ -42,10 +42,6 @@
 #ifdef OAI_MPLANE
 #include "mplane/init-mplane.h"
 #include "mplane/connect-mplane.h"
-#include "mplane/get-mplane.h"
-#include "mplane/subscribe-mplane.h"
-#include "mplane/config-mplane.h"
-#include "mplane/xml/get-xml.h"
 #endif
 
 typedef struct {
@@ -307,52 +303,31 @@ __attribute__((__visibility__("default"))) int transport_init(openair0_device *d
   int ret = init_mplane(&ru_session_list);
   AssertFatal(ret == 0, "Cannot initialize M-plane\n");
 
+  bool ru_configured[ru_session_list.num_rus];
   for (size_t i = 0; i < ru_session_list.num_rus; i++) {
     ru_session_t *ru_session = &ru_session_list.ru_session[i];
     ret = connect_mplane(ru_session, &ru_session_list.du_key_pair);
     if (ret != 0) {
+      ru_configured[i] = false;
       continue;
     }
+    ru_configured[i] = manage_ru(ru_session, openair0_cfg, ru_session_list.num_rus);
+  }
 
-    char *operational_ds = NULL;
-    ret = get_mplane(ru_session, &operational_ds);
-    AssertFatal(ret == 0, "Unable to continue with CU-planes configuration.\n");
-
-    bool ptp_state = false;
-    const char *sync_state = (char *)get_ru_xml_node(operational_ds, "sync-state");
-    if (strcmp(sync_state, "LOCKED") == 0) {
-      printf("[MPLANE] RU is already PTP synchronized.\n");
-      ptp_state = true;
-    }
-
-    /* 1) as per M-plane spec, RU must be in supervised mode,
-          where stream = NULL && filter = "/o-ran-supervision:supervision-notification";
-       2) additionally, we want to subscribe to PTP state change,
-          where stream = NULL && filter = "/o-ran-sync:synchronization-state-change";
-      => since more than one subscription at the time within one session is not possible, we will subscribe to all notifications */
-    const char *stream = "NETCONF";
-    const char *filter = NULL;
-    ru_session->ru_notif.ptp_state = ptp_state;
-    ret = subscribe_mplane(ru_session, stream, filter, (void *)&ru_session->ru_notif);
-
-    // when subscribed to the supervision notification, the watchdog timer needs to be updated
-    ret = update_timer_mplane(ru_session);
-
-    // save RU info for xran
-    const int max_num_ant = RTE_MAX(openair0_cfg->tx_num_channels, openair0_cfg->rx_num_channels) / ru_session_list.num_rus;
-    ret = get_config_for_xran(operational_ds, max_num_ant, &ru_session->xran_mplane);
-
-    // save the U-plane info
-    ret = get_uplane_info(operational_ds, &ru_session->ru_mplane_config);
-
-    if (ru_session->ru_notif.ptp_state) {
-      ret = edit_config_mplane(ru_session);
-      ret = validate_config_mplane(ru_session);
-      ret = commit_config_mplane(ru_session);
+  bool all_ok = true;
+  for (size_t i = 0; i < ru_session_list.num_rus; i++) {
+    if (!ru_configured[i]) {
+      printf("[MPLANE] RU with IP %s could not be configured.\n", ru_session_list.ru_session[i].ru_ip_add);
+      all_ok = false;
     }
   }
 
-  eth->mplane_priv = (void *)&ru_session_list;
+  if (all_ok) {
+    eth->mplane_priv = (void *)&ru_session_list;
+  } else {
+    disconnect_mplane((void *)&ru_session_list);
+    AssertFatal(false, "[MPLANE] Stoping M-plane.\n");
+  }
 
   // the following is just temporary
   bool success = get_xran_config(openair0_cfg, &fh_init, fh_config);

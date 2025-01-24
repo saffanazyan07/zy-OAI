@@ -102,6 +102,8 @@ int subscribe_mplane(ru_session_t *ru_session, const char *stream, const char *f
 
   nc_rpc_free(rpc);
 
+  printf("[MPLANE] Successfully subscribed to all notifications.\n");
+
   return EXIT_SUCCESS;
 }
 
@@ -124,6 +126,8 @@ int update_timer_mplane(ru_session_t *ru_session)
   AssertError(ret == 0, return EXIT_FAILURE, "Failed to update the watchdog timer.\n");
 
   nc_rpc_free(rpc);
+
+  printf("[MPLANE] Successfully updated timer watchdog.\n");
 
   return EXIT_SUCCESS;
 }

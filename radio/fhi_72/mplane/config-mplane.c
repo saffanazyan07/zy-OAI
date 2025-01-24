@@ -58,6 +58,8 @@ int edit_config_mplane(ru_session_t *ru_session)
   nc_rpc_free(rpc);
   free(content);
 
+  printf("[MPLANE] Successfully edited the RU configuration\n");
+
   return EXIT_SUCCESS;
 }
 
@@ -77,6 +79,8 @@ int validate_config_mplane(ru_session_t *ru_session)
   AssertError(ret == 0, return EXIT_FAILURE, "Failed to validate candidate datastore.\n");
 
   nc_rpc_free(rpc);
+
+  printf("[MPLANE] Successfully validated the RU configuration\n");
 
   return EXIT_SUCCESS;
 }
@@ -98,6 +102,8 @@ int commit_config_mplane(ru_session_t *ru_session)
   AssertError(ret == 0, return EXIT_FAILURE, "Failed to commit candidate datastore.\n");
 
   nc_rpc_free(rpc);
+
+  printf("[MPLANE] Successfully commited the RU configuration. The RU is now in working state.\n");
 
   return EXIT_SUCCESS;
 }

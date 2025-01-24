@@ -20,6 +20,10 @@
  */
 
 #include "init-mplane.h"
+#include "get-mplane.h"
+#include "subscribe-mplane.h"
+#include "config-mplane.h"
+#include "xml/get-xml.h"
 #include "radio/fhi_72/oran-params.h"
 
 #include <libyang/libyang.h>
@@ -120,4 +124,57 @@ int init_mplane(ru_session_list_t *ru_session_list)
   ly_set_log_clb(ly_print_clb, 1);
 
   return EXIT_SUCCESS;
+}
+
+bool manage_ru(ru_session_t *ru_session, const openair0_config_t *oai, const size_t num_rus)
+{
+  int ret = 0;
+
+  char *operational_ds = NULL;
+  ret = get_mplane(ru_session, &operational_ds);
+  AssertError(ret == 0, return false, "[MPLANE] Unable to retreive the operational datastore.\n");
+
+  bool ptp_state = false;
+  const char *sync_state = (char *)get_ru_xml_node(operational_ds, "sync-state");
+  if (strcmp(sync_state, "LOCKED") == 0) {
+    printf("[MPLANE] RU is already PTP synchronized.\n");
+    ptp_state = true;
+  }
+
+  /* 1) as per M-plane spec, RU must be in supervised mode,
+        where stream = NULL && filter = "/o-ran-supervision:supervision-notification";
+     2) additionally, we want to subscribe to PTP state change,
+        where stream = NULL && filter = "/o-ran-sync:synchronization-state-change";
+    => since more than one subscription at the time within one session is not possible, we will subscribe to all notifications */
+  const char *stream = "NETCONF";
+  const char *filter = NULL;
+  ru_session->ru_notif.ptp_state = ptp_state;
+  ret = subscribe_mplane(ru_session, stream, filter, (void *)&ru_session->ru_notif);
+  AssertError(ret == 0, return false, "[MPLANE] Unable to subscribe.\n");
+
+  // when subscribed to the supervision notification, the watchdog timer needs to be updated
+  ret = update_timer_mplane(ru_session);
+  AssertError(ret == 0, return false, "[MPLANE] Unable to update the watchdog timer. RU will do a resert after default timer of 60+10s.\n");
+
+  // save RU info for xran
+  const int max_num_ant = RTE_MAX(oai->tx_num_channels, oai->rx_num_channels) / num_rus;
+  ret = get_config_for_xran(operational_ds, max_num_ant, &ru_session->xran_mplane);
+  AssertError(ret == 0, return false, "[MPLANE] Unable to retreive required info for xran from RU.\n");
+
+  // save the U-plane info
+  ret = get_uplane_info(operational_ds, &ru_session->ru_mplane_config);
+  AssertError(ret == 0, return false, "[MPLANE] Unable to get U-plane info from RU operational datastore.\n");
+
+  if (ru_session->ru_notif.ptp_state) {
+    ret = edit_config_mplane(ru_session);
+    AssertError(ret == 0, return false, "[MPLANE] Unable to edit the RU configuration.\n");
+
+    ret = validate_config_mplane(ru_session);
+    AssertError(ret == 0, return false, "[MPLANE] Unable to validate the RU configuration.\n");
+
+    ret = commit_config_mplane(ru_session);
+    AssertError(ret == 0, return false, "[MPLANE] Unable to commit the RU configuration.\n");
+  }
+
+  return true;
 }

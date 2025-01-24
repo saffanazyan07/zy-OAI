@@ -65,8 +65,8 @@ int get_config_for_xran(const char *buffer, const int max_num_ant, xran_mplane_t
     AssertError(false, return EXIT_FAILURE, "[MPLANE] %s RU currently not supported.\n", ru_vendor);
   }
 
+  printf("[MPLANE] Storing the following information to forward to xran\n");
   printf("\
-  [MPLANE]\
     RU vendor name %s\n\
     RU MAC address %s\n\
     MTU %d\n\
@@ -101,6 +101,8 @@ int get_uplane_info(const char *buffer, ru_mplane_config_t *ru_mplane_config)
   // RX carriers
   get_ru_xml_list(buffer, "rx-arrays", &ru_mplane_config->rx_carriers.name, &ru_mplane_config->rx_carriers.num);
   AssertError(ru_mplane_config->rx_carriers.name != NULL, return EXIT_FAILURE, "[MPLANE] Cannot get RX carrier names.\n");
+
+  printf("[MPLANE] Successfully retreived all the U-plane info");
 
   return EXIT_SUCCESS;
 }

@@ -27,4 +27,6 @@
 
 int init_mplane(ru_session_list_t *ru_session_list);
 
+bool manage_ru(ru_session_t *ru_session, const openair0_config_t *oai, const size_t num_rus);
+
 #endif /* OAI_MPLANE_H */

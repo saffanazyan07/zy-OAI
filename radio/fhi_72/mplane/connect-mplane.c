@@ -34,7 +34,7 @@ static int my_auth_hostkey_check(const char *hostname, ssh_session session, void
   return 0;
 }
 
-int connect_mplane(ru_session_t *ru_session, const char ***du_key_pair)
+int connect_mplane(ru_session_t *ru_session, char ***du_key_pair)
 {
   int port = NC_PORT_SSH;
   char *user = "oranbenetel";
