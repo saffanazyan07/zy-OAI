@@ -252,6 +252,7 @@ static inline void applyFtoleft(const t_nrPolar_params *pp, decoder_node_t *node
       simde__m128i minabs128 = simde_mm_min_epi16(absa128, absb128);
       *((simde__m128i *)alpha_l) = simde_mm_sign_epi16(minabs128, simde_mm_sign_epi16(a128, b128));
     } else if (avx2mod == 4) {
+      // this uses __m64, but only with SSE instructions, so we can disable MMX even with this piece of code
       simde__m64 a64 = *((simde__m64 *)alpha_v);
       simde__m64 b64 = ((simde__m64 *)alpha_v)[1];
       simde__m64 absa64 = simde_mm_abs_pi16(a64);
