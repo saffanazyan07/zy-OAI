@@ -132,8 +132,8 @@ sctp_assoc_t get_new_cuup_for_ue(const gNB_RRC_INST *rrc, const gNB_RRC_UE_t *ue
 
   /* update the association for the UE so it will be picked up later */
   ue_data.e1_assoc_id = selected->assoc_id;
-  cu_remove_f1_ue_data(ue->rrc_ue_id);
-  cu_add_f1_ue_data(ue->rrc_ue_id, &ue_data);
+  bool success = cu_update_f1_ue_data(ue->rrc_ue_id, &ue_data);
+  DevAssert(success);
   LOG_I(RRC, "UE %d associating to CU-UP assoc_id %d out of %ld CU-UPs\n", ue->rrc_ue_id, ue_data.e1_assoc_id, rrc->num_cuups);
 
   return ue_data.e1_assoc_id;

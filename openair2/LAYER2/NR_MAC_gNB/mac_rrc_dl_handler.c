@@ -482,7 +482,8 @@ static NR_UE_info_t *create_new_UE(gNB_MAC_INST *mac, uint32_t cu_id)
     return NULL;
 
   f1_ue_data_t new_ue_data = {.secondary_ue = cu_id};
-  du_add_f1_ue_data(rnti, &new_ue_data);
+  bool success = du_add_f1_ue_data(rnti, &new_ue_data);
+  DevAssert(success);
 
   const NR_ServingCellConfigCommon_t *scc = mac->common_channels[CC_id].ServingCellConfigCommon;
   const NR_ServingCellConfig_t *sccd = mac->common_channels[CC_id].pre_ServingCellConfig;
@@ -826,7 +827,8 @@ void dl_rrc_message_transfer(const f1ap_dl_rrc_message_t *dl_rrc)
   if (!du_exists_f1_ue_data(dl_rrc->gNB_DU_ue_id)) {
     LOG_D(NR_MAC, "No CU UE ID stored for UE RNTI %04x, adding CU UE ID %d\n", dl_rrc->gNB_DU_ue_id, dl_rrc->gNB_CU_ue_id);
     f1_ue_data_t new_ue_data = {.secondary_ue = dl_rrc->gNB_CU_ue_id};
-    du_add_f1_ue_data(dl_rrc->gNB_DU_ue_id, &new_ue_data);
+    bool success = du_add_f1_ue_data(dl_rrc->gNB_DU_ue_id, &new_ue_data);
+    DevAssert(success);
   }
 
   if (UE->expect_reconfiguration && dl_rrc->srb_id == 1) {
