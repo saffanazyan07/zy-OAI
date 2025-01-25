@@ -98,6 +98,10 @@
 
 #ifdef E2_AGENT
 #include "openair2/E2AP/RAN_FUNCTION/O-RAN/ran_func_rc_extern.h"
+#include "openair2/E2AP/RAN_FUNCTION/O-RAN/ran_func_rc_subs.h"
+#include "NR_DL-CCCH-Message.h"
+#include "NR_DL-DCCH-Message.h"
+#include "NR_PCCH-Message.h"
 #endif
 
 //#define XER_PRINT
@@ -432,6 +436,17 @@ static void rrc_gNB_generate_RRCSetup(instance_t instance,
     .srb_id = CCCH
   };
   rrc->mac_rrc.dl_rrc_message_transfer(ue_data.du_assoc_id, &dl_rrc);
+
+  #ifdef E2_AGENT
+    if (check_event_trigger_rrc_message(RRC_MESSAGE_E2SM_RC_RAN_PARAM_ID_REPORT_1, DL_CCCH_NR_RRC_CLASS, NR_DL_CCCH_MessageType__c1_PR_rrcSetup - 1))
+    {
+      byte_array_t buffer_ba = {.len = size};
+      buffer_ba.buf = calloc(size,sizeof(uint8_t));
+      assert(buffer_ba.buf != NULL && "Memory exhausted");
+      memcpy(buffer_ba.buf, buf, size);
+      signal_rrc_msg_to_ric(buffer_ba);
+    }
+  #endif
 }
 
 static void rrc_gNB_generate_RRCReject(module_id_t module_id, rrc_gNB_ue_context_t *const ue_context_pP)
@@ -464,6 +479,17 @@ static void rrc_gNB_generate_RRCReject(module_id_t module_id, rrc_gNB_ue_context
     .RAT_frequency_priority_information.en_dc = 0
   };
   rrc->mac_rrc.dl_rrc_message_transfer(ue_data.du_assoc_id, &dl_rrc);
+
+  #ifdef E2_AGENT
+    if (check_event_trigger_rrc_message(RRC_MESSAGE_E2SM_RC_RAN_PARAM_ID_REPORT_1, DL_CCCH_NR_RRC_CLASS, NR_DL_CCCH_MessageType__c1_PR_rrcReject - 1))
+    {
+      byte_array_t buffer_ba = {.len = size};
+      buffer_ba.buf = calloc(size,sizeof(uint8_t));
+      assert(buffer_ba.buf != NULL && "Memory exhausted");
+      memcpy(buffer_ba.buf, buf, size);
+      signal_rrc_msg_to_ric(buffer_ba);
+    }
+  #endif
 }
 
 //-----------------------------------------------------------------------------
@@ -576,6 +602,16 @@ static void rrc_gNB_generate_dedicatedRRCReconfiguration(gNB_RRC_INST *rrc, gNB_
 
   LOG_UE_DL_EVENT(ue_p, "Generate RRCReconfiguration (bytes %d, xid %d)\n", size, xid);
   nr_rrc_transfer_protected_rrc_message(rrc, ue_p, DL_SCH_LCID_DCCH, buffer, size);
+  #ifdef E2_AGENT
+    if (check_event_trigger_rrc_message(RRC_MESSAGE_E2SM_RC_RAN_PARAM_ID_REPORT_1, DL_DCCH_NR_RRC_CLASS, NR_DL_DCCH_MessageType__c1_PR_rrcReconfiguration - 1))
+    {
+      byte_array_t buffer_ba = {.len = size};
+      buffer_ba.buf = calloc(size,sizeof(uint8_t));
+      assert(buffer_ba.buf != NULL && "Memory exhausted");
+      memcpy(buffer_ba.buf, buffer, size);
+      signal_rrc_msg_to_ric(buffer_ba);
+    }
+  #endif
 }
 
 void rrc_gNB_modify_dedicatedRRCReconfiguration(gNB_RRC_INST *rrc, gNB_RRC_UE_t *ue_p)
@@ -685,6 +721,16 @@ void rrc_gNB_modify_dedicatedRRCReconfiguration(gNB_RRC_INST *rrc, gNB_RRC_UE_t 
 
   LOG_I(NR_RRC, "UE %d: Generate RRCReconfiguration (bytes %d)\n", ue_p->rrc_ue_id, size);
   nr_rrc_transfer_protected_rrc_message(rrc, ue_p, DL_SCH_LCID_DCCH, buffer, size);
+  #ifdef E2_AGENT
+    if (check_event_trigger_rrc_message(RRC_MESSAGE_E2SM_RC_RAN_PARAM_ID_REPORT_1, DL_DCCH_NR_RRC_CLASS, NR_DL_DCCH_MessageType__c1_PR_rrcReconfiguration - 1))
+    {
+      byte_array_t buffer_ba = {.len = size};
+      buffer_ba.buf = calloc(size,sizeof(uint8_t));
+      assert(buffer_ba.buf != NULL && "Memory exhausted");
+      memcpy(buffer_ba.buf, buffer, size);
+      signal_rrc_msg_to_ric(buffer_ba);
+    }
+  #endif
 }
 
 //-----------------------------------------------------------------------------
@@ -737,6 +783,16 @@ void rrc_gNB_generate_dedicatedRRCReconfiguration_release(gNB_RRC_INST *rrc,
 
   LOG_I(NR_RRC, "UE %d: Generate NR_RRCReconfiguration (bytes %d)\n", ue_p->rrc_ue_id, size);
   nr_rrc_transfer_protected_rrc_message(rrc, ue_p, DL_SCH_LCID_DCCH, buffer, size);
+  #ifdef E2_AGENT
+    if (check_event_trigger_rrc_message(RRC_MESSAGE_E2SM_RC_RAN_PARAM_ID_REPORT_1, DL_DCCH_NR_RRC_CLASS, NR_DL_DCCH_MessageType__c1_PR_rrcReconfiguration - 1))
+    {
+      byte_array_t buffer_ba = {.len = size};
+      buffer_ba.buf = calloc(size,sizeof(uint8_t));
+      assert(buffer_ba.buf != NULL && "Memory exhausted");
+      memcpy(buffer_ba.buf, buffer, size);
+      signal_rrc_msg_to_ric(buffer_ba);
+    }
+  #endif
 }
 
 /* \brief find existing PDU session inside E1AP Bearer Modif message, or
@@ -879,6 +935,16 @@ static void rrc_gNB_generate_RRCReestablishment(rrc_gNB_ue_context_t *ue_context
     if (ue_p->Srb[srb_id].Active)
       nr_pdcp_config_set_security(ue_p->rrc_ue_id, srb_id, true, &security_parameters);
   }
+  #ifdef E2_AGENT
+    if (check_event_trigger_rrc_message(RRC_MESSAGE_E2SM_RC_RAN_PARAM_ID_REPORT_1, DL_DCCH_NR_RRC_CLASS, NR_DL_DCCH_MessageType__c1_PR_rrcReestablishment - 1))
+    {
+      byte_array_t buffer_ba = {.len = size};
+      buffer_ba.buf = calloc(size,sizeof(uint8_t));
+      assert(buffer_ba.buf != NULL && "Memory exhausted");
+      memcpy(buffer_ba.buf, buffer, size);
+      signal_rrc_msg_to_ric(buffer_ba);
+    }
+  #endif
 }
 
 /// @brief Function tha processes RRCReestablishmentComplete message sent by the UE, after RRCReestasblishment request.
@@ -973,6 +1039,16 @@ static void rrc_gNB_process_RRCReestablishmentComplete(gNB_RRC_INST *rrc, gNB_RR
         ue_p->rnti,
         size);
   nr_rrc_transfer_protected_rrc_message(rrc, ue_p, DL_SCH_LCID_DCCH, buffer, size);
+  #ifdef E2_AGENT
+    if (check_event_trigger_rrc_message(RRC_MESSAGE_E2SM_RC_RAN_PARAM_ID_REPORT_1, DL_DCCH_NR_RRC_CLASS, NR_DL_DCCH_MessageType__c1_PR_rrcReconfiguration - 1))
+    {
+      byte_array_t buffer_ba = {.len = size};
+      buffer_ba.buf = calloc(size,sizeof(uint8_t));
+      assert(buffer_ba.buf != NULL && "Memory exhausted");
+      memcpy(buffer_ba.buf, buffer, size);
+      signal_rrc_msg_to_ric(buffer_ba);
+    }
+  #endif
 }
 //-----------------------------------------------------------------------------
 
@@ -994,6 +1070,16 @@ int nr_rrc_reconfiguration_req(gNB_RRC_INST *rrc, gNB_RRC_UE_t *ue_p, const int 
   int size = do_RRCReconfiguration(ue_p, buffer, NR_RRC_BUF_SIZE, xid, NULL, NULL, NULL, NULL, NULL, NULL, masterCellGroup);
 
   nr_rrc_transfer_protected_rrc_message(rrc, ue_p, DL_SCH_LCID_DCCH, buffer, size);
+  #ifdef E2_AGENT
+    if (check_event_trigger_rrc_message(RRC_MESSAGE_E2SM_RC_RAN_PARAM_ID_REPORT_1, DL_DCCH_NR_RRC_CLASS, NR_DL_DCCH_MessageType__c1_PR_rrcReconfiguration - 1))
+    {
+      byte_array_t buffer_ba = {.len = size};
+      buffer_ba.buf = calloc(size,sizeof(uint8_t));
+      assert(buffer_ba.buf != NULL && "Memory exhausted");
+      memcpy(buffer_ba.buf, buffer, size);
+      signal_rrc_msg_to_ric(buffer_ba);
+    }
+  #endif
 
   return 0;
 }
@@ -1418,6 +1504,17 @@ void rrc_forward_ue_nas_message(gNB_RRC_INST *rrc, gNB_RRC_UE_t *UE)
   // no need to free UE->nas_pdu.buffer, do_NR_DLInformationTransfer() did that
   UE->nas_pdu.buffer = NULL;
   UE->nas_pdu.length = 0;
+
+  #ifdef E2_AGENT
+    if (check_event_trigger_rrc_message(RRC_MESSAGE_E2SM_RC_RAN_PARAM_ID_REPORT_1, DL_DCCH_NR_RRC_CLASS, NR_DL_DCCH_MessageType__c1_PR_dlInformationTransfer - 1))
+    {
+      byte_array_t buffer_ba = {.len = length};
+      buffer_ba.buf = calloc(length,sizeof(uint8_t));
+      assert(buffer_ba.buf != NULL && "Memory exhausted");
+      memcpy(buffer_ba.buf, buffer, length);
+      signal_rrc_msg_to_ric(buffer_ba);
+    }
+  #endif
 }
 
 static void handle_ueCapabilityInformation(gNB_RRC_INST *rrc, gNB_RRC_UE_t *UE, const NR_UECapabilityInformation_t *ue_cap_info)
@@ -1760,7 +1857,19 @@ static int rrc_gNB_decode_dcch(gNB_RRC_INST *rrc, const f1ap_ul_rrc_message_t *m
       default:
         break;
     }
+
+    #ifdef E2_AGENT
+      if (ul_dcch_msg->message.choice.c1->present > 0 && check_event_trigger_rrc_message(RRC_MESSAGE_E2SM_RC_RAN_PARAM_ID_REPORT_1, UL_DCCH_NR_RRC_CLASS, (ul_dcch_msg->message.choice.c1->present - 1)))
+      {
+        byte_array_t buffer_ba = {.len = msg->rrc_container_length};
+        buffer_ba.buf = calloc(msg->rrc_container_length,sizeof(uint8_t));
+        assert(buffer_ba.buf != NULL && "Memory exhausted");
+        memcpy(buffer_ba.buf, msg->rrc_container, msg->rrc_container_length);
+        signal_rrc_msg_to_ric(buffer_ba);
+      }
+    #endif
   }
+
   ASN_STRUCT_FREE(asn_DEF_NR_UL_DCCH_Message, ul_dcch_msg);
   return 0;
 }
@@ -1817,6 +1926,17 @@ void rrc_gNB_process_initial_ul_rrc_message(sctp_assoc_t assoc_id, const f1ap_in
         LOG_E(NR_RRC, "UE %04x Unknown message\n", ul_rrc->crnti);
         break;
     }
+
+    #ifdef E2_AGENT
+      if (ul_ccch_msg->message.choice.c1->present > 0 && check_event_trigger_rrc_message(RRC_MESSAGE_E2SM_RC_RAN_PARAM_ID_REPORT_1, UL_CCCH_NR_RRC_CLASS, (ul_ccch_msg->message.choice.c1->present - 1)))
+      {
+        byte_array_t buffer_ba = {.len = ul_rrc->rrc_container_length};
+        buffer_ba.buf = calloc(ul_rrc->rrc_container_length,sizeof(uint8_t));
+        assert(buffer_ba.buf != NULL && "Memory exhausted");
+        memcpy(buffer_ba.buf, ul_rrc->rrc_container, ul_rrc->rrc_container_length);
+        signal_rrc_msg_to_ric(buffer_ba);
+      }
+    #endif
   }
   ASN_STRUCT_FREE(asn_DEF_NR_UL_CCCH_Message, ul_ccch_msg);
 }
@@ -2669,6 +2789,18 @@ void rrc_gNB_generate_SecurityModeCommand(gNB_RRC_INST *rrc, gNB_RRC_UE_t *ue_p)
   LOG_I(NR_RRC, "UE %u Logical Channel DL-DCCH, Generate SecurityModeCommand (bytes %d)\n", ue_p->rrc_ue_id, size);
 
   nr_rrc_transfer_protected_rrc_message(rrc, ue_p, DL_SCH_LCID_DCCH, buffer, size);
+
+  #ifdef E2_AGENT
+    //signal_ue_id_to_ric(ue_p, F1_UE_CONTEXT_SETUP_REQUEST); // this can cause issues with signal_rrc_msg_to_ric() and needs to be investigated
+    if (check_event_trigger_rrc_message(RRC_MESSAGE_E2SM_RC_RAN_PARAM_ID_REPORT_1, DL_DCCH_NR_RRC_CLASS, NR_DL_DCCH_MessageType__c1_PR_securityModeCommand - 1))
+    {
+      byte_array_t buffer_ba = {.len = size};
+      buffer_ba.buf = calloc(size,sizeof(uint8_t));
+      assert(buffer_ba.buf != NULL && "Memory exhausted");
+      memcpy(buffer_ba.buf, buffer, size);
+      signal_rrc_msg_to_ric(buffer_ba);
+    }
+  #endif
 }
 
 //-----------------------------------------------------------------------------
@@ -2777,6 +2909,17 @@ int rrc_gNB_generate_pcch_msg(sctp_assoc_t assoc_id, const NR_SIB1_t *sib1, uint
   }
   // TODO, send message to pdcp
   (void) assoc_id;
+
+  #ifdef E2_AGENT
+    if (check_event_trigger_rrc_message(RRC_MESSAGE_E2SM_RC_RAN_PARAM_ID_REPORT_1, PCCH_NR_RRC_CLASS, NR_PCCH_MessageType__c1_PR_paging))
+    {
+      byte_array_t buffer_ba = {.len = RRC_BUF_SIZE};
+      buffer_ba.buf = calloc(RRC_BUF_SIZE,sizeof(uint8_t));
+      assert(buffer_ba.buf != NULL && "Memory exhausted");
+      memcpy(buffer_ba.buf, buffer, RRC_BUF_SIZE);
+      signal_rrc_msg_to_ric(buffer_ba);
+    }
+  #endif
 
   return 0;
 }
