@@ -383,10 +383,9 @@ void rx_nr_prach_ru(RU_t *ru, int prachFormat, int numRA, int prachStartSymbol, 
   const dft_size_idx_t dftsize = get_dft(dftlen);
 
   // Do forward transform
-  if (LOG_DEBUGFLAG(PRACH)) {
+  if (LOG_DEBUGFLAG(DEBUG_PRACH)) {
     LOG_D(PHY, "rx_prach: Doing PRACH FFT for nb_rx:%d Ncp:%d dftlen:%d\n", ru->nb_rx, Ncp, dftlen);
   }
-
 
   // Note: Assumes PUSCH SCS @ 30 kHz, take values for formats 0-2 and adjust for others below
   int kbar = 1;
@@ -497,7 +496,7 @@ void rx_nr_prach(PHY_VARS_gNB *gNB,
   LOG_D(PHY,"L1 PRACH RX: rooSequenceIndex %d, numRootSeqeuences %d, NCS %d, N_ZC %d, format %d \n",rootSequenceIndex,numrootSequenceIndex,NCS,N_ZC,prach_fmt);
 
   prach_ifft = gNB->prach_vars.prach_ifft;
-  if (LOG_DEBUGFLAG(PRACH)){
+  if (LOG_DEBUGFLAG(DEBUG_PRACH)) {
     if ((frame&1023) < 20) LOG_D(PHY,"PRACH (gNB) : running rx_prach for slot %d, msg1_frequencystart %d, rootSequenceIndex %d\n", slot, msg1_frequencystart, rootSequenceIndex);
   }
 
@@ -520,8 +519,7 @@ void rx_nr_prach(PHY_VARS_gNB *gNB,
   *max_preamble = 0;
   int16_t prachF[2 * 1024];
   for (preamble_index=0 ; preamble_index<64 ; preamble_index++) {
-
-    if (LOG_DEBUGFLAG(PRACH)){
+    if (LOG_DEBUGFLAG(DEBUG_PRACH)) {
       int en = dB_fixed(signal_energy((int32_t*)&rxsigF[0][0],(N_ZC==839) ? 840: 140));
       if (en>60) LOG_D(PHY,"frame %d, slot %d : Trying preamble %d \n",frame,slot,preamble_index);
     }
@@ -599,7 +597,7 @@ void rx_nr_prach(PHY_VARS_gNB *gNB,
     }
 
     // Compute DFT of RX signal (conjugate input, results in conjugate output) for each new rootSequenceIndex
-    if (LOG_DEBUGFLAG(PRACH)) {
+    if (LOG_DEBUGFLAG(DEBUG_PRACH)) {
       int en = dB_fixed(signal_energy((int32_t*)&rxsigF[0][0],840));
       if (en>60)
         LOG_D(PHY,
@@ -626,11 +624,11 @@ void rx_nr_prach(PHY_VARS_gNB *gNB,
 
       memset(prach_ifft,0,((N_ZC==839) ? 2048 : 256)*sizeof(int32_t));
       memset(prachF, 0, sizeof(int16_t) * 2 * 1024);
-      if (LOG_DUMPFLAG(PRACH)) {
+      if (LOG_DUMPFLAG(DEBUG_PRACH)) {
         LOG_M("prach_rxF0.m","prach_rxF0",rxsigF[0],N_ZC,1,1);
         LOG_M("prach_rxF1.m","prach_rxF1",rxsigF[1],6144,1,1);
       }
-   
+
       for (int aa = 0; aa < nb_rx; aa++) {
 	// Do componentwise product with Xu* on each antenna 
 
@@ -653,7 +651,7 @@ void rx_nr_prach(PHY_VARS_gNB *gNB,
             prach_ifft[i] += (int32_t)prach_ifft_tmp[i<<1]*(int32_t)prach_ifft_tmp[(i<<1)] + (int32_t)prach_ifft_tmp[1+(i<<1)]*(int32_t)prach_ifft_tmp[1+(i<<1)];
         }
 
-        if (LOG_DUMPFLAG(PRACH)) {
+        if (LOG_DUMPFLAG(DEBUG_PRACH)) {
           if (aa == 0)
             LOG_M("prach_rxF_comp0.m","prach_rxF_comp0", prachF, 1024, 1, 1);
           if (aa == 1)
@@ -717,8 +715,7 @@ void rx_nr_prach(PHY_VARS_gNB *gNB,
   }
   else *TA = *TA/2;
 
-
-  if (LOG_DUMPFLAG(PRACH)) {
+  if (LOG_DUMPFLAG(DEBUG_PRACH)) {
     //int en = dB_fixed(signal_energy((int32_t*)&rxsigF[0][0],840));
     //    if (en>60) {
       int k = (12 * n_ra_prb) - 6 * fp->N_RB_UL;
@@ -734,7 +731,7 @@ void rx_nr_prach(PHY_VARS_gNB *gNB,
       LOG_M("Xu.m","xu", Xu, N_ZC, 1, 1);
       LOG_M("prach_ifft0.m","prach_t0", prach_ifft, 1024, 1, 1);
       //    }
-  } /* LOG_DUMPFLAG(PRACH) */
+  }
   stop_meas(&gNB->rx_prach);
 
 }

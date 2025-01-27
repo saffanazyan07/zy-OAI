@@ -901,7 +901,6 @@ void nfapi_vnf_p7_config_destory(nfapi_vnf_p7_config_t* config);
  * This function is blocking and will not return until the nfapi_vnf_p7_stop
  * function is called. 
  */
-extern queue_t gnb_slot_ind_queue;
 int nfapi_vnf_p7_start(nfapi_vnf_p7_config_t* config);
 int nfapi_nr_vnf_p7_start(nfapi_vnf_p7_config_t* config);
 
@@ -933,13 +932,14 @@ int nfapi_vnf_p7_release_pdu(nfapi_vnf_p7_config_t* config, void*);
  *  \param pnf_p7_addr The udp address the pnf p7 entity has chosen 
  *  \param pnf_p7_port The udp port the pnf p7 entity has chosen
  *  \param phy_id The unique phy id for the pnf p7 entity
+ *  \param mu The subcarrier spacing the PNF is operating with.
  *  \return A status value. 0 equal success, -1 indicates failure
  *
  * This function should be used to each pnf p7 entity that is to be added to this
  * vnf p7 entity. Once added the vnf p7 entity will start establish sync with the
  * pnf p7 entity and that has been sucessfull will generate subframe indications for it
  */
-int nfapi_vnf_p7_add_pnf(nfapi_vnf_p7_config_t* config, const char* pnf_p7_addr, int pnf_p7_port, int phy_id);
+int nfapi_vnf_p7_add_pnf(nfapi_vnf_p7_config_t* config, const char* pnf_p7_addr, int pnf_p7_port, int phy_id, int mu);
 
 /*! Delete a vnf p7 instance to the vnf p7 module
  *  \param config A pointer to the vnf p7 configuration

@@ -1726,7 +1726,8 @@ void *UE_thread(void *arg) {
   pthread_mutex_unlock(&sync_mutex);
   */
   wait_sync("UE thread");
-#ifdef NAS_UE
+
+#ifdef NAS_BUILT_IN_UE
   MessageDef *message_p;
   message_p = itti_alloc_new_message(TASK_NAS_UE, 0, INITIALIZE_MESSAGE);
   itti_send_msg_to_task (TASK_NAS_UE, UE->Mod_id + NB_eNB_INST, message_p);
@@ -2089,7 +2090,7 @@ void init_UE_single_thread_stub(int nb_inst) {
     AssertFatal(PHY_vars_UE_g[i][0]!=NULL,"PHY_vars_UE_g[inst][0] is NULL\n");
 
     if(NFAPI_MODE==NFAPI_UE_STUB_PNF || NFAPI_MODE==NFAPI_MODE_STANDALONE_PNF) {
-#ifdef NAS_UE
+#ifdef NAS_BUILT_IN_UE
       MessageDef *message_p;
       message_p = itti_alloc_new_message(TASK_NAS_UE, 0, INITIALIZE_MESSAGE);
       itti_send_msg_to_task (TASK_NAS_UE, i + NB_eNB_INST, message_p);

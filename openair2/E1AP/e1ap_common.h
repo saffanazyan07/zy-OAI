@@ -31,7 +31,7 @@ typedef struct e1ap_upcp_inst_s {
   instance_t instance;
   uint32_t gnb_id; // associated gNB's ID, unused in E1 but necessary for e.g. E2 agent
   E1_t type;
-  enum sctp_state_e sockState;
+  sctp_state_e sockState;
   struct {
     sctp_assoc_t assoc_id;
     e1ap_setup_req_t setupReq;

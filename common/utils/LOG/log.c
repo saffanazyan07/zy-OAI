@@ -120,28 +120,6 @@ mapping * log_option_names_ptr(void)
   return log_options;
 }
 
-static mapping log_maskmap[] = {{"PRACH", DEBUG_PRACH},
-                               {"RU", DEBUG_RU},
-                               {"UE_PHYPROC", DEBUG_UE_PHYPROC},
-                               {"LTEESTIM", DEBUG_LTEESTIM},
-                               {"DLCELLSPEC", DEBUG_DLCELLSPEC},
-                               {"ULSCH", DEBUG_ULSCH},
-                               {"RRC", DEBUG_RRC},
-                               {"PDCP", DEBUG_PDCP},
-                               {"DFT", DEBUG_DFT},
-                               {"ASN1", DEBUG_ASN1},
-                               {"CTRLSOCKET", DEBUG_CTRLSOCKET},
-                               {"SECURITY", DEBUG_SECURITY},
-                               {"NAS", DEBUG_NAS},
-                               {"RLC", DEBUG_RLC},
-                               {"DLSCH_DECOD", DEBUG_DLSCH_DECOD},
-                               {"UE_TIMING", UE_TIMING},
-                               {NULL, -1}};
-mapping * log_maskmap_ptr(void)
-{
-  return log_maskmap;
-}
-
 /* .log_format = 0x13 uncolored standard messages
  * .log_format = 0x93 colored standard messages */
 /* keep white space in first position; switching it to 0 allows colors to be disabled*/
@@ -327,6 +305,9 @@ int write_file_matlab(const char *fname, const char *vname, void *data, int leng
   return 0;
 }
 
+#define FLAG_SETDEBUG(flag) g_log->debug_mask.DEBUG_##flag = *logparams_debug[i++].uptr;
+#define FLAG_SETDUMP(flag) g_log->dump_mask.DEBUG_##flag = *logparams_dump[i++].uptr;
+
 /* get log parameters from configuration file */
 void log_getconfig(log_t *g_log)
 {
@@ -335,8 +316,6 @@ void log_getconfig(log_t *g_log)
   paramdef_t logparams_defaults[] = LOG_GLOBALPARAMS_DESC;
   paramdef_t logparams_level[MAX_LOG_PREDEF_COMPONENTS];
   paramdef_t logparams_logfile[MAX_LOG_PREDEF_COMPONENTS];
-  paramdef_t logparams_debug[sizeofArray(log_maskmap)];
-  paramdef_t logparams_dump[sizeofArray(log_maskmap)];
   int ret = config_get(config_get_if(), logparams_defaults, sizeofArray(logparams_defaults), CONFIG_STRING_LOG_PREFIX);
 
   if (ret <0) {
@@ -404,37 +383,45 @@ void log_getconfig(log_t *g_log)
   }
 
   /* build then read the debug and dump parameter array */
-  for (int i=0; log_maskmap[i].name != NULL ; i++) {
-    sprintf(logparams_debug[i].optname,  LOG_CONFIG_DEBUG_FORMAT, log_maskmap[i].name);
-    sprintf(logparams_dump[i].optname,   LOG_CONFIG_DUMP_FORMAT, log_maskmap[i].name);
-    logparams_debug[i].defuintval  = 0;
-    logparams_debug[i].type        = TYPE_UINT;
-    logparams_debug[i].paramflags  = PARAMFLAG_BOOL;
-    logparams_debug[i].uptr        = NULL;
-    logparams_debug[i].chkPptr     = NULL;
-    logparams_debug[i].numelt      = 0;
-    logparams_dump[i].defuintval  = 0;
-    logparams_dump[i].type        = TYPE_UINT;
-    logparams_dump[i].paramflags  = PARAMFLAG_BOOL;
-    logparams_dump[i].uptr        = NULL;
-    logparams_dump[i].chkPptr     = NULL;
-    logparams_dump[i].numelt      = 0;
+  int sz = 0;
+  for (const char *const *ptr = flag_name; strlen(*ptr) > 1; ptr++)
+    sz++;
+  paramdef_t logparams_debug[sz];
+  paramdef_t logparams_dump[sz];
+  for (int i = 0; i < sz; i++) {
+    logparams_debug[i] = (paramdef_t){
+        .type = TYPE_UINT,
+        .paramflags = PARAMFLAG_BOOL,
+    };
+    sprintf(logparams_debug[i].optname, LOG_CONFIG_DEBUG_FORMAT, flag_name[i]);
+    logparams_dump[i] = (paramdef_t){.type = TYPE_UINT, .paramflags = PARAMFLAG_BOOL};
+    sprintf(logparams_dump[i].optname, LOG_CONFIG_DUMP_FORMAT, flag_name[i]);
   }
 
-  config_get(config_get_if(), logparams_debug, sizeofArray(log_maskmap) - 1, CONFIG_STRING_LOG_PREFIX);
-  config_get(config_get_if(), logparams_dump, sizeofArray(log_maskmap) - 1, CONFIG_STRING_LOG_PREFIX);
+  config_get(config_get_if(), logparams_debug, sz, CONFIG_STRING_LOG_PREFIX);
+  config_get(config_get_if(), logparams_dump, sz, CONFIG_STRING_LOG_PREFIX);
 
-  if (config_check_unknown_cmdlineopt(config_get_if(), CONFIG_STRING_LOG_PREFIX) > 0)
+  bool old = CONFIG_ISFLAGSET(CONFIG_NOABORTONCHKF);
+  CONFIG_SETRTFLAG(CONFIG_NOABORTONCHKF);
+  if (config_check_unknown_cmdlineopt(config_get_if(), CONFIG_STRING_LOG_PREFIX) > 0) {
+    printf("Existing log_config options:\n");
+    printf("   Boolean options:\n");
+    for (int i = 0; i < sz; i++)
+      printf("      %s, \t%s\n", logparams_debug[i].optname, logparams_dump[i].optname);
+    printf("   Log level per module (");
+    for (int i = 0; log_level_names[i].name != NULL; i++)
+      printf("%s ", log_level_names[i].name);
+    printf(")\n");
+    for (int i = 0; i < MAX_LOG_PREDEF_COMPONENTS; i++)
+      printf("      %s\n", logparams_level[i].optname);
     exit(1);
-
-  /* set the debug mask according to the debug parameters values */
-  for (int i=0; log_maskmap[i].name != NULL ; i++) {
-    if (*(logparams_debug[i].uptr) )
-      g_log->debug_mask = g_log->debug_mask | log_maskmap[i].value;
-
-    if (*(logparams_dump[i].uptr) )
-      g_log->dump_mask = g_log->dump_mask | log_maskmap[i].value;
   }
+  if (!old)
+    CONFIG_CLEARRTFLAG(CONFIG_NOABORTONCHKF);
+  int i = 0;
+  FOREACH_FLAG(FLAG_SETDEBUG);
+  i = 0;
+  FOREACH_FLAG(FLAG_SETDUMP);
 
   /* log globally enabled/disabled */
   set_glog_onlinelog(consolelog);

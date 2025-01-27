@@ -34,8 +34,6 @@
 
 #include "nas_user.h"
 #include "common/ran_context.h"
-// FIXME make command line option for NAS_UE_AUTOSTART
-# define NAS_UE_AUTOSTART 1
 
 // FIXME review these externs
 extern uint16_t NB_UE_INST;
@@ -203,15 +201,12 @@ void *nas_ue_task(void *args_p)
 
       switch (ITTI_MSG_ID(msg_p)) {
       case INITIALIZE_MESSAGE:
-        LOG_I(NAS, "[UE %d] Received %s\n", Mod_id,  ITTI_MSG_NAME (msg_p));
-#if (NAS_UE_AUTOSTART != 0)
+        LOG_I(NAS, "[UE %d] Received %s\n", Mod_id, ITTI_MSG_NAME(msg_p));
         {
           /* Send an activate modem command to NAS like UserProcess should do it */
           char *user_data = "at+cfun=1\r";
-
           nas_user_receive_and_process (user, user_data);
         }
-#endif
         break;
 
       case TERMINATE_MESSAGE:

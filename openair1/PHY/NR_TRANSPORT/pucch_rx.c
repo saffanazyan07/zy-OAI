@@ -62,10 +62,6 @@ void nr_fill_pucch(PHY_VARS_gNB *gNB,
                    int slot,
                    nfapi_nr_pucch_pdu_t *pucch_pdu)
 {
-
-  if (NFAPI_MODE == NFAPI_MODE_PNF)
-    gNB->pucch[0].active = false; // check if true in monolithic mode
-
   bool found = false;
   for (int i = 0; i < gNB->max_nb_pucch; i++) {
     NR_gNB_PUCCH_t *pucch = &gNB->pucch[i];
@@ -1299,7 +1295,7 @@ void nr_decode_pucch2(PHY_VARS_gNB *gNB,
     corr_dB = dB_fixed64(corr);
     LOG_D(PHY, "metric %d dB\n", corr_dB);
   } else
-    LOG_E(PHY, "PUCCH not processed: nb_bit %d decoderState %d\n", nb_bit, decoderState);
+    LOG_D(PHY, "PUCCH not processed: nb_bit %d decoderState %d\n", nb_bit, decoderState);
 
   LOG_D(PHY, "UCI decoderState %d, payload[0] %llu\n", decoderState, (unsigned long long)decodedPayload[0]);
 

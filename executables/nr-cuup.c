@@ -172,6 +172,7 @@ int main(int argc, char **argv)
   MessageDef *msg = RCconfig_NR_CU_E1(&e1type);
   AssertFatal(msg != NULL, "Send init to task for E1AP UP failed\n");
   itti_send_msg_to_task(TASK_CUUP_E1, 0, msg);
+  LOG_D(E1AP, "Send E1AP REGISTER REQ to TASK_CUUP_E1\n");
 
   #ifdef E2_AGENT
   //////////////////////////////////

@@ -19,9 +19,10 @@
  *      contact@openairinterface.org
  */
 
+#ifndef NFAPI_VNF_H_
+#define NFAPI_VNF_H_
 
 void configure_nfapi_vnf(char *vnf_addr, int vnf_p5_port, char *pnf_ip_addr, int pnf_p7_port, int vnf_p7_port);
 void configure_nr_nfapi_vnf(char *vnf_addr, int vnf_p5_port, char *pnf_ip_addr, int pnf_p7_port, int vnf_p7_port);
 
-uint32_t sfnslot_add_slot(uint16_t sfn, uint16_t slot, int offset);
-
+#endif /* NFAPI_VNF_H_ */

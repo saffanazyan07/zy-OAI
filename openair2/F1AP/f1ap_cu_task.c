@@ -65,7 +65,7 @@ static void cu_task_handle_sctp_association_ind(instance_t instance,
 static void cu_task_handle_sctp_association_resp(instance_t instance, sctp_new_association_resp_t *sctp_new_association_resp) {
   DevAssert(sctp_new_association_resp != NULL);
 
-  enum sctp_state_e state = sctp_new_association_resp->sctp_state;
+  sctp_state_e state = sctp_new_association_resp->sctp_state;
   if (state != SCTP_STATE_ESTABLISHED) {
     f1ap_cudu_inst_t *f1ap_cu_data = getCxt(instance);
     AssertFatal(f1ap_cu_data != NULL, "illegal state: SCTP shutdown for non-existing F1AP endpoint\n");

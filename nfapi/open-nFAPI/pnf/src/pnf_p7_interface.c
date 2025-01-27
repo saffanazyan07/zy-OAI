@@ -21,14 +21,15 @@
 
 nfapi_pnf_p7_config_t* nfapi_pnf_p7_config_create()
 {
-	pnf_p7_t* _this = (pnf_p7_t*)calloc(1, sizeof(pnf_p7_t));
+  pnf_p7_t* _this = NULL;
+  int rc = posix_memalign((void**)&_this, 32, sizeof(pnf_p7_t));
 
-	if(_this == 0)
-		return 0;
+  if (_this == NULL || rc != 0)
+    return 0;
 
 
 	// set the default parameters
-	_this->_public.segment_size = 1400;
+	_this->_public.segment_size = 65000; // UDP max packet size is 65535
 	_this->max_num_segments = 8;
 	
 	_this->_public.subframe_buffer_size = 8;// TODO: Initialize the slot_buffer size
@@ -271,7 +272,13 @@ int nfapi_pnf_p7_nr_rx_data_ind(nfapi_pnf_p7_config_t* config, nfapi_nr_rx_data_
 	}
 
 	pnf_p7_t* _this = (pnf_p7_t*)(config);
-	return pnf_nr_p7_pack_and_send_p7_message(_this, (nfapi_nr_p7_message_header_t*)ind, sizeof(nfapi_nr_rx_data_indication_t));
+
+	int ret = pnf_nr_p7_pack_and_send_p7_message(_this, (nfapi_nr_p7_message_header_t*)ind, sizeof(nfapi_nr_rx_data_indication_t));
+  if (ret == 0) {
+    for (int i = 0; i < ind->number_of_pdus; ++i)
+      _this->nr_stats.ul.bytes += ind->pdu_list[i].pdu_length;
+  }
+  return ret;
 }
 
 int nfapi_pnf_p7_nr_crc_ind(nfapi_pnf_p7_config_t* config, nfapi_nr_crc_indication_t* ind)

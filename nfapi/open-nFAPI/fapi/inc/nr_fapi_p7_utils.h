@@ -75,4 +75,16 @@ size_t get_crc_indication_size(const nfapi_nr_crc_indication_t *msg);
 size_t get_uci_indication_size(const nfapi_nr_uci_indication_t *msg);
 size_t get_srs_indication_size(const nfapi_nr_srs_indication_t *msg);
 size_t get_rach_indication_size(nfapi_nr_rach_indication_t *msg);
+
+void dump_dl_tti_request(const nfapi_nr_dl_tti_request_t *msg);
+void dump_ul_tti_request(const nfapi_nr_ul_tti_request_t *msg);
+void dump_slot_indication(const nfapi_nr_slot_indication_scf_t *msg);
+void dump_ul_dci_request(const nfapi_nr_ul_dci_request_t *msg);
+void dump_tx_data_request(const nfapi_nr_tx_data_request_t *msg);
+void dump_rx_data_indication(const nfapi_nr_rx_data_indication_t *msg);
+void dump_crc_indication(const nfapi_nr_crc_indication_t *msg);
+void dump_uci_indication(const nfapi_nr_uci_indication_t *msg);
+void dump_srs_indication(const nfapi_nr_srs_indication_t *msg);
+void dump_rach_indication(const nfapi_nr_rach_indication_t *msg);
+
 #endif // OPENAIRINTERFACE_NR_FAPI_P7_UTILS_H

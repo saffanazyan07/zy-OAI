@@ -38,7 +38,7 @@ Description Usefull logging functions
 #ifndef __NAS_LOG_H__
 #define __NAS_LOG_H__
 
-#if defined(NAS_BUILT_IN_UE) && defined(NAS_UE)
+#if defined(NAS_BUILT_IN_UE)
 # include "common/utils/LOG/log.h"
 # undef LOG_TRACE
 #endif

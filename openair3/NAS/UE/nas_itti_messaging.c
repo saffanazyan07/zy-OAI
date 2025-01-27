@@ -27,8 +27,7 @@
 
 #   define TASK_ORIGIN  TASK_NAS_UE
 
-
-#if (defined(ENABLE_NAS_UE_LOGGING) && defined(NAS_BUILT_IN_UE) )
+#if defined(NAS_BUILT_IN_UE)
 __attribute__ ((unused)) static const uint8_t emm_message_ids[] = {
   ATTACH_REQUEST,
   ATTACH_ACCEPT,

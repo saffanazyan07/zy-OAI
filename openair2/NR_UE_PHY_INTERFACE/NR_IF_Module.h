@@ -312,7 +312,11 @@ void check_and_process_dci(nfapi_nr_dl_tti_request_t *dl_tti_request,
                            nfapi_nr_ul_dci_request_t *ul_dci_request,
                            nfapi_nr_ul_tti_request_t *ul_tti_request);
 
-bool sfn_slot_matcher(void *wanted, void *candidate);
+struct sfn_slot_s {
+  int sfn;
+  int slot;
+};
+bool sfn_slot_matcher(void *sfn_slot_s, void *candidate);
 
 /**\brief interface between L1/L2, indicating the downlink related information, like dci_ind and rx_req
    \param dl_info including dci_ind and rx_request messages*/

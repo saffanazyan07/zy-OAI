@@ -42,7 +42,7 @@ nfapi_vnf_p7_config_t* nfapi_vnf_p7_config_create()
 		return 0;
 
 	// todo : initialize
-	_this->_public.segment_size = 1400;
+	_this->_public.segment_size = 65000; // UDP max packet size is 65535
 	_this->_public.max_num_segments = 8;
 	_this->_public.checksum_enabled = 1;
 
@@ -98,8 +98,6 @@ struct timespec timespec_sub(struct timespec lhs, struct timespec rhs)
 // send indications to mac
 int nfapi_nr_vnf_p7_start(nfapi_vnf_p7_config_t* config)
 {	
-	struct PHY_VARS_gNB_s *gNB = RC.gNB[0];
-	uint8_t prev_slot = 0;
 	if(config == 0)
 		return -1;
 
@@ -157,7 +155,6 @@ int nfapi_nr_vnf_p7_start(nfapi_vnf_p7_config_t* config)
 
     struct timespec ref_time;
 	clock_gettime(CLOCK_MONOTONIC, &ref_time);
-	uint8_t setup_done;
 	while(vnf_p7->terminate == 0)
 	{	
 		fd_set rfds;
@@ -168,39 +165,6 @@ int nfapi_nr_vnf_p7_start(nfapi_vnf_p7_config_t* config)
 		// Add the p7 socket
 		FD_SET(vnf_p7->socket, &rfds);
 		maxSock = vnf_p7->socket;
-
-    if (setup_done == 0) {
-      struct timespec curr_time;
-      clock_gettime(CLOCK_MONOTONIC, &curr_time);
-      uint8_t setup_time = curr_time.tv_sec - ref_time.tv_sec;
-      if (setup_time > 3) {
-        setup_done = 1;
-      }
-    }
-
-		nfapi_nr_slot_indication_scf_t *slot_ind = get_queue(&gnb_slot_ind_queue);
-		NFAPI_TRACE(NFAPI_TRACE_DEBUG, "This is the slot_ind queue size %ld in %s():%d\n",
-			    gnb_slot_ind_queue.num_items, __FUNCTION__, __LINE__);
-		if (slot_ind) {
-      NR_UL_IND_t UL_INFO = {.frame = slot_ind->sfn, .slot = slot_ind->slot};
-
-      NFAPI_TRACE(NFAPI_TRACE_DEBUG, "UL_INFO.frame = %d and slot %d, prev_slot = %d\n", UL_INFO.frame, UL_INFO.slot, prev_slot);
-      if (setup_done && prev_slot != UL_INFO.slot) { // Give the VNF sufficient time to setup before starting scheduling  &&
-                                                     // prev_slot != UL_INFO.slot
-
-        // Call the scheduler
-        UL_INFO.module_id = gNB->Mod_id;
-        UL_INFO.CC_id = gNB->CC_id;
-        NFAPI_TRACE(NFAPI_TRACE_DEBUG,
-                    "Calling NR_UL_indication for UL_INFO.frame = %d and slot %d\n",
-                    UL_INFO.frame,
-                    UL_INFO.slot);
-        gNB->if_inst->NR_UL_indication(&UL_INFO);
-        prev_slot = UL_INFO.slot;
-      }
-      free(slot_ind);
-      slot_ind = NULL;
-    }
 
 		selectRetval = pselect(maxSock+1, &rfds, NULL, NULL, &pselect_timeout, NULL);
 
@@ -570,7 +534,7 @@ int nfapi_vnf_p7_stop(nfapi_vnf_p7_config_t* config)
 	return 0;
 }
 
-int nfapi_vnf_p7_add_pnf(nfapi_vnf_p7_config_t* config, const char* pnf_p7_addr, int pnf_p7_port, int phy_id)
+int nfapi_vnf_p7_add_pnf(nfapi_vnf_p7_config_t* config, const char* pnf_p7_addr, int pnf_p7_port, int phy_id, int mu)
 {
 	NFAPI_TRACE(NFAPI_TRACE_INFO, "%s(config:%p phy_id:%d pnf_addr:%s pnf_p7_port:%d)\n", __FUNCTION__, config, phy_id,  pnf_p7_addr, pnf_p7_port);
 
@@ -594,6 +558,7 @@ int nfapi_vnf_p7_add_pnf(nfapi_vnf_p7_config_t* config, const char* pnf_p7_addr,
 	node->sfn = 0;
     node->slot = 0;
 	node->min_sync_cycle_count = 8;
+  node->mu = mu;
 
 	// save the remote endpoint information
 	node->remote_addr.sin_family = AF_INET;

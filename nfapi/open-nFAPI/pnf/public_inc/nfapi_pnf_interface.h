@@ -573,11 +573,10 @@ typedef struct
 	//uint16_t sfn_slot
 	uint16_t sfn;
 	uint16_t slot;
-	//TODO: Change P7 structs to NR
-	nfapi_nr_dl_tti_request_t* dl_tti_req;//nfapi_dl_config_request_t* dl_config_req; 
-	nfapi_nr_ul_tti_request_t* ul_tti_req;//nfapi_ul_config_request_t* ul_config_req;
-	nfapi_nr_ul_dci_request_t* ul_dci_req;//nfapi_hi_dci0_request_t* hi_dci0_req;
-	nfapi_nr_tx_data_request_t* tx_data_req;//nfapi_tx_request_t* tx_req;
+	nfapi_nr_dl_tti_request_t  dl_tti_req;
+	nfapi_nr_ul_tti_request_t  ul_tti_req;
+	nfapi_nr_ul_dci_request_t  ul_dci_req;
+	nfapi_nr_tx_data_request_t tx_data_req;
 
 	//TODO: check these two later
 	//nfapi_lbt_dl_config_request_t* lbt_dl_config_req;

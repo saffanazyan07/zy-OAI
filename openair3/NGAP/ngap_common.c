@@ -31,3 +31,38 @@
 #include "ngap_common.h"
 
 int asn1_xer_print = 0;
+
+void encode_ngap_cause(NGAP_Cause_t *out, const ngap_cause_t *in)
+{
+  switch (in->type) {
+    case NGAP_CAUSE_RADIO_NETWORK:
+      out->present = NGAP_Cause_PR_radioNetwork;
+      out->choice.radioNetwork = in->value;
+      break;
+
+    case NGAP_CAUSE_TRANSPORT:
+      out->present = NGAP_Cause_PR_transport;
+      out->choice.transport = in->value;
+      break;
+
+    case NGAP_CAUSE_NAS:
+      out->present = NGAP_Cause_PR_nas;
+      out->choice.nas = in->value;
+      break;
+
+    case NGAP_CAUSE_PROTOCOL:
+      out->present = NGAP_Cause_PR_protocol;
+      out->choice.protocol = in->value;
+      break;
+
+    case NGAP_CAUSE_MISC:
+      out->present = NGAP_Cause_PR_misc;
+      out->choice.misc = in->value;
+      break;
+
+    case NGAP_CAUSE_NOTHING:
+    default:
+      AssertFatal(false, "Unknown failure cause %d\n", in->type);
+      break;
+  }
+}

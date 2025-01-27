@@ -177,8 +177,6 @@ static int nrLDPC_prepare_TB_encoding(nrLDPC_slot_encoding_parameters_t *nrLDPC_
   impp.toutput = nrLDPC_slot_encoding_parameters->toutput;
   impp.Kb = nrLDPC_TB_encoding_parameters->Kb;
   impp.Zc = nrLDPC_TB_encoding_parameters->Z;
-  NR_DL_gNB_HARQ_t harq;
-  impp.harq = &harq;
   impp.BG = nrLDPC_TB_encoding_parameters->BG;
   impp.output = nrLDPC_TB_encoding_parameters->segments->output;
   impp.K = nrLDPC_TB_encoding_parameters->K;

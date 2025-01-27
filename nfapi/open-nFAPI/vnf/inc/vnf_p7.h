@@ -91,6 +91,8 @@ typedef struct nfapi_vnf_p7_connection_info {
 	int sfn_sf;
 	int sfn;
 	int slot;
+  int mu; // some 5G slot calculations need the numerology to know the number
+          // of slots
 
 	int socket;
 	struct sockaddr_in local_addr;

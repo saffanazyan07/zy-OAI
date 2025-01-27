@@ -352,7 +352,6 @@ void set_softmodem_sighandler(void);
 extern uint64_t downlink_frequency[MAX_NUM_CCs][4];
 extern int32_t uplink_frequency_offset[MAX_NUM_CCs][4];
 extern int usrp_tx_thread;
-extern int sl_ahead;
 extern int sf_ahead;
 extern int oai_exit;
 

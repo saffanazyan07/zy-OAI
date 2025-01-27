@@ -26,11 +26,11 @@ MESSAGE_DEF(E1AP_REGISTER_REQ, MESSAGE_PRIORITY_MED, e1ap_register_req_t, e1ap_r
 MESSAGE_DEF(E1AP_LOST_CONNECTION, MESSAGE_PRIORITY_MED, e1ap_lost_connection_t, e1ap_lost_connection)
 
 /* E1AP Interface Management Messages */
-/* E1AP Setup Request: gNB-CU-UP -> gNB-CU-CP */
+/* GNB-CU-UP E1 Setup Request: gNB-CU-UP -> gNB-CU-CP */
 MESSAGE_DEF(E1AP_SETUP_REQ  , MESSAGE_PRIORITY_MED , e1ap_setup_req_t , e1ap_setup_req)
-/* E1AP Setup Response: gNB-CU-CP -> gNB-CU-UP */
+/* GNB-CU-UP E1 Setup Response: gNB-CU-CP -> gNB-CU-UP */
 MESSAGE_DEF(E1AP_SETUP_RESP , MESSAGE_PRIORITY_MED, e1ap_setup_resp_t , e1ap_setup_resp)
-/* E1AP Setup Failure: gNB-CU-CP -> gNB-CU-UP */
+/* GNB-CU-UP E1 Setup Failure: gNB-CU-CP -> gNB-CU-UP */
 MESSAGE_DEF(E1AP_SETUP_FAIL, MESSAGE_PRIORITY_MED, e1ap_setup_fail_t, e1ap_setup_fail)
 
 /* E1AP Bearer Context Management Procedures */

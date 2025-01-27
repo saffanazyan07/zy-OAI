@@ -15,6 +15,8 @@ int oai_nfapi_nr_uci_indication(nfapi_nr_uci_indication_t *ind) { return (0); }
 int oai_nfapi_nr_rach_indication(nfapi_nr_rach_indication_t *ind) { return (0); }
 int oai_nfapi_nr_rx_data_indication(nfapi_nr_rx_data_indication_t *ind) { return 0; }
 
+void handle_nr_slot_ind(uint16_t sfn, uint16_t slot) { }
+
 int pack_nr_srs_beamforming_report(void *pMessageBuf, void *pPackedBuf, uint32_t packedBufLen) { return 0; }
 int unpack_nr_srs_beamforming_report(void *pMessageBuf, uint32_t messageBufLen, void *pUnpackedBuf, uint32_t unpackedBufLen) { return 0; }
 int pack_nr_srs_normalized_channel_iq_matrix(void *pMessageBuf, void *pPackedBuf, uint32_t packedBufLen) { return 0; }

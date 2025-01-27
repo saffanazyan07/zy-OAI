@@ -320,10 +320,28 @@ static int decodePDUSessionResourceSetup(pdusession_t *session)
   return 0;
 }
 
-void trigger_bearer_setup(gNB_RRC_INST *rrc, gNB_RRC_UE_t *UE, int n, pdusession_t *sessions, uint64_t ueAggMaxBitRateDownlink)
+/**
+ * @brief Triggers bearer setup for the specified UE.
+ *
+ * This function initiates the setup of bearer contexts for a given UE
+ * by preparing and sending an E1AP Bearer Setup Request message to the CU-UP.
+ *
+ * @return True if bearer setup was successfully initiated, false otherwise
+ * @retval true Bearer setup was initiated successfully
+ * @retval false No CU-UP is associated, so bearer setup could not be initiated
+ *
+ * @note the return value is expected to be used (as per declaration)
+ *
+ */
+bool trigger_bearer_setup(gNB_RRC_INST *rrc, gNB_RRC_UE_t *UE, int n, pdusession_t *sessions, uint64_t ueAggMaxBitRateDownlink)
 {
   AssertFatal(UE->as_security_active, "logic bug: security should be active when activating DRBs\n");
   e1ap_bearer_setup_req_t bearer_req = {0};
+
+  // Reject bearers setup if there's no CU-UP associated
+  if (!is_cuup_associated(rrc)) {
+    return false;
+  }
 
   e1ap_nssai_t cuup_nssai = {0};
   for (int i = 0; i < n; i++) {
@@ -419,27 +437,60 @@ void trigger_bearer_setup(gNB_RRC_INST *rrc, gNB_RRC_UE_t *UE, int n, pdusession
    * CU-UPs, and send them to the different CU-UPs. */
   sctp_assoc_t assoc_id = get_new_cuup_for_ue(rrc, UE, cuup_nssai.sst, cuup_nssai.sd);
   rrc->cucp_cuup.bearer_context_setup(assoc_id, &bearer_req);
+  return true;
+}
+
+/**
+ * @brief Fill PDU Session Resource Failed to Setup Item of the
+ *        PDU Session Resource Failed to Setup List for either:
+ *        - NGAP PDU Session Resource Setup Response
+ *        - NGAP Initial Context Setup Response
+ */
+static void fill_pdu_session_resource_failed_to_setup_item(pdusession_failed_t *f, int pdusession_id, ngap_cause_t cause)
+{
+  f->pdusession_id = pdusession_id;
+  f->cause = cause;
+}
+
+/**
+ * @brief Fill Initial Context Setup Response with a PDU Session Resource Failed to Setup List
+ *        and send ITTI message to TASK_NGAP
+ */
+static void send_ngap_initial_context_setup_resp_fail(instance_t instance,
+                                                      ngap_initial_context_setup_req_t *msg,
+                                                      ngap_cause_t cause)
+{
+  MessageDef *msg_p = itti_alloc_new_message(TASK_RRC_GNB, instance, NGAP_INITIAL_CONTEXT_SETUP_RESP);
+  ngap_initial_context_setup_resp_t *resp = &NGAP_INITIAL_CONTEXT_SETUP_RESP(msg_p);
+  resp->gNB_ue_ngap_id = msg->gNB_ue_ngap_id;
+
+  for (int i = 0; i < msg->nb_of_pdusessions; i++) {
+    fill_pdu_session_resource_failed_to_setup_item(&resp->pdusessions_failed[i], msg->pdusession_param[i].pdusession_id, cause);
+  }
+  resp->nb_of_pdusessions = 0;
+  resp->nb_of_pdusessions_failed = msg->nb_of_pdusessions;
+  itti_send_msg_to_task(TASK_NGAP, instance, msg_p);
 }
 
 //------------------------------------------------------------------------------
 int rrc_gNB_process_NGAP_INITIAL_CONTEXT_SETUP_REQ(MessageDef *msg_p, instance_t instance)
 //------------------------------------------------------------------------------
 {
+  gNB_RRC_INST *rrc = RC.nrrrc[instance];
   ngap_initial_context_setup_req_t *req = &NGAP_INITIAL_CONTEXT_SETUP_REQ(msg_p);
 
-  rrc_gNB_ue_context_t *ue_context_p = rrc_gNB_get_ue_context(RC.nrrrc[instance], req->gNB_ue_ngap_id);
-  gNB_RRC_UE_t *UE = &ue_context_p->ue_context;
-
+  rrc_gNB_ue_context_t *ue_context_p = rrc_gNB_get_ue_context(rrc, req->gNB_ue_ngap_id);
   if (ue_context_p == NULL) {
     /* Can not associate this message to an UE index, send a failure to NGAP and discard it! */
     LOG_W(NR_RRC, "[gNB %ld] In NGAP_INITIAL_CONTEXT_SETUP_REQ: unknown UE from NGAP ids (%u)\n", instance, req->gNB_ue_ngap_id);
+    ngap_cause_t cause = { .type = NGAP_CAUSE_RADIO_NETWORK, .value = NGAP_CAUSE_RADIO_NETWORK_UNKNOWN_LOCAL_UE_NGAP_ID};
     rrc_gNB_send_NGAP_INITIAL_CONTEXT_SETUP_FAIL(req->gNB_ue_ngap_id,
                                                  NULL,
-                                                 NGAP_CAUSE_RADIO_NETWORK,
-                                                 NGAP_CAUSE_RADIO_NETWORK_UNKNOWN_LOCAL_UE_NGAP_ID);
+                                                 cause);
     return (-1);
   }
-  gNB_RRC_INST *rrc = RC.nrrrc[instance];
+  gNB_RRC_UE_t *UE = &ue_context_p->ue_context;
+
   UE->amf_ue_ngap_id = req->amf_ue_ngap_id;
 
   /* store guami in gNB_RRC_UE_t context;
@@ -485,7 +536,13 @@ int rrc_gNB_process_NGAP_INITIAL_CONTEXT_SETUP_REQ(MessageDef *msg_p, instance_t
       // do not remove the above allocation which is reused here: this is used
       // in handle_rrcReconfigurationComplete() to know that we need to send a
       // Initial context setup response message
-      trigger_bearer_setup(rrc, UE, UE->n_initial_pdu, UE->initial_pdus, 0);
+      if (!trigger_bearer_setup(rrc, UE, UE->n_initial_pdu, UE->initial_pdus, 0)) {
+        LOG_W(NR_RRC, "UE %d: reject PDU Session Setup in Initial Context Setup Response\n", UE->rrc_ue_id);
+        ngap_cause_t cause = {.type = NGAP_CAUSE_RADIO_NETWORK, .value = NGAP_CAUSE_RADIO_NETWORK_RESOURCES_NOT_AVAILABLE_FOR_THE_SLICE};
+        send_ngap_initial_context_setup_resp_fail(rrc->module_id, req, cause);
+        rrc_forward_ue_nas_message(rrc, UE);
+        return -1;
+      }
     } else {
       /* no PDU sesion to setup: acknowledge this message, and forward NAS
        * message, if required */
@@ -528,10 +585,10 @@ void rrc_gNB_send_NGAP_INITIAL_CONTEXT_SETUP_RESP(gNB_RRC_INST *rrc, gNB_RRC_UE_
       }
     } else if (session->status != PDU_SESSION_STATUS_ESTABLISHED) {
       session->status = PDU_SESSION_STATUS_FAILED;
-      pdusession_failed_t *fail = &resp->pdusessions_failed[pdu_sessions_failed];
-      fail->pdusession_id = session->param.pdusession_id;
-      fail->cause = NGAP_CAUSE_RADIO_NETWORK;
-      fail->cause_value = NGAP_CauseRadioNetwork_unknown_PDU_session_ID;
+      ngap_cause_t cause = {.type = NGAP_CAUSE_RADIO_NETWORK, .value = NGAP_CAUSE_RADIO_NETWORK_UNKNOWN_PDU_SESSION_ID};
+      fill_pdu_session_resource_failed_to_setup_item(&resp->pdusessions_failed[pdu_sessions_failed],
+                                                     session->param.pdusession_id,
+                                                     cause);
       pdu_sessions_failed++;
     }
   }
@@ -543,15 +600,13 @@ void rrc_gNB_send_NGAP_INITIAL_CONTEXT_SETUP_RESP(gNB_RRC_INST *rrc, gNB_RRC_UE_
 
 void rrc_gNB_send_NGAP_INITIAL_CONTEXT_SETUP_FAIL(uint32_t gnb,
                                                   const rrc_gNB_ue_context_t *const ue_context_pP,
-                                                  const ngap_Cause_t causeP,
-                                                  const long cause_valueP)
+                                                  const ngap_cause_t causeP)
 {
   MessageDef *msg_p = itti_alloc_new_message(TASK_RRC_GNB, 0, NGAP_INITIAL_CONTEXT_SETUP_FAIL);
   ngap_initial_context_setup_fail_t *fail = &NGAP_INITIAL_CONTEXT_SETUP_FAIL(msg_p);
   memset(fail, 0, sizeof(*fail));
   fail->gNB_ue_ngap_id = gnb;
   fail->cause = causeP;
-  fail->cause_value = cause_valueP;
   itti_send_msg_to_task(TASK_NGAP, 0, msg_p);
 }
 
@@ -738,8 +793,8 @@ void rrc_gNB_send_NGAP_PDUSESSION_SETUP_RESP(gNB_RRC_INST *rrc, gNB_RRC_UE_t *UE
       session->status = PDU_SESSION_STATUS_FAILED;
       pdusession_failed_t *fail = &resp->pdusessions_failed[pdu_sessions_failed];
       fail->pdusession_id = session->param.pdusession_id;
-      fail->cause = NGAP_CAUSE_RADIO_NETWORK;
-      fail->cause_value = NGAP_CauseRadioNetwork_unknown_PDU_session_ID;
+      fail->cause.type = NGAP_CAUSE_RADIO_NETWORK;
+      fail->cause.value = NGAP_CAUSE_RADIO_NETWORK_UNKNOWN_PDU_SESSION_ID;
       pdu_sessions_failed++;
     }
     resp->nb_of_pdusessions = pdu_sessions_done;
@@ -762,47 +817,72 @@ void rrc_gNB_send_NGAP_PDUSESSION_SETUP_RESP(gNB_RRC_INST *rrc, gNB_RRC_UE_t *UE
   return;
 }
 
-//------------------------------------------------------------------------------
-void rrc_gNB_process_NGAP_PDUSESSION_SETUP_REQ(MessageDef *msg_p, instance_t instance)
-//------------------------------------------------------------------------------
+/**
+ * @brief Fill PDU Session Resource Setup Response with a list of PDU Session Resources Failed to Setup
+ *        and send ITTI message to TASK_NGAP
+ */
+static void send_ngap_pdu_session_setup_resp_fail(instance_t instance, ngap_pdusession_setup_req_t *msg, ngap_cause_t cause)
 {
+  MessageDef *msg_resp = itti_alloc_new_message(TASK_RRC_GNB, 0, NGAP_PDUSESSION_SETUP_RESP);
+  ngap_pdusession_setup_resp_t *resp = &NGAP_PDUSESSION_SETUP_RESP(msg_resp);
+  resp->gNB_ue_ngap_id = msg->gNB_ue_ngap_id;
+  resp->nb_of_pdusessions_failed = msg->nb_pdusessions_tosetup;
+  resp->nb_of_pdusessions = 0;
+  for (int i = 0; i < resp->nb_of_pdusessions_failed; ++i) {
+    fill_pdu_session_resource_failed_to_setup_item(&resp->pdusessions_failed[i],
+                                                   msg->pdusession_setup_params[i].pdusession_id,
+                                                   cause);
+  }
+  itti_send_msg_to_task(TASK_NGAP, instance, msg_resp);
+}
 
-  ngap_pdusession_setup_req_t* msg=&NGAP_PDUSESSION_SETUP_REQ(msg_p);
-  rrc_gNB_ue_context_t *ue_context_p = rrc_gNB_get_ue_context(RC.nrrrc[instance], msg->gNB_ue_ngap_id);
-  gNB_RRC_UE_t *UE = &ue_context_p->ue_context;
+void rrc_gNB_process_NGAP_PDUSESSION_SETUP_REQ(MessageDef *msg_p, instance_t instance)
+{
   gNB_RRC_INST *rrc = RC.nrrrc[instance];
-
+  ngap_pdusession_setup_req_t* msg=&NGAP_PDUSESSION_SETUP_REQ(msg_p);
+  rrc_gNB_ue_context_t *ue_context_p = rrc_gNB_get_ue_context(rrc, msg->gNB_ue_ngap_id);
+  // Reject PDU Session Resource setup if no UE context is found
   if (ue_context_p == NULL) {
-    MessageDef *msg_fail_p = NULL;
-    LOG_W(NR_RRC, "[gNB %ld] In NGAP_PDUSESSION_SETUP_REQ: unknown UE from NGAP ids (%u)\n", instance, msg->gNB_ue_ngap_id);
-    msg_fail_p = itti_alloc_new_message(TASK_RRC_GNB, 0, NGAP_PDUSESSION_SETUP_REQUEST_FAIL);
-    NGAP_PDUSESSION_SETUP_FAIL(msg_fail_p).gNB_ue_ngap_id = msg->gNB_ue_ngap_id;
-    // TODO add failure cause when defined!
-    itti_send_msg_to_task (TASK_NGAP, instance, msg_fail_p);
-    return ;
+    LOG_W(NR_RRC,
+          "[gNB %ld] In NGAP_PDUSESSION_SETUP_REQ: no UE context found from UE NGAP ID (%u)\n",
+          instance,
+          msg->gNB_ue_ngap_id);
+    ngap_cause_t cause = {.type = NGAP_CAUSE_RADIO_NETWORK, .value = NGAP_CAUSE_RADIO_NETWORK_UNKNOWN_LOCAL_UE_NGAP_ID};
+    send_ngap_pdu_session_setup_resp_fail(instance, msg, cause);
+    return;
   }
 
-  DevAssert(UE->rrc_ue_id == msg->gNB_ue_ngap_id);
-  LOG_I(NR_RRC, "UE %d: received PDU session setup request\n", UE->rrc_ue_id);
+  gNB_RRC_UE_t *UE = &ue_context_p->ue_context;
+  LOG_I(NR_RRC, "UE %d: received PDU Session Resource Setup Request\n", UE->rrc_ue_id);
 
+  // Reject PDU Session Resource setup if gNB_ue_ngap_id is not matching
+  if (UE->rrc_ue_id != msg->gNB_ue_ngap_id) {
+    LOG_W(NR_RRC, "[gNB %ld] In NGAP_PDUSESSION_SETUP_REQ: unknown UE NGAP ID (%u)\n", instance, msg->gNB_ue_ngap_id);
+    ngap_cause_t cause = {.type = NGAP_CAUSE_RADIO_NETWORK, .value = NGAP_CAUSE_RADIO_NETWORK_UNKNOWN_LOCAL_UE_NGAP_ID};
+    send_ngap_pdu_session_setup_resp_fail(instance, msg, cause);
+    rrc_forward_ue_nas_message(rrc, UE);
+    return;
+  }
+
+  // Reject PDU Session Resource setup if there is no security context active
   if (!UE->as_security_active) {
-    LOG_E(NR_RRC, "UE %d: no security context active for UE, rejecting PDU session setup request\n", UE->rrc_ue_id);
-    MessageDef *msg_resp = itti_alloc_new_message(TASK_RRC_GNB, 0, NGAP_PDUSESSION_SETUP_RESP);
-    ngap_pdusession_setup_resp_t *resp = &NGAP_PDUSESSION_SETUP_RESP(msg_resp);
-    resp->gNB_ue_ngap_id = UE->rrc_ue_id;
-    resp->nb_of_pdusessions_failed = msg->nb_pdusessions_tosetup;
-    for (int i = 0; i < resp->nb_of_pdusessions_failed; ++i) {
-      pdusession_failed_t *f = &resp->pdusessions_failed[i];
-      f->pdusession_id = msg->pdusession_setup_params[i].pdusession_id;
-      f->cause = NGAP_CAUSE_PROTOCOL;
-      f->cause_value = NGAP_CAUSE_PROTOCOL_MSG_NOT_COMPATIBLE_WITH_RECEIVER_STATE;
-    }
-    itti_send_msg_to_task(TASK_NGAP, instance, msg_resp);
+    LOG_E(NR_RRC, "UE %d: no security context active for UE, rejecting PDU Session Resource Setup Request\n", UE->rrc_ue_id);
+    ngap_cause_t cause = {.type = NGAP_CAUSE_PROTOCOL, .value = NGAP_CAUSE_PROTOCOL_MSG_NOT_COMPATIBLE_WITH_RECEIVER_STATE};
+    send_ngap_pdu_session_setup_resp_fail(instance, msg, cause);
+    rrc_forward_ue_nas_message(rrc, UE);
     return;
   }
 
   UE->amf_ue_ngap_id = msg->amf_ue_ngap_id;
-  trigger_bearer_setup(rrc, UE, msg->nb_pdusessions_tosetup, msg->pdusession_setup_params, msg->ueAggMaxBitRateDownlink);
+
+  if (!trigger_bearer_setup(rrc, UE, msg->nb_pdusessions_tosetup, msg->pdusession_setup_params, msg->ueAggMaxBitRateDownlink)) {
+    // Reject PDU Session Resource setup if there's no CU-UP associated
+    LOG_W(NR_RRC, "UE %d: reject PDU Session Setup in PDU Session Resource Setup Response\n", UE->rrc_ue_id);
+    ngap_cause_t cause = {.type = NGAP_CAUSE_RADIO_NETWORK, .value = NGAP_CAUSE_RADIO_NETWORK_RESOURCES_NOT_AVAILABLE_FOR_THE_SLICE};
+    send_ngap_pdu_session_setup_resp_fail(instance, msg, cause);
+    rrc_forward_ue_nas_message(rrc, UE);
+  }
+
   return;
 }
 
@@ -926,17 +1006,18 @@ int rrc_gNB_process_NGAP_PDUSESSION_MODIFY_REQ(MessageDef *msg_p, instance_t ins
       UE->nb_of_pdusessions++;
       sess->status = PDU_SESSION_STATUS_FAILED;
       sess->param.pdusession_id = sessMod->pdusession_id;
-      sess->cause = NGAP_CAUSE_RADIO_NETWORK;
-      UE->pduSession[i].cause_value = NGAP_CauseRadioNetwork_unknown_PDU_session_ID;
+      sess->cause.type = NGAP_CAUSE_RADIO_NETWORK;
+      UE->pduSession[i].cause.type = NGAP_CAUSE_RADIO_NETWORK;
+      UE->pduSession[i].cause.value = NGAP_CAUSE_RADIO_NETWORK_UNKNOWN_PDU_SESSION_ID;
     } else {
       all_failed = false;
       sess->status = PDU_SESSION_STATUS_NEW;
       sess->param.pdusession_id = sessMod->pdusession_id;
-      sess->cause = NGAP_CAUSE_RADIO_NETWORK;
-      sess->cause_value = NGAP_CauseRadioNetwork_multiple_PDU_session_ID_instances;
+      sess->cause.type = NGAP_CAUSE_RADIO_NETWORK;
+      sess->cause.value = NGAP_CAUSE_RADIO_NETWORK_MULTIPLE_PDU_SESSION_ID_INSTANCES;
       sess->status = PDU_SESSION_STATUS_NEW;
       sess->param.pdusession_id = sessMod->pdusession_id;
-      sess->cause = NGAP_CAUSE_NOTHING;
+      sess->cause.type = NGAP_CAUSE_NOTHING;
       if (sessMod->nas_pdu.buffer != NULL) {
         UE->pduSession[i].param.nas_pdu = sessMod->nas_pdu;
       }
@@ -964,8 +1045,8 @@ int rrc_gNB_process_NGAP_PDUSESSION_MODIFY_REQ(MessageDef *msg_p, instance_t ins
     for (int i = 0; i < UE->nb_of_pdusessions; i++) {
       if (UE->pduSession[i].status == PDU_SESSION_STATUS_FAILED) {
         msg->pdusessions_failed[i].pdusession_id = UE->pduSession[i].param.pdusession_id;
-        msg->pdusessions_failed[i].cause = UE->pduSession[i].cause;
-        msg->pdusessions_failed[i].cause_value = UE->pduSession[i].cause_value;
+        msg->pdusessions_failed[i].cause.type = UE->pduSession[i].cause.type;
+        msg->pdusessions_failed[i].cause.value = UE->pduSession[i].cause.value;
       }
     }
     itti_send_msg_to_task(TASK_NGAP, instance, msg_fail_p);
@@ -1000,7 +1081,7 @@ int rrc_gNB_send_NGAP_PDUSESSION_MODIFY_RESP(gNB_RRC_INST *rrc, gNB_RRC_UE_t *UE
         LOG_I(NR_RRC, "update pdu session %d \n", pduSession->param.pdusession_id);
         // Update UE->pduSession
         pduSession->status = PDU_SESSION_STATUS_ESTABLISHED;
-        pduSession->cause = NGAP_CAUSE_NOTHING;
+        pduSession->cause.type = NGAP_CAUSE_NOTHING;
         for (int qos_flow_index = 0; qos_flow_index < UE->pduSession[i].param.nb_qos; qos_flow_index++) {
           pduSession->param.qos[qos_flow_index] = UE->pduSession[i].param.qos[qos_flow_index];
         }
@@ -1022,16 +1103,16 @@ int rrc_gNB_send_NGAP_PDUSESSION_MODIFY_RESP(gNB_RRC_INST *rrc, gNB_RRC_UE_t *UE
       } else {
         LOG_W(NR_RRC, "PDU SESSION modify of a not existing pdu session %d \n", UE->pduSession[i].param.pdusession_id);
         resp->pdusessions_failed[pdu_sessions_failed].pdusession_id = UE->pduSession[i].param.pdusession_id;
-        resp->pdusessions_failed[pdu_sessions_failed].cause = NGAP_CAUSE_RADIO_NETWORK;
-        resp->pdusessions_failed[pdu_sessions_failed].cause_value = NGAP_CauseRadioNetwork_unknown_PDU_session_ID;
+        ngap_cause_t cause = {.type = NGAP_CAUSE_RADIO_NETWORK, .value = NGAP_CAUSE_RADIO_NETWORK_UNKNOWN_PDU_SESSION_ID};
+        resp->pdusessions_failed[pdu_sessions_failed].cause = cause;
         pdu_sessions_failed++;
       }
     } else if ((UE->pduSession[i].status == PDU_SESSION_STATUS_NEW) || (UE->pduSession[i].status == PDU_SESSION_STATUS_ESTABLISHED)) {
       LOG_D(NR_RRC, "PDU SESSION is NEW or already ESTABLISHED\n");
     } else if (UE->pduSession[i].status == PDU_SESSION_STATUS_FAILED) {
       resp->pdusessions_failed[pdu_sessions_failed].pdusession_id = UE->pduSession[i].param.pdusession_id;
-      resp->pdusessions_failed[pdu_sessions_failed].cause = UE->pduSession[i].cause;
-      resp->pdusessions_failed[pdu_sessions_failed].cause_value = UE->pduSession[i].cause_value;
+      resp->pdusessions_failed[pdu_sessions_failed].cause.type = UE->pduSession[i].cause.type;
+      resp->pdusessions_failed[pdu_sessions_failed].cause.value = UE->pduSession[i].cause.value;
       pdu_sessions_failed++;
     }
     else
@@ -1055,7 +1136,9 @@ int rrc_gNB_send_NGAP_PDUSESSION_MODIFY_RESP(gNB_RRC_INST *rrc, gNB_RRC_UE_t *UE
 }
 
 //------------------------------------------------------------------------------
-void rrc_gNB_send_NGAP_UE_CONTEXT_RELEASE_REQ(const module_id_t gnb_mod_idP, const rrc_gNB_ue_context_t *const ue_context_pP, const ngap_Cause_t causeP, const long cause_valueP)
+void rrc_gNB_send_NGAP_UE_CONTEXT_RELEASE_REQ(const module_id_t gnb_mod_idP,
+                                              const rrc_gNB_ue_context_t *const ue_context_pP,
+                                              const ngap_cause_t causeP)
 //------------------------------------------------------------------------------
 {
   if (ue_context_pP == NULL) {
@@ -1066,8 +1149,8 @@ void rrc_gNB_send_NGAP_UE_CONTEXT_RELEASE_REQ(const module_id_t gnb_mod_idP, con
     ngap_ue_release_req_t *req = &NGAP_UE_CONTEXT_RELEASE_REQ(msg);
     memset(req, 0, sizeof(*req));
     req->gNB_ue_ngap_id = UE->rrc_ue_id;
-    req->cause = causeP;
-    req->cause_value = cause_valueP;
+    req->cause.type = causeP.type;
+    req->cause.value = causeP.value;
     for (int i = 0; i < UE->nb_of_pdusessions; i++) {
       req->pdusessions[i].pdusession_id = UE->pduSession[i].param.pdusession_id;
       req->nb_of_pdusessions++;
@@ -1268,8 +1351,8 @@ int rrc_gNB_process_NGAP_PDUSESSION_RELEASE_COMMAND(MessageDef *msg_p, instance_
       int j=UE->nb_of_pdusessions++;
       UE->pduSession[j].status = PDU_SESSION_STATUS_FAILED;
       UE->pduSession[j].param.pdusession_id = cmd->pdusession_release_params[pdusession].pdusession_id;
-      UE->pduSession[j].cause = NGAP_CAUSE_RADIO_NETWORK;
-      UE->pduSession[j].cause_value = 30;
+      ngap_cause_t cause = {.type = NGAP_CAUSE_RADIO_NETWORK, .value = NGAP_CAUSE_RADIO_NETWORK_UNKNOWN_PDU_SESSION_ID};
+      UE->pduSession[j].cause = cause;
       continue;
     }
     if (pduSession->status == PDU_SESSION_STATUS_FAILED) {

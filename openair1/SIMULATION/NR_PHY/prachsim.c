@@ -83,7 +83,6 @@ openair0_config_t openair0_cfg[MAX_CARDS];
 //uint8_t nfapi_mode=0;
 uint64_t downlink_frequency[MAX_NUM_CCs][4];
 int32_t uplink_frequency_offset[MAX_NUM_CCs][4];
-int sl_ahead = 0;
 uint32_t N_RB_DL = 106;
 
 NR_IF_Module_t *NR_IF_Module_init(int Mod_id) { return (NULL); }
@@ -403,7 +402,7 @@ int main(int argc, char **argv){
   // Configure log
   logInit();
   set_glog(loglvl);
-  SET_LOG_DEBUG(PRACH); 
+  SET_LOG_DEBUG(DEBUG_PRACH);
 
   // Configure gNB and RU
   RC.gNB = (PHY_VARS_gNB**) malloc(2*sizeof(PHY_VARS_gNB *));
@@ -825,7 +824,7 @@ int main(int argc, char **argv){
 
   phy_free_nr_gNB(gNB);
   // allocated in set_tdd_config_nr()
-  int nb_slots_to_set = TDD_CONFIG_NB_FRAMES*(1<<mu)*NR_NUMBER_OF_SUBFRAMES_PER_FRAME;
+  int nb_slots_to_set = (1<<mu)*NR_NUMBER_OF_SUBFRAMES_PER_FRAME;
   free(gNB->gNB_config.prach_config.num_prach_fd_occasions_list);
   for (int i = 0; i < nb_slots_to_set; ++i)
     free(gNB->gNB_config.tdd_table.max_tdd_periodicity_list[i].max_num_of_symbol_per_slot_list);

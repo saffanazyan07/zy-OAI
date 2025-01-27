@@ -44,6 +44,7 @@
 #include <pthread.h>
 #include "common/utils/ds/seq_arr.h"
 #include "common/utils/nr/nr_common.h"
+#include "common/utils/ds/byte_array.h"
 
 #define NR_SCHED_LOCK(lock)                                        \
   do {                                                             \
@@ -481,10 +482,9 @@ typedef struct NR_UE_harq {
   uint16_t feedback_frame;
   uint16_t feedback_slot;
 
-  /* Transport block to be sent using this HARQ process, its size is in
-   * sched_pdsch */
-  uint32_t transportBlock[38016]; // valid up to 4 layers
-  uint32_t tb_size;
+  /* Transport block to be sent using this HARQ process */
+  byte_array_t transportBlock;
+  uint32_t tb_size;  // size of currently stored TB
 
   /// sched_pdsch keeps information on MCS etc used for the initial transmission
   NR_sched_pdsch_t sched_pdsch;

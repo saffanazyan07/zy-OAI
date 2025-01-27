@@ -22,7 +22,7 @@
 #include "nr_fapi_p5.h"
 #include "nr_fapi_p5_utils.h"
 
-void fill_config_request_tlv(nfapi_nr_config_request_scf_t *nfapi_resp)
+static void fill_config_request_tlv_tdd_rand(nfapi_nr_config_request_scf_t *nfapi_resp)
 {
   FILL_TLV(nfapi_resp->carrier_config.dl_bandwidth, NFAPI_NR_CONFIG_DL_BANDWIDTH_TAG, rand16());
   nfapi_resp->num_tlv++;
@@ -70,7 +70,8 @@ void fill_config_request_tlv(nfapi_nr_config_request_scf_t *nfapi_resp)
   FILL_TLV(nfapi_resp->cell_config.phy_cell_id, NFAPI_NR_CONFIG_PHY_CELL_ID_TAG, rand16());
   nfapi_resp->num_tlv++;
 
-  FILL_TLV(nfapi_resp->cell_config.frame_duplex_type, NFAPI_NR_CONFIG_FRAME_DUPLEX_TYPE_TAG, rand8());
+  // TDD because below we pack the TDD table
+  FILL_TLV(nfapi_resp->cell_config.frame_duplex_type, NFAPI_NR_CONFIG_FRAME_DUPLEX_TYPE_TAG, 1 /* TDD */);
   nfapi_resp->num_tlv++;
 
   FILL_TLV(nfapi_resp->ssb_config.ss_pbch_power, NFAPI_NR_CONFIG_SS_PBCH_POWER_TAG, (int32_t)rand32());
@@ -230,7 +231,7 @@ void fill_config_request_tlv(nfapi_nr_config_request_scf_t *nfapi_resp)
   nfapi_resp->num_tlv++;
 }
 
-void test_pack_unpack(nfapi_nr_config_request_scf_t *req)
+static void test_pack_unpack(nfapi_nr_config_request_scf_t *req)
 {
   uint8_t msg_buf[65535];
   uint16_t msg_len = sizeof(*req);
@@ -263,7 +264,7 @@ void test_pack_unpack(nfapi_nr_config_request_scf_t *req)
   free_config_request(&unpacked_req);
 }
 
-void test_copy(const nfapi_nr_config_request_scf_t *msg)
+static void test_copy(const nfapi_nr_config_request_scf_t *msg)
 {
   // Test copy function
   nfapi_nr_config_request_scf_t copy = {0};
@@ -272,16 +273,173 @@ void test_copy(const nfapi_nr_config_request_scf_t *msg)
   free_config_request(&copy);
 }
 
-int main(int n, char *v[])
+static void test_config_req_rand(void)
 {
-  fapi_test_init();
   nfapi_nr_config_request_scf_t req = {.header.message_id = NFAPI_NR_PHY_MSG_TYPE_CONFIG_REQUEST};
   // Fill CONFIG.request TVLs
-  fill_config_request_tlv(&req);
+  fill_config_request_tlv_tdd_rand(&req);
   // Perform tests
   test_pack_unpack(&req);
   test_copy(&req);
   // All tests successful!
   free_config_request(&req);
+}
+
+static void fill_config_request_tlv_fdd(nfapi_nr_config_request_scf_t *req)
+{
+  /* carrier config */
+  FILL_TLV(req->carrier_config.dl_bandwidth, NFAPI_NR_CONFIG_DL_BANDWIDTH_TAG, 5);
+  req->num_tlv++;
+  FILL_TLV(req->carrier_config.dl_frequency, NFAPI_NR_CONFIG_DL_FREQUENCY_TAG, 2150430);
+  req->num_tlv++;
+  for (int i = 0; i < 5; ++i)
+    FILL_TLV(req->carrier_config.dl_k0[i], NFAPI_NR_CONFIG_DL_K0_TAG, 0);
+  // these 5 are 1 tlv
+  req->num_tlv++;
+  FILL_TLV(req->carrier_config.dl_grid_size[0], NFAPI_NR_CONFIG_DL_GRID_SIZE_TAG, 25);
+  for (int i = 1; i < 5; ++i)
+    FILL_TLV(req->carrier_config.dl_grid_size[i], NFAPI_NR_CONFIG_DL_GRID_SIZE_TAG, 0);
+  // these 5 are 1 tlv
+  req->num_tlv++;
+  FILL_TLV(req->carrier_config.num_tx_ant, NFAPI_NR_CONFIG_NUM_TX_ANT_TAG, 1);
+  req->num_tlv++;
+  FILL_TLV(req->carrier_config.uplink_bandwidth, NFAPI_NR_CONFIG_UPLINK_BANDWIDTH_TAG, 5);
+  req->num_tlv++;
+  FILL_TLV(req->carrier_config.uplink_frequency, NFAPI_NR_CONFIG_UPLINK_FREQUENCY_TAG, 1750430);
+  req->num_tlv++;
+  for (int i = 0; i < 5; ++i)
+    FILL_TLV(req->carrier_config.ul_k0[i], NFAPI_NR_CONFIG_UL_K0_TAG, 0);
+  // these 5 are 1 tlv
+  req->num_tlv++;
+  FILL_TLV(req->carrier_config.ul_grid_size[0], NFAPI_NR_CONFIG_UL_GRID_SIZE_TAG, 25);
+  for (int i = 0; i < 5; ++i)
+    FILL_TLV(req->carrier_config.ul_grid_size[i], NFAPI_NR_CONFIG_UL_GRID_SIZE_TAG, 0);
+  // these 5 are 1 tlv
+  req->num_tlv++;
+  FILL_TLV(req->carrier_config.num_rx_ant, NFAPI_NR_CONFIG_NUM_RX_ANT_TAG, 1);
+  req->num_tlv++;
+  FILL_TLV(req->carrier_config.frequency_shift_7p5khz, NFAPI_NR_CONFIG_FREQUENCY_SHIFT_7P5KHZ_TAG, 0);
+  req->num_tlv++;
+
+  /* cell config */
+  FILL_TLV(req->cell_config.phy_cell_id, NFAPI_NR_CONFIG_PHY_CELL_ID_TAG, 0);
+  req->num_tlv++;
+  FILL_TLV(req->cell_config.frame_duplex_type, NFAPI_NR_CONFIG_FRAME_DUPLEX_TYPE_TAG, 0 /* FDD */);
+  req->num_tlv++;
+
+  /* SSB config */
+  FILL_TLV(req->ssb_config.ss_pbch_power, NFAPI_NR_CONFIG_SS_PBCH_POWER_TAG, -25);
+  req->num_tlv++;
+  FILL_TLV(req->ssb_config.bch_payload, NFAPI_NR_CONFIG_BCH_PAYLOAD_TAG, 1 /* PHY generates timing bits */);
+  req->num_tlv++;
+  FILL_TLV(req->ssb_config.scs_common, NFAPI_NR_CONFIG_SCS_COMMON_TAG, 0 /* 15 kHz */);
+  req->num_tlv++;
+
+  /* PRACH config */
+  FILL_TLV(req->prach_config.prach_sequence_length, NFAPI_NR_CONFIG_PRACH_SEQUENCE_LENGTH_TAG, 1);
+  req->num_tlv++;
+  FILL_TLV(req->prach_config.prach_sub_c_spacing, NFAPI_NR_CONFIG_PRACH_SUB_C_SPACING_TAG, 0);
+  req->num_tlv++;
+  FILL_TLV(req->prach_config.restricted_set_config, NFAPI_NR_CONFIG_RESTRICTED_SET_CONFIG_TAG, 0);
+  req->num_tlv++;
+  FILL_TLV(req->prach_config.prach_ConfigurationIndex, NFAPI_NR_CONFIG_PRACH_CONFIG_INDEX_TAG, 98);
+  req->num_tlv++;
+  int num_prach = 1;
+  FILL_TLV(req->prach_config.num_prach_fd_occasions, NFAPI_NR_CONFIG_NUM_PRACH_FD_OCCASIONS_TAG, num_prach);
+  req->num_tlv++;
+  nfapi_nr_num_prach_fd_occasions_t *l = calloc(num_prach, sizeof(*l));
+  req->prach_config.num_prach_fd_occasions_list = l;
+  FILL_TLV(l->prach_root_sequence_index, NFAPI_NR_CONFIG_PRACH_ROOT_SEQUENCE_INDEX_TAG, 1);
+  req->num_tlv++;
+  FILL_TLV(l->num_root_sequences, NFAPI_NR_CONFIG_NUM_ROOT_SEQUENCES_TAG, 16);
+  req->num_tlv++;
+  FILL_TLV(l->k1, NFAPI_NR_CONFIG_K1_TAG, 0);
+  req->num_tlv++;
+  FILL_TLV(l->prach_zero_corr_conf, NFAPI_NR_CONFIG_PRACH_ZERO_CORR_CONF_TAG, 13);
+  req->num_tlv++;
+  /* should be at least according to spec */
+  FILL_TLV(l->num_unused_root_sequences, NFAPI_NR_CONFIG_NUM_UNUSED_ROOT_SEQUENCES_TAG, 0);
+  req->num_tlv++;
+  l->unused_root_sequences_list = NULL;
+  FILL_TLV(req->prach_config.ssb_per_rach, NFAPI_NR_CONFIG_SSB_PER_RACH_TAG, 3);
+  req->num_tlv++;
+  FILL_TLV(req->prach_config.prach_multiple_carriers_in_a_band, NFAPI_NR_CONFIG_PRACH_MULTIPLE_CARRIERS_IN_A_BAND_TAG, 0);
+  req->num_tlv++;
+
+  /* SSB table */
+  FILL_TLV(req->ssb_table.ssb_offset_point_a, NFAPI_NR_CONFIG_SSB_OFFSET_POINT_A_TAG, 4);
+  req->num_tlv++;
+  FILL_TLV(req->ssb_table.ssb_period, NFAPI_NR_CONFIG_SSB_PERIOD_TAG, 2);
+  req->num_tlv++;
+  FILL_TLV(req->ssb_table.ssb_subcarrier_offset, NFAPI_NR_CONFIG_SSB_SUBCARRIER_OFFSET_TAG, 0);
+  req->num_tlv++;
+  FILL_TLV(req->ssb_table.MIB, NFAPI_NR_CONFIG_MIB_TAG, 0);
+  req->num_tlv++;
+
+  FILL_TLV(req->ssb_table.ssb_mask_list[0].ssb_mask, NFAPI_NR_CONFIG_SSB_MASK_TAG, 2147483648);
+  req->num_tlv++;
+  FILL_TLV(req->ssb_table.ssb_mask_list[1].ssb_mask, NFAPI_NR_CONFIG_SSB_MASK_TAG, 0);
+  req->num_tlv++;
+  for (int i = 0; i < 64; i++) {
+    FILL_TLV(req->ssb_table.ssb_beam_id_list[i].beam_id, NFAPI_NR_CONFIG_BEAM_ID_TAG, 0);
+    req->num_tlv++;
+  }
+
+  /* NOTE: no TDD table! */
+
+  /* Measurement config rssi_measurement NULL -> not present */
+
+  /* nFAPI config */
+  /* IPv4 address is 127.0.0.1 */
+  req->nfapi_config.p7_vnf_address_ipv4.tl.tag = NFAPI_NR_NFAPI_P7_VNF_ADDRESS_IPV4_TAG;
+  req->nfapi_config.p7_vnf_address_ipv4.address[0] = 127;
+  req->nfapi_config.p7_vnf_address_ipv4.address[1] = 0;
+  req->nfapi_config.p7_vnf_address_ipv4.address[2] = 0;
+  req->nfapi_config.p7_vnf_address_ipv4.address[3] = 1;
+  req->num_tlv++;
+  /* no IPv6 address */
+  FILL_TLV(req->nfapi_config.p7_vnf_port, NFAPI_NR_NFAPI_P7_VNF_PORT_TAG, 50011);
+  req->num_tlv++;
+  FILL_TLV(req->nfapi_config.timing_window, NFAPI_NR_NFAPI_TIMING_WINDOW_TAG, 30);
+  req->num_tlv++;
+  FILL_TLV(req->nfapi_config.timing_info_mode, NFAPI_NR_NFAPI_TIMING_INFO_MODE_TAG, 3);
+  req->num_tlv++;
+  FILL_TLV(req->nfapi_config.timing_info_period, NFAPI_NR_NFAPI_TIMING_INFO_PERIOD_TAG, 10);
+  req->num_tlv++;
+  FILL_TLV(req->nfapi_config.dl_tti_timing_offset, NFAPI_NR_NFAPI_DL_TTI_TIMING_OFFSET, 0);
+  req->num_tlv++;
+  FILL_TLV(req->nfapi_config.dl_tti_timing_offset, NFAPI_NR_NFAPI_UL_TTI_TIMING_OFFSET, 0);
+  req->num_tlv++;
+  FILL_TLV(req->nfapi_config.dl_tti_timing_offset, NFAPI_NR_NFAPI_UL_DCI_TIMING_OFFSET, 0);
+  req->num_tlv++;
+  FILL_TLV(req->nfapi_config.dl_tti_timing_offset, NFAPI_NR_NFAPI_TX_DATA_TIMING_OFFSET, 0);
+  req->num_tlv++;
+
+  /* PMI list NULL */
+
+  /* Digital beamforming NULL */
+
+  /* Analog beamforming NULL */
+
+  //DevAssert(req->num_tlv == 103);
+}
+
+static void test_config_req_fdd(void)
+{
+  nfapi_nr_config_request_scf_t req = {.header.phy_id = 1, .header.message_id = NFAPI_NR_PHY_MSG_TYPE_CONFIG_REQUEST};
+  // Fill CONFIG.request TVLs
+  fill_config_request_tlv_fdd(&req);
+  // Perform tests
+  test_pack_unpack(&req);
+  test_copy(&req);
+  // All tests successful!
+  free_config_request(&req);
+}
+
+int main(int n, char *v[])
+{
+  fapi_test_init();
+  test_config_req_rand();
+  test_config_req_fdd();
   return 0;
 }

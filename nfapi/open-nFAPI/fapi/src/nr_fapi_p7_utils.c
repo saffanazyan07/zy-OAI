@@ -2001,3 +2001,743 @@ size_t get_rach_indication_size(nfapi_nr_rach_indication_t *msg)
 
   return total_size;
 }
+
+static void dump_p7_message_header(const nfapi_nr_p7_message_header_t *hdr, int depth)
+{
+  INDENTED_PRINTF("Message ID = 0x%02x\n", hdr->message_id);
+  INDENTED_PRINTF("Message Length = 0x%02x\n", hdr->message_length);
+}
+
+static void dump_dl_beamforming_pdu(const nfapi_nr_tx_precoding_and_beamforming_t *pdu, int depth)
+{
+  INDENTED_PRINTF("numPRGs = %d\n", pdu->num_prgs);
+  INDENTED_PRINTF("prgSize = %d\n", pdu->prg_size);
+  INDENTED_PRINTF("digBFInterfaces = %d\n", pdu->dig_bf_interfaces);
+  depth++;
+  for (int i = 0; i < pdu->num_prgs; ++i) {
+    INDENTED_PRINTF("PMIdx = %d\n", pdu->prgs_list[i].pm_idx);
+    depth++;
+    for (int j = 0; j < pdu->dig_bf_interfaces; ++j) {
+      INDENTED_PRINTF("beamIDX = %d\n", pdu->prgs_list[i].dig_bf_interface_list[j].beam_idx);
+    }
+    depth--;
+  }
+}
+
+static void dump_dl_dci_pdu(const nfapi_nr_dl_dci_pdu_t *pdu, int depth)
+{
+  INDENTED_PRINTF("RNTI = 0x%x\n", pdu->RNTI);
+  INDENTED_PRINTF("ScramblingId = %d\n", pdu->ScramblingId);
+  INDENTED_PRINTF("ScramblingRNTI = 0x%x\n", pdu->ScramblingRNTI);
+  INDENTED_PRINTF("CCEIndex = %d\n", pdu->CceIndex);
+  INDENTED_PRINTF("AggregationLevel = %d\n", pdu->AggregationLevel);
+  dump_dl_beamforming_pdu(&pdu->precodingAndBeamforming, depth + 1);
+  INDENTED_PRINTF("beta_PDCCH_1_0 = %d\n", pdu->beta_PDCCH_1_0);
+  INDENTED_PRINTF("powerControlOffsetSS = %d\n", pdu->powerControlOffsetSS);
+  INDENTED_PRINTF("PayloadSizeBits = %d\n", pdu->PayloadSizeBits);
+  INDENTED_PRINTF("Payload = ");
+  for (int i = 0; i < (pdu->PayloadSizeBits + 7) / 8; ++i) {
+    printf("0x%02x ", pdu->Payload[i]);
+  }
+  printf("\n");
+}
+
+static void dump_dl_tti_request_PDCCH_PDU(const nfapi_nr_dl_tti_pdcch_pdu_rel15_t *pdu, int depth)
+{
+  INDENTED_PRINTF("BWPSize = %d\n", pdu->BWPSize);
+  INDENTED_PRINTF("BWPStart = %d\n", pdu->BWPStart);
+  INDENTED_PRINTF("Subcarrier Spacing = %d\n", pdu->SubcarrierSpacing);
+  INDENTED_PRINTF("Ciclic Prefix = %d\n", pdu->CyclicPrefix);
+  INDENTED_PRINTF("StartSymbolIndex = %d\n", pdu->StartSymbolIndex);
+  INDENTED_PRINTF("DurationSymbols = %d\n", pdu->DurationSymbols);
+  INDENTED_PRINTF("FrequencyDomainResource : ");
+  for (int i = 0; i < 6; ++i) {
+    printf("%d ", pdu->FreqDomainResource[i]);
+  }
+  printf("\n");
+  INDENTED_PRINTF("CCE Reg Mapping Type = %d\n", pdu->CceRegMappingType);
+  INDENTED_PRINTF("Reg Bundle Size = %d\n", pdu->RegBundleSize);
+  INDENTED_PRINTF("Interleaver Size = %d\n", pdu->InterleaverSize);
+  INDENTED_PRINTF("CoreSetType = %d\n", pdu->CoreSetType);
+  INDENTED_PRINTF("ShiftIndex = %d\n", pdu->ShiftIndex);
+  INDENTED_PRINTF("precoderGranularity = %d\n", pdu->precoderGranularity);
+  INDENTED_PRINTF("numDLDCI = %d\n", pdu->numDlDci);
+  for (int i = 0; i < pdu->numDlDci; ++i) {
+    dump_dl_dci_pdu(&pdu->dci_pdu[i], depth + 1);
+  }
+}
+
+static void dump_dl_tti_request_PDSCH_PDU(const nfapi_nr_dl_tti_pdsch_pdu_rel15_t *pdu, int depth)
+{
+  INDENTED_PRINTF("pduBitmap = %d\n", pdu->pduBitmap);
+  INDENTED_PRINTF("RNTI = 0x%x\n", pdu->rnti);
+  INDENTED_PRINTF("pduIndex = %d\n", pdu->pduIndex);
+  INDENTED_PRINTF("BWPSize = %d\n", pdu->BWPSize);
+  INDENTED_PRINTF("BWPStart = %d\n", pdu->BWPStart);
+  INDENTED_PRINTF("SubcarrierSpacing = %d\n", pdu->SubcarrierSpacing);
+  INDENTED_PRINTF("CyclicPrefix = %d\n", pdu->CyclicPrefix);
+  INDENTED_PRINTF("NrOfCodewords = %d\n", pdu->NrOfCodewords);
+  for (int i = 0; i < pdu->NrOfCodewords; ++i) {
+    depth++;
+    INDENTED_PRINTF("Codeword #%d\n", i);
+    depth++;
+    INDENTED_PRINTF("targetCoderate = %d\n", pdu->targetCodeRate[i]);
+    INDENTED_PRINTF("qamModOrder = %d\n", pdu->qamModOrder[i]);
+    INDENTED_PRINTF("mcsIndex = %d\n", pdu->mcsIndex[i]);
+    INDENTED_PRINTF("mcsTable = %d\n", pdu->mcsTable[i]);
+    INDENTED_PRINTF("rvIndex = %d\n", pdu->rvIndex[i]);
+    INDENTED_PRINTF("TBSize = %d\n", pdu->TBSize[i]);
+    depth--;
+    depth--;
+  }
+
+  INDENTED_PRINTF("dataScramblingId = %d\n", pdu->dataScramblingId);
+  INDENTED_PRINTF("nrOfLayers = %d\n", pdu->nrOfLayers);
+  INDENTED_PRINTF("transmissionScheme = %d\n", pdu->transmissionScheme);
+  INDENTED_PRINTF("refPoint = %d\n", pdu->refPoint);
+  INDENTED_PRINTF("dlDmrsSymbPos = %d\n", pdu->dlDmrsSymbPos);
+  INDENTED_PRINTF("dmrsConfigType = %d\n", pdu->dmrsConfigType);
+  INDENTED_PRINTF("dlDmrsScramblingId = %d\n", pdu->dlDmrsScramblingId);
+  INDENTED_PRINTF("SCID = %d\n", pdu->SCID);
+  INDENTED_PRINTF("numDmrsCdmGrpsNoData = %d\n", pdu->numDmrsCdmGrpsNoData);
+  INDENTED_PRINTF("dmrsPorts = %d\n", pdu->dmrsPorts);
+  INDENTED_PRINTF("resourceAlloc = %d\n", pdu->resourceAlloc);
+  INDENTED_PRINTF("rbBitmap = ");
+  for (int i = 0; i < 36; ++i) {
+    printf("%d ", pdu->rbBitmap[i]);
+  }
+  printf("\n");
+  INDENTED_PRINTF("rbStart = %d\n", pdu->rbStart);
+  INDENTED_PRINTF("rbSize = %d\n", pdu->rbSize);
+  INDENTED_PRINTF("VRBtoPRBMapping = %d\n", pdu->VRBtoPRBMapping);
+  INDENTED_PRINTF("StartSymbolIndex = %d\n", pdu->StartSymbolIndex);
+  INDENTED_PRINTF("NrOfSymbols = %d\n", pdu->NrOfSymbols);
+
+  INDENTED_PRINTF("PTRSPortIndex = %d\n", pdu->PTRSPortIndex);
+  INDENTED_PRINTF("PTRSTimeDensity = %d\n", pdu->PTRSTimeDensity);
+  INDENTED_PRINTF("PTRSFreqDensity = %d\n", pdu->PTRSFreqDensity);
+  INDENTED_PRINTF("PTRSReOffset = %d\n", pdu->PTRSReOffset);
+  INDENTED_PRINTF("nEpreRatioOfPDSCHToPTRS = %d\n", pdu->nEpreRatioOfPDSCHToPTRS);
+
+  dump_dl_beamforming_pdu(&pdu->precodingAndBeamforming, depth + 1);
+  INDENTED_PRINTF("powerControlOffset = %d\n", pdu->powerControlOffset);
+  INDENTED_PRINTF("powerControlOffsetSS = %d\n", pdu->powerControlOffsetSS);
+
+  INDENTED_PRINTF("isLastCbPresent = %d\n", pdu->isLastCbPresent);
+  INDENTED_PRINTF("isInlineTbCrc = %d\n", pdu->isInlineTbCrc);
+  INDENTED_PRINTF("dlTbCrc = %d\n", pdu->dlTbCrc);
+}
+
+static void dump_dl_tti_request_CSI_RS_PDU(const nfapi_nr_dl_tti_csi_rs_pdu_rel15_t *pdu, int depth)
+{
+  INDENTED_PRINTF("BWPSize = %d\n", pdu->bwp_size);
+  INDENTED_PRINTF("BWPStart = %d\n", pdu->bwp_start);
+  INDENTED_PRINTF("SubcarrierSpacing = %d\n", pdu->subcarrier_spacing);
+  INDENTED_PRINTF("CyclicPrefix = %d\n", pdu->cyclic_prefix);
+  INDENTED_PRINTF("StartRB = %d\n", pdu->start_rb);
+  INDENTED_PRINTF("NrOfRBs = %d\n", pdu->nr_of_rbs);
+  INDENTED_PRINTF("CSIType = %d\n", pdu->csi_type);
+  INDENTED_PRINTF("Row = %d\n", pdu->row);
+  INDENTED_PRINTF("FreqDomain = %d\n", pdu->freq_domain);
+  INDENTED_PRINTF("SymbL0 = %d\n", pdu->symb_l0);
+  INDENTED_PRINTF("SymbL1 = %d\n", pdu->symb_l1);
+  INDENTED_PRINTF("CDMType = %d\n", pdu->cdm_type);
+  INDENTED_PRINTF("FreqDensity = %d\n", pdu->freq_density);
+  INDENTED_PRINTF("ScrambId = %d\n", pdu->scramb_id);
+  INDENTED_PRINTF("powerControllOffset = %d\n", pdu->power_control_offset);
+  INDENTED_PRINTF("powerControllOffsetSS = %d\n", pdu->power_control_offset_ss);
+  dump_dl_beamforming_pdu(&pdu->precodingAndBeamforming, depth + 1);
+}
+
+static void dump_dl_tti_request_SSB_PDU(const nfapi_nr_dl_tti_ssb_pdu_rel15_t *pdu, int depth)
+{
+  INDENTED_PRINTF("physCellId = %d\n", pdu->PhysCellId);
+  INDENTED_PRINTF("BetaPss = %d\n", pdu->BetaPss);
+  INDENTED_PRINTF("SSBBlockIndex = %d\n", pdu->SsbBlockIndex);
+  INDENTED_PRINTF("SSBSubcarrierOffset = %d\n", pdu->SsbSubcarrierOffset);
+  INDENTED_PRINTF("SSBOffsetPointA = %d\n", pdu->ssbOffsetPointA);
+  INDENTED_PRINTF("bchPayloadFlag = %d\n", pdu->bchPayloadFlag);
+  INDENTED_PRINTF("bchPayload = %x\n", pdu->bchPayload);
+  dump_dl_beamforming_pdu(&pdu->precoding_and_beamforming, depth + 1);
+}
+
+static char *dl_tti_pdu_type_to_str(uint16_t pdu_type)
+{
+  switch (pdu_type) {
+    case NFAPI_NR_DL_TTI_PDCCH_PDU_TYPE:
+      return "NFAPI_NR_DL_TTI_PDCCH_PDU_TYPE";
+    case NFAPI_NR_DL_TTI_PDSCH_PDU_TYPE:
+      return "NFAPI_NR_DL_TTI_PDSCH_PDU_TYPE";
+    case NFAPI_NR_DL_TTI_CSI_RS_PDU_TYPE:
+      return "NFAPI_NR_DL_TTI_CSI_RS_PDU_TYPE";
+    case NFAPI_NR_DL_TTI_SSB_PDU_TYPE:
+      return "NFAPI_NR_DL_TTI_SSB_PDU_TYPE";
+    default:
+      return "Unknown";
+      break;
+  }
+}
+
+void dump_dl_tti_request(const nfapi_nr_dl_tti_request_t *msg)
+{
+  int depth = 0;
+  dump_p7_message_header(&msg->header, depth);
+  depth++;
+  INDENTED_PRINTF("SFN = %d\n", msg->SFN);
+  INDENTED_PRINTF("Slot = %d\n", msg->Slot);
+  INDENTED_PRINTF("nPDUs = %d\n", msg->dl_tti_request_body.nPDUs);
+  INDENTED_PRINTF("nGroup = %d\n", msg->dl_tti_request_body.nGroup);
+  for (int i = 0; i < msg->dl_tti_request_body.nPDUs; ++i) {
+    const nfapi_nr_dl_tti_request_pdu_t *pdu = &msg->dl_tti_request_body.dl_tti_pdu_list[i];
+    depth++;
+    INDENTED_PRINTF("PDU #%d\n", i);
+    INDENTED_PRINTF("PDUType = 0x%02x (%s)\n", pdu->PDUType, dl_tti_pdu_type_to_str(pdu->PDUType));
+    INDENTED_PRINTF("PDUSize = 0x%02x\n", pdu->PDUSize);
+    /* call to dump_dl_tti_request_<PDU_Type>_pdu */
+    switch (pdu->PDUType) {
+      case NFAPI_NR_DL_TTI_PDCCH_PDU_TYPE:
+        dump_dl_tti_request_PDCCH_PDU(&pdu->pdcch_pdu.pdcch_pdu_rel15, depth + 1);
+        break;
+      case NFAPI_NR_DL_TTI_PDSCH_PDU_TYPE:
+        dump_dl_tti_request_PDSCH_PDU(&pdu->pdsch_pdu.pdsch_pdu_rel15, depth + 1);
+        break;
+      case NFAPI_NR_DL_TTI_CSI_RS_PDU_TYPE:
+        dump_dl_tti_request_CSI_RS_PDU(&pdu->csi_rs_pdu.csi_rs_pdu_rel15, depth + 1);
+        break;
+      case NFAPI_NR_DL_TTI_SSB_PDU_TYPE:
+        dump_dl_tti_request_SSB_PDU(&pdu->ssb_pdu.ssb_pdu_rel15, depth + 1);
+        break;
+      default:
+        INDENTED_PRINTF("Unknown PDU type 0x%02x\n", pdu->PDUType);
+        break;
+    }
+    depth--;
+  }
+  for (int group_idx = 0; group_idx < msg->dl_tti_request_body.nGroup; group_idx++) {
+    depth++;
+    INDENTED_PRINTF("Group #%d\n", group_idx);
+    INDENTED_PRINTF("nUe[%d] = 0x%02x\n", group_idx, msg->dl_tti_request_body.nUe[group_idx]);
+    for (int ue_idx = 0; ue_idx < msg->dl_tti_request_body.nUe[group_idx]; ue_idx++) {
+      depth++;
+      INDENTED_PRINTF("UE #%d\n", ue_idx);
+      INDENTED_PRINTF("PduIdx[%d][%d] = 0x%02x\n", group_idx, ue_idx, msg->dl_tti_request_body.PduIdx[group_idx][ue_idx]);
+      depth--;
+    }
+    depth--;
+  }
+}
+
+static void dump_ul_tti_beamforming(const nfapi_nr_ul_beamforming_t *pdu, int depth)
+{
+  INDENTED_PRINTF("TRP Scheme = %d\n", pdu->trp_scheme);
+  INDENTED_PRINTF("numPRGs = %d\n", pdu->num_prgs);
+  INDENTED_PRINTF("prgSize = %d\n", pdu->prg_size);
+  INDENTED_PRINTF("digBFInterface = %d\n", pdu->dig_bf_interface);
+  for (int prg = 0; prg < pdu->num_prgs; ++prg) {
+    INDENTED_PRINTF("PRG #%d \n", prg);
+    depth++;
+    for (int dbf_if = 0; dbf_if < pdu->dig_bf_interface; ++dbf_if) {
+      INDENTED_PRINTF("digBFInterface #%d \n", dbf_if);
+      depth++;
+      INDENTED_PRINTF("beamIdx = %d\n", pdu->prgs_list[prg].dig_bf_interface_list[dbf_if].beam_idx);
+      depth--;
+    }
+    depth--;
+  }
+}
+
+static char *ul_tti_prach_format_to_str(int prach_format)
+{
+  switch (prach_format) {
+    case 0:
+      return "0";
+    case 1:
+      return "1";
+    case 2:
+      return "2";
+    case 3:
+      return "3";
+    case 4:
+      return "A1";
+    case 5:
+      return "A2";
+    case 6:
+      return "A3";
+    case 7:
+      return "B1";
+    case 8:
+      return "B4";
+    case 9:
+      return "C0";
+    case 10:
+      return "C2";
+    case 11:
+      return "A1/B1";
+    case 12:
+      return "A2/B2";
+    case 13:
+      return "A3/B3";
+    default:
+      return "Unknown";
+  }
+}
+
+static void dump_ul_tti_request_PRACH_PDU(const nfapi_nr_prach_pdu_t *pdu, int depth)
+{
+  INDENTED_PRINTF("physCellID = %d\n", pdu->phys_cell_id);
+  INDENTED_PRINTF("NumPrachOcas = %d\n", pdu->num_prach_ocas);
+  INDENTED_PRINTF("prachFormat = %d (%s)\n", pdu->prach_format, ul_tti_prach_format_to_str(pdu->prach_format));
+  INDENTED_PRINTF("numRa = %d\n", pdu->num_ra);
+  INDENTED_PRINTF("prachStartSymbol = %d\n", pdu->prach_start_symbol);
+  INDENTED_PRINTF("numCs = %d\n", pdu->num_cs);
+  dump_ul_tti_beamforming(&pdu->beamforming, depth + 1);
+}
+
+static void dump_ul_tti_request_PUSCH_PDU(const nfapi_nr_pusch_pdu_t *pdu, int depth)
+{
+  INDENTED_PRINTF("pduBitmap = %d\n", pdu->pdu_bit_map);
+  INDENTED_PRINTF("RNTI = 0x%x\n", pdu->rnti);
+  INDENTED_PRINTF("Handle = %d\n", pdu->handle);
+  INDENTED_PRINTF("BWPSize = %d\n", pdu->bwp_size);
+  INDENTED_PRINTF("BWPStart = %d\n", pdu->bwp_start);
+  INDENTED_PRINTF("SubcarrierSpacing = %d\n", pdu->subcarrier_spacing);
+  INDENTED_PRINTF("CyclicPrefix = %d\n", pdu->cyclic_prefix);
+  INDENTED_PRINTF("targetCodeRate = %d\n", pdu->target_code_rate);
+  INDENTED_PRINTF("qamModOrder = %d\n", pdu->qam_mod_order);
+  INDENTED_PRINTF("mcsIndex = %d\n", pdu->mcs_index);
+  INDENTED_PRINTF("mcsTable = %d\n", pdu->mcs_table);
+  INDENTED_PRINTF("TransformPrecoding = %d\n", pdu->transform_precoding);
+  INDENTED_PRINTF("dataScramblingId = %d\n", pdu->data_scrambling_id);
+  INDENTED_PRINTF("nrOfLayers = %d\n", pdu->nrOfLayers);
+  INDENTED_PRINTF("ulDmrsSymbPos = %d\n", pdu->ul_dmrs_symb_pos);
+  INDENTED_PRINTF("dmrsConfigType = %d\n", pdu->dmrs_config_type);
+  INDENTED_PRINTF("ulDmrsScramblingId = %d\n", pdu->ul_dmrs_scrambling_id);
+  INDENTED_PRINTF("puschIdentity = %d\n", pdu->pusch_identity);
+  INDENTED_PRINTF("SCID = %d\n", pdu->scid);
+  INDENTED_PRINTF("numDmrsCdmGrpsNoData = %d\n", pdu->num_dmrs_cdm_grps_no_data);
+  INDENTED_PRINTF("dmrsPorts = %d\n", pdu->dmrs_ports);
+  INDENTED_PRINTF("resourceAlloc = %d\n", pdu->resource_alloc);
+  INDENTED_PRINTF("rbBitmap = ");
+  for (int i = 0; i < 36; ++i) {
+    printf("%d ", pdu->rb_bitmap[i]);
+  }
+  printf("\n");
+  INDENTED_PRINTF("rbStart = %d\n", pdu->rb_start);
+  INDENTED_PRINTF("rbSize = %d\n", pdu->rb_size);
+  INDENTED_PRINTF("VRBtoPRBMapping = %d\n", pdu->vrb_to_prb_mapping);
+  INDENTED_PRINTF("FrequencyHopping = %d\n", pdu->frequency_hopping);
+  INDENTED_PRINTF("txDirectCurrentLocation = %d\n", pdu->tx_direct_current_location);
+  INDENTED_PRINTF("uplinkFrequencyShift7p5khz = %d\n", pdu->uplink_frequency_shift_7p5khz);
+  INDENTED_PRINTF("NrOfSymbols = %d\n", pdu->nr_of_symbols);
+
+  INDENTED_PRINTF("puschData (%s)\n", pdu->pdu_bit_map & PUSCH_PDU_BITMAP_PUSCH_DATA ? "included" : "not included");
+  if (pdu->pdu_bit_map & PUSCH_PDU_BITMAP_PUSCH_DATA) {
+    depth++;
+    INDENTED_PRINTF("rvIndex = %d\n", pdu->pusch_data.rv_index);
+    INDENTED_PRINTF("harqProcessID = %d\n", pdu->pusch_data.harq_process_id);
+    INDENTED_PRINTF("newDataIndicator = %d\n", pdu->pusch_data.new_data_indicator);
+    INDENTED_PRINTF("TBSize = %d\n", pdu->pusch_data.tb_size);
+    INDENTED_PRINTF("numCB = %d\n", pdu->pusch_data.num_cb);
+    INDENTED_PRINTF("cbPresentAndPosition = ");
+    for (int i = 0; i < (pdu->pusch_data.num_cb + 7) / 8; i++) {
+      printf("%d ", pdu->pusch_data.cb_present_and_position[i]);
+    }
+    printf("\n");
+    depth--;
+  }
+
+  INDENTED_PRINTF("puschUci (%s)\n", pdu->pdu_bit_map & PUSCH_PDU_BITMAP_PUSCH_UCI ? "included" : "not included");
+  if (pdu->pdu_bit_map & PUSCH_PDU_BITMAP_PUSCH_UCI) {
+    depth++;
+    INDENTED_PRINTF("harqAckBitLength = %d\n", pdu->pusch_uci.harq_ack_bit_length);
+    INDENTED_PRINTF("csiPart1BitLength = %d\n", pdu->pusch_uci.csi_part1_bit_length);
+    INDENTED_PRINTF("csiPart2BitLength = %d\n", pdu->pusch_uci.csi_part2_bit_length);
+    INDENTED_PRINTF("AlphaScaling = %d\n", pdu->pusch_uci.alpha_scaling);
+    INDENTED_PRINTF("betaOffsetHarqAck = %d\n", pdu->pusch_uci.beta_offset_harq_ack);
+    INDENTED_PRINTF("betaOffsetCsi1 = %d\n", pdu->pusch_uci.beta_offset_csi1);
+    INDENTED_PRINTF("betaOffsetCsi2 = %d\n", pdu->pusch_uci.beta_offset_csi2);
+    depth--;
+  }
+
+  INDENTED_PRINTF("puschPtrs (%s)\n", pdu->pdu_bit_map & PUSCH_PDU_BITMAP_PUSCH_PTRS ? "included" : "not included");
+  if (pdu->pdu_bit_map & PUSCH_PDU_BITMAP_PUSCH_PTRS) {
+    depth++;
+    INDENTED_PRINTF("lowPaprGroupNumber = %d\n", pdu->pusch_ptrs.num_ptrs_ports);
+    for (int i = 0; i < pdu->pusch_ptrs.num_ptrs_ports; ++i) {
+      INDENTED_PRINTF("ptrsPort #%d\n", i);
+      depth++;
+      INDENTED_PRINTF("PTRSPortIndex = %d\n", pdu->pusch_ptrs.ptrs_ports_list[i].ptrs_port_index);
+      INDENTED_PRINTF("PTRSDmrsPort = %d\n", pdu->pusch_ptrs.ptrs_ports_list[i].ptrs_dmrs_port);
+      INDENTED_PRINTF("PTRSReOffset = %d\n", pdu->pusch_ptrs.ptrs_ports_list[i].ptrs_re_offset);
+      depth--;
+    }
+    INDENTED_PRINTF("PTRSTimeDensity = %d\n", pdu->pusch_ptrs.ptrs_time_density);
+    INDENTED_PRINTF("PTRSFreqDensity = %d\n", pdu->pusch_ptrs.ptrs_freq_density);
+    INDENTED_PRINTF("ulPTRSPower = %d\n", pdu->pusch_ptrs.ul_ptrs_power);
+    depth--;
+  }
+
+  INDENTED_PRINTF("dtfsOfdm (%s)\n", pdu->pdu_bit_map & PUSCH_PDU_BITMAP_DFTS_OFDM ? "included" : "not included");
+  if (pdu->pdu_bit_map & PUSCH_PDU_BITMAP_DFTS_OFDM) {
+    depth++;
+    INDENTED_PRINTF("lowPaprGroupNumber = %d\n", pdu->dfts_ofdm.low_papr_group_number);
+    INDENTED_PRINTF("lowPaprSequenceNumber = %d\n", pdu->dfts_ofdm.low_papr_sequence_number);
+    INDENTED_PRINTF("ulPtrsSampleDensity = %d\n", pdu->dfts_ofdm.ul_ptrs_sample_density);
+    INDENTED_PRINTF("ulPtrsTimeDensityTransformPrecoding = %d\n", pdu->dfts_ofdm.ul_ptrs_time_density_transform_precoding);
+    depth--;
+  }
+  dump_ul_tti_beamforming(&pdu->beamforming, depth + 1);
+}
+
+static void dump_ul_tti_request_PUCCH_PDU(const nfapi_nr_pucch_pdu_t *pdu, int depth)
+{
+  INDENTED_PRINTF("RNTI = 0x%x\n", pdu->rnti);
+  INDENTED_PRINTF("Handle = %d\n", pdu->handle);
+  INDENTED_PRINTF("BWPSize = %d\n", pdu->bwp_size);
+  INDENTED_PRINTF("BWPStart = %d\n", pdu->bwp_start);
+  INDENTED_PRINTF("SubcarrierSpacing = %d\n", pdu->subcarrier_spacing);
+  INDENTED_PRINTF("CyclicPrefix = %d\n", pdu->cyclic_prefix);
+  INDENTED_PRINTF("FormatType = %d\n", pdu->format_type);
+  INDENTED_PRINTF("multiSlotTxIndicator = %d\n", pdu->multi_slot_tx_indicator);
+  INDENTED_PRINTF("pi2Bpsk = %d\n", pdu->pi_2bpsk);
+  INDENTED_PRINTF("prbStart = %d\n", pdu->prb_start);
+  INDENTED_PRINTF("prbSize = %d\n", pdu->prb_size);
+  INDENTED_PRINTF("StartSymbolIndex = %d\n", pdu->start_symbol_index);
+  INDENTED_PRINTF("NrOfSymbols = %d\n", pdu->nr_of_symbols);
+  INDENTED_PRINTF("freqHopFlag = %d\n", pdu->freq_hop_flag);
+  INDENTED_PRINTF("secondHopPRB = %d\n", pdu->second_hop_prb);
+  INDENTED_PRINTF("groupHopFlag = %d\n", pdu->group_hop_flag);
+  INDENTED_PRINTF("sequenceHopFlag = %d\n", pdu->sequence_hop_flag);
+  INDENTED_PRINTF("hoppingId = %d\n", pdu->hopping_id);
+  INDENTED_PRINTF("InitialCyclicShift = %d\n", pdu->initial_cyclic_shift);
+  INDENTED_PRINTF("dataScramblingId = %d\n", pdu->data_scrambling_id);
+  INDENTED_PRINTF("TimeDomainOccIdx = %d\n", pdu->time_domain_occ_idx);
+  INDENTED_PRINTF("PreDftOccIdx = %d\n", pdu->pre_dft_occ_idx);
+  INDENTED_PRINTF("PreDftOccLen = %d\n", pdu->pre_dft_occ_len);
+  INDENTED_PRINTF("AddDmrsFlag = %d\n", pdu->add_dmrs_flag);
+  INDENTED_PRINTF("DmrsScramblingId = %d\n", pdu->dmrs_scrambling_id);
+  INDENTED_PRINTF("DMRScyclicshift = %d\n", pdu->dmrs_cyclic_shift);
+  INDENTED_PRINTF("SRFlag = %d\n", pdu->sr_flag);
+  INDENTED_PRINTF("BitLenHarq = %d\n", pdu->bit_len_harq);
+  INDENTED_PRINTF("BitLenCsiPart1 = %d\n", pdu->bit_len_csi_part1);
+  INDENTED_PRINTF("BitLenCsiPart2 = %d\n", pdu->bit_len_csi_part2);
+  dump_ul_tti_beamforming(&pdu->beamforming, depth + 1);
+}
+
+static void dump_ul_tti_request_srs_parameters(const nfapi_v4_srs_parameters_t *pdu, const uint8_t num_symbols, uint8_t depth)
+{
+  INDENTED_PRINTF("srsBandwidthSize = %d\n", pdu->srs_bandwidth_size);
+  for (int symbol_idx = 0; symbol_idx < num_symbols; ++symbol_idx) {
+    const nfapi_v4_srs_parameters_symbols_t *symbol = &pdu->symbol_list[symbol_idx];
+    INDENTED_PRINTF("Symbol #%d\n", symbol_idx);
+    depth++;
+    INDENTED_PRINTF("srsBandwidthStart = %d\n", symbol->srs_bandwidth_start);
+    INDENTED_PRINTF("sequenceGroup = %d\n", symbol->sequence_group);
+    INDENTED_PRINTF("sequenceNumber = %d\n", symbol->sequence_number);
+    depth--;
+  }
+  const uint8_t nUsage = __builtin_popcount(pdu->usage);
+  INDENTED_PRINTF("Usage = %d (nUsage = %d)\n", pdu->usage, nUsage);
+  depth++;
+  for (int idx = 0; idx < nUsage; ++idx) {
+    INDENTED_PRINTF("ReportType[%d] = %d\n", idx, pdu->report_type[idx]);
+  }
+  depth--;
+  INDENTED_PRINTF("singular Value Representation = %d\n", pdu->singular_Value_representation);
+  INDENTED_PRINTF("iq Representation = %d\n", pdu->iq_representation);
+  INDENTED_PRINTF("prgSize = %d\n", pdu->prg_size);
+  INDENTED_PRINTF("numTotalUeAntennas = %d\n", pdu->num_total_ue_antennas);
+  INDENTED_PRINTF("ueAntennasInThisSrsResourceSet = %d\n", pdu->ue_antennas_in_this_srs_resource_set);
+  INDENTED_PRINTF("sampledUeAntennas = %d\n", pdu->sampled_ue_antennas);
+  INDENTED_PRINTF("reportScope = %d\n", pdu->report_scope);
+  INDENTED_PRINTF("NumULSpatialStreamsPorts = %d\n", pdu->num_ul_spatial_streams_ports);
+  depth++;
+  for (int idx = 0; idx < pdu->num_ul_spatial_streams_ports; ++idx) {
+    INDENTED_PRINTF("UlSpatialStreamPorts[%d] = %d\n", idx, pdu->Ul_spatial_stream_ports[idx]);
+  }
+}
+
+static void dump_ul_tti_request_SRS_PDU(const nfapi_nr_srs_pdu_t *pdu, int depth)
+{
+  INDENTED_PRINTF("RNTI = 0x%x\n", pdu->rnti);
+  INDENTED_PRINTF("Handle = %d\n", pdu->handle);
+  INDENTED_PRINTF("BWPSize = %d\n", pdu->bwp_size);
+  INDENTED_PRINTF("BWPStart = %d\n", pdu->bwp_start);
+  INDENTED_PRINTF("SubcarrierSpacing = %d\n", pdu->subcarrier_spacing);
+  INDENTED_PRINTF("CyclicPrefix = %d\n", pdu->cyclic_prefix);
+  INDENTED_PRINTF("numAntPorts = %d\n", pdu->num_ant_ports);
+  INDENTED_PRINTF("numSymbols = %d\n", pdu->num_symbols);
+  INDENTED_PRINTF("numRepetitions = %d\n", pdu->num_repetitions);
+  INDENTED_PRINTF("timeStartPosition = %d\n", pdu->time_start_position);
+  INDENTED_PRINTF("configIndex = %d\n", pdu->config_index);
+  INDENTED_PRINTF("sequenceId = %d\n", pdu->sequence_id);
+  INDENTED_PRINTF("bandwidthIndex = %d\n", pdu->bandwidth_index);
+  INDENTED_PRINTF("combSize = %d\n", pdu->comb_size);
+  INDENTED_PRINTF("combOffset = %d\n", pdu->comb_offset);
+  INDENTED_PRINTF("cyclicShift = %d\n", pdu->cyclic_shift);
+  INDENTED_PRINTF("frequencyPosition = %d\n", pdu->frequency_position);
+  INDENTED_PRINTF("frequencyShift = %d\n", pdu->frequency_shift);
+  INDENTED_PRINTF("frequencyHopping = %d\n", pdu->frequency_hopping);
+  INDENTED_PRINTF("groupOrSequenceHopping = %d\n", pdu->group_or_sequence_hopping);
+  INDENTED_PRINTF("resourceType = %d\n", pdu->resource_type);
+  INDENTED_PRINTF("Tsrs = %d\n", pdu->t_srs);
+  INDENTED_PRINTF("Toffset = %d\n", pdu->t_offset);
+  dump_ul_tti_beamforming(&pdu->beamforming, depth + 1);
+  dump_ul_tti_request_srs_parameters(&pdu->srs_parameters_v4, 1 << pdu->num_symbols, depth + 1);
+}
+
+static char *ul_tti_pdu_type_to_str(uint16_t pdu_type)
+{
+  switch (pdu_type) {
+    case NFAPI_NR_UL_CONFIG_PRACH_PDU_TYPE:
+      return "NFAPI_NR_UL_CONFIG_PRACH_PDU_TYPE";
+    case NFAPI_NR_UL_CONFIG_PUSCH_PDU_TYPE:
+      return "NFAPI_NR_UL_CONFIG_PUSCH_PDU_TYPE";
+    case NFAPI_NR_UL_CONFIG_PUCCH_PDU_TYPE:
+      return "NFAPI_NR_UL_CONFIG_PUCCH_PDU_TYPE";
+    case NFAPI_NR_UL_CONFIG_SRS_PDU_TYPE:
+      return "NFAPI_NR_UL_CONFIG_SRS_PDU_TYPE";
+    default:
+      return "Unknown";
+      break;
+  }
+}
+
+void dump_ul_tti_request(const nfapi_nr_ul_tti_request_t *msg)
+{
+  int depth = 0;
+  dump_p7_message_header(&msg->header, depth);
+  depth++;
+  INDENTED_PRINTF("SFN = %d\n", msg->SFN);
+  INDENTED_PRINTF("Slot = %d\n", msg->Slot);
+  INDENTED_PRINTF("nPDUs = %d\n", msg->n_pdus);
+  INDENTED_PRINTF("RachPresent = %d\n", msg->rach_present);
+  INDENTED_PRINTF("nULSCH = %d\n", msg->n_ulsch);
+  INDENTED_PRINTF("nULCCH = %d\n", msg->n_ulcch);
+  INDENTED_PRINTF("nGroup = %d\n", msg->n_group);
+  for (int i = 0; i < msg->n_pdus; ++i) {
+    const nfapi_nr_ul_tti_request_number_of_pdus_t *pdu = &msg->pdus_list[i];
+    depth++;
+    INDENTED_PRINTF("PDU #%d\n", i);
+    INDENTED_PRINTF("PDUType = 0x%02x (%s)\n", pdu->pdu_type, ul_tti_pdu_type_to_str(pdu->pdu_type));
+    INDENTED_PRINTF("PDUSize = 0x%02x\n", pdu->pdu_size);
+    /* call to dump_ul_tti_request_<PDU_Type>_pdu */
+    switch (pdu->pdu_type) {
+      case NFAPI_NR_UL_CONFIG_PRACH_PDU_TYPE:
+        dump_ul_tti_request_PRACH_PDU(&pdu->prach_pdu, depth + 1);
+        break;
+      case NFAPI_NR_UL_CONFIG_PUSCH_PDU_TYPE:
+        dump_ul_tti_request_PUSCH_PDU(&pdu->pusch_pdu, depth + 1);
+        break;
+      case NFAPI_NR_UL_CONFIG_PUCCH_PDU_TYPE:
+        dump_ul_tti_request_PUCCH_PDU(&pdu->pucch_pdu, depth + 1);
+        break;
+      case NFAPI_NR_UL_CONFIG_SRS_PDU_TYPE:
+        dump_ul_tti_request_SRS_PDU(&pdu->srs_pdu, depth + 1);
+        break;
+      default:
+        INDENTED_PRINTF("Unknown PDU type 0x%02x\n", pdu->pdu_type);
+        break;
+    }
+    depth--;
+  }
+  for (int group_idx = 0; group_idx < msg->n_group; group_idx++) {
+    const nfapi_nr_ul_tti_request_number_of_groups_t *grp = &msg->groups_list[group_idx];
+    depth++;
+    INDENTED_PRINTF("Group #%d\n", group_idx);
+    INDENTED_PRINTF("nUe[%d] = 0x%02x\n", group_idx, grp->n_ue);
+    for (int ue_idx = 0; ue_idx < grp->n_ue; ue_idx++) {
+      depth++;
+      INDENTED_PRINTF("UE #%d\n", ue_idx);
+      INDENTED_PRINTF("PduIdx[%d][%d] = 0x%02x\n", group_idx, ue_idx, grp->ue_list[ue_idx].pdu_idx);
+      depth--;
+    }
+    depth--;
+  }
+}
+
+void dump_slot_indication(const nfapi_nr_slot_indication_scf_t *msg)
+{
+  int depth = 0;
+  dump_p7_message_header(&msg->header, depth);
+  depth++;
+  INDENTED_PRINTF("SFN = %d\n", msg->sfn);
+  INDENTED_PRINTF("Slot = %d\n", msg->slot);
+}
+
+void dump_ul_dci_request(const nfapi_nr_ul_dci_request_t *msg)
+{
+  int depth = 0;
+  dump_p7_message_header(&msg->header, depth);
+  depth++;
+  INDENTED_PRINTF("SFN = %d\n", msg->SFN);
+  INDENTED_PRINTF("Slot = %d\n", msg->Slot);
+
+  INDENTED_PRINTF("numPDUs = %d\n", msg->numPdus);
+  for (int i = 0; i < msg->numPdus; i++) {
+    depth++;
+    INDENTED_PRINTF("PDU #%d\n", i);
+    const nfapi_nr_ul_dci_request_pdus_t *pdu = &msg->ul_dci_pdu_list[i];
+    INDENTED_PRINTF("PDUType = 0x%02x\n", pdu->PDUType);
+    INDENTED_PRINTF("PDUSize = 0x%02x\n", pdu->PDUSize);
+    /* call to dump_dl_tti_request_pdcch_pdu */
+    dump_dl_tti_request_PDCCH_PDU(&pdu->pdcch_pdu.pdcch_pdu_rel15, depth + 1);
+    depth--;
+  }
+}
+
+void dump_tx_data_request(const nfapi_nr_tx_data_request_t *msg)
+{
+  int depth = 0;
+  dump_p7_message_header(&msg->header, depth);
+  depth++;
+  INDENTED_PRINTF("SFN = %d\n", msg->SFN);
+  INDENTED_PRINTF("Slot = %d\n", msg->Slot);
+  INDENTED_PRINTF("Number of PDUs = %d\n", msg->Number_of_PDUs);
+  for (int i = 0; i < msg->Number_of_PDUs; i++) {
+    depth++;
+    INDENTED_PRINTF("PDU #%d\n", i);
+    const nfapi_nr_pdu_t *pdu = &msg->pdu_list[i];
+    INDENTED_PRINTF("PDU Length = 0x%02x\n", pdu->PDU_length);
+    INDENTED_PRINTF("PDU Index = 0x%02x\n", pdu->PDU_index);
+    INDENTED_PRINTF("numTLV = 0x%02x\n", pdu->num_TLV);
+    /* call to dump_tx_data_request_tlv */
+    depth--;
+  }
+}
+
+void dump_rx_data_indication(const nfapi_nr_rx_data_indication_t *msg)
+{
+  int depth = 0;
+  dump_p7_message_header(&msg->header, depth);
+  depth++;
+  INDENTED_PRINTF("SFN = %d\n", msg->sfn);
+  INDENTED_PRINTF("Slot = %d\n", msg->slot);
+  INDENTED_PRINTF("Number of PDUs = %d\n", msg->number_of_pdus);
+  for (int pdu_idx = 0; pdu_idx < msg->number_of_pdus; pdu_idx++) {
+    depth++;
+    INDENTED_PRINTF("PDU #%d\n", pdu_idx);
+    const nfapi_nr_rx_data_pdu_t *pdu = &msg->pdu_list[pdu_idx];
+    INDENTED_PRINTF("Handle = 0x%02x\n", pdu->handle);
+    INDENTED_PRINTF("RNTI = 0x%02x\n", pdu->rnti);
+    INDENTED_PRINTF("HarqID = 0x%02x\n", pdu->harq_id);
+    INDENTED_PRINTF("PDU Length = 0x%02x\n", pdu->pdu_length);
+    INDENTED_PRINTF("UL_CQI = 0x%02x\n", pdu->ul_cqi);
+    INDENTED_PRINTF("Timing advance = 0x%02x\n", pdu->timing_advance);
+    INDENTED_PRINTF("RSSI = 0x%02x\n", pdu->rssi);
+    INDENTED_PRINTF("PDU =");
+    for (int i = 0; i < pdu->pdu_length; i++) {
+      printf("%02x ", pdu->pdu[i]);
+    }
+    printf("\n");
+    depth--;
+  }
+}
+
+void dump_crc_indication(const nfapi_nr_crc_indication_t *msg)
+{
+  int depth = 0;
+  dump_p7_message_header(&msg->header, depth);
+  depth++;
+  INDENTED_PRINTF("SFN = %d\n", msg->sfn);
+  INDENTED_PRINTF("Slot = %d\n", msg->slot);
+  INDENTED_PRINTF("NumCRCs = %d\n", msg->number_crcs);
+  for (int i = 0; i < msg->number_crcs; i++) {
+    depth++;
+    INDENTED_PRINTF("CRC #%d\n", i);
+    const nfapi_nr_crc_t *crc = &msg->crc_list[i];
+    INDENTED_PRINTF("Handle = 0x%02x\n", crc->handle);
+    INDENTED_PRINTF("RNTI = 0x%02x\n", crc->rnti);
+    INDENTED_PRINTF("HarqID = 0x%02x\n", crc->harq_id);
+    INDENTED_PRINTF("TbCrcStatus = 0x%02x\n", crc->tb_crc_status);
+    INDENTED_PRINTF("NumCb = 0x%02x\n", crc->num_cb);
+    const uint16_t cb_len = (crc->num_cb / 8) + 1; // length is ceil(NumCb/8)
+    INDENTED_PRINTF("CbCrcStatus =\n");
+    for (int j = 0; j < cb_len; j++) {
+      printf("%02x ", crc->cb_crc_status[j]);
+    }
+    printf("\n");
+    INDENTED_PRINTF("UL_CQI = 0x%02x\n", crc->ul_cqi);
+    INDENTED_PRINTF("Timing advance = 0x%02x\n", crc->timing_advance);
+    INDENTED_PRINTF("RSSI = 0x%02x\n", crc->rssi);
+    depth--;
+  }
+}
+
+void dump_uci_indication(const nfapi_nr_uci_indication_t *msg)
+{
+  int depth = 0;
+  dump_p7_message_header(&msg->header, depth);
+  depth++;
+  INDENTED_PRINTF("SFN = %d\n", msg->sfn);
+  INDENTED_PRINTF("Slot = %d\n", msg->slot);
+
+  INDENTED_PRINTF("NumUCIS = %d\n", msg->num_ucis);
+  for (int i = 0; i < msg->num_ucis; i++) {
+    depth++;
+    INDENTED_PRINTF("UCI #%d\n", i);
+    const nfapi_nr_uci_t *uci = &msg->uci_list[i];
+    INDENTED_PRINTF("PDUType = 0x%02x\n", uci->pdu_type);
+    INDENTED_PRINTF("PDUSize = 0x%02x\n", uci->pdu_size);
+    /* call to dump_uci_indication_<PDU_Type>_pdu */
+    depth--;
+  }
+}
+
+void dump_srs_indication(const nfapi_nr_srs_indication_t *msg)
+{
+  int depth = 0;
+  dump_p7_message_header(&msg->header, depth);
+  depth++;
+  INDENTED_PRINTF("SFN = %d\n", msg->sfn);
+  INDENTED_PRINTF("Slot = %d\n", msg->slot);
+
+  INDENTED_PRINTF("controlLength = %d\n", msg->control_length);
+  INDENTED_PRINTF("Number of PDUs = %d\n", msg->number_of_pdus);
+  for (int i = 0; i < msg->number_of_pdus; i++) {
+    depth++;
+    INDENTED_PRINTF("PDU #%d\n", i);
+    const nfapi_nr_srs_indication_pdu_t *pdu = &msg->pdu_list[i];
+    INDENTED_PRINTF("Handle = 0x%02x\n", pdu->handle);
+    INDENTED_PRINTF("RNTI = 0x%02x\n", pdu->rnti);
+    INDENTED_PRINTF("Timing advance offset = 0x%02x\n", pdu->timing_advance_offset);
+    INDENTED_PRINTF("Timing advance offset in nanoseconds = 0x%02x\n", pdu->timing_advance_offset_nsec);
+    INDENTED_PRINTF("SRS usage = 0x%02x\n", pdu->srs_usage);
+    INDENTED_PRINTF("Report Type = 0x%02x\n", pdu->report_type);
+    /* call to dump_srs_report_tlv */
+    depth--;
+  }
+}
+
+void dump_rach_indication(const nfapi_nr_rach_indication_t *msg)
+{
+  int depth = 0;
+  dump_p7_message_header(&msg->header, depth);
+  depth++;
+  INDENTED_PRINTF("SFN = %d\n", msg->sfn);
+  INDENTED_PRINTF("Slot = %d\n", msg->slot);
+
+  INDENTED_PRINTF("Number of PDUs = %d\n", msg->number_of_pdus);
+  for (int i = 0; i < msg->number_of_pdus; i++) {
+    depth++;
+    INDENTED_PRINTF("PRACH PDU #%d\n", i);
+    const nfapi_nr_prach_indication_pdu_t *pdu = &msg->pdu_list[i];
+    INDENTED_PRINTF("physCellID = 0x%02x\n", pdu->phy_cell_id);
+    INDENTED_PRINTF("SymbolIndex = 0x%02x\n", pdu->symbol_index);
+    INDENTED_PRINTF("SlotIndex = 0x%02x\n", pdu->slot_index);
+    INDENTED_PRINTF("FreqIndex = 0x%02x\n", pdu->freq_index);
+    INDENTED_PRINTF("avgRssi = 0x%02x\n", pdu->avg_rssi);
+    INDENTED_PRINTF("avgSnr = 0x%02x\n", pdu->avg_snr);
+    INDENTED_PRINTF("numPreamble = 0x%02x\n", pdu->num_preamble);
+    for (int j = 0; j < pdu->num_preamble; j++) {
+      depth++;
+      INDENTED_PRINTF("Preamble #%d\n", j);
+      const nfapi_nr_prach_indication_preamble_t *preamble = &pdu->preamble_list[j];
+      INDENTED_PRINTF("preambleIndex = 0x%02x\n", preamble->preamble_index);
+      INDENTED_PRINTF("Timing advance = 0x%02x\n", preamble->timing_advance);
+      INDENTED_PRINTF("PreamblePwr = 0x%02x\n", preamble->preamble_pwr);
+      depth--;
+    }
+    depth--;
+  }
+}

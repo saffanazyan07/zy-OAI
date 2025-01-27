@@ -242,6 +242,8 @@ void phy_procedures_gNB_TX(processingData_L1tx_t *msgTx,
 
     VCD_SIGNAL_DUMPER_DUMP_FUNCTION_BY_NAME(VCD_SIGNAL_DUMPER_FUNCTIONS_PHY_gNB_PDCCH_TX,0);
   }
+  msgTx->num_dl_pdcch = 0;
+  msgTx->num_ul_pdcch = 0;
  
   if (msgTx->num_pdsch_slot > 0) {
     VCD_SIGNAL_DUMPER_DUMP_FUNCTION_BY_NAME(VCD_SIGNAL_DUMPER_FUNCTIONS_GENERATE_DLSCH,1);
@@ -249,6 +251,7 @@ void phy_procedures_gNB_TX(processingData_L1tx_t *msgTx,
     nr_generate_pdsch(msgTx, frame, slot);
     VCD_SIGNAL_DUMPER_DUMP_FUNCTION_BY_NAME(VCD_SIGNAL_DUMPER_FUNCTIONS_GENERATE_DLSCH,0);
   }
+  msgTx->num_pdsch_slot = 0;
 
   for (int i = 0; i < NR_SYMBOLS_PER_SLOT; i++){
     NR_gNB_CSIRS_t *csirs = &msgTx->csirs_pdu[i];
@@ -730,8 +733,6 @@ int phy_procedures_gNB_uespec_RX(PHY_VARS_gNB *gNB, int frame_rx, int slot_rx, N
   for (int i = 0; i < gNB->max_nb_pucch; i++) {
     NR_gNB_PUCCH_t *pucch = &gNB->pucch[i];
     if (pucch) {
-      if (NFAPI_MODE == NFAPI_MODE_PNF)
-        pucch->frame = frame_rx;
       if (pucch->active && (pucch->frame == frame_rx) && (pucch->slot == slot_rx)) {
         c16_t **rxdataF = gNB->common_vars.rxdataF[pucch->beam_nb];
         pucch_decode_done = 1;

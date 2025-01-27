@@ -69,7 +69,6 @@ MESSAGE_DEF(NGAP_UE_CONTEXT_RELEASE_COMPLETE, MESSAGE_PRIORITY_MED, ngap_ue_rele
 MESSAGE_DEF(NGAP_UE_CTXT_MODIFICATION_RESP , MESSAGE_PRIORITY_MED, ngap_ue_ctxt_modification_resp_t , ngap_ue_ctxt_modification_resp)
 MESSAGE_DEF(NGAP_UE_CTXT_MODIFICATION_FAIL , MESSAGE_PRIORITY_MED, ngap_ue_ctxt_modification_fail_t , ngap_ue_ctxt_modification_fail)
 MESSAGE_DEF(NGAP_PDUSESSION_SETUP_RESP          , MESSAGE_PRIORITY_MED, ngap_pdusession_setup_resp_t          , ngap_pdusession_setup_resp)
-MESSAGE_DEF(NGAP_PDUSESSION_SETUP_REQUEST_FAIL  , MESSAGE_PRIORITY_MED, ngap_pdusession_setup_req_fail_t      , ngap_pdusession_setup_request_fail)
 MESSAGE_DEF(NGAP_PDUSESSION_MODIFY_RESP          , MESSAGE_PRIORITY_MED, ngap_pdusession_modify_resp_t          , ngap_pdusession_modify_resp)
 MESSAGE_DEF(NGAP_PDUSESSION_RELEASE_RESPONSE    , MESSAGE_PRIORITY_MED, ngap_pdusession_release_resp_t        , ngap_pdusession_release_resp)
 MESSAGE_DEF(NGAP_PATH_SWITCH_REQ           , MESSAGE_PRIORITY_MED, ngap_path_switch_req_t           , ngap_path_switch_req)

@@ -34,10 +34,6 @@
 #ifndef PHY_FRAME_CONFIG_NR_H
 #define PHY_FRAME_CONFIG_NR_H
 
-/************** DEFINE ********************************************/
-
-#define TDD_CONFIG_NB_FRAMES           (2)
-
 /*************** FUNCTIONS *****************************************/
 
 /** \brief This function processes tdd dedicated configuration for nr

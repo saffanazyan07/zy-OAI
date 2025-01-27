@@ -678,26 +678,29 @@ int main( int argc, char **argv ) {
 
 #endif // E2_AGENT
 
+  // wait for F1 Setup Response before starting L1 for real
+  if (NFAPI_MODE != NFAPI_MODE_PNF && (NODE_IS_DU(node_type) || NODE_IS_MONOLITHIC(node_type)))
+    wait_f1_setup_response();
+
+  if (RC.nb_RU > 0)
+    start_NR_RU();
+
+#ifdef ENABLE_AERIAL
+  gNB_MAC_INST *nrmac = RC.nrmac[0];
+  nvIPC_Init(nrmac->nvipc_params_s);
+#endif
+
+  for (int idx = 0; idx < RC.nb_nr_L1_inst; idx++)
+    RC.gNB[idx]->if_inst->sl_ahead = sl_ahead;
 
   if (NFAPI_MODE==NFAPI_MODE_PNF) {
     wait_nfapi_init("main?");
   }
 
-  // wait for F1 Setup Response before starting L1 for real
-  if (NODE_IS_DU(node_type) || NODE_IS_MONOLITHIC(node_type))
-    wait_f1_setup_response();
-
-  if (RC.nb_RU > 0)
-    start_NR_RU();
-#ifdef ENABLE_AERIAL
-  gNB_MAC_INST *nrmac = RC.nrmac[0];
-  nvIPC_Init(nrmac->nvipc_params_s);
-#endif
   if (RC.nb_nr_L1_inst > 0) {
     wait_RUs();
     // once all RUs are ready initialize the rest of the gNBs ((dependence on final RU parameters after configuration)
 
-    for (int idx=0;idx<RC.nb_nr_L1_inst;idx++) RC.gNB[idx]->if_inst->sl_ahead = sl_ahead;
     if (IS_SOFTMODEM_DOSCOPE || IS_SOFTMODEM_IMSCOPE_ENABLED) {
       sleep(1);
       scopeParms_t p;

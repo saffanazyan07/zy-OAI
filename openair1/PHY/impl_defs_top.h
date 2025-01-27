@@ -268,7 +268,6 @@
 #if 1
 
 #define NB_NUMEROLOGIES_NR                       (5)
-#define TDD_CONFIG_NB_FRAMES                     (2)
 #define NR_MAX_SLOTS_PER_FRAME                   (160)                    /* number of slots per frame */
 
 /* FFS_NR_TODO it defines ue capability which is the number of slots        */

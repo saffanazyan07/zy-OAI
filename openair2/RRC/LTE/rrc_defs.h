@@ -752,17 +752,6 @@ typedef struct eNB_RRC_INST_s {
   hash_table_t                      *initial_id2_s1ap_ids; // key is    content is rrc_ue_s1ap_ids_t
   hash_table_t                      *s1ap_id2_s1ap_ids   ; // key is    content is rrc_ue_s1ap_ids_t
 
-#ifdef LOCALIZATION
-  /// localization type, 0: power based, 1: time based
-  uint8_t loc_type;
-  /// epoch timestamp in millisecond, RRC
-  int32_t reference_timestamp_ms;
-  /// aggregate physical states every n millisecond
-  int32_t aggregation_period_ms;
-  /// localization list for aggregated measurements from PHY
-  struct list loc_list;
-#endif
-
   //RRC configuration
   RrcConfigurationReq configuration;
 

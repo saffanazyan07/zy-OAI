@@ -22,7 +22,7 @@
 -->
 <testCaseList>
   <htmlTabRef>TEST-SA-FR1-N310-4x4-60MHz</htmlTabRef>
-  <htmlTabName>60 MHz 4x4 TDD SA</htmlTabName>
+  <htmlTabName>nFAPI 60 MHz 4x4 TDD SA</htmlTabName>
   <htmlTabIcon>tasks</htmlTabIcon>
   <TestCaseRequestedList>
     100000
@@ -85,7 +85,7 @@
   </testCase>
   <testCase id="030101">
       <class>Deploy_Object</class>
-      <desc>Deploy gNB (TDD/Band77/60MHz/N310) in a container</desc>
+      <desc>Deploy VNF-PNF (TDD/Band77/60MHz/N310) in a container</desc>
       <yaml_path>ci-scripts/yaml_files/5g_sa_n310_4x4_60MHz</yaml_path>
       <eNB_instance>0</eNB_instance>
       <eNB_serverId>0</eNB_serverId>
@@ -144,11 +144,11 @@
   <testCase id="030201">
     <class>Undeploy_Object</class>
     <always_exec>true</always_exec>
-    <desc>Undeploy gNB</desc>
+    <desc>Undeploy VNF-PNF</desc>
     <yaml_path>ci-scripts/yaml_files/5g_sa_n310_4x4_60MHz</yaml_path>
     <eNB_instance>0</eNB_instance>
     <eNB_serverId>0</eNB_serverId>
-    <services>oai-gnb</services>
+    <services>oai-vnf oai-pnf</services>
     <d_retx_th>10,100,100,100</d_retx_th>
     <u_retx_th>10,100,100,100</u_retx_th>
   </testCase>

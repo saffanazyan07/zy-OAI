@@ -194,3 +194,7 @@ Note that CU-UPs are not released from CU-CP internal structures. That means
 that you have to restart the CU-CP if you want to connect the CU-UP again
 (e.g., after a crash). The CU-CP might also misfunction during attach if a
 CU-UP was connected, but disconnected in the meantime.
+
+# 5. Abnormal conditions
+
+* The CU-UP goes offline during normal operation (e.g. UEs have a valid PDU Session and are exchanging data on the UP): after restarting the CU-UP, the UP is not restored and the user will notice GTP errors. In this case the UEs have to reconnect.

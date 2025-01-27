@@ -222,7 +222,7 @@ static void writerProcessWaitingQueue(openair0_device *device)
           if (wroteSamples != nsamps)
             LOG_E(HW, "Failed to write to rf\n");
         }
-        ctx->nextTS += nsamps;
+        ctx->nextTS = timestamp + nsamps;
         pthread_mutex_lock(&ctx->mutex_store);
       }
     }
@@ -253,7 +253,7 @@ int openair0_write_reorder(openair0_device *device, openair0_timestamp timestamp
         wroteSamples = device->trx_write_func(device, timestamp, txp, nsamps, nbAnt, flags);
       else
         wroteSamples = nsamps;
-      ctx->nextTS += nsamps;
+      ctx->nextTS = timestamp + nsamps;
 
     } else {
       writerEnqueue(ctx, timestamp, txp, nsamps, nbAnt, flags);

@@ -227,7 +227,7 @@ int32_t generate_nr_prach(PHY_VARS_NR_UE *ue, uint8_t gNB_id, int frame, uint8_t
 
   LOG_I(PHY,
         "PRACH [UE %d] in frame.slot %d.%d, placing PRACH in position %d, Msg1/MsgA-Preamble frequency start %d (k1 %d), "
-        "preamble_offset %d, first_nonzero_root_idx %d\n",
+        "preamble_offset %d, first_nonzero_root_idx %d, preambleIndex = %d\n",
         Mod_id,
         frame,
         slot,
@@ -235,7 +235,8 @@ int32_t generate_nr_prach(PHY_VARS_NR_UE *ue, uint8_t gNB_id, int frame, uint8_t
         n_ra_prb,
         nrUE_config->prach_config.num_prach_fd_occasions_list[fd_occasion].k1,
         preamble_offset,
-        first_nonzero_root_idx);
+        first_nonzero_root_idx,
+        prach_pdu->ra_PreambleIndex);
 
   // Ncp and dftlen here is given in terms of T_s wich is 30.72MHz sampling
   if (prach_sequence_length == 0) {

@@ -559,8 +559,18 @@ set_ldpc_dec_op(struct rte_bbdev_dec_op **ops,
         ops[j]->ldpc_dec.op_flags |= RTE_BBDEV_LDPC_CRC_TYPE_24B_CHECK;
       }
       ops[j]->ldpc_dec.code_block_mode = 1;
-      ops[j]->ldpc_dec.harq_combined_input.offset = (((nrLDPC_slot_decoding_parameters->TBs[h].harq_unique_pid * NR_LDPC_MAX_NUM_CB) % HARQ_CODEBLOCK_ID_MAX) + i) * LDPC_MAX_CB_SIZE;
-      ops[j]->ldpc_dec.harq_combined_output.offset = (((nrLDPC_slot_decoding_parameters->TBs[h].harq_unique_pid * NR_LDPC_MAX_NUM_CB) % HARQ_CODEBLOCK_ID_MAX) + i) * LDPC_MAX_CB_SIZE;
+
+      // Calculate offset in the HARQ combined buffers
+      // Unique segment offset
+      uint32_t segment_offset = (nrLDPC_slot_decoding_parameters->TBs[h].harq_unique_pid * NR_LDPC_MAX_NUM_CB) + i;
+      // Prune to avoid shooting above maximum id
+      uint32_t pruned_segment_offset = segment_offset % HARQ_CODEBLOCK_ID_MAX;
+      // Segment offset to byte offset
+      uint32_t harq_combined_offset = pruned_segment_offset * LDPC_MAX_CB_SIZE;
+
+      ops[j]->ldpc_dec.harq_combined_input.offset = harq_combined_offset;
+      ops[j]->ldpc_dec.harq_combined_output.offset = harq_combined_offset;
+
       if (bufs->hard_outputs != NULL)
         ops[j]->ldpc_dec.hard_output = bufs->hard_outputs[start_idx + j];
       if (bufs->inputs != NULL)

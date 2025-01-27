@@ -95,6 +95,7 @@
 #include "x2ap_messages_types.h"
 #include "xer_encoder.h"
 #include "E1AP/lib/e1ap_bearer_context_management.h"
+#include "E1AP/lib/e1ap_interface_management.h"
 
 #ifdef E2_AGENT
 #include "openair2/E2AP/RAN_FUNCTION/O-RAN/ran_func_rc_extern.h"
@@ -594,7 +595,7 @@ void rrc_gNB_modify_dedicatedRRCReconfiguration(gNB_RRC_INST *rrc, gNB_RRC_UE_t 
       continue;
     }
 
-    if (ue_p->pduSession[i].cause != NGAP_CAUSE_NOTHING) {
+    if (ue_p->pduSession[i].cause.type != NGAP_CAUSE_NOTHING) {
       // set xid of failure pdu session
       ue_p->pduSession[i].xid = xid;
       ue_p->pduSession[i].status = PDU_SESSION_STATUS_FAILED;
@@ -610,10 +611,10 @@ void rrc_gNB_modify_dedicatedRRCReconfiguration(gNB_RRC_INST *rrc, gNB_RRC_UE_t 
     }
 
     if (j == MAX_DRBS_PER_UE) {
+      ngap_cause_t cause = {.type = NGAP_CAUSE_RADIO_NETWORK, .value = NGAP_CauseRadioNetwork_unspecified};
       ue_p->pduSession[i].xid = xid;
       ue_p->pduSession[i].status = PDU_SESSION_STATUS_FAILED;
-      ue_p->pduSession[i].cause = NGAP_CAUSE_RADIO_NETWORK;
-      ue_p->pduSession[i].cause_value = NGAP_CauseRadioNetwork_unspecified;
+      ue_p->pduSession[i].cause = cause;
       continue;
     }
 
@@ -634,10 +635,10 @@ void rrc_gNB_modify_dedicatedRRCReconfiguration(gNB_RRC_INST *rrc, gNB_RRC_UE_t 
 
         default:
           LOG_E(NR_RRC, "not supported 5qi %lu\n", ue_p->pduSession[i].param.qos[qos_flow_index].fiveQI);
+          ngap_cause_t cause = {.type = NGAP_CAUSE_RADIO_NETWORK, .value = NGAP_CauseRadioNetwork_not_supported_5QI_value};
           ue_p->pduSession[i].status = PDU_SESSION_STATUS_FAILED;
           ue_p->pduSession[i].xid = xid;
-          ue_p->pduSession[i].cause = NGAP_CAUSE_RADIO_NETWORK;
-          ue_p->pduSession[i].cause_value = NGAP_CauseRadioNetwork_not_supported_5QI_value;
+          ue_p->pduSession[i].cause = cause;
           continue;
       }
         LOG_I(NR_RRC,
@@ -766,6 +767,10 @@ static void cuup_notify_reestablishment(gNB_RRC_INST *rrc, gNB_RRC_UE_t *ue_p)
       .gNB_cu_cp_ue_id = ue_p->rrc_ue_id,
       .gNB_cu_up_ue_id = ue_p->rrc_ue_id,
   };
+  // Quit re-establishment notification if no CU-UP is associated
+  if (!is_cuup_associated(rrc)) {
+    return;
+  }
   if (!ue_associated_to_cuup(rrc, ue_p))
     return;
   /* loop through active DRBs */
@@ -1181,8 +1186,8 @@ static void rrc_handle_RRCReestablishmentRequest(gNB_RRC_INST *rrc,
     /* update to old DU assoc id -- RNTI + secondary DU UE ID further below */
     f1_ue_data_t ue_data = cu_get_f1_ue_data(UE->rrc_ue_id);
     ue_data.du_assoc_id = source_ctx->du->assoc_id;
-    cu_remove_f1_ue_data(UE->rrc_ue_id);
-    cu_add_f1_ue_data(UE->rrc_ue_id, &ue_data);
+    bool success = cu_update_f1_ue_data(UE->rrc_ue_id, &ue_data);
+    DevAssert(success);
     nr_rrc_finalize_ho(UE);
   } else if (physCellId != cell_info->nr_pci) {
     /* UE was moving from previous cell so quickly that RRCReestablishment for previous cell was received in this cell */
@@ -1212,8 +1217,8 @@ static void rrc_handle_RRCReestablishmentRequest(gNB_RRC_INST *rrc,
   UE->nr_cellid = msg->nr_cellid;
   f1_ue_data_t ue_data = cu_get_f1_ue_data(UE->rrc_ue_id);
   ue_data.secondary_ue = msg->gNB_DU_ue_id;
-  cu_remove_f1_ue_data(UE->rrc_ue_id);
-  cu_add_f1_ue_data(UE->rrc_ue_id, &ue_data);
+  bool success = cu_update_f1_ue_data(UE->rrc_ue_id, &ue_data);
+  DevAssert(success);
 
   rrc_gNB_generate_RRCReestablishment(ue_context_p, msg->du2cu_rrc_container, old_rnti, du);
   return;
@@ -1222,9 +1227,10 @@ fallback_rrc_setup:
   fill_random(&random_value, sizeof(random_value));
   random_value = random_value & 0x7fffffffff; /* random value is 39 bits */
 
+  ngap_cause_t cause = {.type = NGAP_CAUSE_RADIO_NETWORK, .value = ngap_cause};
   /* request release of the "old" UE in case it exists */
   if (ue_context_p != NULL)
-    rrc_gNB_send_NGAP_UE_CONTEXT_RELEASE_REQ(0, ue_context_p, NGAP_CAUSE_RADIO_NETWORK, ngap_cause);
+    rrc_gNB_send_NGAP_UE_CONTEXT_RELEASE_REQ(0, ue_context_p, cause);
 
   rrc_gNB_ue_context_t *new = rrc_gNB_create_ue_context(assoc_id, msg->crnti, rrc, random_value, msg->gNB_DU_ue_id);
   activate_srb(&new->ue_context, 1);
@@ -1402,6 +1408,14 @@ static int handle_rrcReestablishmentComplete(gNB_RRC_INST *rrc, gNB_RRC_UE_t *UE
   return 0;
 }
 
+/**
+ * @brief Forward stored NAS PDU to UE (3GPP TS 38.413)
+ *        - 8.2.1.2: If the NAS-PDU IE is included in the PDU SESSION RESOURCE SETUP REQUEST message,
+ *        the NG-RAN node shall pass it to the UE.
+ *        - 8.3.1.2: If the NAS-PDU IE is included in the INITIAL CONTEXT SETUP REQUEST message,
+ *        the NG-RAN node shall pass it transparently towards the UE.
+ *        - 8.6.2: The NAS-PDU IE contains an AMF–UE message that is transferred without interpretation in the NG-RAN node.
+ */
 void rrc_forward_ue_nas_message(gNB_RRC_INST *rrc, gNB_RRC_UE_t *UE)
 {
   if (UE->nas_pdu.buffer == NULL || UE->nas_pdu.length == 0)
@@ -1522,7 +1536,12 @@ static void handle_ueCapabilityInformation(gNB_RRC_INST *rrc, gNB_RRC_UE_t *UE, 
      * up security and request capabilities, so trigger PDU sessions now. The
      * UE NAS message will be forwarded in the corresponding reconfiguration,
      * the Initial context setup response after reconfiguration complete. */
-    trigger_bearer_setup(rrc, UE, UE->n_initial_pdu, UE->initial_pdus, 0);
+    if (!trigger_bearer_setup(rrc, UE, UE->n_initial_pdu, UE->initial_pdus, 0)) {
+      LOG_W(NR_RRC, "Failed to setup bearers for UE %d: send Initial Context Setup Response\n", UE->rrc_ue_id);
+      rrc_gNB_send_NGAP_INITIAL_CONTEXT_SETUP_RESP(rrc, UE);
+      rrc_forward_ue_nas_message(rrc, UE);
+      return;
+    }
   } else {
     rrc_gNB_send_NGAP_INITIAL_CONTEXT_SETUP_RESP(rrc, UE);
     rrc_forward_ue_nas_message(rrc, UE);
@@ -1734,7 +1753,11 @@ static int rrc_gNB_decode_dcch(gNB_RRC_INST *rrc, const f1ap_ul_rrc_message_t *m
            * to set up security, so trigger PDU sessions now. The UE NAS
            * message will be forwarded in the corresponding reconfiguration,
            * the Initial context setup response after reconfiguration complete. */
-          trigger_bearer_setup(rrc, UE, UE->n_initial_pdu, UE->initial_pdus, 0);
+          if (!trigger_bearer_setup(rrc, UE, UE->n_initial_pdu, UE->initial_pdus, 0)) {
+            LOG_W(NR_RRC, "Failed to setup bearers for UE %d: send Initial Context Setup Response\n", UE->rrc_ue_id);
+            rrc_gNB_send_NGAP_INITIAL_CONTEXT_SETUP_RESP(rrc, UE);
+            rrc_forward_ue_nas_message(rrc, UE);
+          }
         } else {
           /* we already have capabilities, and no PDU sessions to setup, ack
            * this UE */
@@ -1882,6 +1905,11 @@ static void f1u_ul_gtp_update(f1u_tunnel_t *f1u, const up_params_t *p)
  * E1 to the CU of this UE. Also updates TEID info internally */
 static void e1_send_bearer_updates(gNB_RRC_INST *rrc, gNB_RRC_UE_t *UE, int n, f1ap_drb_to_be_setup_t *drbs)
 {
+  // Quit bearer updates if no CU-UP is associated
+  if (!is_cuup_associated(rrc)) {
+    return;
+  }
+
   // we assume the same UE ID in CU-UP and CU-CP
   e1ap_bearer_mod_req_t req = {
     .gNB_cu_cp_ue_id = UE->rrc_ue_id,
@@ -2031,10 +2059,8 @@ static void rrc_CU_process_ue_context_release_request(MessageDef *msg_p, sctp_as
 
   /* TODO: marshall types correctly */
   LOG_I(NR_RRC, "received UE Context Release Request for UE %u, forwarding to AMF\n", req->gNB_CU_ue_id);
-  rrc_gNB_send_NGAP_UE_CONTEXT_RELEASE_REQ(instance,
-                                           ue_context_p,
-                                           NGAP_CAUSE_RADIO_NETWORK,
-                                           NGAP_CAUSE_RADIO_NETWORK_RADIO_CONNECTION_WITH_UE_LOST);
+  ngap_cause_t cause = {.type = NGAP_CAUSE_RADIO_NETWORK, .value = NGAP_CAUSE_RADIO_NETWORK_RADIO_CONNECTION_WITH_UE_LOST};
+  rrc_gNB_send_NGAP_UE_CONTEXT_RELEASE_REQ(instance, ue_context_p, cause);
 }
 
 static void rrc_delete_ue_data(gNB_RRC_UE_t *UE)
@@ -2125,8 +2151,8 @@ static void rrc_CU_process_ue_context_modification_response(MessageDef *msg_p, i
     f1_ue_data_t ue_data = cu_get_f1_ue_data(UE->rrc_ue_id);
     ue_data.secondary_ue = target_ctx->du_ue_id;
     ue_data.du_assoc_id = target_ctx->du->assoc_id;
-    cu_remove_f1_ue_data(UE->rrc_ue_id);
-    cu_add_f1_ue_data(UE->rrc_ue_id, &ue_data);
+    bool success = cu_update_f1_ue_data(UE->rrc_ue_id, &ue_data);
+    DevAssert(success);
     LOG_I(NR_RRC, "UE %d handover: update RNTI from %04x to %04x\n", UE->rrc_ue_id, UE->rnti, target_ctx->new_rnti);
     nr_ho_source_cu_t *source_ctx = UE->ho_context->source;
     DevAssert(source_ctx->old_rnti == UE->rnti);
@@ -2618,6 +2644,7 @@ void *rrc_gnb_task(void *args_p) {
 
       case E1AP_SETUP_REQ:
         rrc_gNB_process_e1_setup_req(msg_p->ittiMsgHeader.originInstance, &E1AP_SETUP_REQ(msg_p));
+        free_e1ap_cuup_setup_request(&E1AP_SETUP_REQ(msg_p));
         break;
 
       case E1AP_BEARER_CONTEXT_SETUP_RESP:

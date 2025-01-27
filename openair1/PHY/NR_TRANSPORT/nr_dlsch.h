@@ -35,9 +35,8 @@
 
 #include "PHY/defs_gNB.h"
 
-void nr_fill_dlsch(processingData_L1tx_t *msgTx,
-                   nfapi_nr_dl_tti_pdsch_pdu *pdsch_pdu,
-                   unsigned char *sdu); 
+void nr_fill_dlsch_dl_tti_req(processingData_L1tx_t *msgTx, nfapi_nr_dl_tti_pdsch_pdu *pdsch_pdu);
+void nr_fill_dlsch_tx_req(processingData_L1tx_t *msgTx, int idx, uint8_t *sdu);
 
 void nr_generate_pdsch(processingData_L1tx_t *msgTx,
                        int frame,
@@ -56,8 +55,6 @@ int nr_dlsch_encoding(PHY_VARS_gNB *gNB,
                       time_stats_t *dlsch_rate_matching_stats,
                       time_stats_t *dlsch_interleaving_stats,
                       time_stats_t *dlsch_segmentation_stats);
-
-void nr_emulate_dlsch_payload(uint8_t* payload, uint16_t size);
 
 void dump_pdsch_stats(FILE *fd,PHY_VARS_gNB *gNB);
 

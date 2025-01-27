@@ -2523,7 +2523,9 @@ void nr_ue_pucch_scheduler(NR_UE_MAC_INST_t *mac, frame_t frameP, int slotP)
         LOG_E(NR_MAC, "Error in pucch allocation\n");
         return;
       }
-      mac->nr_ue_emul_l1.active_uci_sfn_slot = NFAPI_SFNSLOT2HEX(frameP, slotP);
+      DevAssert(mac->current_DL_BWP != NULL);
+      int mu = mac->current_DL_BWP->scs;
+      mac->nr_ue_emul_l1.active_uci_sfn_slot = NFAPI_SFNSLOT2DEC(mu, frameP, slotP);
       int ret = nr_ue_configure_pucch(mac,
                                       slotP,
                                       frameP,

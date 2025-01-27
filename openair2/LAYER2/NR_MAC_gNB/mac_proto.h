@@ -381,6 +381,9 @@ void handle_nr_ul_harq(const int CC_idP,
                        sub_frame_t slot,
                        const nfapi_nr_crc_t *crc_pdu);
 
+uint8_t *allocate_transportBlock_buffer(byte_array_t *tb, uint32_t needed);
+void free_transportBlock_buffer(byte_array_t *tb);
+
 void handle_nr_srs_measurements(const module_id_t module_id,
                                 const frame_t frame,
                                 const sub_frame_t slot,

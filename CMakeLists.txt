@@ -260,7 +260,6 @@ endif()
 
 # Debug related options
 #########################################
-add_boolean_option(DEBUG_ASN1 False "Enable ASN1 debug logs" OFF)
 # asn1c skeletons have hardcoded this flag to make customized debug logs
 # OAI uses this feature to re-use OAI LOG_I(ASN1, ...)
 # see common/utils/config.h
@@ -346,6 +345,7 @@ set(NGAP_DIR ${OPENAIR3_DIR}/NGAP)
 include_directories ("${NGAP_DIR}")
 add_library(ngap
   ${NGAP_DIR}/ngap_gNB.c
+  ${NGAP_DIR}/ngap_common.c
   ${NGAP_DIR}/ngap_gNB_context_management_procedures.c
   ${NGAP_DIR}/ngap_gNB_decoder.c
   ${NGAP_DIR}/ngap_gNB_encoder.c
@@ -494,7 +494,6 @@ include_directories ("${OPENAIR_DIR}/radio/COMMON")
 add_boolean_option(UE_EXPANSION             False         "enable UE_EXPANSION with max 256 UE" ON)
 add_boolean_option(PHY_TX_THREAD            False         "enable UE_EXPANSION with max 256 UE" ON)
 add_boolean_option(PRE_SCD_THREAD           False         "enable UE_EXPANSION with max 256 UE" ON)
-add_boolean_option(UESIM_EXPANSION          False         "enable UESIM_EXPANSION with max 256 UE" ON)
 
 ##########################
 # SCHEDULING/REAL-TIME/PERF options
@@ -506,20 +505,15 @@ add_boolean_option(ENABLE_VCD_FIFO         False  "time measurements of proc cal
 ##########################
 # PHY options
 ##########################
-add_boolean_option(LOCALIZATION            False "???" ON)
-add_integer_option(MAX_NUM_CCs             1     "????" ON)
+add_integer_option(MAX_NUM_CCs             1     "Carrier component data arrays size (oai doesn't support carrier aggreagtion for now)" ON)
 add_boolean_option(SMBV                    False "Rohde&Schwarz SMBV100A vector signal generator" ON)
 add_boolean_option(DEBUG_PHY               False "Enable PHY layer debugging options" ON)
 add_boolean_option(DEBUG_PHY_PROC          False "Enable debugging of PHY layer procedures" ON)
-add_boolean_option(MEX                     False "Enabling compilation with mex" ON)
 
 ##########################
 # NAS LAYER OPTIONS
 ##########################
-add_boolean_option(ENABLE_NAS_UE_LOGGING   True  "????" ON)
 add_boolean_option(NAS_BUILT_IN_UE         True  "UE NAS layer present in this executable" ON)
-add_boolean_option(NAS_UE                  True  "NAS UE INSTANCE (<> NAS_MME)" ON)
-
 
 ##########################
 # RRC LAYER OPTIONS
@@ -716,6 +710,7 @@ set(NFAPI_PNF_SRC
 )
 add_library(NFAPI_PNF_LIB ${NFAPI_PNF_SRC})
 target_link_libraries(NFAPI_PNF_LIB PRIVATE asn1_lte_rrc_hdrs asn1_nr_rrc_hdrs)
+target_link_libraries(NFAPI_PNF_LIB PUBLIC nr_fapi_p7)
 
 include_directories(${NFAPI_DIR}/pnf/public_inc)
 include_directories(${NFAPI_DIR}/pnf/inc)
@@ -746,6 +741,9 @@ set(NFAPI_USER_SRC
 add_library(NFAPI_USER_LIB ${NFAPI_USER_SRC})
 target_link_libraries(NFAPI_USER_LIB PRIVATE asn1_lte_rrc_hdrs asn1_nr_rrc_hdrs UTIL)
 target_link_libraries(NFAPI_USER_LIB PRIVATE nr_fapi_p7)
+if(OAI_AERIAL)
+  target_compile_definitions(NFAPI_USER_LIB PRIVATE ENABLE_AERIAL)
+endif()
 include_directories(${NFAPI_USER_DIR})
 
 # Layer 1
@@ -897,6 +895,7 @@ set(PHY_SRC_UE
   ${OPENAIR1_DIR}/PHY/LTE_UE_TRANSPORT/ulsch_coding.c
   ${OPENAIR1_DIR}/PHY/LTE_UE_TRANSPORT/rar_tools_ue.c
   ${OPENAIR1_DIR}/PHY/LTE_UE_TRANSPORT/initial_sync.c
+  ${OPENAIR1_DIR}/PHY/LTE_UE_TRANSPORT/dlsch_llr_computation_avx2.c
   ${OPENAIR1_DIR}/PHY/MODULATION/slot_fep.c
   ${OPENAIR1_DIR}/PHY/MODULATION/slot_fep_mbsfn.c
   ${OPENAIR1_DIR}/PHY/MODULATION/ul_7_5_kHz_ue.c
@@ -1026,8 +1025,6 @@ if (${SMBV})
   set(PHY_SRC "${PHY_SRC} ${OPENAIR1_DIR}/PHY/TOOLS/smbv.c")
 endif  (${SMBV})
 
-set(PHY_SRC_UE ${PHY_SRC_UE} ${OPENAIR1_DIR}/PHY/LTE_UE_TRANSPORT/dlsch_llr_computation_avx2.c)
-
 add_library(PHY_COMMON ${PHY_SRC_COMMON})
 target_link_libraries(PHY_COMMON PRIVATE shlib_loader)
 add_dependencies(PHY_COMMON dfts)
@@ -1062,28 +1059,6 @@ target_link_libraries(PHY_NR_UE PRIVATE asn1_nr_rrc_hdrs nr_phy_common nr_common
 
 add_library(PHY_RU ${PHY_SRC_RU})
 target_link_libraries(PHY_RU PRIVATE asn1_lte_rrc_hdrs UTIL)
-
-#Library for mex functions
-#########################3
-set(PHY_MEX_UE
-  ${OPENAIR1_DIR}/PHY/LTE_UE_TRANSPORT/linear_preprocessing_rec.c
-  ${OPENAIR1_DIR}/PHY/LTE_UE_TRANSPORT/dlsch_llr_computation.c
-  ${OPENAIR1_DIR}/PHY/LTE_UE_TRANSPORT/dlsch_demodulation.c
-  ${OPENAIR1_DIR}/PHY/TOOLS/log2_approx.c
-  ${OPENAIR1_DIR}/PHY/LTE_TRANSPORT/lte_mcs.c
-  ${OPENAIR1_DIR}/PHY/LTE_UE_TRANSPORT/get_pmi.c
-  ${OPENAIR1_DIR}/PHY/TOOLS/dB_routines.c
-  ${OPENAIR1_DIR}/PHY/LTE_TRANSPORT/pmch_common.c
-  ${OPENAIR1_DIR}/PHY/TOOLS/cadd_vv.c
-  ${OPENAIR1_DIR}/PHY/TOOLS/cmult_sv.c
-  ${OPENAIR1_DIR}/PHY/TOOLS/cmult_vv.c
-  ${OPENAIR1_DIR}/PHY/TOOLS/signal_energy.c
-  ${OPENAIR1_DIR}/PHY/TOOLS/simde_operations.c
-  ${OPENAIR1_DIR}/PHY/LTE_UE_TRANSPORT/dlsch_llr_computation_avx2.c
-  ${OPENAIR1_DIR}/PHY/LTE_ESTIMATION/lte_ue_measurements.c
-  )
-add_library(PHY_MEX ${PHY_MEX_UE})
-target_link_libraries(PHY_MEX PRIVATE asn1_lte_rrc_hdrs UTIL)
 
 #Layer 2 library
 #####################
@@ -2214,7 +2189,7 @@ if (${T_TRACER})
         SECURITY SCHED_LIB SCHED_NR_LIB SCHED_RU_LIB SCHED_UE_LIB SCHED_NR_UE_LIB default_sched remote_sched RAL
         NFAPI_LIB NFAPI_PNF_LIB NFAPI_VNF_LIB NFAPI_USER_LIB
         MISC_NFAPI_LTE_LIB MISC_NFAPI_NR_LIB
-        PHY_COMMON PHY PHY_UE PHY_NR PHY_NR_COMMON PHY_NR_UE PHY_RU PHY_MEX
+        PHY_COMMON PHY PHY_UE PHY_NR PHY_NR_COMMON PHY_NR_UE PHY_RU
         L2 L2_LTE L2_NR L2_LTE_NR L2_UE NR_L2_UE L2_UE_LTE_NR MAC_NR_COMMON MAC_UE_NR ngap
         CN_UTILS GTPV1U SCTP_CLIENT MME_APP LIB_NAS_UE NB_IoT SIMU OPENAIR0_LIB
         dfts config_internals nr_common)

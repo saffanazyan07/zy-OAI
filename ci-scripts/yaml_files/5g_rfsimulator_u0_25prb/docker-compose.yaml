@@ -80,13 +80,15 @@ services:
             interval: 10s
             timeout: 5s
             retries: 5
-    oai-gnb:
+
+    oai-vnf:
         image: ${REGISTRY:-oaisoftwarealliance}/${GNB_IMG:-oai-gnb}:${TAG:-develop}
-        container_name: rfsim5g-oai-gnb
+        container_name: rfsim5g-oai-vnf
         cap_drop:
             - ALL
         environment:
-            USE_ADDITIONAL_OPTIONS: --rfsim --log_config.global_log_options level,nocolor,time
+            USE_ADDITIONAL_OPTIONS: --nfapi VNF --log_config.global_log_options level,nocolor,time
+            NFAPI_TRACE_LEVEL: info
             ASAN_OPTIONS: detect_leaks=0
         depends_on:
             - oai-ext-dn
@@ -94,7 +96,29 @@ services:
             public_net:
                 ipv4_address: 192.168.71.140
         volumes:
-            - ../../conf_files/gnb.sa.band66.u0.25prb.rfsim.conf:/opt/oai-gnb/etc/gnb.conf
+            - ../../conf_files/gnb-vnf.sa.band66.u0.25prb.nfapi.conf:/opt/oai-gnb/etc/gnb.conf
+        healthcheck:
+            test: /bin/bash -c "pgrep nr-softmodem"
+            interval: 10s
+            timeout: 5s
+            retries: 5
+
+    oai-pnf:
+        image: ${REGISTRY:-oaisoftwarealliance}/${GNB_IMG:-oai-gnb}:${TAG:-develop}
+        container_name: rfsim5g-oai-pnf
+        cap_drop:
+            - ALL
+        environment:
+            USE_ADDITIONAL_OPTIONS: --nfapi PNF --rfsim --log_config.global_log_options level,nocolor,time
+            NFAPI_TRACE_LEVEL: info
+            ASAN_OPTIONS: detect_leaks=0
+        depends_on:
+            - oai-vnf
+        networks:
+            public_net:
+                ipv4_address: 192.168.71.141
+        volumes:
+            - ../../conf_files/gnb-pnf.band66.rfsim.conf:/opt/oai-gnb/etc/gnb.conf
         healthcheck:
             test: /bin/bash -c "pgrep nr-softmodem"
             interval: 10s
@@ -110,9 +134,9 @@ services:
             - NET_ADMIN  # for interface bringup
             - NET_RAW    # for ping
         environment:
-            USE_ADDITIONAL_OPTIONS: --rfsim -r 25 --numerology 0 --uicc0.imsi 208990100001100 --band 66 -C 2152680000 --CO -400000000 --ssb 48 --rfsimulator.serveraddr 192.168.71.140 --log_config.global_log_options level,nocolor,time
+            USE_ADDITIONAL_OPTIONS: --rfsim -r 25 --numerology 0 --uicc0.imsi 208990100001100 --band 66 -C 2152680000 --CO -400000000 --ssb 48 --rfsimulator.serveraddr 192.168.71.141 --log_config.global_log_options level,nocolor,time
         depends_on:
-            - oai-gnb
+            - oai-pnf
         networks:
             public_net:
                 ipv4_address: 192.168.71.150

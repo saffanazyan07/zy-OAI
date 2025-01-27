@@ -1538,15 +1538,25 @@ static void nr_generate_Msg2(module_id_t module_idP,
   pdsch_pdu_rel15->precodingAndBeamforming.prgs_list[0].pm_idx = 0;
   pdsch_pdu_rel15->precodingAndBeamforming.prgs_list[0].dig_bf_interface_list[0].beam_idx = ra->beam_id;
 
+  // Distance calculation according to SCF222.10.02 RACH.indication (table 3-74) and 38.213 4.2/38.211 4.3.1
+  // T_c according to 38.211 4.1
+  float T_c_ns = 0.509;
+  int numerology = ra->UL_BWP.scs;
+  float rtt_ns = T_c_ns * 16 * 64 / (1 << numerology) * ra->timing_offset;
+  float speed_of_light_in_meters_per_second = 299792458.0f;
+  float distance_in_meters = speed_of_light_in_meters_per_second * rtt_ns / 1000 / 1000 / 1000 / 2;
   LOG_A(NR_MAC,
-        "UE %04x: %d.%d Generating RA-Msg2 DCI, RA RNTI 0x%x, state %d, CoreSetType %d, RAPID %d\n",
+        "UE %04x: %d.%d Generating RA-Msg2 DCI, RA RNTI 0x%x, state %d, CoreSetType %d, preamble_index(RAPID) %d, "
+        "timing_offset = %d (estimated distance %.1f [m])\n",
         ra->rnti,
         frameP,
         slotP,
         ra->RA_rnti,
         ra->ra_state,
         pdcch_pdu_rel15->CoreSetType,
-        ra->preamble_index);
+        ra->preamble_index,
+        ra->timing_offset,
+        distance_in_meters);
 
   // SCF222: PDU index incremented for each PDSCH PDU sent in TX control message. This is used to associate control
   // information to data and is reset every slot.
@@ -2126,7 +2136,7 @@ static void nr_generate_Msg4_MsgB(module_id_t module_idP,
 
     harq->tb_size = tb_size;
 
-    uint8_t *buf = (uint8_t *) harq->transportBlock;
+    uint8_t *buf = allocate_transportBlock_buffer(&harq->transportBlock, tb_size);
     // Bytes to be transmitted
     if (harq->round == 0) {
       uint16_t mac_pdu_length = 0;
@@ -2206,11 +2216,11 @@ static void nr_generate_Msg4_MsgB(module_id_t module_idP,
     }
 
     T(T_GNB_MAC_DL_PDU_WITH_DATA, T_INT(module_idP), T_INT(CC_id), T_INT(ra->rnti),
-      T_INT(frameP), T_INT(slotP), T_INT(current_harq_pid), T_BUFFER(harq->transportBlock, harq->tb_size));
+      T_INT(frameP), T_INT(slotP), T_INT(current_harq_pid), T_BUFFER(harq->transportBlock.buf, harq->tb_size));
 
     // DL TX request
     nfapi_nr_pdu_t *tx_req = &TX_req->pdu_list[TX_req->Number_of_PDUs];
-    memcpy(tx_req->TLVs[0].value.direct, harq->transportBlock, sizeof(uint8_t) * harq->tb_size);
+    memcpy(tx_req->TLVs[0].value.direct, harq->transportBlock.buf, sizeof(uint8_t) * harq->tb_size);
     tx_req->PDU_index = pduindex;
     tx_req->num_TLV = 1;
     tx_req->TLVs[0].length =  harq->tb_size;
