@@ -177,7 +177,6 @@ typedef struct {
   double chan_pathloss;
   double chan_forgetfact;
   uint64_t chan_offset;
-  float  noise_power_dB;
   void *telnetcmd_qid;
   poll_telnetcmdq_func_t poll_telnetcmdq;
   int wait_timeout;
@@ -456,7 +455,7 @@ static int rfsimu_setchanmod_cmd(char *buff, int debug, telnet_printfunc_t prnt,
                                                           t->chan_forgetfact, // forgetting_factor
                                                           t->chan_offset, // propagation delay in samples
                                                           t->chan_pathloss,
-                                                          t->noise_power_dB); // path_loss in dB
+                                                          0); // noise_power
           set_channeldesc_owner(newmodel, RFSIMU_MODULEID);
           set_channeldesc_name(newmodel,modelname);
           random_channel(newmodel,false);
