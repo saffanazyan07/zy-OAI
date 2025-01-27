@@ -930,7 +930,7 @@ typedef struct gNB_MAC_INST_s {
   bool first_MIB;
   NR_bler_options_t dl_bler;
   NR_bler_options_t ul_bler;
-  uint8_t min_grant_prb;
+  uint16_t min_grant_prb;
   uint8_t min_grant_mcs;
   bool identity_pm;
   int precoding_matrix_size[NR_MAX_NB_LAYERS];
