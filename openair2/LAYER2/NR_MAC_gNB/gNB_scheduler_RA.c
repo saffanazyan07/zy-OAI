@@ -1022,7 +1022,7 @@ static bool nr_get_Msg3alloc(gNB_MAC_INST *mac, int CC_id, int current_slot, fra
 {
   DevAssert(ra->Msg3_tda_id >= 0 && ra->Msg3_tda_id < 16);
 
-  uint16_t msg3_nb_rb = 8; // sdu has 6 or 8 bytes
+  uint16_t msg3_nb_rb = max(8, mac->min_grant_prb); // sdu has 6 or 8 bytes
 
   NR_UE_UL_BWP_t *ul_bwp = &ra->UL_BWP;
   NR_UE_ServingCell_Info_t *sc_info = &ra->sc_info;
