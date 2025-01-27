@@ -137,7 +137,7 @@ bool manage_ru(ru_session_t *ru_session, const openair0_config_t *oai, const siz
   bool ptp_state = false;
   const char *sync_state = (char *)get_ru_xml_node(operational_ds, "sync-state");
   if (strcmp(sync_state, "LOCKED") == 0) {
-    MP_LOG_I("[MPLANE] RU is already PTP synchronized.\n");
+    LOG_I(HW, "[MPLANE] RU is already PTP synchronized.\n");
     ptp_state = true;
   }
 
@@ -153,11 +153,13 @@ bool manage_ru(ru_session_t *ru_session, const openair0_config_t *oai, const siz
   AssertError(ret == 0, return false, "[MPLANE] Unable to subscribe.\n");
 
   // when subscribed to the supervision notification, the watchdog timer needs to be updated
-  ret = update_timer_mplane(ru_session);
+  char *watchdog_answer = NULL;
+  ret = update_timer_mplane(ru_session, &watchdog_answer);
   AssertError(ret == 0, return false, "[MPLANE] Unable to update the watchdog timer. RU will do a resert after default timer of 60+10s.\n");
+  LOG_I(HW, "[MPLANE] Watchdog timer answer: %s\n", watchdog_answer);
 
   // save RU info for xran
-  const int max_num_ant = RTE_MAX(oai->tx_num_channels, oai->rx_num_channels) / num_rus;
+  const int max_num_ant = (oai->tx_num_channels/num_rus > oai->rx_num_channels/num_rus) ? oai->tx_num_channels/num_rus : oai->rx_num_channels/num_rus;
   ret = get_config_for_xran(operational_ds, max_num_ant, &ru_session->xran_mplane);
   AssertError(ret == 0, return false, "[MPLANE] Unable to retreive required info for xran from RU.\n");
 

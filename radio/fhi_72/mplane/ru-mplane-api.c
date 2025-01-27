@@ -65,8 +65,7 @@ int get_config_for_xran(const char *buffer, const int max_num_ant, xran_mplane_t
     AssertError(false, return EXIT_FAILURE, "[MPLANE] %s RU currently not supported.\n", ru_vendor);
   }
 
-  LOG_I(HW, "[MPLANE] Storing the following information to forward to xran\n");
-  LOG_I(HW, "[MPLANE] \
+  LOG_I(HW, "[MPLANE] Storing the following information to forward to xran\n\
     RU vendor name %s\n\
     RU MAC address %s\n\
     MTU %d\n\

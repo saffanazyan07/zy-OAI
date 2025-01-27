@@ -29,10 +29,16 @@ static void *find_ru_xml_node(xmlNode *node, const char *filter)
   for (xmlNode *cur_node = node; cur_node; cur_node = cur_node->next) {
     if (cur_node->type == XML_ELEMENT_NODE) {
       if (strcmp((const char *)cur_node->name, filter) == 0) {
-        if (/* cur_node->children->name != NULL && */ strcmp((const char *)cur_node->children->name, "name") == 0) {
-          cur_node = cur_node->children;
+        xmlNode *target_node = cur_node;
+
+        for(xmlNode *cur_node2 = cur_node->children; cur_node2; cur_node2 = cur_node2->next) {
+          if (cur_node2->type == XML_ELEMENT_NODE && strcmp((const char *)cur_node2->name, "name") == 0) {
+            target_node = cur_node2;
+            break;
+          }
         }
-        return (void *)xmlNodeGetContent(cur_node);
+        char *content = (char *)xmlNodeGetContent(target_node);
+        return (void *)content;
       }
       void *answer = find_ru_xml_node(cur_node->children, filter);
       if (answer != NULL) {
@@ -58,15 +64,22 @@ static void find_ru_xml_list(xmlNode *node, const char *filter, char ***match_li
   for (xmlNode *cur_node = node; cur_node; cur_node = cur_node->next) {
     if (cur_node->type == XML_ELEMENT_NODE) {
       if (strcmp((const char *)cur_node->name, filter) == 0) {
-        if (/* cur_node->children->name != NULL && */ strcmp((const char *)cur_node->children->name, "name") == 0) {
-          cur_node = cur_node->children;
+        xmlNode *name_node = NULL;
+
+        for (xmlNode *cur_node2 = cur_node->children; cur_node2; cur_node2 = cur_node2->next) {
+          if (cur_node2->type == XML_ELEMENT_NODE && strcmp((const char *)cur_node2->name, "name") == 0) {
+            name_node = cur_node2;
+            break;
+          }
         }
-        *match_list = realloc(*match_list, (*count + 1) * sizeof(char *));
-        *match_list[*count] = (char *)xmlNodeGetContent(cur_node);
-        (*count)++;
-      } else {
-        find_ru_xml_list(cur_node->children, filter, match_list, count);
+        const char *content = (const char *)xmlNodeGetContent(name_node ? name_node : cur_node);
+        if (content) {
+          *match_list = realloc(*match_list, (*count + 1) * sizeof(char *));
+          (*match_list)[*count] = strdup(content);
+          (*count)++;
+        }
       }
+      find_ru_xml_list(cur_node->children, filter, match_list, count);
     }
   }
 }
