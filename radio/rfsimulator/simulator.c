@@ -1000,7 +1000,9 @@ static int rfsimulator_read(openair0_device *device, openair0_timestamp *ptimest
   // Clear the output buffer
   for (int a=0; a<nbAnt; a++)
     memset(samplesVoid[a],0,sampleToByte(nsamps,1));
-
+  cf_t temp_array[nbAnt][nsamps];
+  bool apply_noise_per_channel = get_noise_power_dBFS() == INVALID_DBFS_VALUE;
+  int num_chanmod_channels = 0;
   // Add all input nodes signal in the output buffer
   for (int sock = 0; sock < MAX_FD_RFSIMU; sock++) {
     buffer_t *ptr=&t->buf[sock];
@@ -1018,12 +1020,18 @@ static int rfsimulator_read(openair0_device *device, openair0_timestamp *ptimest
 
       for (int a=0; a<nbAnt; a++) {//loop over number of Rx antennas
         if ( ptr->channel_model != NULL ) { // apply a channel model
-          rxAddInput(ptr->circularBuf, (c16_t *) samplesVoid[a],
+          if (num_chanmod_channels == 0) {
+            memset(temp_array, 0, sizeof(temp_array));
+          }
+          num_chanmod_channels++;
+          rxAddInput(ptr->circularBuf,
+                     temp_array[a],
                      a,
                      ptr->channel_model,
                      nsamps,
                      t->nextRxTstamp,
-                     CirSize);
+                     CirSize,
+                     apply_noise_per_channel);
         }
         else { // no channel modeling
           int nbAnt_tx = ptr->th.nbAnt; // number of Tx antennas
@@ -1055,6 +1063,26 @@ static int rfsimulator_read(openair0_device *device, openair0_timestamp *ptimest
           } // end of 1 tx antenna optimization
         } // end of no channel modeling
       } // end for a (number of rx antennas)
+    }
+  }
+  if (apply_noise_per_channel && num_chanmod_channels > 0) {
+    // Noise is already applied through the channel model
+    for (int a = 0; a < nbAnt; a++) {
+      sample_t *out = (sample_t *)samplesVoid[a];
+      for (int i = 0; i < nsamps; i++) {
+        out[i].r += lroundf(temp_array[a][i].r);
+        out[i].i += lroundf(temp_array[a][i].i);
+      }
+    }
+  } else if (num_chanmod_channels > 0) {
+    // Apply noise from global setting
+    int16_t noise_power = (int16_t)(32767.0 / pow(10.0, .05 * -get_noise_power_dBFS()));
+    for (int a = 0; a < nbAnt; a++) {
+      sample_t *out = (sample_t *)samplesVoid[a];
+      for (int i = 0; i < nsamps; i++) {
+        out[i].r += lroundf(temp_array[a][i].r + noise_power * gaussZiggurat(0.0, 1.0));
+        out[i].i += lroundf(temp_array[a][i].i + noise_power * gaussZiggurat(0.0, 1.0));
+      }
     }
   }
 

@@ -73,6 +73,7 @@ static telnetshell_vardef_t channelmod_vardef[] = {{"", 0, 0, NULL}};
 static unsigned int max_chan;
 static channel_desc_t **defined_channels;
 static char *modellist_name;
+static int noise_power_dBFS = INVALID_DBFS_VALUE;
 
 void fill_channel_desc(channel_desc_t *chan_desc,
                        uint8_t nb_tx,
@@ -2364,6 +2365,10 @@ int load_channellist(uint8_t nb_tx, uint8_t nb_rx, double sampling_rate, uint64_
 
   return channel_list.numelt;
 } /* load_channelist */
+
+int get_noise_power_dBFS(void) {
+  return noise_power_dBFS;
+}
 
 #ifdef RANDOM_CHANNEL_MAIN
 #define sampling_rate 5.0
