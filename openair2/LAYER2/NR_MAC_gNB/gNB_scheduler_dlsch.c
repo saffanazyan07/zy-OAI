@@ -1280,12 +1280,12 @@ void nr_schedule_ue_spec(module_id_t module_id,
                   UE->rnti,
                   current_harq_pid);
       T(T_GNB_MAC_RETRANSMISSION_DL_PDU_WITH_DATA, T_INT(module_id), T_INT(CC_id), T_INT(rnti),
-        T_INT(frame), T_INT(slot), T_INT(current_harq_pid), T_INT(harq->round), T_BUFFER(harq->transportBlock, TBS));
+        T_INT(frame), T_INT(slot), T_INT(current_harq_pid), T_INT(harq->round), T_BUFFER(harq->transportBlock.buf, TBS));
       UE->mac_stats.dl.total_rbs_retx += sched_pdsch->rbSize;
       gNB_mac->mac_stats.used_prb_aggregate += sched_pdsch->rbSize;
     } else { /* initial transmission */
       LOG_D(NR_MAC, "Initial HARQ transmission in %d.%d\n", frame, slot);
-      uint8_t *buf = (uint8_t *) harq->transportBlock;
+      uint8_t *buf = allocate_transportBlock_buffer(&harq->transportBlock, TBS);
       /* first, write all CEs that might be there */
       int written = nr_write_ce_dlsch_pdu(module_id,
                                           sched_ctrl,
@@ -1420,7 +1420,7 @@ void nr_schedule_ue_spec(module_id_t module_id,
       }
 
       T(T_GNB_MAC_DL_PDU_WITH_DATA, T_INT(module_id), T_INT(CC_id), T_INT(rnti),
-        T_INT(frame), T_INT(slot), T_INT(current_harq_pid), T_BUFFER(harq->transportBlock, TBS));
+        T_INT(frame), T_INT(slot), T_INT(current_harq_pid), T_BUFFER(harq->transportBlock.buf, TBS));
     }
 
     const int ntx_req = TX_req->Number_of_PDUs;
@@ -1429,7 +1429,7 @@ void nr_schedule_ue_spec(module_id_t module_id,
     tx_req->num_TLV = 1;
     tx_req->TLVs[0].length = TBS;
     tx_req->PDU_length = compute_PDU_length(tx_req->num_TLV, tx_req->TLVs[0].length);
-    memcpy(tx_req->TLVs[0].value.direct, harq->transportBlock, TBS);
+    memcpy(tx_req->TLVs[0].value.direct, harq->transportBlock.buf, TBS);
     TX_req->Number_of_PDUs++;
     TX_req->SFN = frame;
     TX_req->Slot = slot;

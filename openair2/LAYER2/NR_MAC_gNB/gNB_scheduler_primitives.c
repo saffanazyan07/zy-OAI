@@ -2079,12 +2079,35 @@ void delete_nr_ue_data(NR_UE_info_t *UE, NR_COMMON_channels_t *ccPtr, uid_alloca
   destroy_nr_list(&sched_ctrl->available_ul_harq);
   destroy_nr_list(&sched_ctrl->feedback_ul_harq);
   destroy_nr_list(&sched_ctrl->retrans_ul_harq);
+  for (int i = 0; i < NR_MAX_HARQ_PROCESSES; ++i)
+    free_transportBlock_buffer(&sched_ctrl->harq_processes[i].transportBlock);
   free_sched_pucch_list(sched_ctrl);
   uid_linear_allocator_free(uia, UE->uid);
   LOG_I(NR_MAC, "Remove NR rnti 0x%04x\n", UE->rnti);
   free(UE);
 }
 
+#define TB_SINGLE_LAYER (32 * 1024)
+uint8_t *allocate_transportBlock_buffer(byte_array_t *tb, uint32_t needed)
+{
+  DevAssert(needed > 0);
+  if (tb->buf != NULL && needed <= tb->len)
+    return tb->buf; // nothing to do, current is enough
+
+  uint32_t size = TB_SINGLE_LAYER;
+  while (needed > size)
+    size *= 2;
+  LOG_D(NR_MAC, "allocating new TB block of size %d\n", size);
+  free(tb->buf);
+  tb->buf = malloc_or_fail(size);
+  tb->len = size;
+  return tb->buf;
+}
+
+void free_transportBlock_buffer(byte_array_t *tb)
+{
+  free_byte_array(*tb);
+}
 
 void set_max_fb_time(NR_UE_UL_BWP_t *UL_BWP, const NR_UE_DL_BWP_t *DL_BWP)
 {
