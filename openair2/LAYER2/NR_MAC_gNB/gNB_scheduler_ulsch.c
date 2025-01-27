@@ -1953,7 +1953,7 @@ static void pf_ul(module_id_t module_id,
       const uint16_t slbitmap = SL_to_bitmap(sched_pusch->tda_info.startSymbolIndex, sched_pusch->tda_info.nrOfSymbols);
       while (rbStart < bwpSize && (rballoc_mask[rbStart + bwpStart] & slbitmap))
         rbStart++;
-      if (rbStart + min_rb >= bwpSize) {
+      if (rbStart + min_rb > bwpSize) {
         LOG_D(NR_MAC,
               "[UE %04x][%4d.%2d] could not allocate continuous UL data: no resources (rbStart %d, min_rb %d, bwpSize %d)\n",
               UE->rnti,
@@ -2113,7 +2113,7 @@ static void pf_ul(module_id_t module_id,
     while (rbStart + max_rbSize < bwpSize && !(rballoc_mask[rbStart + bwpStart + max_rbSize] & slbitmap))
       max_rbSize++;
 
-    if (rbStart + min_rb >= bwpSize || max_rbSize < min_rb) {
+    if (rbStart + min_rb > bwpSize || max_rbSize < min_rb) {
       reset_beam_status(&nrmac->beam_info, frame, slot, iterator->UE->UE_beam_index, n_dl, dci_beam.new_beam);
       reset_beam_status(&nrmac->beam_info, sched_pusch->frame, sched_pusch->slot, iterator->UE->UE_beam_index, n, beam.new_beam);
       LOG_D(NR_MAC, "[UE %04x][%4d.%2d] could not allocate UL data: no resources (rbStart %d, min_rb %d, bwpSize %d)\n",
