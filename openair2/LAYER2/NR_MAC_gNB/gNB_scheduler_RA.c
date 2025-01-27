@@ -1033,14 +1033,6 @@ static bool nr_get_Msg3alloc(gNB_MAC_INST *mac, int CC_id, int current_slot, fra
   int startSymbolAndLength = pusch_TimeDomainAllocationList->list.array[ra->Msg3_tda_id]->startSymbolAndLength;
   SLIV2SL(startSymbolAndLength, &ra->msg3_startsymb, &ra->msg3_nbSymb);
 
-  LOG_I(NR_MAC,
-        "UE %04x: Msg3 scheduled at %d.%d (%d.%d TDA %u)\n",
-        ra->rnti,
-        ra->Msg3_frame,
-        ra->Msg3_slot,
-        current_frame,
-        current_slot,
-        ra->Msg3_tda_id);
   const int buffer_index = ul_buffer_index(ra->Msg3_frame, ra->Msg3_slot, mu, mac->vrb_map_UL_size);
   uint16_t *vrb_map_UL = &mac->common_channels[CC_id].vrb_map_UL[ra->Msg3_beam.idx][buffer_index * MAX_BWP_SIZE];
 
@@ -1072,6 +1064,16 @@ static bool nr_get_Msg3alloc(gNB_MAC_INST *mac, int CC_id, int current_slot, fra
   ra->msg3_nb_rb = msg3_nb_rb;
   ra->msg3_first_rb = rbStart;
   ra->msg3_bwp_start = bwpStart;
+  LOG_I(NR_MAC,
+        "UE %04x: Msg3 scheduled at %d.%d (%d.%d TDA %u) start %d RBs %d\n",
+        ra->rnti,
+        ra->Msg3_frame,
+        ra->Msg3_slot,
+        current_frame,
+        current_slot,
+        ra->Msg3_tda_id,
+        ra->msg3_first_rb,
+        ra->msg3_nb_rb);
   return true;
 }
 
