@@ -34,7 +34,7 @@ static int my_auth_hostkey_check(const char *hostname, ssh_session session, void
   return 0;
 }
 
-int connect_mplane(ru_session_t *ru_session, char ***du_key_pair)
+int connect_mplane(ru_session_t *ru_session, char **du_key_pair)
 {
   int port = NC_PORT_SSH;
   char *user = "oranbenetel";
@@ -45,7 +45,7 @@ int connect_mplane(ru_session_t *ru_session, char ***du_key_pair)
   nc_client_ssh_set_auth_pref(NC_SSH_AUTH_PASSWORD, -1);
   nc_client_ssh_set_auth_pref(NC_SSH_AUTH_INTERACTIVE, -1);
 
-  int keypair_ret = nc_client_ssh_add_keypair(&du_key_pair[0], &du_key_pair[1]);
+  int keypair_ret = nc_client_ssh_add_keypair(du_key_pair[0], du_key_pair[1]);
   AssertError(keypair_ret == 0, return EXIT_FAILURE, "[MPLANE] Unable to authenticate RU with IP address %s\n", ru_session->ru_ip_add);
   nc_client_ssh_set_auth_hostkey_check_clb(my_auth_hostkey_check, "DATA");  // host-key identification
 
