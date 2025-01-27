@@ -195,6 +195,15 @@ void handle_nr_srs_measurements(const module_id_t module_id,
 /* forward declarations */
 void set_default_frame_parms(LTE_DL_FRAME_PARMS *frame_parms[MAX_NUM_CCs]);
 
+/* TODO these declarations are to be removed */
+void nr_schedule_dl_tti_req(void) {};
+void nr_schedule_ul_dci_req() {};
+void nr_schedule_tx_req() {};
+void nr_schedule_ul_tti_req() {};
+void nr_slot_select() {};
+void NR_UL_indication(NR_UL_IND_t *UL_INFO) {};
+void gNB_dlsch_ulsch_scheduler() {};
+
 /*---------------------BMC: timespec helpers -----------------------------*/
 
 struct timespec min_diff_time = { .tv_sec = 0, .tv_nsec = 0 };

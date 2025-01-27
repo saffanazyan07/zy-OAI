@@ -825,7 +825,7 @@ int main(int argc, char **argv){
 
   phy_free_nr_gNB(gNB);
   // allocated in set_tdd_config_nr()
-  int nb_slots_to_set = TDD_CONFIG_NB_FRAMES*(1<<mu)*NR_NUMBER_OF_SUBFRAMES_PER_FRAME;
+  int nb_slots_to_set = (1<<mu)*NR_NUMBER_OF_SUBFRAMES_PER_FRAME;
   free(gNB->gNB_config.prach_config.num_prach_fd_occasions_list);
   for (int i = 0; i < nb_slots_to_set; ++i)
     free(gNB->gNB_config.tdd_table.max_tdd_periodicity_list[i].max_num_of_symbol_per_slot_list);

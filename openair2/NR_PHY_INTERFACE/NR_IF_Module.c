@@ -73,34 +73,26 @@ static void handle_nr_rach(NR_UL_IND_t *UL_info)
     return;
   }
   if (UL_info->rach_ind.number_of_pdus) {
-    int frame_diff = UL_info->frame - UL_info->rach_ind.sfn;
-    if (frame_diff < 0) {
-      frame_diff += 1024;
-    }
-    bool in_timewindow = frame_diff == 0 || (frame_diff == 1 && UL_info->slot < 7);
-
-    if (in_timewindow) {
-      LOG_D(MAC,
-            "UL_info[Frame %d, Slot %d] Calling initiate_ra_proc RACH:SFN/SLOT:%d/%d\n",
-            UL_info->frame,
-            UL_info->slot,
-            UL_info->rach_ind.sfn,
-            UL_info->rach_ind.slot);
-      for (int i = 0; i < UL_info->rach_ind.number_of_pdus; i++) {
-        nfapi_nr_prach_indication_pdu_t *rach = UL_info->rach_ind.pdu_list + i;
-        if (rach->num_preamble > 1) {
-          LOG_E(MAC, "Not more than 1 preamble per RACH PDU supported, ignoring the rest\n");
-        }
-        nr_initiate_ra_proc(UL_info->module_id,
-                            UL_info->CC_id,
-                            UL_info->rach_ind.sfn,
-                            UL_info->rach_ind.slot,
-                            rach->preamble_list[0].preamble_index,
-                            rach->freq_index,
-                            rach->symbol_index,
-                            rach->preamble_list[0].timing_advance,
-                            rach->preamble_list[0].preamble_pwr);
+    LOG_D(MAC,
+          "UL_info[Frame %d, Slot %d] Calling initiate_ra_proc RACH:SFN/SLOT:%d/%d\n",
+          UL_info->frame,
+          UL_info->slot,
+          UL_info->rach_ind.sfn,
+          UL_info->rach_ind.slot);
+    for (int i = 0; i < UL_info->rach_ind.number_of_pdus; i++) {
+      nfapi_nr_prach_indication_pdu_t *rach = UL_info->rach_ind.pdu_list + i;
+      if (rach->num_preamble > 1) {
+        LOG_E(MAC, "Not more than 1 preamble per RACH PDU supported, ignoring the rest\n");
       }
+      nr_initiate_ra_proc(UL_info->module_id,
+                          UL_info->CC_id,
+                          UL_info->rach_ind.sfn,
+                          UL_info->rach_ind.slot,
+                          rach->preamble_list[0].preamble_index,
+                          rach->freq_index,
+                          rach->symbol_index,
+                          rach->preamble_list[0].timing_advance,
+                          rach->preamble_list[0].preamble_pwr);
     }
   }
 }
@@ -149,15 +141,19 @@ static void handle_nr_uci(NR_UL_IND_t *UL_info)
 
 }
 
+struct sfn_slot {
+  int sfn;
+  int slot;
+};
 static bool crc_sfn_slot_matcher(void *wanted, void *candidate)
 {
   nfapi_nr_p7_message_header_t *msg = candidate;
-  int sfn_sf = *(int *)wanted;
+  struct sfn_slot *sfn_sf = (struct sfn_slot *)wanted;
 
   switch (msg->message_id) {
     case NFAPI_NR_PHY_MSG_TYPE_CRC_INDICATION: {
       nfapi_nr_crc_indication_t *ind = candidate;
-      return NFAPI_SFNSLOT2SFN(sfn_sf) == ind->sfn && NFAPI_SFNSLOT2SLOT(sfn_sf) == ind->slot;
+      return sfn_sf->sfn == ind->sfn && sfn_sf->slot == ind->slot;
     }
 
     default:
@@ -396,7 +392,15 @@ static void match_crc_rx_pdu(nfapi_nr_rx_data_indication_t *rx_ind, nfapi_nr_crc
   }
 }
 
-static void run_scheduler(module_id_t module_id, int CC_id, int frame, int slot)
+extern void handle_nr_slot_ind(uint16_t sfn, uint16_t slot);
+static void pnf_send_slot_ind(module_id_t module_id, int CC_id, int frame, int slot)
+{
+  (void)module_id;
+  (void)CC_id;
+  handle_nr_slot_ind(frame, slot);
+}
+
+static void run_scheduler_monolithic(module_id_t module_id, int CC_id, int frame, int slot)
 {
   NR_IF_Module_t *ifi = nr_if_inst[module_id];
 
@@ -449,7 +453,7 @@ void NR_UL_indication(NR_UL_IND_t *UL_info) {
   nfapi_nr_uci_indication_t *uci_ind = NULL;
   nfapi_nr_rx_data_indication_t *rx_ind = NULL;
   nfapi_nr_crc_indication_t *crc_ind = NULL;
-  if (get_softmodem_params()->emulate_l1 || NFAPI_MODE == NFAPI_MODE_AERIAL)
+  if (NFAPI_MODE == NFAPI_MODE_VNF || NFAPI_MODE == NFAPI_MODE_AERIAL)
   {
     if (gnb_rach_ind_queue.num_items > 0) {
       LOG_D(NR_MAC, "gnb_rach_ind_queue size = %zu\n", gnb_rach_ind_queue.num_items);
@@ -467,7 +471,7 @@ void NR_UL_indication(NR_UL_IND_t *UL_info) {
       LOG_D(NR_MAC, "gnb_rx_ind_queue size = %zu and gnb_crc_ind_queue size = %zu\n",
             gnb_rx_ind_queue.num_items, gnb_crc_ind_queue.num_items);
       rx_ind = get_queue(&gnb_rx_ind_queue);
-      int sfn_slot = NFAPI_SFNSLOT2HEX(rx_ind->sfn, rx_ind->slot);
+      struct sfn_slot sfn_slot = {.sfn = rx_ind->sfn, .slot = rx_ind->slot};
       crc_ind = unqueue_matching(&gnb_crc_ind_queue,
                                  MAX_QUEUE_SIZE,
                                  crc_sfn_slot_matcher,
@@ -487,12 +491,13 @@ void NR_UL_indication(NR_UL_IND_t *UL_info) {
     }
   }
 
-  handle_nr_rach(UL_info);
+  if (UL_info->rach_ind.number_of_pdus > 0)
+    handle_nr_rach(UL_info);
   handle_nr_uci(UL_info);
   handle_nr_ulsch(UL_info);
   handle_nr_srs(UL_info);
 
-  if (get_softmodem_params()->emulate_l1 || NFAPI_MODE == NFAPI_MODE_AERIAL) {
+  if (NFAPI_MODE == NFAPI_MODE_VNF || NFAPI_MODE == NFAPI_MODE_AERIAL) {
     free_unqueued_nfapi_indications(rach_ind, uci_ind, rx_ind, crc_ind);
   }
 }
@@ -509,7 +514,12 @@ NR_IF_Module_t *NR_IF_Module_init(int Mod_id) {
 
     nr_if_inst[Mod_id]->CC_mask=0;
     nr_if_inst[Mod_id]->NR_UL_indication = NR_UL_indication;
-    nr_if_inst[Mod_id]->NR_slot_indication = run_scheduler;
+    if (NFAPI_MODE == NFAPI_MONOLITHIC)
+      nr_if_inst[Mod_id]->NR_slot_indication = run_scheduler_monolithic;
+    else if (NFAPI_MODE == NFAPI_MODE_PNF)
+      nr_if_inst[Mod_id]->NR_slot_indication = pnf_send_slot_ind;
+    else // NFAPI_MODE_VNF
+      NULL;
     AssertFatal(pthread_mutex_init(&nr_if_inst[Mod_id]->if_mutex,NULL)==0,
                 "allocation of nr_if_inst[%d]->if_mutex fails\n",Mod_id);
   }

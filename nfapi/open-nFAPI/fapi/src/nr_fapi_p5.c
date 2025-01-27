@@ -714,16 +714,7 @@ uint8_t unpack_nr_param_response(uint8_t **ppReadPackedMsg, uint8_t *end, void *
       {NFAPI_NR_NFAPI_TIMING_INFO_MODE_TAG, &pNfapiMsg->nfapi_config.timing_info_mode, &unpack_uint8_tlv_value},
       {NFAPI_NR_NFAPI_TIMING_INFO_PERIOD_TAG, &pNfapiMsg->nfapi_config.timing_info_period, &unpack_uint8_tlv_value},
   };
-  // print ppReadPackedMsg
-  uint8_t *ptr = *ppReadPackedMsg;
-  printf("\n Read message unpack_param_response:   ");
 
-  while (ptr < end) {
-    printf(" 0x%02x", *ptr);
-    ptr++;
-  }
-
-  printf("\n");
   return (pull8(ppReadPackedMsg, &pNfapiMsg->error_code, end) && pull8(ppReadPackedMsg, &pNfapiMsg->num_tlv, end)
           && unpack_nr_tlv_list(unpack_fns,
                                 sizeof(unpack_fns) / sizeof(unpack_tlv_t),
@@ -1017,22 +1008,24 @@ uint8_t pack_nr_config_request(void *msg, uint8_t **ppWritePackedMsg, uint8_t *e
 
   // END SSB Table
   // START TDD Table
-  retval &=
-      pack_nr_tlv(NFAPI_NR_CONFIG_TDD_PERIOD_TAG, &(pNfapiMsg->tdd_table.tdd_period), ppWritePackedMsg, end, &pack_uint8_tlv_value);
-  numTLVs++;
-  const uint8_t slotsperframe[5] = {10, 20, 40, 80, 160};
-  // Assuming always CP_Normal, because Cyclic prefix is not included in CONFIG.request 10.02, but is present in 10.04
-  uint8_t cyclicprefix = 1;
-  // 3GPP 38.211 Table 4.3.2.1 & Table 4.3.2.2
-  uint8_t number_of_symbols_per_slot = cyclicprefix ? 14 : 12;
-  for (int i = 0; i < slotsperframe[pNfapiMsg->ssb_config.scs_common.value]; i++) { // TODO check right number of slots
-    for (int k = 0; k < number_of_symbols_per_slot; k++) { // TODO can change?
-      retval &= pack_nr_tlv(NFAPI_NR_CONFIG_SLOT_CONFIG_TAG,
-                            &pNfapiMsg->tdd_table.max_tdd_periodicity_list[i].max_num_of_symbol_per_slot_list[k].slot_config,
-                            ppWritePackedMsg,
-                            end,
-                            &pack_uint8_tlv_value);
-      numTLVs++;
+  if (pNfapiMsg->cell_config.frame_duplex_type.value == 1 /* TDD */) {
+    retval &=
+        pack_nr_tlv(NFAPI_NR_CONFIG_TDD_PERIOD_TAG, &(pNfapiMsg->tdd_table.tdd_period), ppWritePackedMsg, end, &pack_uint8_tlv_value);
+    numTLVs++;
+    const uint8_t slotsperframe[5] = {10, 20, 40, 80, 160};
+    // Assuming always CP_Normal, because Cyclic prefix is not included in CONFIG.request 10.02, but is present in 10.04
+    uint8_t cyclicprefix = 1;
+    // 3GPP 38.211 Table 4.3.2.1 & Table 4.3.2.2
+    uint8_t number_of_symbols_per_slot = cyclicprefix ? 14 : 12;
+    for (int i = 0; i < slotsperframe[pNfapiMsg->ssb_config.scs_common.value]; i++) { // TODO check right number of slots
+      for (int k = 0; k < number_of_symbols_per_slot; k++) { // TODO can change?
+        retval &= pack_nr_tlv(NFAPI_NR_CONFIG_SLOT_CONFIG_TAG,
+                              &pNfapiMsg->tdd_table.max_tdd_periodicity_list[i].max_num_of_symbol_per_slot_list[k].slot_config,
+                              ppWritePackedMsg,
+                              end,
+                              &pack_uint8_tlv_value);
+        numTLVs++;
+      }
     }
   }
 
@@ -1232,27 +1225,28 @@ uint8_t unpack_nr_config_request(uint8_t **ppReadPackedMsg, uint8_t *end, void *
             pNfapiMsg->prach_config.num_prach_fd_occasions.tl.tag = generic_tl.tag;
             pNfapiMsg->prach_config.num_prach_fd_occasions.tl.length = generic_tl.length;
             result = (*unpack_fns[idx].unpack_func)(&pNfapiMsg->prach_config.num_prach_fd_occasions, ppReadPackedMsg, end);
-            pNfapiMsg->prach_config.num_prach_fd_occasions_list = (nfapi_nr_num_prach_fd_occasions_t *)malloc(
-                pNfapiMsg->prach_config.num_prach_fd_occasions.value * sizeof(nfapi_nr_num_prach_fd_occasions_t));
+            pNfapiMsg->prach_config.num_prach_fd_occasions_list = calloc(pNfapiMsg->prach_config.num_prach_fd_occasions.value, sizeof(nfapi_nr_num_prach_fd_occasions_t));
             prach_root_seq_idx = 0;
             break;
           case NFAPI_NR_CONFIG_SCS_COMMON_TAG:
             pNfapiMsg->ssb_config.scs_common.tl.tag = generic_tl.tag;
             pNfapiMsg->ssb_config.scs_common.tl.length = generic_tl.length;
             result = (*unpack_fns[idx].unpack_func)(&pNfapiMsg->ssb_config.scs_common, ppReadPackedMsg, end);
-            const uint8_t slotsperframe[5] = {10, 20, 40, 80, 160};
+
             // Assuming always CP_Normal, because Cyclic prefix is not included in CONFIG.request 10.02, but is present in 10.04
             uint8_t cyclicprefix = 1;
             // 3GPP 38.211 Table 4.3.2.1 & Table 4.3.2.2
             uint8_t number_of_symbols_per_slot = cyclicprefix ? 14 : 12;
 
-            pNfapiMsg->tdd_table.max_tdd_periodicity_list = (nfapi_nr_max_tdd_periodicity_t *)malloc(
-                slotsperframe[pNfapiMsg->ssb_config.scs_common.value] * sizeof(nfapi_nr_max_tdd_periodicity_t));
+            if (pNfapiMsg->cell_config.frame_duplex_type.value == 1 /* TDD */) {
+              const uint8_t slotsperframe[5] = {10, 20, 40, 80, 160};
+              int n = slotsperframe[pNfapiMsg->ssb_config.scs_common.value];
+              pNfapiMsg->tdd_table.max_tdd_periodicity_list = calloc(n, sizeof(nfapi_nr_max_tdd_periodicity_t));
 
-            for (int i = 0; i < slotsperframe[pNfapiMsg->ssb_config.scs_common.value]; i++) {
-              pNfapiMsg->tdd_table.max_tdd_periodicity_list[i].max_num_of_symbol_per_slot_list =
-                  (nfapi_nr_max_num_of_symbol_per_slot_t *)malloc(number_of_symbols_per_slot
-                                                                  * sizeof(nfapi_nr_max_num_of_symbol_per_slot_t));
+              for (int i = 0; i < n; i++) {
+                pNfapiMsg->tdd_table.max_tdd_periodicity_list[i].max_num_of_symbol_per_slot_list =
+                    calloc(number_of_symbols_per_slot, sizeof(nfapi_nr_max_num_of_symbol_per_slot_t));
+              }
             }
             break;
           case NFAPI_NR_CONFIG_PRACH_ROOT_SEQUENCE_INDEX_TAG:

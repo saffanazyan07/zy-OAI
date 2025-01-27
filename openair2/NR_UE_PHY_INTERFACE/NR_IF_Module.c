@@ -275,59 +275,59 @@ void send_nsa_standalone_msg(NR_UL_IND_t *UL_INFO, uint16_t msg_id)
   }
 }
 
-bool sfn_slot_matcher(void *wanted, void *candidate)
+bool sfn_slot_matcher(void *sfn_slot_s, void *candidate)
 {
   nfapi_p7_message_header_t *msg = candidate;
-  int sfn_sf = *(int*)wanted;
+  const struct sfn_slot_s *sfn_sf = (const struct sfn_slot_s *)sfn_slot_s;
 
   switch (msg->message_id)
   {
     case NFAPI_NR_PHY_MSG_TYPE_RACH_INDICATION:
     {
       nfapi_nr_rach_indication_t *ind = candidate;
-      return NFAPI_SFNSLOT2SFN(sfn_sf) == ind->sfn && NFAPI_SFNSLOT2SLOT(sfn_sf) == ind->slot;
+      return sfn_sf->sfn == ind->sfn && sfn_sf->slot == ind->slot;
     }
 
     case NFAPI_NR_PHY_MSG_TYPE_RX_DATA_INDICATION:
     {
       nfapi_nr_rx_data_indication_t *ind = candidate;
-      return NFAPI_SFNSLOT2SFN(sfn_sf) == ind->sfn && NFAPI_SFNSLOT2SLOT(sfn_sf) == ind->slot;
+      return sfn_sf->sfn == ind->sfn && sfn_sf->slot == ind->slot;
     }
 
     case NFAPI_NR_PHY_MSG_TYPE_CRC_INDICATION:
     {
       nfapi_nr_crc_indication_t *ind = candidate;
-      return NFAPI_SFNSLOT2SFN(sfn_sf) == ind->sfn && NFAPI_SFNSLOT2SLOT(sfn_sf) == ind->slot;
+      return sfn_sf->sfn == ind->sfn && sfn_sf->slot == ind->slot;
     }
 
     case NFAPI_NR_PHY_MSG_TYPE_UCI_INDICATION:
     {
       nfapi_nr_uci_indication_t *ind = candidate;
-      return NFAPI_SFNSLOT2SFN(sfn_sf) == ind->sfn && NFAPI_SFNSLOT2SLOT(sfn_sf) == ind->slot;
+      return sfn_sf->sfn == ind->sfn && sfn_sf->slot == ind->slot;
     }
 
     case NFAPI_NR_PHY_MSG_TYPE_DL_TTI_REQUEST:
     {
       nfapi_nr_dl_tti_request_t *ind = candidate;
-      return NFAPI_SFNSLOT2SFN(sfn_sf) == ind->SFN && NFAPI_SFNSLOT2SLOT(sfn_sf) == ind->Slot;
+      return sfn_sf->sfn == ind->SFN && sfn_sf->slot == ind->Slot;
     }
 
     case NFAPI_NR_PHY_MSG_TYPE_TX_DATA_REQUEST:
     {
       nfapi_nr_tx_data_request_t *ind = candidate;
-      return NFAPI_SFNSLOT2SFN(sfn_sf) == ind->SFN && NFAPI_SFNSLOT2SLOT(sfn_sf) == ind->Slot;
+      return sfn_sf->sfn == ind->SFN && sfn_sf->slot == ind->Slot;
     }
 
     case NFAPI_NR_PHY_MSG_TYPE_UL_DCI_REQUEST:
     {
       nfapi_nr_ul_dci_request_t *ind = candidate;
-      return NFAPI_SFNSLOT2SFN(sfn_sf) == ind->SFN && NFAPI_SFNSLOT2SLOT(sfn_sf) == ind->Slot;
+      return sfn_sf->sfn == ind->SFN && sfn_sf->slot == ind->Slot;
     }
 
     case NFAPI_NR_PHY_MSG_TYPE_UL_TTI_REQUEST:
     {
       nfapi_nr_ul_tti_request_t *ind = candidate;
-      return NFAPI_SFNSLOT2SFN(sfn_sf) == ind->SFN && NFAPI_SFNSLOT2SLOT(sfn_sf) == ind->Slot;
+      return sfn_sf->sfn == ind->SFN && sfn_sf->slot == ind->Slot;
     }
 
     default:
@@ -630,10 +630,11 @@ static void copy_ul_dci_data_req_to_dl_info(nr_downlink_indication_t *dl_info, n
     dl_info->slot = ul_dci_req->Slot;
 }
 
-static bool send_crc_ind_and_rx_ind(int sfn_slot)
+static bool send_crc_ind_and_rx_ind(int sfn, int slot)
 {
   bool sent_crc_rx = true;
 
+  struct sfn_slot_s sfn_slot = {.sfn = sfn, .slot = slot};
   nfapi_nr_rx_data_indication_t *rx_ind = unqueue_matching(&nr_rx_ind_queue, MAX_QUEUE_SIZE, sfn_slot_matcher, &sfn_slot);
   nfapi_nr_crc_indication_t *crc_ind = unqueue_matching(&nr_crc_ind_queue, MAX_QUEUE_SIZE, sfn_slot_matcher, &sfn_slot);
 
@@ -642,8 +643,9 @@ static bool send_crc_ind_and_rx_ind(int sfn_slot)
     NR_UE_MAC_INST_t *mac = get_mac_inst(0);
     for (int i = 0; i < crc_ind->number_crcs; i++) {
         int harq_pid = crc_ind->crc_list[i].harq_id;
-        LOG_T(NR_MAC, "Resetting harq_pid %d active_ul_harq_sfn_slot\n", harq_pid);
-        mac->nr_ue_emul_l1.harq[harq_pid].active_ul_harq_sfn_slot = -1;
+        LOG_T(NR_MAC, "Resetting harq_pid %d active_ul_harq_sfn/slot\n", harq_pid);
+        mac->nr_ue_emul_l1.harq[harq_pid].active_ul_harq_sfn = -1;
+        mac->nr_ue_emul_l1.harq[harq_pid].active_ul_harq_slot = -1;
     }
     NR_UL_IND_t UL_INFO = {
       .crc_ind = *crc_ind,
@@ -671,12 +673,11 @@ static bool send_crc_ind_and_rx_ind(int sfn_slot)
 static void copy_ul_tti_data_req_to_dl_info(nr_downlink_indication_t *dl_info, nfapi_nr_ul_tti_request_t *ul_tti_req)
 {
     int num_pdus = ul_tti_req->n_pdus;
-    int sfn_slot = NFAPI_SFNSLOT2HEX(ul_tti_req->SFN, ul_tti_req->Slot);
     AssertFatal(num_pdus >= 0, "Invalid ul_tti_request number of PDUS\n");
     AssertFatal(num_pdus <= sizeof(ul_tti_req->pdus_list) / sizeof(ul_tti_req->pdus_list[0]),
                 "Too many pdus %d in ul_tti_req\n", num_pdus);
 
-    if (!send_crc_ind_and_rx_ind(sfn_slot))
+    if (!send_crc_ind_and_rx_ind(ul_tti_req->SFN, ul_tti_req->Slot))
     {
         LOG_T(NR_MAC, "CRC_RX ind not sent\n");
         if (!put_queue(&nr_ul_tti_req_queue, ul_tti_req))
@@ -1018,8 +1019,7 @@ void *nrue_standalone_pnf_task(void *context)
       uint16_t *sfn_slot = CALLOC(1, sizeof(*sfn_slot));
       memcpy(sfn_slot, buffer, sizeof(*sfn_slot));
 
-      LOG_D(NR_PHY, "Received from proxy sfn %d slot %d\n",
-            NFAPI_SFNSLOT2SFN(*sfn_slot), NFAPI_SFNSLOT2SLOT(*sfn_slot));
+      LOG_D(NR_PHY, "Received from proxy sfn_slot %x\n", *sfn_slot);
 
       if (!put_queue(&nr_sfn_slot_queue, sfn_slot))
       {
@@ -1043,11 +1043,13 @@ void *nrue_standalone_pnf_task(void *context)
       // TODO: Update sinr field of slot_rnti_mcs to be array.
       for (int i = 0; i < ch_info->nb_of_csi; ++i)
       {
-        slot_rnti_mcs[NFAPI_SFNSLOT2SLOT(ch_info->sfn_slot)].sinr = ch_info->csi[i].sinr;
-        slot_rnti_mcs[NFAPI_SFNSLOT2SLOT(ch_info->sfn_slot)].area_code = ch_info->csi[i].area_code;
+        int mu = 1; // NR-UE emul-L1 is hardcoded to 30kHZ, see check_and_process_dci()
+        int frame = NFAPI_SFNSLOTDEC2SFN(mu, ch_info->sfn_slot);
+        int slot = NFAPI_SFNSLOTDEC2SLOT(mu, ch_info->sfn_slot);
+        slot_rnti_mcs[slot].sinr = ch_info->csi[i].sinr;
+        slot_rnti_mcs[slot].area_code = ch_info->csi[i].area_code;
 
-        LOG_D(NR_PHY, "Received_SINR[%d] = %f, sfn:slot %d:%d\n",
-              i, ch_info->csi[i].sinr, NFAPI_SFNSLOT2SFN(ch_info->sfn_slot), NFAPI_SFNSLOT2SLOT(ch_info->sfn_slot));
+        LOG_D(NR_PHY, "Received_SINR[%d] = %f, sfn:slot %d:%d\n", i, ch_info->csi[i].sinr, frame, slot);
       }
 
       if (!put_queue(&nr_chan_param_queue, ch_info))

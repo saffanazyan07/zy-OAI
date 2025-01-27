@@ -325,7 +325,8 @@ typedef struct {
      NRUE MAC layer already does in get_downlink_ack(). */
   int active_dl_harq_sfn;
   int active_dl_harq_slot;
-  int active_ul_harq_sfn_slot;
+  int active_ul_harq_sfn;
+  int active_ul_harq_slot;
   bool active;
 } emul_l1_harq_t;
 

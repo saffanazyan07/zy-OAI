@@ -1216,29 +1216,7 @@ void *ru_thread(void *param)
   struct timespec slot_start;
 	clock_gettime(CLOCK_MONOTONIC, &slot_start);
   
-  struct timespec slot_duration; 
-	slot_duration.tv_sec = 0;
-	//slot_duration.tv_nsec = 0.5e6;
-	slot_duration.tv_nsec = 0.5e6;
-
-  
-
   while (!oai_exit) {
-    
-    if (NFAPI_MODE==NFAPI_MODE_VNF || NFAPI_MODE == NFAPI_MODE_AERIAL ) {
-      // We should make a VNF main loop with proper tasks calls in case of VNF
-      slot_start = timespec_add(slot_start,slot_duration);
-      struct timespec curr_time;
-      clock_gettime(CLOCK_MONOTONIC, &curr_time);    
-      struct timespec sleep_time;
-      
-      if((slot_start.tv_sec > curr_time.tv_sec) ||
-	 (slot_start.tv_sec == curr_time.tv_sec && slot_start.tv_nsec > curr_time.tv_nsec)){
-	sleep_time = timespec_sub(slot_start,curr_time);
-	usleep(sleep_time.tv_nsec * 1e-3); 
-      }
-    }
-    
     if (slot==(fp->slots_per_frame-1)) {
       slot=0;
       frame++;

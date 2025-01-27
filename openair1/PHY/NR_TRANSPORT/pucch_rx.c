@@ -62,10 +62,6 @@ void nr_fill_pucch(PHY_VARS_gNB *gNB,
                    int slot,
                    nfapi_nr_pucch_pdu_t *pucch_pdu)
 {
-
-  if (NFAPI_MODE == NFAPI_MODE_PNF)
-    gNB->pucch[0].active = false; // check if true in monolithic mode
-
   bool found = false;
   for (int i = 0; i < gNB->max_nb_pucch; i++) {
     NR_gNB_PUCCH_t *pucch = &gNB->pucch[i];

@@ -190,17 +190,21 @@ void init_nrUE_standalone_thread(int ue_idx)
   pthread_setname_np(phy_thread, "oai:nrue-stand-phy");
 }
 
-static void process_queued_nr_nfapi_msgs(NR_UE_MAC_INST_t *mac, int sfn_slot)
+static void process_queued_nr_nfapi_msgs(NR_UE_MAC_INST_t *mac, int sfn, int slot)
 {
+  struct sfn_slot_s sfn_slot = {.sfn = sfn, .slot = slot};
   nfapi_nr_rach_indication_t *rach_ind = unqueue_matching(&nr_rach_ind_queue, MAX_QUEUE_SIZE, sfn_slot_matcher, &sfn_slot);
   nfapi_nr_dl_tti_request_t *dl_tti_request = get_queue(&nr_dl_tti_req_queue);
   nfapi_nr_ul_dci_request_t *ul_dci_request = get_queue(&nr_ul_dci_req_queue);
 
   for (int i = 0; i < NR_MAX_HARQ_PROCESSES; i++) {
-    LOG_D(NR_MAC, "Try to get a ul_tti_req by matching CRC active SFN %d/SLOT %d from queue with %lu items\n",
-            NFAPI_SFNSLOT2SFN(mac->nr_ue_emul_l1.harq[i].active_ul_harq_sfn_slot),
-            NFAPI_SFNSLOT2SLOT(mac->nr_ue_emul_l1.harq[i].active_ul_harq_sfn_slot), nr_ul_tti_req_queue.num_items);
-    nfapi_nr_ul_tti_request_t *ul_tti_request_crc = unqueue_matching(&nr_ul_tti_req_queue, MAX_QUEUE_SIZE, sfn_slot_matcher, &mac->nr_ue_emul_l1.harq[i].active_ul_harq_sfn_slot);
+    LOG_D(NR_MAC,
+          "Try to get a ul_tti_req by matching CRC active sfn/slot %d.%d from queue with %lu items\n",
+          sfn,
+          slot,
+          nr_ul_tti_req_queue.num_items);
+    struct sfn_slot_s sfn_sf = {.sfn = mac->nr_ue_emul_l1.harq[i].active_ul_harq_sfn, .slot = mac->nr_ue_emul_l1.harq[i].active_ul_harq_slot };
+    nfapi_nr_ul_tti_request_t *ul_tti_request_crc = unqueue_matching(&nr_ul_tti_req_queue, MAX_QUEUE_SIZE, sfn_slot_matcher, &sfn_sf);
     if (ul_tti_request_crc && ul_tti_request_crc->n_pdus > 0) {
       check_and_process_dci(NULL, NULL, NULL, ul_tti_request_crc);
       free_and_zero(ul_tti_request_crc);
@@ -216,11 +220,11 @@ static void process_queued_nr_nfapi_msgs(NR_UE_MAC_INST_t *mac, int sfn_slot)
       free_and_zero(rach_ind);
   }
   if (dl_tti_request) {
-    int dl_tti_sfn_slot = NFAPI_SFNSLOT2HEX(dl_tti_request->SFN, dl_tti_request->Slot);
-    nfapi_nr_tx_data_request_t *tx_data_request = unqueue_matching(&nr_tx_req_queue, MAX_QUEUE_SIZE, sfn_slot_matcher, &dl_tti_sfn_slot);
+    struct sfn_slot_s sfn_slot = {.sfn = dl_tti_request->SFN, .slot = dl_tti_request->Slot};
+    nfapi_nr_tx_data_request_t *tx_data_request = unqueue_matching(&nr_tx_req_queue, MAX_QUEUE_SIZE, sfn_slot_matcher, &sfn_slot);
     if (!tx_data_request) {
-      LOG_E(NR_MAC, "[%d %d] No corresponding tx_data_request for given dl_tti_request sfn/slot\n",
-            NFAPI_SFNSLOT2SFN(dl_tti_sfn_slot), NFAPI_SFNSLOT2SLOT(dl_tti_sfn_slot));
+      LOG_E(NR_MAC, "[%d.%d] No corresponding tx_data_request for given dl_tti_request sfn/slot\n",
+            dl_tti_request->SFN, dl_tti_request->Slot);
       if (get_softmodem_params()->nsa)
         save_nr_measurement_info(dl_tti_request);
       free_and_zero(dl_tti_request);
@@ -262,7 +266,8 @@ static void *NRUE_phy_stub_standalone_pnf_task(void *arg)
   NR_UE_MAC_INST_t *mac = get_mac_inst(mod_id);
   for (int i = 0; i < NR_MAX_HARQ_PROCESSES; i++) {
       mac->nr_ue_emul_l1.harq[i].active = false;
-      mac->nr_ue_emul_l1.harq[i].active_ul_harq_sfn_slot = -1;
+      mac->nr_ue_emul_l1.harq[i].active_ul_harq_sfn = -1;
+      mac->nr_ue_emul_l1.harq[i].active_ul_harq_slot = -1;
   }
 
   while (!oai_exit) {
@@ -285,8 +290,9 @@ static void *NRUE_phy_stub_standalone_pnf_task(void *arg)
       free_and_zero(ch_info);
     }
 
-    frame_t frame = NFAPI_SFNSLOT2SFN(sfn_slot);
-    int slot = NFAPI_SFNSLOT2SLOT(sfn_slot);
+    int mu = 1; // NR-UE emul-L1 is hardcoded to 30kHZ, see check_and_process_dci()
+    frame_t frame = NFAPI_SFNSLOTDEC2SFN(mu, sfn_slot);
+    int slot = NFAPI_SFNSLOTDEC2SLOT(mu, sfn_slot);
     if (sfn_slot == last_sfn_slot) {
       LOG_D(NR_MAC, "repeated sfn_sf = %d.%d\n",
             frame, slot);
@@ -300,7 +306,7 @@ static void *NRUE_phy_stub_standalone_pnf_task(void *arg)
     if (IS_SA_MODE(get_softmodem_params()) && mac->mib == NULL) {
       LOG_D(NR_MAC, "We haven't gotten MIB. Lets see if we received it\n");
       nr_ue_dl_indication(&mac->dl_info);
-      process_queued_nr_nfapi_msgs(mac, sfn_slot);
+      process_queued_nr_nfapi_msgs(mac, frame, slot);
     }
 
     int CC_id = 0;
@@ -340,7 +346,7 @@ static void *NRUE_phy_stub_standalone_pnf_task(void *arg)
       LOG_D(NR_MAC, "Slot %d. calling nr_ue_ul_ind()\n", ul_info.slot);
       nr_ue_ul_scheduler(mac, &ul_info);
     }
-    process_queued_nr_nfapi_msgs(mac, sfn_slot);
+    process_queued_nr_nfapi_msgs(mac, frame, slot);
   }
   return NULL;
 }

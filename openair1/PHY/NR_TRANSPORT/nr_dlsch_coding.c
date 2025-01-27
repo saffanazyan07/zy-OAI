@@ -66,7 +66,6 @@ void free_gNB_dlsch(NR_gNB_DLSCH_t *dlsch, uint16_t N_RB, const NR_DL_FRAME_PARM
     harq->c[r] = NULL;
   }
   free(harq->c);
-  free(harq->pdu);
 }
 
 NR_gNB_DLSCH_t new_gNB_dlsch(NR_DL_FRAME_PARMS *frame_parms, uint16_t N_RB)
@@ -87,10 +86,6 @@ NR_gNB_DLSCH_t new_gNB_dlsch(NR_DL_FRAME_PARMS *frame_parms, uint16_t N_RB)
   bzero(harq, sizeof(NR_DL_gNB_HARQ_t));
   harq->b = malloc16(dlsch_bytes);
   AssertFatal(harq->b, "cannot allocate memory for harq->b\n");
-  harq->pdu = malloc16(dlsch_bytes);
-  AssertFatal(harq->pdu, "cannot allocate memory for harq->pdu\n");
-  bzero(harq->pdu, dlsch_bytes);
-  nr_emulate_dlsch_payload(harq->pdu, (dlsch_bytes) >> 3);
   bzero(harq->b, dlsch_bytes);
 
   harq->c = (uint8_t **)malloc16(a_segments*sizeof(uint8_t *));

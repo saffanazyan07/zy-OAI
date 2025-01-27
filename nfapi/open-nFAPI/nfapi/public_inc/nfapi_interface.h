@@ -120,16 +120,14 @@ typedef struct {
 #define NFAPI_TAG_LENGTH_PACKED_LEN 4
 
 // Convenience methods to convert between SFN/SLOT formats
-#define NFAPI_SFNSLOT2DEC(_sfn,_slot) ( _sfn*20 + _slot  )  // total count of slots
-#define NFAPI_SFNSLOTDEC2SFNSLOT(_sfnslot_dec) ((((_sfnslot_dec) / 20) << 6) | (((_sfnslot_dec) - (((_sfnslot_dec) / 20) * 20)) & 0x3F))
+#define NFAPI_SLOTNUM(_mu) (10 << (_mu))
+#define NFAPI_SLOTLEN(_mu) (1000.f / (1 << _mu))
 
-#define NFAPI_SFNSLOT2SFN(_sfnslot) ((_sfnslot) >> 6)
-#define NFAPI_SFNSLOT2SLOT(_sfnslot) ((_sfnslot) & 0x3F)
-#define NFAPI_SFNSLOTDEC2SFN(_sfnslot_dec) ((_sfnslot_dec) / 20)
-#define NFAPI_SFNSLOTDEC2SLOT(_sfnslot_dec) ((_sfnslot_dec) % 20)
-#define NFAPI_SFNSLOT2HEX(_sfn,_slot) ((_sfn << 6) | (_slot & 0x3F))
+#define NFAPI_SFNSLOT2DEC(_mu, _sfn, _slot) ((_sfn) * NFAPI_SLOTNUM(_mu) + (_slot))
+#define NFAPI_SFNSLOTDEC2SFN(_mu, _sfnslot_dec) ((_sfnslot_dec) / NFAPI_SLOTNUM(_mu))
+#define NFAPI_SFNSLOTDEC2SLOT(_mu, _sfnslot_dec) ((_sfnslot_dec) % NFAPI_SLOTNUM(_mu))
 
-#define NFAPI_MAX_SFNSLOTDEC 1024*20 // 20 is for numerology 1
+#define NFAPI_MAX_SFNSLOTDEC(_mu) (1024 * NFAPI_SLOTNUM(_mu))
 
 // Convenience methods to convert between SFN/SFN formats
 #define NFAPI_SFNSF2DEC(_sfnsf) ((((_sfnsf) >> 4) * 10) + ((_sfnsf) & 0xF))

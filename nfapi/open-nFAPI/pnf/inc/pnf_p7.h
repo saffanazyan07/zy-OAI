@@ -29,36 +29,31 @@
 
 typedef struct {
 	uint16_t dl_conf_ontime;
-	uint16_t dl_tti_ontime;
 	uint16_t dl_conf_late;
-	uint16_t dl_tti_late;
 	uint16_t ul_conf_ontime;
-	uint16_t ul_tti_ontime;
 	uint16_t ul_conf_late;
-	uint16_t ul_tti_late;
 	uint16_t hi_dci0_ontime;
 	uint16_t hi_dci0_late;
-	uint16_t ul_dci_ontime;
-	uint16_t ul_dci_late;
 	uint16_t tx_ontime;
 	uint16_t tx_late;
-	uint16_t tx_data_ontime;
-	uint16_t tx_data_late;
 } pnf_p7_stats_t;
 
 
-typedef struct { // TODO: replace with the stats
-	uint16_t dl_tti_ontime;
-	uint16_t dl_tti_late;
-	uint16_t ul_tti_ontime;
-	uint16_t ul_tti_late;
-	uint16_t ul_dci_ontime;
-	uint16_t ul_dci_late;
-	uint16_t tx_data_ontime;
-	uint16_t tx_data_late;
+typedef struct pnf_p7_arr_time {
+  uint16_t ontime;
+  uint16_t late;
+} pnf_p7_arr_time_t;
+typedef struct pnf_p7_dir {
+  uint32_t bytes;
+} pnf_p7_dir_t;
+typedef struct {
+  pnf_p7_arr_time_t dl_tti;
+  pnf_p7_arr_time_t ul_tti;
+  pnf_p7_arr_time_t ul_dci;
+  pnf_p7_arr_time_t tx_data;
+  pnf_p7_dir_t dl;
+  pnf_p7_dir_t ul;
 } pnf_p7_nr_stats_t;
-
-
 
 typedef struct {
 	uint8_t* buffer;
@@ -119,6 +114,7 @@ typedef struct {
 	
 	uint16_t sfn;
 	uint16_t slot;
+  int mu;
 	uint16_t sfn_slot;
 	uint32_t slot_start_time_hr;
 	int32_t slot_shift;

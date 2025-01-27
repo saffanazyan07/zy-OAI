@@ -544,7 +544,6 @@ int param_request(nfapi_pnf_config_t *config, nfapi_pnf_phy_config_t *phy, nfapi
   nfapi_resp.num_tlv++;
   nfapi_pnf_param_resp(config, &nfapi_resp);
   printf("[PNF] Sent NFAPI_PARAM_RESPONSE phy_id:%d number_of_tlvs:%u\n", req->header.phy_id, nfapi_resp.num_tlv);
-  printf("[PNF] param request .. exit\n");
   return 0;
 }
 
@@ -763,7 +762,6 @@ int nr_param_request(nfapi_pnf_config_t *config, nfapi_pnf_phy_config_t *phy, nf
   nfapi_nr_pnf_param_resp(config, &nfapi_resp);
 
   printf("[PNF] Sent NFAPI_PNF_PARAM_RESPONSE phy_id:%d number_of_tlvs:%u\n", req->header.phy_id, nfapi_resp.num_tlv);
-  printf("[PNF] param request .. exit\n");
   return 0;
 }
 
@@ -1102,38 +1100,13 @@ void pnf_nr_phy_deallocate_p7_vendor_ext(void *header)
   free(header);
 }
 
-notifiedFIFO_elt_t *l1tx_message_extract(PHY_VARS_gNB *gNB, int frame, int slot) {
-  notifiedFIFO_elt_t *res;
-
-  //TODO: This needs to be reworked for nfapi to work
-  res = pullNotifiedFIFO(&gNB->L1_tx_free);
-  return res;
-}
-
-int pnf_phy_ul_dci_req(gNB_L1_rxtx_proc_t *proc, nfapi_pnf_p7_config_t *pnf_p7, nfapi_nr_ul_dci_request_t *req) {
+extern void nr_schedule_ul_dci_req(PHY_VARS_gNB *gNB, nfapi_nr_ul_dci_request_t *UL_dci_req);
+int pnf_phy_ul_dci_req(gNB_L1_rxtx_proc_t *proc, nfapi_pnf_p7_config_t *pnf_p7, nfapi_nr_ul_dci_request_t *req)
+{
+  DevAssert(RC.gNB != NULL && RC.gNB[0] != NULL);
+  PHY_VARS_gNB *gNB = RC.gNB[0]; // phy_inst?
   
-  //   LOG_D(PHY,"[PNF] HI_DCI0_REQUEST SFN/SF:%05d dci:%d hi:%d\n", NFAPI_SFNSF2DEC(req->sfn_sf), req->hi_dci0_request_body.number_of_dci, req->hi_dci0_request_body.number_of_hi);
-
-  struct PHY_VARS_gNB_s *gNB = RC.gNB[0];
-
-  // extract the next available thread message (priority to message with current slot, then free message)
-  notifiedFIFO_elt_t *res;
-  res = l1tx_message_extract(gNB, req->SFN, req->Slot);
-  processingData_L1tx_t *msgTx = (processingData_L1tx_t *)NotifiedFifoData(res);
-
-  if (proc ==NULL) 
-    proc = &gNB->proc.L1_proc;
-
-  if (req->numPdus > 0) {
-    for (int i=0; i<req->numPdus; i++) {
-      if (req->ul_dci_pdu_list[i].PDUType == NFAPI_NR_DL_TTI_PDCCH_PDU_TYPE) // only possible value 0: PDCCH PDU
-        msgTx->ul_pdcch_pdu[i] = req->ul_dci_pdu_list[i];
-      else
-        LOG_E(PHY,"[PNF] UL_DCI_REQ sfn_slot:%d PDU[%d] - unknown pdu type:%d\n", NFAPI_SFNSLOT2DEC(req->SFN, req->Slot), req->numPdus-1, req->ul_dci_pdu_list[req->numPdus-1].PDUType);
-    }
-  }
-
-  pushNotifiedFIFO(&gNB->L1_tx_filled, res);
+  nr_schedule_ul_dci_req(gNB, req);
 
   return 0;
 }
@@ -1168,84 +1141,16 @@ int pnf_phy_hi_dci0_req(L1_rxtx_proc_t *proc, nfapi_pnf_p7_config_t *pnf_p7, nfa
 }
 
 
-int pnf_phy_dl_tti_req(gNB_L1_rxtx_proc_t *proc, nfapi_pnf_p7_config_t *pnf_p7, nfapi_nr_dl_tti_request_t *req) {
-  if (RC.ru == 0) {
-    return -1;
-  }
+// from dl_tti_req_fn fptr
+extern void nr_schedule_dl_tti_req(PHY_VARS_gNB *gNB, nfapi_nr_dl_tti_request_t *DL_req);
+int pnf_phy_dl_tti_req(gNB_L1_rxtx_proc_t *proc, nfapi_pnf_p7_config_t *pnf_p7, nfapi_nr_dl_tti_request_t *DL_req) 
+{
+  DevAssert(proc == NULL);
+  DevAssert(sync_var == 0);
+  DevAssert(RC.gNB != NULL && RC.gNB[0] != NULL);
+  PHY_VARS_gNB *gNB = RC.gNB[0]; // phy_inst?
 
-  if (RC.gNB == 0) {
-    return -2;
-  }
-
-  if (RC.gNB[0] == 0) {
-    return -3;
-  }
-
-  if (sync_var != 0) {
-    NFAPI_TRACE(NFAPI_TRACE_INFO, "%s() Main system not up - is this a dummy subframe?\n", __FUNCTION__);
-    return -4;
-  }
-
-  int sfn = req->SFN;
-  int slot =  req->Slot;
-  struct PHY_VARS_gNB_s *gNB = RC.gNB[0];
-  if (proc==NULL)
-     proc = &gNB->proc.L1_proc;
-  nfapi_nr_dl_tti_request_pdu_t *dl_tti_pdu_list = req->dl_tti_request_body.dl_tti_pdu_list;
-
-  if (req->dl_tti_request_body.nPDUs)
-    NFAPI_TRACE(NFAPI_TRACE_INFO, "%s() TX:%d/%d RX:%d/%d; sfn:%d, slot:%d, nGroup:%u, nPDUs: %u, nUE: %p, PduIdx: %p,\n",
-                __FUNCTION__, proc->frame_tx, proc->slot_tx, proc->frame_rx, proc->slot_rx, // TODO: change subframes to slot
-                req->SFN,
-                req->Slot,
-                req->dl_tti_request_body.nGroup,
-                req->dl_tti_request_body.nPDUs,
-                req->dl_tti_request_body.nUe,
-                req->dl_tti_request_body.PduIdx);
-
-  for (int i=0; i<req->dl_tti_request_body.nPDUs; i++) {
-    // NFAPI_TRACE(NFAPI_TRACE_INFO, "%s() sfn/sf:%d PDU[%d] size:%d pdcch_vars->num_dci:%d\n", __FUNCTION__, NFAPI_SFNSF2DEC(req->sfn_sf), i, dl_config_pdu_list[i].pdu_size,pdcch_vars->num_dci);
-    notifiedFIFO_elt_t *res;
-    res = l1tx_message_extract(gNB, sfn, slot);
-    processingData_L1tx_t *msgTx = (processingData_L1tx_t *)NotifiedFifoData(res);
-
-    if (dl_tti_pdu_list[i].PDUType == NFAPI_NR_DL_TTI_PDCCH_PDU_TYPE) {
-      msgTx->pdcch_pdu[i] = dl_tti_pdu_list[i].pdcch_pdu; // copies all the received PDCCH PDUs
-    } 
-    else if (dl_tti_pdu_list[i].PDUType == NFAPI_NR_DL_TTI_SSB_PDU_TYPE) {
-      //NFAPI_TRACE(NFAPI_TRACE_INFO, "%s() PDU:%d BCH: pdu_index:%u pdu_length:%d sdu_length:%d BCH_SDU:%x,%x,%x\n", __FUNCTION__, i, pdu_index, bch_pdu->bch_pdu_rel8.length, tx_request_pdu[sfn][sf][pdu_index]->segments[0].segment_length, sdu[0], sdu[1], sdu[2]);
-      handle_nr_nfapi_ssb_pdu(msgTx, sfn, slot, &dl_tti_pdu_list[i]);
-    }
-    else if (dl_tti_pdu_list[i].PDUType == NFAPI_NR_DL_TTI_PDSCH_PDU_TYPE) {
-      nfapi_nr_dl_tti_pdsch_pdu *pdsch_pdu = &dl_tti_pdu_list[i].pdsch_pdu;
-      nfapi_nr_dl_tti_pdsch_pdu_rel15_t *rel15_pdu = &pdsch_pdu->pdsch_pdu_rel15;
-      nfapi_nr_pdu_t *tx_data = tx_data_request[sfn][slot][rel15_pdu->pduIndex];
-
-      if (tx_data != NULL) {
-        uint8_t *dlsch_sdu = (uint8_t *)tx_data->TLVs[0].value.direct;
-        //NFAPI_TRACE(NFAPI_TRACE_INFO, "%s() DLSCH:pdu_index:%d handle_nfapi_dlsch_pdu(eNB, proc_rxtx, dlsch_pdu, transport_blocks:%d sdu:%p) eNB->pdcch_vars[proc->subframe_tx & 1].num_pdcch_symbols:%d\n", __FUNCTION__, rel8_pdu->pdu_index, rel8_pdu->transport_blocks, dlsch_sdu, eNB->pdcch_vars[proc->subframe_tx & 1].num_pdcch_symbols);
-        AssertFatal(msgTx->num_pdsch_slot < gNB->max_nb_pdsch,
-                    "Number of PDSCH PDUs %d exceeded the limit %d\n",
-                    msgTx->num_pdsch_slot,
-                    gNB->max_nb_pdsch);
-        handle_nr_nfapi_pdsch_pdu(msgTx, pdsch_pdu, dlsch_sdu);
-      } 
-      else {
-        NFAPI_TRACE(NFAPI_TRACE_ERROR, "%s() DLSCH NULL TX PDU SFN/SF:%d PDU_INDEX:%d\n", __FUNCTION__, NFAPI_SFNSLOT2DEC(sfn,slot), rel15_pdu->pduIndex);     
-      }
-    }
-    else if (dl_tti_pdu_list[i].PDUType == NFAPI_NR_DL_TTI_CSI_RS_PDU_TYPE) {
-      nfapi_nr_dl_tti_csi_rs_pdu *csi_rs_pdu = &dl_tti_pdu_list[i].csi_rs_pdu;
-      handle_nfapi_nr_csirs_pdu(msgTx, sfn, slot, csi_rs_pdu);
-    }
-    else {
-      NFAPI_TRACE(NFAPI_TRACE_ERROR, "%s() UNKNOWN:%d\n", __FUNCTION__, dl_tti_pdu_list[i].PDUType);
-    }
-    pushNotifiedFIFO(&gNB->L1_tx_filled, res);
-  }
-
-  if(req->vendor_extension)
-    free(req->vendor_extension);
+  nr_schedule_dl_tti_req(gNB, DL_req);
 
   return 0;
 }
@@ -1343,29 +1248,13 @@ int pnf_phy_dl_config_req(L1_rxtx_proc_t *proc, nfapi_pnf_p7_config_t *pnf_p7, n
 }
 
 
+extern void nr_schedule_tx_req(PHY_VARS_gNB *gNB, nfapi_nr_tx_data_request_t *TX_req);
+int pnf_phy_tx_data_req(nfapi_pnf_p7_config_t *pnf_p7, nfapi_nr_tx_data_request_t *req)
+{
+  DevAssert(RC.gNB != NULL && RC.gNB[0] != NULL);
+  PHY_VARS_gNB *gNB = RC.gNB[0]; // phy_inst?
 
-int pnf_phy_tx_data_req(nfapi_pnf_p7_config_t *pnf_p7, nfapi_nr_tx_data_request_t *req) {
-  uint16_t sfn = req->SFN;
-  uint16_t slot = req->Slot;
-
-  if (req->Number_of_PDUs == 0)
-    LOG_D(PHY,"%s() SFN/SLOT:%d%d PDUs:%d\n", __FUNCTION__, sfn, slot, req->Number_of_PDUs);
-
-  //if (req->pdu_list[0].TLVs->tag ==  NFAPI_NR_PHY_MSG_TYPE_TX_DATA_REQUEST) {
-    for (int i=0; i<req->Number_of_PDUs; i++) {
-      // LOG_D(PHY,"%s() SFN/SF:%d%d number_of_pdus:%d [PDU:%d] pdu_length:%d pdu_index:%d num_segments:%d\n",
-      //       __FUNCTION__,
-      //       sfn, sf,
-      //       req->tx_request_body.number_of_pdus,
-      //       i,
-      //       req->tx_request_body.tx_pdu_list[i].pdu_length,
-      //       req->tx_request_body.tx_pdu_list[i].pdu_index,
-      //       req->tx_request_body.tx_pdu_list[i].num_segments
-      //      );
-      // tx_request_pdu[sfn][sf][i] = &req->tx_request_body.tx_pdu_list[i];
-      tx_data_request[sfn][slot][i] = &req->pdu_list[i];
-    }
-  //}
+  nr_schedule_tx_req(gNB, req);
 
   return 0;
 }
@@ -1396,77 +1285,13 @@ int pnf_phy_tx_req(nfapi_pnf_p7_config_t *pnf_p7, nfapi_tx_request_t *req) {
   return 0;
 }
 
+extern void nr_schedule_ul_tti_req(PHY_VARS_gNB *gNB, nfapi_nr_ul_tti_request_t *UL_tti_req);
+int pnf_phy_ul_tti_req(gNB_L1_rxtx_proc_t *proc, nfapi_pnf_p7_config_t *pnf_p7, nfapi_nr_ul_tti_request_t *req)
+{
+  DevAssert(RC.gNB != NULL && RC.gNB[0] != NULL);
+  PHY_VARS_gNB *gNB = RC.gNB[0]; // phy_inst?
 
-
-int pnf_phy_ul_tti_req(gNB_L1_rxtx_proc_t *proc, nfapi_pnf_p7_config_t *pnf_p7, nfapi_nr_ul_tti_request_t *req) {
-  LOG_D(PHY,"[PNF] UL_TTI_REQ recvd, writing into structs, SFN/slot:%d.%d pdu:%d \n",
-                req->SFN,req->Slot,
-                req->n_pdus
-               );
-
-  if (RC.ru == 0) {
-    return -1;
-  }
-
-  if (RC.gNB == 0) {
-    return -2;
-  }
-
-  if (RC.gNB[0] == 0) {
-    return -3;
-  }
-
-  if (sync_var != 0) {
-    NFAPI_TRACE(NFAPI_TRACE_INFO, "%s() Main system not up - is this a dummy slot?\n", __FUNCTION__);
-    return -4;
-  }
-  uint16_t curr_sfn = req->SFN;
-  uint16_t curr_slot = req->Slot;
-  struct PHY_VARS_gNB_s *gNB = RC.gNB[0];
-
-  if (proc==NULL)
-     proc = &gNB->proc.L1_proc;
-
-  nfapi_nr_ul_tti_request_number_of_pdus_t *ul_tti_pdu_list = req->pdus_list;
-
-  for (int i=0; i< req->n_pdus; i++) {
-    switch (ul_tti_pdu_list[i].pdu_type) {
-      case NFAPI_NR_UL_CONFIG_PUSCH_PDU_TYPE:
-        //LOG_D(PHY,"frame %d, slot %d, Got NFAPI_NR_UL_TTI_PUSCH_PDU_TYPE for %d.%d\n", frame, slot, UL_tti_req->SFN, UL_tti_req->Slot);
-        //curr_sfn = curr_sfn + 3; //Gokul
-        nr_fill_ulsch(gNB,curr_sfn, curr_slot, &ul_tti_pdu_list[i].pusch_pdu);
-        break;
-      case NFAPI_NR_UL_CONFIG_PUCCH_PDU_TYPE:
-        //LOG_D(PHY,"frame %d, slot %d, Got NFAPI_NR_UL_TTI_PUCCH_PDU_TYPE for %d.%d\n", frame, slot, UL_tti_req->SFN, UL_tti_req->Slot);
-        nr_fill_pucch(gNB,curr_sfn, curr_slot, &ul_tti_pdu_list[i].pucch_pdu);
-        break;
-      case NFAPI_NR_UL_CONFIG_PRACH_PDU_TYPE:
-        //LOG_D(PHY,"frame %d, slot %d, Got NFAPI_NR_UL_TTI_PRACH_PDU_TYPE for %d.%d\n", frame, slot, UL_tti_req->SFN, UL_tti_req->Slot);
-        nr_fill_prach(gNB, curr_sfn, curr_slot, &ul_tti_pdu_list[i].prach_pdu);
-        if (gNB->RU_list[0]->if_south == LOCAL_RF) nr_fill_prach_ru(gNB->RU_list[0], curr_sfn, curr_slot, &ul_tti_pdu_list[i].prach_pdu);
-        break;
-      default:
-      NFAPI_TRACE(NFAPI_TRACE_ERROR, "%s() PDU:%i UNKNOWN type :%d\n", __FUNCTION__, i, ul_tti_pdu_list[i].pdu_type);
-      break;
-
-    }
-    // //LOG_D(PHY, "%s() sfn/sf:%d PDU[%d] size:%d\n", __FUNCTION__, NFAPI_SFNSF2DEC(req->sfn_sf), i, ul_config_pdu_list[i].pdu_size);
-    // if (
-    //   ul_tti_pdu_list[i].pdu_type == NFAPI_NR_UL_CONFIG_PRACH_PDU_TYPE ||
-    //   ul_tti_pdu_list[i].pdu_type == NFAPI_NR_UL_CONFIG_PUSCH_PDU_TYPE ||
-    //   ul_tti_pdu_list[i].pdu_type == NFAPI_NR_UL_CONFIG_PUCCH_PDU_TYPE ||
-    //   ul_tti_pdu_list[i].pdu_type == NFAPI_NR_UL_CONFIG_SRS_PDU_TYPE
-    // ) {
-    //   //LOG_D(PHY, "%s() handle_nfapi_ul_pdu() for PDU:%d\n", __FUNCTION__, i);
-    //   // handle_nfapi_ul_pdu(eNB,proc,&ul_config_pdu_list[i],curr_sfn,curr_sf,req->ul_config_request_body.srs_present);
-      
-    //   // TODO: dont have an NR function for this, also srs_present flag not there
-      
-    // } else {
-    //   NFAPI_TRACE(NFAPI_TRACE_ERROR, "%s() PDU:%i UNKNOWN type :%d\n", __FUNCTION__, i, ul_tti_pdu_list[i].pdu_type);
-    // }
-  }
-
+  nr_schedule_ul_tti_req(gNB, req);
   return 0;
 }
 
@@ -1931,6 +1756,18 @@ int nr_start_request(nfapi_pnf_config_t *config, nfapi_pnf_phy_config_t *phy, nf
   NFAPI_TRACE(NFAPI_TRACE_INFO, "[PNF] HACK - Set p7_config global ready for subframe ind%s\n", __FUNCTION__);
   p7_config_g = p7_config;
 
+  // Hack? in the config request (which comes before the start request here),
+  // we receive the SCS/mu. The PNF needs that for calculating frame/slot
+  // offsets. However, the memory for the structure which actually keeps track
+  // of the time, is only allocated here, so "pick" the SCS from memory.
+  PHY_VARS_gNB *gNB = RC.gNB[0];
+  DevAssert(gNB != NULL);
+  // check that SCS has actually been received
+  const nfapi_uint8_tlv_t *scs = &gNB->gNB_config.ssb_config.scs_common;
+  DevAssert(scs->tl.tag == NFAPI_NR_CONFIG_SCS_COMMON_TAG);
+  pnf_p7_t* pnf_p7 = (pnf_p7_t*)(p7_config);
+  pnf_p7->mu = scs->value;
+
   // Need to wait for main thread to create RU structures
   while (config_sync_var < 0) {
     usleep(5000000);
@@ -1955,7 +1792,7 @@ int nr_start_request(nfapi_pnf_config_t *config, nfapi_pnf_phy_config_t *phy, nf
   }
 
   while(sync_var<0) {
-    usleep(5000000);
+    usleep(50000);
     printf("[PNF] waiting for OAI to be started\n");
   }
 
@@ -2430,24 +2267,53 @@ void oai_subframe_ind(uint16_t sfn, uint16_t sf) {
   }
 }
 
-void handle_nr_slot_ind(uint16_t sfn, uint16_t slot) {
+#define SLOT_DURATION 800 // in microseconds
+static void maybe_slow_down_pnf(int mu)
+{
+  /* uses a usleep to wait for approximately the same time period (300 us) */
+  static struct timespec last_execution = {0};
+  struct timespec current_execution;
+  clock_gettime(CLOCK_REALTIME, &current_execution);
+  // Calculate elapsed time since last execution
+  long elapsed_time = (current_execution.tv_sec - last_execution.tv_sec) * 1000000; // Convert seconds to microseconds
+  elapsed_time += (current_execution.tv_nsec - last_execution.tv_nsec) / 1000; // Convert nanoseconds to microseconds
+  int duration = SLOT_DURATION >> mu;
+  if (elapsed_time < duration)
+    usleep(duration - elapsed_time);
+  // Update last_execution time
+  last_execution = current_execution;
+}
+
+void handle_nr_slot_ind(uint16_t sfn, uint16_t slot)
+{
+  nfapi_pnf_p7_config_t *config = p7_config_g;
+  pnf_p7_t *_this = (pnf_p7_t *)(config);
+  int mu = _this->mu;
+
+  if (IS_SOFTMODEM_RFSIM) {
+    // RFsim can run faster than realtime. However, we need to give the VNF
+    // some time to send an answer, so the PNF can run faster than realtime,
+    // but it should not too much. This function will "maybe" slow down, up to
+    // a slot length
+    maybe_slow_down_pnf(mu);
+  }
 
     //send VNF slot indication, which is aligned with TX thread, so that it can call the scheduler
-    nfapi_nr_slot_indication_scf_t *ind;
-    ind = (nfapi_nr_slot_indication_scf_t *) malloc(sizeof(nfapi_nr_slot_indication_scf_t));
-    int slot_ahead = 6;
-    uint32_t sfn_slot_tx = sfnslot_add_slot(sfn, slot, slot_ahead);
-    uint16_t sfn_tx = NFAPI_SFNSLOT2SFN(sfn_slot_tx);
-    uint8_t slot_tx = NFAPI_SFNSLOT2SLOT(sfn_slot_tx);
+    //we give four additional slots (2ms) which should be enough time for the VNF to
+    //answer
+  int slot_ahead = 2 << mu;
+  uint16_t sfn_tx = sfn;
+  uint16_t slot_tx = slot;
+  sfnslot_add_slot(mu, &sfn_tx, &slot_tx, slot_ahead); // modify: do in place
 
-    ind->sfn = sfn_tx;
-    ind->slot = slot_tx;
-    oai_nfapi_nr_slot_indication(ind); 
+  // printf("send slot indication for sfn/slot:%4d.%2d current:%4d.%2d\n", sfn_tx, slot_tx, sfn, slot);
+  nfapi_nr_slot_indication_scf_t ind = {.sfn = sfn_tx, .slot = slot_tx};
+  oai_nfapi_nr_slot_indication(&ind);
 
-    //copy data from appropriate p7 slot buffers into channel structures for PHY processing
-    nfapi_pnf_p7_slot_ind(p7_config_g, p7_config_g->phy_id, sfn, slot); 
+  // copy data from appropriate p7 slot buffers into channel structures for PHY processing
+  nfapi_pnf_p7_slot_ind(config, config->phy_id, sfn, slot);
 
-    return;
+  return;
 }
 
 int oai_nfapi_rach_ind(nfapi_rach_indication_t *rach_ind) {

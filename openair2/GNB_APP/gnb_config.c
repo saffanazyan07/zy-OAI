@@ -2202,7 +2202,7 @@ void NRRCConfig(void)
 
   // Set num of gNBs instances
   RC.nb_nr_inst = GNBSParams[GNB_ACTIVE_GNBS_IDX].numelt;
-  AssertFatal(RC.nb_nr_inst == NUMBER_OF_gNB_MAX,
+  AssertFatal(RC.nb_nr_inst <= NUMBER_OF_gNB_MAX,
               "Configuration error: RC.nb_nr_inst (%d) must equal NUMBER_OF_gNB_MAX (%d).\n"
               "Currently, only one instance of each layer (L1, L2, L3) is supported.\n"
               "Ensure that nb_nr_inst matches the maximum allowed gNB instances in this configuration.",

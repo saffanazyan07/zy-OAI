@@ -145,8 +145,8 @@ In the last lines:
 
 ## Split-related options (running in a DU)
 
-See [nFAPI documentation](../L2NFAPI.md) or [Aerial
-tutorial](../Aerial_FAPI_Split_Tutorial.md) for information about the FAPI
+See [nFAPI documentation](../nfapi.md) or [Aerial
+tutorial](../Aerial_FAPI_Split_Tutorial.md) for information about the (n)FAPI
 split.
 
 See [F1 documentation](../F1-design.md) for information about the F1 split.

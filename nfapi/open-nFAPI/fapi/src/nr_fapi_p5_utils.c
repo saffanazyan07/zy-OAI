@@ -240,18 +240,20 @@ bool eq_config_request(const nfapi_nr_config_request_scf_t *unpacked_req, const 
     EQ_TLV(unpacked_req->ssb_table.ssb_beam_id_list[i].beam_id, req->ssb_table.ssb_beam_id_list[i].beam_id);
   }
 
-  EQ_TLV(unpacked_req->tdd_table.tdd_period, req->tdd_table.tdd_period);
+  if (req->cell_config.frame_duplex_type.value == 1 /* TDD */) {
+    EQ_TLV(unpacked_req->tdd_table.tdd_period, req->tdd_table.tdd_period);
 
-  const uint8_t slotsperframe[5] = {10, 20, 40, 80, 160};
-  // Assuming always CP_Normal, because Cyclic prefix is not included in CONFIG.request 10.02, but is present in 10.04
-  uint8_t cyclicprefix = 1;
-  // 3GPP 38.211 Table 4.3.2.1 & Table 4.3.2.2
-  uint8_t number_of_symbols_per_slot = cyclicprefix ? 14 : 12;
+    const uint8_t slotsperframe[5] = {10, 20, 40, 80, 160};
+    // Assuming always CP_Normal, because Cyclic prefix is not included in CONFIG.request 10.02, but is present in 10.04
+    uint8_t cyclicprefix = 1;
+    // 3GPP 38.211 Table 4.3.2.1 & Table 4.3.2.2
+    uint8_t number_of_symbols_per_slot = cyclicprefix ? 14 : 12;
 
-  for (int i = 0; i < slotsperframe[unpacked_req->ssb_config.scs_common.value]; i++) {
-    for (int k = 0; k < number_of_symbols_per_slot; k++) {
-      EQ_TLV(unpacked_req->tdd_table.max_tdd_periodicity_list[i].max_num_of_symbol_per_slot_list[k].slot_config,
-             req->tdd_table.max_tdd_periodicity_list[i].max_num_of_symbol_per_slot_list[k].slot_config);
+    for (int i = 0; i < slotsperframe[unpacked_req->ssb_config.scs_common.value]; i++) {
+      for (int k = 0; k < number_of_symbols_per_slot; k++) {
+        EQ_TLV(unpacked_req->tdd_table.max_tdd_periodicity_list[i].max_num_of_symbol_per_slot_list[k].slot_config,
+               req->tdd_table.max_tdd_periodicity_list[i].max_num_of_symbol_per_slot_list[k].slot_config);
+      }
     }
   }
 
@@ -768,24 +770,26 @@ void copy_config_request(const nfapi_nr_config_request_scf_t *src, nfapi_nr_conf
     COPY_TLV(dst->ssb_table.ssb_beam_id_list[i].beam_id, src->ssb_table.ssb_beam_id_list[i].beam_id);
   }
 
-  COPY_TLV(dst->tdd_table.tdd_period, src->tdd_table.tdd_period);
+  if (src->cell_config.frame_duplex_type.value == 1 /* TDD */) {
+    COPY_TLV(dst->tdd_table.tdd_period, src->tdd_table.tdd_period);
 
-  const uint8_t slotsperframe[5] = {10, 20, 40, 80, 160};
-  // Assuming always CP_Normal, because Cyclic prefix is not included in CONFIG.request 10.02, but is present in 10.04
-  uint8_t cyclicprefix = 1;
-  // 3GPP 38.211 Table 4.3.2.1 & Table 4.3.2.2
-  uint8_t number_of_symbols_per_slot = cyclicprefix ? 14 : 12;
-  dst->tdd_table.max_tdd_periodicity_list = (nfapi_nr_max_tdd_periodicity_t *)malloc(slotsperframe[dst->ssb_config.scs_common.value]
-                                                                                     * sizeof(nfapi_nr_max_tdd_periodicity_t));
+    const uint8_t slotsperframe[5] = {10, 20, 40, 80, 160};
+    // Assuming always CP_Normal, because Cyclic prefix is not included in CONFIG.request 10.02, but is present in 10.04
+    uint8_t cyclicprefix = 1;
+    // 3GPP 38.211 Table 4.3.2.1 & Table 4.3.2.2
+    uint8_t number_of_symbols_per_slot = cyclicprefix ? 14 : 12;
+    dst->tdd_table.max_tdd_periodicity_list = (nfapi_nr_max_tdd_periodicity_t *)malloc(slotsperframe[dst->ssb_config.scs_common.value]
+                                                                                       * sizeof(nfapi_nr_max_tdd_periodicity_t));
 
-  for (int i = 0; i < slotsperframe[dst->ssb_config.scs_common.value]; i++) {
-    dst->tdd_table.max_tdd_periodicity_list[i].max_num_of_symbol_per_slot_list =
-        (nfapi_nr_max_num_of_symbol_per_slot_t *)malloc(number_of_symbols_per_slot * sizeof(nfapi_nr_max_num_of_symbol_per_slot_t));
-  }
-  for (int i = 0; i < slotsperframe[dst->ssb_config.scs_common.value]; i++) { // TODO check right number of slots
-    for (int k = 0; k < number_of_symbols_per_slot; k++) { // TODO can change?
-      COPY_TLV(dst->tdd_table.max_tdd_periodicity_list[i].max_num_of_symbol_per_slot_list[k].slot_config,
-               src->tdd_table.max_tdd_periodicity_list[i].max_num_of_symbol_per_slot_list[k].slot_config);
+    for (int i = 0; i < slotsperframe[dst->ssb_config.scs_common.value]; i++) {
+      dst->tdd_table.max_tdd_periodicity_list[i].max_num_of_symbol_per_slot_list =
+          (nfapi_nr_max_num_of_symbol_per_slot_t *)malloc(number_of_symbols_per_slot * sizeof(nfapi_nr_max_num_of_symbol_per_slot_t));
+    }
+    for (int i = 0; i < slotsperframe[dst->ssb_config.scs_common.value]; i++) { // TODO check right number of slots
+      for (int k = 0; k < number_of_symbols_per_slot; k++) { // TODO can change?
+        COPY_TLV(dst->tdd_table.max_tdd_periodicity_list[i].max_num_of_symbol_per_slot_list[k].slot_config,
+                 src->tdd_table.max_tdd_periodicity_list[i].max_num_of_symbol_per_slot_list[k].slot_config);
+      }
     }
   }
 
