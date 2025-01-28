@@ -323,9 +323,9 @@ void rx_prach0(PHY_VARS_eNB *eNB,
           break;
       }
 
-      dft(get_dft(fft_size), prach2, rxsigF[aa], 1);
+      dft(get_dft(fft_size), prach2, rxsigF[aa], get_dft_scaling(fft_size,ru->dft_in_levdB));
       if (prach_fmt > 1 && prach_fmt != 4)
-          dft(get_dft(fft_size), prach2 + 2 * fft_size, rxsigF[aa] + 2 * fft_size, 1);
+          dft(get_dft(fft_size), prach2 + 2 * fft_size, rxsigF[aa] + 2 * fft_size, get_dft_scaling(fft_size,ru->dft_in_levdB));
 
       k = (12*n_ra_prb) - 6*fp->N_RB_UL;
 
@@ -532,13 +532,13 @@ void rx_prach0(PHY_VARS_eNB *eNB,
         // Now do IFFT of size 1024 (N_ZC=839) or 256 (N_ZC=139)
         if (N_ZC == 839) {
           log2_ifft_size = 10;
-          idft(IDFT_1024,(int16_t*)prachF,prach_ifft_tmp,1);
+          idft(IDFT_1024,(int16_t*)prachF,prach_ifft_tmp,get_idft_scaling(1024,1));
 
           // compute energy and accumulate over receive antennas and repetitions for BR
           for (i=0; i<2048; i++)
             prach_ifft[i] += (prach_ifft_tmp[i<<1]*prach_ifft_tmp[i<<1] + prach_ifft_tmp[1+(i<<1)]*prach_ifft_tmp[1+(i<<1)])>>9;
         } else {
-          idft(IDFT_256,(int16_t*)prachF,prach_ifft_tmp,1);
+          idft(IDFT_256,(int16_t*)prachF,prach_ifft_tmp,get_idft_scaling(1024,1));
           log2_ifft_size = 8;
 
           // compute energy and accumulate over receive antennas and repetitions for BR

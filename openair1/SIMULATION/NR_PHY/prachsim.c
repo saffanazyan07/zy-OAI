@@ -760,6 +760,12 @@ int main(int argc, char **argv){
 	  }
 	}
 
+  int sigenergy=0;
+  ru->dft_in_levdB=dB_fixed(sigenergy);
+
+  for (int aarx = 0; aarx < frame_parms->nb_antennas_rx ; aarx++) {
+    sigenergy += signal_energy((int32_t *)ru->common.rxdata[aarx]+rx_prach_start,frame_parms->samples_per_subframe);
+  }
 	for (l = 0; l < frame_parms->symbols_per_slot; l++) {
 	  for (aa = 0; aa < frame_parms->nb_antennas_rx; aa++) {
 	    nr_slot_fep_ul(frame_parms,
@@ -767,7 +773,8 @@ int main(int argc, char **argv){
 			   (int32_t *)ru->common.rxdataF[aa],
 			   l,
 			   slot,
-			   ru->N_TA_offset);
+			   ru->N_TA_offset,
+         ru->dft_in_levdB);
 	  }
 	}
 	

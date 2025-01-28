@@ -358,7 +358,8 @@ void nr_256qam_llr(int32_t *rxdataF_comp, int32_t *ch_mag, int32_t *ch_mag2, int
 void freq2time(uint16_t ofdm_symbol_size, int16_t *freq_signal, int16_t *time_signal)
 {
   const idft_size_idx_t idft_size = get_idft(ofdm_symbol_size);
-  idft(idft_size, freq_signal, time_signal, 1);
+  uint32_t *scaling_sched = get_idft_scaling(ofdm_symbol_size,1);
+  idft(idft_size, freq_signal, time_signal, scaling_sched);
 }
 
 void nr_est_delay(int ofdm_symbol_size, const c16_t *ls_est, c16_t *ch_estimates_time, delay_t *delay)

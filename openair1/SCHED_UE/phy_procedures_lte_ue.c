@@ -4452,6 +4452,7 @@ int phy_procedures_UE_RX(PHY_VARS_UE *ue,
         }
 
         VCD_SIGNAL_DUMPER_DUMP_FUNCTION_BY_NAME(VCD_SIGNAL_DUMPER_FUNCTIONS_UE_SLOT_FEP, VCD_FUNCTION_IN);
+	if (l==0) ue->dft_in_levdB = -1; //trigger dft scaling adjustment
         slot_fep(ue,
                  l,
                  (subframe_rx<<1),

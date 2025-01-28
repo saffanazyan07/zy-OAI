@@ -102,7 +102,7 @@ void dump_nr_I0_stats(FILE *fd,PHY_VARS_gNB *gNB) {
      if (i%25 == 24) fprintf(fd,"\n");
     }
     fprintf(fd,"\n");
-    fprintf(fd,"max_IO = %d (%d), min_I0 = %d (%d), avg_I0 = %d dB",max_I0,amax,min_I0,amin,gNB->measurements.n0_subband_power_avg_dB);
+    fprintf(fd,"max_IO = %d (%d), min_I0 = %d (%d), avg_I0 = %d dB, dft_in_levdB %d dB",max_I0,amax,min_I0,amin,gNB->measurements.n0_subband_power_avg_dB,gNB->RU_list[0]->dft_in_levdB);
     if (gNB->frame_parms.nb_antennas_rx>1) {
        fprintf(fd,"(");
        for (int aarx=0;aarx<gNB->frame_parms.nb_antennas_rx;aarx++)

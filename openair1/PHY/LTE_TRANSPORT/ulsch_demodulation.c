@@ -130,9 +130,9 @@ void lte_idft(LTE_DL_FRAME_PARMS *frame_parms,uint32_t *z, uint16_t Msc_PUSCH) {
   dft_size_idx_t dftsize = get_dft(Msc_PUSCH);
   switch (Msc_PUSCH) {
     case 12:
-      dft(dftsize, (int16_t *)idft_in0, (int16_t *)idft_out0, 0);
-      dft(dftsize, (int16_t *)idft_in1, (int16_t *)idft_out1, 0);
-      dft(dftsize, (int16_t *)idft_in2, (int16_t *)idft_out2, 0);
+      dft(dftsize, (int16_t *)idft_in0, (int16_t *)idft_out0, (uint32_t*)0);
+      dft(dftsize, (int16_t *)idft_in1, (int16_t *)idft_out1, (uint32_t*)0);
+      dft(dftsize, (int16_t *)idft_in2, (int16_t *)idft_out2, (uint32_t*)0);
       norm128 = simde_mm_set1_epi16(9459);
 
       for (i=0; i<12; i++) {
@@ -144,9 +144,9 @@ void lte_idft(LTE_DL_FRAME_PARMS *frame_parms,uint32_t *z, uint16_t Msc_PUSCH) {
       break;
 
     default:
-      dft(dftsize, idft_in0, idft_out0, 1);
-      dft(dftsize, idft_in1, idft_out1, 1);
-      dft(dftsize, idft_in2, idft_out2, 1);
+      dft(dftsize, idft_in0, idft_out0, (uint32_t*)1);
+      dft(dftsize, idft_in1, idft_out1, (uint32_t*)1);
+      dft(dftsize, idft_in2, idft_out2, (uint32_t*)1);
   }
 
   for (i=0,ip=0; i<Msc_PUSCH; i++,ip+=4) {

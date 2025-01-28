@@ -1279,6 +1279,12 @@ void *ru_thread(void *param)
         // set the tti that was generated to busy
         rx_tti_busy[proc->tti_rx % RU_RX_SLOT_DEPTH] = true;
         ru->feprx(ru,proc->tti_rx);
+        if (ru->dft_in_levdB==-1) {
+          int sigenergy=0;
+          for (int aa=0;aa<ru->nb_rx;aa++)
+            sigenergy += signal_energy(ru->common.rxdata[aa]+fp->get_samples_slot_timestamp(proc->tti_rx,fp,0),2048);
+          ru->dft_in_levdB = dB_fixed(sigenergy)+40;
+        }
         LOG_D(NR_PHY, "Setting %d.%d (%d) to busy\n", proc->frame_rx, proc->tti_rx, proc->tti_rx % RU_RX_SLOT_DEPTH);
         //LOG_M("rxdata.m","rxs",ru->common.rxdata[0],1228800,1,1);
         LOG_D(PHY,"RU proc: frame_rx = %d, tti_rx = %d\n", proc->frame_rx, proc->tti_rx);

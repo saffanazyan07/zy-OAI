@@ -671,7 +671,7 @@ int lte_dl_channel_estimation(PHY_VARS_UE *ue,
           idft(get_idft(s),
                (int16_t *)&dl_ch_estimates[(p << 1) + aarx][8],
                (int16_t *)vars->dl_ch_estimates_time[eNB_offset][(p << 1) + aarx],
-               1);
+               get_idft_scaling(s,1));
         }
       }
   }

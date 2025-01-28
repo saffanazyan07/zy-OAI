@@ -256,6 +256,12 @@ void DL_channel(RU_t *ru,PHY_VARS_UE *UE,uint subframe,int awgn_flag,double SNR,
         (short) (r_im[aa][i] + (iqim*r_re[aa][i]) + sqrt(sigma2/2)*gaussdouble(0.0,1.0));
     }
   }
+ 
+  int sigenergy=0;
+  for (aa=0;aa<UE->frame_parms.nb_antennas_rx; aa++) {
+     sigenergy+=signal_energy((int32_t*)(UE->common_vars.rxdata[aa]+subframe*UE->frame_parms.samples_per_tti),UE->frame_parms.samples_per_tti);
+  }
+  UE->dft_in_levdB = dB_fixed(sigenergy);
 }
 
 uint16_t

@@ -548,6 +548,7 @@ typedef struct PHY_VARS_NR_UE_s {
   Actor_t dl_actors[NUM_DL_ACTORS];
   Actor_t ul_actor;
   ntn_config_message_t* ntn_config_message;
+  int32_t dft_in_levdB;
 } PHY_VARS_NR_UE;
 
 typedef struct {

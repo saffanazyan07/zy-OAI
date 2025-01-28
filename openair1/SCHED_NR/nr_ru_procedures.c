@@ -363,7 +363,8 @@ void nr_fep(void* arg)
                      &ru->common.rxdataF[aid][offset],
                      l,
                      tti_rx,
-                     ru->N_TA_offset);
+                     ru->N_TA_offset,
+                     ru->dft_in_levdB);
   VCD_SIGNAL_DUMPER_DUMP_FUNCTION_BY_NAME(VCD_SIGNAL_DUMPER_FUNCTIONS_PHY_PROCEDURES_RU_FEPRX+aid, 0);
 
   // Task completed in //

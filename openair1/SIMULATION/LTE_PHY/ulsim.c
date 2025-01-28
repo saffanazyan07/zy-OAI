@@ -1142,6 +1142,11 @@ int main(int argc, char **argv) {
                                   &ru->common.rxdata[0][(eNB->frame_parms.samples_per_tti<<1) -eNB->frame_parms.ofdm_symbol_size],
                                   OFDM_SYMBOL_SIZE_COMPLEX_SAMPLES/2)) - 1)+10*log10(eNB->frame_parms.N_RB_UL/nb_rb);
 
+          int sigenergy=0;
+          for (aa=0;aa<eNB->frame_parms.nb_antennas_rx; aa++) {
+             sigenergy+=signal_energy((int32_t*)(ru->common.rxdata[aa]+subframe*eNB->frame_parms.samples_per_tti),eNB->frame_parms.samples_per_tti);
+          }
+          ru->dft_in_levdB = dB_fixed(sigenergy);
           if (n_frames<=10) {
             printf("SNRmeas %f\n",SNRmeas);
             LOG_M("rxsig0UL.m","rxs0", &ru->common.rxdata[0][eNB->frame_parms.samples_per_tti*subframe],eNB->frame_parms.samples_per_tti,1,1);

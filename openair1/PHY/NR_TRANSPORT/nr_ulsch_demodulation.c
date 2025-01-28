@@ -35,7 +35,7 @@ void nr_idft(int32_t *z, uint32_t Msc_PUSCH)
   dft_size_idx_t dftsize = get_dft(Msc_PUSCH);
   switch (Msc_PUSCH) {
     case 12:
-      dft(dftsize, (int16_t *)idft_in0, (int16_t *)idft_out0, 0);
+      dft(dftsize, (int16_t *)idft_in0, (int16_t *)idft_out0, (uint32_t*)0);
 
       norm128 = simde_mm_set1_epi16(9459);
 
@@ -45,7 +45,7 @@ void nr_idft(int32_t *z, uint32_t Msc_PUSCH)
 
       break;
     default:
-      dft(dftsize, idft_in0, idft_out0, 1);
+      dft(dftsize, idft_in0, idft_out0, (uint32_t*)1);
       break;
   }
 

@@ -749,7 +749,7 @@ int lte_dl_mbsfn_channel_estimation(PHY_VARS_UE *ue,
            (int16_t *)&tmp[8],
            (int16_t *)ue->common_vars.common_vars_rx_data_per_thread[ue->current_thread_id[subframe]]
                .dl_ch_estimates_time[eNB_offset][aa],
-           1);
+           get_idft_scaling(len,1));
     }
   }
   return(0);
@@ -918,7 +918,7 @@ int lte_dl_mbsfn_khz_1dot25_channel_estimation(PHY_VARS_UE *ue,
         idft(get_idft(len),
              (int16_t *)&tmp[8],
              (int16_t *)ue->common_vars.common_vars_rx_data_per_thread[ue->current_thread_id[subframe]].dl_ch_estimates_time[0][aa],
-             1);
+             get_idft_scaling(len,1));
     }
   }
   return(0);

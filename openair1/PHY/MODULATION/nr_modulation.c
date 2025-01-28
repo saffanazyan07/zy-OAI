@@ -344,7 +344,8 @@ void nr_dft(c16_t *z, c16_t *d, uint32_t Msc_PUSCH)
   dft_size_idx_t dftsize = get_dft(Msc_PUSCH);
   switch (Msc_PUSCH) {
     case 12:
-      dft(dftsize, (int16_t *)dft_in0, (int16_t *)dft_out0, 0);
+      dft(DFT_12,(int16_t *)dft_in0, (int16_t *)dft_out0, (uint32_t*)0);
+
       norm128 = simde_mm_set1_epi16(9459);
       for (i = 0; i < 12; i++) {
         ((simde__m128i *)dft_out0)[i] = simde_mm_slli_epi16(simde_mm_mulhi_epi16(((simde__m128i *)dft_out0)[i], norm128), 1);
@@ -352,7 +353,7 @@ void nr_dft(c16_t *z, c16_t *d, uint32_t Msc_PUSCH)
 
       break;
     default:
-      dft(dftsize, (int16_t *)dft_in0, (int16_t *)dft_out0, 1);
+      dft(dftsize, (int16_t *)dft_in0, (int16_t *)dft_out0, (uint32_t*)1);
       break;
   }
 

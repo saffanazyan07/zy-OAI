@@ -69,7 +69,7 @@ int lte_est_timing_advance(LTE_DL_FRAME_PARMS *frame_parms,
         break;
       }
        if (len)
-      dft(get_dft(len), (int16_t *)lte_eNB_srs->srs_ch_estimates[aa], (int16_t *)lte_eNB_srs->srs_ch_estimates_time[aa], 1);
+      dft(get_dft(len), (int16_t *)lte_eNB_srs->srs_ch_estimates[aa], (int16_t *)lte_eNB_srs->srs_ch_estimates_time[aa], get_dft_scaling(len,0));
 #ifdef DEBUG_PHY
       sprintf(fname,"srs_ch_estimates_time_%d%d.m",ind,aa);
       sprintf(vname,"srs_time_%d%d",ind,aa);

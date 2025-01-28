@@ -78,6 +78,7 @@ void nr_ue_layer_mapping(const c16_t *mod_symbs, const int n_layers, const int n
 \param symbol symbol within slot (0..12/14)
 \param Ns Slot number (0..19)
 \param sample_offset offset within rxdata (points to beginning of subframe)
+\param levdB Input level to select scaling of dft in OFDM demod
 */
 
 int nr_slot_fep_ul(NR_DL_FRAME_PARMS *frame_parms,
@@ -85,7 +86,8 @@ int nr_slot_fep_ul(NR_DL_FRAME_PARMS *frame_parms,
                    int32_t *rxdataF,
                    unsigned char symbol,
                    unsigned char Ns,
-                   int sample_offset);
+                   int sample_offset,
+                   uint32_t levdB);
 
 /*!
 \brief This function implements the dft transform precoding in PUSCH

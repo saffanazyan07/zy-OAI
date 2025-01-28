@@ -1815,6 +1815,12 @@ static void *ru_thread( void *param ) {
 
         // do RX front-end processing (frequency-shift, dft) if needed
         if (ru->feprx) ru->feprx(ru, proc->tti_rx);
+        if (ru->dft_in_levdB==-1) {
+              int sigenergy=0;
+              for (int aa=0;aa<ru->nb_rx;aa++)
+                 sigenergy += signal_energy(ru->common.rxdata[aa]+proc->tti_rx*ru->frame_parms->samples_per_tti,2048);
+              ru->dft_in_levdB = dB_fixed(sigenergy)+30;
+        }
 
         // wakeup all eNB processes waiting for this RU
         AssertFatal((ret=pthread_mutex_lock(&proc->mutex_eNBs))==0,"mutex_lock returns %d\n",ret);

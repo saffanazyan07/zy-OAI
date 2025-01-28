@@ -181,6 +181,7 @@ int phy_init_RU(RU_t *ru) {
   } // !=IF5
 
   ru->common.sync_corr = (uint32_t *)malloc16_clear( LTE_NUMBER_OF_SUBFRAMES_PER_FRAME*sizeof(uint32_t)*fp->samples_per_tti );
+  ru->dft_in_levdB = -1;
   return(0);
 }
 

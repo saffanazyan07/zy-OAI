@@ -131,6 +131,7 @@ int nr_phy_init_RU(RU_t *ru)
 
   init_prach_ru_list(ru);
 
+  ru->dft_in_levdB = -1;
   return(0);
 }
 

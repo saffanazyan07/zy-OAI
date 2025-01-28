@@ -240,7 +240,7 @@ int32_t lte_ul_channel_estimation(LTE_DL_FRAME_PARMS *frame_parms,
           LOG_E(PHY, "Unknown N_RB_DL %d\n", frame_parms->N_RB_DL);
           return -1;
       }
-      idft(get_idft(len), (int16_t *)temp_in_ifft_0, (int16_t *)ul_ch_estimates_time[aa], 1);
+      idft(get_idft(len), (int16_t *)temp_in_ifft_0, (int16_t *)ul_ch_estimates_time[aa], get_idft_scaling(len,1));
 #if T_TRACER
 
       if (aa == 0)
@@ -511,7 +511,7 @@ int32_t lte_ul_channel_estimation_RRU(LTE_DL_FRAME_PARMS *frame_parms,
           LOG_E(PHY, "Unknown N_RB_DL %d\n", frame_parms->N_RB_DL);
           return -1;
       }
-      idft(get_idft(len), (int16_t *)temp_in_ifft_0, (int16_t *)ul_ch_estimates_time[aa], 1);
+      idft(get_idft(len), (int16_t *)temp_in_ifft_0, (int16_t *)ul_ch_estimates_time[aa], get_idft_scaling(len,1));
 #if T_TRACER
 
       if (aa == 0)

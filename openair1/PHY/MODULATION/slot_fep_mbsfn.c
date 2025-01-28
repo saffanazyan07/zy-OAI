@@ -84,7 +84,7 @@ int slot_fep_mbsfn(PHY_VARS_UE *ue,
                                               nb_prefix_samples0 +
                                               subframe_offset -
                                               SOFFSET) % frame_length_samples],
-          (int16_t *)&common_vars->common_vars_rx_data_per_thread[ue->current_thread_id[subframe]].rxdataF[aa][frame_parms->ofdm_symbol_size*l],1);
+          (int16_t *)&common_vars->common_vars_rx_data_per_thread[ue->current_thread_id[subframe]].rxdataF[aa][frame_parms->ofdm_symbol_size*l],get_dft_scaling(s,ue->dft_in_levdB));
       stop_UE_TIMING(ue->rx_dft_stats);
     } else {
       if ((sample_offset +
@@ -102,7 +102,7 @@ int slot_fep_mbsfn(PHY_VARS_UE *ue,
                                               (frame_parms->ofdm_symbol_size+nb_prefix_samples)*(l-1) +
                                               subframe_offset-
                                               SOFFSET) % frame_length_samples],
-          (int16_t *)&common_vars->common_vars_rx_data_per_thread[ue->current_thread_id[subframe]].rxdataF[aa][frame_parms->ofdm_symbol_size*l],1);
+          (int16_t *)&common_vars->common_vars_rx_data_per_thread[ue->current_thread_id[subframe]].rxdataF[aa][frame_parms->ofdm_symbol_size*l],get_dft_scaling(s,ue->dft_in_levdB));
       stop_UE_TIMING(ue->rx_dft_stats);
     }
   }
@@ -223,7 +223,7 @@ int slot_fep_mbsfn_khz_1dot25(PHY_VARS_UE *ue,
                                             nb_prefix_samples +
                                             subframe_offset -
                                             SOFFSET) % frame_length_samples],
-        (int16_t *)&common_vars->common_vars_rx_data_per_thread[ue->current_thread_id[subframe]].rxdataF[aa][0],1);
+        (int16_t *)&common_vars->common_vars_rx_data_per_thread[ue->current_thread_id[subframe]].rxdataF[aa][0],get_dft_scaling(ofdm_symbol_size,ue->dft_in_levdB));
     stop_UE_TIMING(ue->rx_dft_stats);
   }
 

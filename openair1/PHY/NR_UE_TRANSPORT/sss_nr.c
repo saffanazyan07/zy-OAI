@@ -169,7 +169,7 @@ void insert_sss_nr(int16_t *sss_time,
   idft(IDFT_2048,
        (int16_t *)synchroF_tmp, /* complex input */
        (int16_t *)synchro_tmp, /* complex output */
-       1); /* scaling factor */
+       IDFT_SCALING_2048[1]); /* scaling factor */
 
   /* then get final sss in time */
   memcpy(sss_time, synchro_tmp, ofdm_symbol_size * sizeof(c16_t));

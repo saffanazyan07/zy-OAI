@@ -86,6 +86,12 @@ int nr_slot_fep(PHY_VARS_NR_UE *ue,
   Ns, symbol, nb_prefix_samples, nb_prefix_samples0, rx_offset, dB_fixed(signal_energy((int32_t *)&common_vars->rxdata[0][rx_offset],frame_parms->ofdm_symbol_size)));
 #endif
 
+  uint32_t *scaling_sched=NULL;
+
+  if (ue && ue->dft_in_levdB >=0)  
+    scaling_sched = get_dft_scaling(frame_parms->ofdm_symbol_size,ue->dft_in_levdB);
+  
+  uint32_t sigenergy_avg=0;
   for (unsigned char aa=0; aa<frame_parms->nb_antennas_rx; aa++) {
     int16_t *rxdata_ptr = (int16_t *)&rxdata[aa][rx_offset];
 
@@ -110,18 +116,25 @@ int nr_slot_fep(PHY_VARS_NR_UE *ue,
 
     if (ue)
       start_meas_nr_ue_phy(ue, RX_DFT_STATS);
-
+    else 
+      scaling_sched = get_dft_scaling(frame_parms->ofdm_symbol_size,dB_fixed(signal_energy((int32_t*)rxdata_ptr,dftsize)));
+  
+    if (ue && ue->dft_in_levdB < 0) { // this means dft scaling level needs to be recomputed
+      uint32_t sigenergy= signal_energy((int32_t*)rxdata_ptr,dftsize);
+      scaling_sched = get_dft_scaling(frame_parms->ofdm_symbol_size,dB_fixed(sigenergy));
+      sigenergy_avg += sigenergy/frame_parms->nb_antennas_rx; 
+    }
     dft(dftsize,
         rxdata_ptr,
         (int16_t *)&rxdataF[aa][frame_parms->ofdm_symbol_size*symbol],
-        1);
+        scaling_sched);
 
     if (ue)
       stop_meas_nr_ue_phy(ue, RX_DFT_STATS);
 
     apply_nr_rotation_RX(frame_parms, rxdataF[aa], frame_parms->symbol_rotation[linktype], slot, N_RB, 0, symbol, 1);
   }
-
+  if (ue && ue->dft_in_levdB < 0) ue->dft_in_levdB = dB_fixed(sigenergy_avg) + 20;
 #ifdef DEBUG_FEP
   printf("slot_fep: done\n");
 #endif
@@ -134,12 +147,14 @@ int nr_slot_fep_ul(NR_DL_FRAME_PARMS *frame_parms,
                    int32_t *rxdataF,
                    unsigned char symbol,
                    unsigned char Ns,
-                   int sample_offset)
+                   int sample_offset,
+                   uint32_t levdB)
 {
   unsigned int nb_prefix_samples  = frame_parms->nb_prefix_samples;
   unsigned int nb_prefix_samples0 = frame_parms->nb_prefix_samples0;
 
   dft_size_idx_t dftsize = get_dft(frame_parms->ofdm_symbol_size);
+  uint32_t *scaling_sched = get_dft_scaling(frame_parms->ofdm_symbol_size,levdB);
   // This is for misalignment issues
   int32_t tmp_dft_in[8192] __attribute__ ((aligned (32)));
 
@@ -183,7 +198,7 @@ int nr_slot_fep_ul(NR_DL_FRAME_PARMS *frame_parms,
   dft(dftsize,
       rxdata_ptr,
       (int16_t *)&rxdataF[symbol * frame_parms->ofdm_symbol_size],
-      1);
+      scaling_sched);
 
   return 0;
 }

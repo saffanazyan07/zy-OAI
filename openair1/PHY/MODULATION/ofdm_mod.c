@@ -137,6 +137,7 @@ void PHY_ofdm_mod(const int *input, /// pointer to complex input
     return;
 
   idft_size_idx_t idft_size = get_idft(fftsize);
+  uint32_t *scaling_sched = get_idft_scaling(fftsize,0);
 
 #ifdef DEBUG_OFDM_MOD
   printf("[PHY] OFDM mod (size %d,prefix %d) Symbols %d, input %p, output %p\n",
@@ -169,11 +170,11 @@ void PHY_ofdm_mod(const int *input, /// pointer to complex input
         // Current idft implementation uses AVX-256: Check if buffer is already aligned to 256 bits (32 bytes)
         if ((uintptr_t)output_ptr % 32 == 0) {
           // output ptr is aligned, do ifft inplace
-          idft(idft_size, (int16_t *)&input[i * fftsize], (int16_t *)output_ptr, 1);
+          idft(idft_size, (int16_t *)&input[i * fftsize], (int16_t *)output_ptr, scaling_sched);
         } else {
           // output ptr is not aligned, needs an extra memcpy
           c16_t temp[fftsize] __attribute__((aligned(IDFT_OUTPUT_BUFFER_ALIGNMENT)));
-          idft(idft_size, (int16_t *)&input[i * fftsize], (int16_t *)temp, 1);
+          idft(idft_size, (int16_t *)&input[i * fftsize], (int16_t *)temp, scaling_sched);
           memcpy((void *)output_ptr, (void *)temp, sizeof(temp));
         }
         // perform cyclic prefix insertion
@@ -184,7 +185,7 @@ void PHY_ofdm_mod(const int *input, /// pointer to complex input
       case CYCLIC_SUFFIX: {
         // Use alignment of 64 bytes
         c16_t temp[fftsize] __attribute__((aligned(IDFT_OUTPUT_BUFFER_ALIGNMENT)));
-        idft(idft_size, (int16_t *)&input[i * fftsize], (int16_t *)temp, 1);
+        idft(idft_size, (int16_t *)&input[i * fftsize], (int16_t *)temp, scaling_sched);
         int *output_ptr = &output[(i * fftsize) + (i * nb_prefix_samples)];
         memcpy(output_ptr, temp, sizeof(temp));
         memcpy(&output_ptr[fftsize], temp, nb_prefix_samples * sizeof(c16_t));
@@ -197,7 +198,7 @@ void PHY_ofdm_mod(const int *input, /// pointer to complex input
 
       case NONE: {
         c16_t temp[fftsize] __attribute__((aligned(IDFT_OUTPUT_BUFFER_ALIGNMENT)));
-        idft(idft_size, (int16_t *)&input[i * fftsize], (int16_t *)temp, 1);
+        idft(idft_size, (int16_t *)&input[i * fftsize], (int16_t *)temp, scaling_sched);
         int *output_ptr = &output[i * fftsize];
         memcpy(output_ptr, temp, sizeof(temp));
         break;

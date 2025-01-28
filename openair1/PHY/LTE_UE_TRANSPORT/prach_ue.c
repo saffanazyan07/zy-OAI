@@ -356,12 +356,12 @@ int32_t generate_prach( PHY_VARS_UE *ue, uint8_t eNB_id, uint8_t subframe, uint1
       break;
   }
   if (prach_fmt == 4) {
-    idft(get_idft(len), prachF, prach2, 1);
+    idft(get_idft(len), prachF, prach2, get_idft_scaling(len,0));
     // TODO: account for repeated format in dft output
     memmove(prach, prach + 2 * len, Ncp << 2);
     prach_len = len + Ncp;
   } else {
-    idft(get_idft(len), prachF, prach2, 1);
+    idft(get_idft(len), prachF, prach2, get_idft_scaling(len,0));
     memmove(prach, prach + 2 * len, Ncp << 2);
     prach_len = len + Ncp;
     if (prach_fmt > 1) {

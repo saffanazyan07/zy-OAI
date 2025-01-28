@@ -100,9 +100,9 @@ void dft_lte(int32_t *z,struct complex16 *input, int32_t Msc_PUSCH, uint8_t Nsym
 
   switch (Msc_PUSCH) {
   case 12:
-    dft(dftsize, (int16_t *)dft_in0, (int16_t *)dft_out0, 0);
-    dft(dftsize, (int16_t *)dft_in1, (int16_t *)dft_out1, 0);
-    dft(dftsize, (int16_t *)dft_in2, (int16_t *)dft_out2, 0);
+    dft(dftsize, (int16_t *)dft_in0, (int16_t *)dft_out0, (uint32_t*)0);
+    dft(dftsize, (int16_t *)dft_in1, (int16_t *)dft_out1, (uint32_t*)0);
+    dft(dftsize, (int16_t *)dft_in2, (int16_t *)dft_out2, (uint32_t*)0);
     norm128 = simde_mm_set1_epi16(9459);
     for (i = 0; i < 12; i++) {
       ((simde__m128i *)dft_out0)[i] = simde_mm_slli_epi16(simde_mm_mulhi_epi16(((simde__m128i *)dft_out0)[i], norm128), 1);
@@ -113,9 +113,9 @@ void dft_lte(int32_t *z,struct complex16 *input, int32_t Msc_PUSCH, uint8_t Nsym
     break;
 
   default:
-    dft(dftsize, (int16_t *)dft_in0, (int16_t *)dft_out0, 1);
-    dft(dftsize, (int16_t *)dft_in1, (int16_t *)dft_out1, 1);
-    dft(dftsize, (int16_t *)dft_in2, (int16_t *)dft_out2, 1);
+    dft(dftsize, (int16_t *)dft_in0, (int16_t *)dft_out0, (uint32_t*)1);
+    dft(dftsize, (int16_t *)dft_in1, (int16_t *)dft_out1, (uint32_t*)1);
+    dft(dftsize, (int16_t *)dft_in2, (int16_t *)dft_out2, (uint32_t*)1);
     break;
   }
 

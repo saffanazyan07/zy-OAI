@@ -877,6 +877,7 @@ int pbch_pdcch_processing(PHY_VARS_NR_UE *ue, const UE_nr_rxtx_proc_t *proc, nr_
           __attribute__ ((aligned(32))) struct complex16 dl_ch_estimates_time[fp->nb_antennas_rx][fp->ofdm_symbol_size];
 
           for (int i=1; i<4; i++) {
+            if (i==1) ue->dft_in_levdB=-1; // trigger recalculation of DFT scaling 
             nr_slot_fep(ue,
                         fp,
                         proc->nr_slot_rx,

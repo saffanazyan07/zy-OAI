@@ -663,6 +663,7 @@ typedef struct RU_t_s {
   /// number of cores for RU ThreadPool
   int num_tpcores;
   void* scopeData;
+  int32_t dft_in_levdB;
 } RU_t;
 
 
