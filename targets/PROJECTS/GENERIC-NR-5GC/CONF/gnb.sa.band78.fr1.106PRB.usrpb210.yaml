@@ -19,6 +19,7 @@ gNBs:
     # Physical parameters:
     do_CSIRS: 1
     do_SRS: 1
+    #uess_agg_levels: [0,1,1,1,1]
     servingCellConfigCommon:
         #spCellConfigCommon
       - physCellId: 0

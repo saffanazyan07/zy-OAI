@@ -122,6 +122,9 @@ static const uint16_t cqi_table3[16][2] = {{0, 0},
                                            {6, 6660},
                                            {6, 7720}};
 
+static void determine_aggregation_level_search_order(int agg_level_search_order[NUM_PDCCH_AGG_LEVELS],
+                                                     float pdcch_cl_adjust);
+
 uint8_t get_dl_nrOfLayers(const NR_UE_sched_ctrl_t *sched_ctrl,
                           const nr_dci_format_t dci_format) {
 
@@ -553,15 +556,18 @@ int get_cce_index(const gNB_MAC_INST *nrmac,
                   const NR_SearchSpace_t *ss,
                   const NR_ControlResourceSet_t *coreset,
                   NR_sched_pdcch_t *sched_pdcch,
-                  bool is_common)
+                  bool is_common,
+                  float pdcch_cl_adjust)
 {
-
   const uint32_t Y = is_common ? 0 : get_Y(ss, slot, rnti);
   uint8_t nr_of_candidates;
-  for (int i = 0; i < 5; i++) {
-    // for now taking the lowest value among the available aggregation levels
-    find_aggregation_candidates(aggregation_level, &nr_of_candidates, ss, 1 << i);
-    if(nr_of_candidates > 0)
+
+  int agg_level_search_order[NUM_PDCCH_AGG_LEVELS];
+  determine_aggregation_level_search_order(agg_level_search_order, pdcch_cl_adjust);
+
+  for (int i = 0; i < NUM_PDCCH_AGG_LEVELS; i++) {
+    find_aggregation_candidates(aggregation_level, &nr_of_candidates, ss, 1 << agg_level_search_order[i]);
+    if (nr_of_candidates > 0)
       break;
   }
   int CCEIndex = find_pdcch_candidate(nrmac, CC_id, *aggregation_level, nr_of_candidates, beam_idx, sched_pdcch, coreset, Y);
@@ -2494,6 +2500,7 @@ NR_UE_info_t *add_new_nr_ue(gNB_MAC_INST *nr_mac, rnti_t rntiP, NR_CellGroupConf
   sched_ctrl->ta_update = 31;
   sched_ctrl->sched_srs.frame = -1;
   sched_ctrl->sched_srs.slot = -1;
+  sched_ctrl->pdcch_cl_adjust = 0;
 
   // initialize LCID structure
   seq_arr_init(&sched_ctrl->lc_config, sizeof(nr_lc_config_t));
@@ -3527,4 +3534,32 @@ bool nr_mac_get_new_rnti(NR_UEs_t *UEs, const NR_RA_t *ra_base, int ra_count, rn
     loop++;
   } while (loop < 100 && (exist_connected_ue || exist_in_pending_ra_ue));
   return loop < 100; // nothing found: loop count 100
+}
+
+/// @brief Orders PDCCH aggregation levels so that we first check desired aggregation level according to
+///        pdcch_cl_adjust
+/// @param agg_level_search_order in/out 5-element array of aggregation levels from 0 to 4
+/// @param pdcch_cl_adjust value from 0 to 1 indication channel impariments (0 - good channel, 1 - bad channel)
+static void determine_aggregation_level_search_order(int agg_level_search_order[NUM_PDCCH_AGG_LEVELS], float pdcch_cl_adjust)
+{
+  int desired_agg_level_index = round(4 * pdcch_cl_adjust);
+  int agg_level_search_index = 0;
+  for (int i = desired_agg_level_index; i < NUM_PDCCH_AGG_LEVELS; i++) {
+    agg_level_search_order[agg_level_search_index++] = i;
+  }
+  for (int i = desired_agg_level_index - 1; i >= 0; i--) {
+    agg_level_search_order[agg_level_search_index++] = i;
+  }
+}
+
+/// @brief Update PDCCH closed loop adjust for UE depending on detection of feedback.
+/// @param sched_ctrl UE scheduling control info
+/// @param feedback_not_detected Whether feedback (PUSCH or HARQ) was detected
+void nr_mac_update_pdcch_closed_loop_adjust(NR_UE_sched_ctrl_t *sched_ctrl, bool feedback_not_detected)
+{
+  if (feedback_not_detected) {
+    sched_ctrl->pdcch_cl_adjust = min(1, sched_ctrl->pdcch_cl_adjust + 0.05);
+  } else {
+    sched_ctrl->pdcch_cl_adjust = max(0, sched_ctrl->pdcch_cl_adjust - 0.01);
+  }
 }

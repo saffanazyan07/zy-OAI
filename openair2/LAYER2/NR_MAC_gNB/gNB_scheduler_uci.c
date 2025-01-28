@@ -785,6 +785,7 @@ void handle_nr_uci_pucch_0_1(module_id_t mod_id,
       const int8_t pid = sched_ctrl->feedback_dl_harq.head;
       remove_front_nr_list(&sched_ctrl->feedback_dl_harq);
       LOG_D(NR_MAC,"%4d.%2d bit %d pid %d ack/nack %d\n",frame, slot, harq_bit,pid,harq_value);
+      nr_mac_update_pdcch_closed_loop_adjust(sched_ctrl, harq_confidence != 0);
       handle_dl_harq(UE, pid, harq_value == 0 && harq_confidence == 0, nrmac->dl_bler.harq_round_max);
       if (!UE->Msg4_MsgB_ACKed && harq_value == 0 && harq_confidence == 0)
         UE->Msg4_MsgB_ACKed = true;

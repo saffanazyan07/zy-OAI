@@ -523,6 +523,19 @@ void get_coreset_rballoc(uint8_t *FreqDomainResource,int *n_rb,int *rb_offset) {
   *n_rb = 6*count;
 }
 
+int get_coreset_num_cces(uint8_t *FreqDomainResource, int duration) {
+  int num_rbs;
+  int rb_offset;
+  get_coreset_rballoc(FreqDomainResource, &num_rbs, &rb_offset);
+  int re_per_rb = 12;
+  int total_resource_elements = num_rbs * duration * re_per_rb;
+  int re_per_reg = 12;
+  int total_resource_element_groups = total_resource_elements / re_per_reg;
+  int reg_per_cce = 6;
+  int total_cces = total_resource_element_groups / reg_per_cce;
+  return total_cces;
+}
+
 int get_nb_periods_per_frame(uint8_t tdd_period)
 {
 
