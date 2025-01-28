@@ -1,0 +1,4 @@
+add_executable(test_shm_iq_channel test_shm_iq_channel.c)
+target_link_libraries(test_shm_iq_channel shm_iq_channel minimal_lib)
+add_dependencies(tests test_shm_iq_channel)
+add_test(test_shm_iq_channel ./test_shm_iq_channel)
