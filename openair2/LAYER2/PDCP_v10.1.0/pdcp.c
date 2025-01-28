@@ -143,6 +143,7 @@ pthread_t pdcp_stats_thread_desc;
  * \param[in]  kRRCenc            RRC encryption key
  * \param[in]  kRRCint            RRC integrity key
  * \param[in]  kUPenc             User-Plane encryption key
+ * \param[in]  reestablisment_on_going  status to know if reestablisment is on going
  * \return     A status about the processing, OK or error code.
  */
 static bool pdcp_config_req_asn1(const protocol_ctxt_t *const ctxt_pP,
@@ -159,7 +160,8 @@ static bool pdcp_config_req_asn1(const protocol_ctxt_t *const ctxt_pP,
                                  const uint8_t security_modeP,
                                  uint8_t *const kRRCenc_pP,
                                  uint8_t *const kRRCint_pP,
-                                 uint8_t *const kUPenc_pP);
+                                 uint8_t *const kUPenc_pP,
+                                 bool reestablisment_on_going);
 
 void *pdcp_stats_thread(void *param) {
 
@@ -1409,17 +1411,17 @@ bool pdcp_remove_UE(const protocol_ctxt_t *const  ctxt_pP)
 
 
 //-----------------------------------------------------------------------------
-bool
-rrc_pdcp_config_asn1_req(const protocol_ctxt_t *const  ctxt_pP,
-                         LTE_SRB_ToAddModList_t  *const srb2add_list_pP,
-                         LTE_DRB_ToAddModList_t  *const drb2add_list_pP,
-                         LTE_DRB_ToReleaseList_t *const drb2release_list_pP,
-                         const uint8_t                   security_modeP,
-                         uint8_t                  *const kRRCenc_pP,
-                         uint8_t                  *const kRRCint_pP,
-                         uint8_t                  *const kUPenc_pP,
-                         LTE_PMCH_InfoList_r9_t  *const pmch_InfoList_r9_pP,
-                         rb_id_t                 *const defaultDRB)
+bool rrc_pdcp_config_asn1_req(const protocol_ctxt_t *const ctxt_pP,
+                              LTE_SRB_ToAddModList_t *const srb2add_list_pP,
+                              LTE_DRB_ToAddModList_t *const drb2add_list_pP,
+                              LTE_DRB_ToReleaseList_t *const drb2release_list_pP,
+                              const uint8_t security_modeP,
+                              uint8_t *const kRRCenc_pP,
+                              uint8_t *const kRRCint_pP,
+                              uint8_t *const kUPenc_pP,
+                              LTE_PMCH_InfoList_r9_t *const pmch_InfoList_r9_pP,
+                              rb_id_t *const defaultDRB,
+                              const rnti_t previous_rnti_for_reestab)
 //-----------------------------------------------------------------------------
 {
   long int        lc_id          = 0;
@@ -1437,13 +1439,17 @@ rrc_pdcp_config_asn1_req(const protocol_ctxt_t *const  ctxt_pP,
   LTE_SRB_ToAddMod_t *srb_toaddmod_p = NULL;
   LTE_DRB_ToAddMod_t *drb_toaddmod_p = NULL;
   pdcp_t         *pdcp_p         = NULL;
+  pdcp_t *pdcp_p_previous = NULL;
   hash_key_t      key            = HASHTABLE_NOT_A_KEY_VALUE;
+  hash_key_t key_previous = HASHTABLE_NOT_A_KEY_VALUE;
   hashtable_rc_t  h_rc;
+  hashtable_rc_t h_rc_previous;
   hash_key_t      key_defaultDRB = HASHTABLE_NOT_A_KEY_VALUE;
   hashtable_rc_t  h_defaultDRB_rc;
   int i,j;
   LTE_MBMS_SessionInfoList_r9_t *mbms_SessionInfoList_r9_p = NULL;
   LTE_MBMS_SessionInfo_r9_t     *MBMS_SessionInfo_p        = NULL;
+  bool reestablishment_ongoing = previous_rnti_for_reestab == NOT_A_RNTI ? false : true;
   LOG_T(PDCP, PROTOCOL_CTXT_FMT" %s() SRB2ADD %p DRB2ADD %p DRB2RELEASE %p\n",
         PROTOCOL_CTXT_ARGS(ctxt_pP),
         __FUNCTION__,
@@ -1496,44 +1502,44 @@ rrc_pdcp_config_asn1_req(const protocol_ctxt_t *const  ctxt_pP,
                 break;
 
               default:
-                pdcp_config_req_asn1 (
-                  ctxt_pP,
-                  pdcp_p,
-                  SRB_FLAG_YES,
-                  rlc_type,
-                  action,
-                  lc_id,
-                  mch_id,
-                  srb_id,
-                  srb_sn,
-                  0, // drb_report
-                  0, // header compression
-                  security_modeP,
-                  kRRCenc_pP,
-                  kRRCint_pP,
-                  kUPenc_pP);
+                pdcp_config_req_asn1(ctxt_pP,
+                                     pdcp_p,
+                                     SRB_FLAG_YES,
+                                     rlc_type,
+                                     action,
+                                     lc_id,
+                                     mch_id,
+                                     srb_id,
+                                     srb_sn,
+                                     0, // drb_report
+                                     0, // header compression
+                                     security_modeP,
+                                     kRRCenc_pP,
+                                     kRRCint_pP,
+                                     kUPenc_pP,
+                                     reestablishment_ongoing);
                 break;
             }
 
             break;
 
           case LTE_SRB_ToAddMod__rlc_Config_PR_defaultValue:
-            pdcp_config_req_asn1 (
-              ctxt_pP,
-              pdcp_p,
-              SRB_FLAG_YES,
-              rlc_type,
-              action,
-              lc_id,
-              mch_id,
-              srb_id,
-              srb_sn,
-              0, // drb_report
-              0, // header compression
-              security_modeP,
-              kRRCenc_pP,
-              kRRCint_pP,
-              kUPenc_pP);
+            pdcp_config_req_asn1(ctxt_pP,
+                                 pdcp_p,
+                                 SRB_FLAG_YES,
+                                 rlc_type,
+                                 action,
+                                 lc_id,
+                                 mch_id,
+                                 srb_id,
+                                 srb_sn,
+                                 0, // drb_report
+                                 0, // header compression
+                                 security_modeP,
+                                 kRRCenc_pP,
+                                 kRRCint_pP,
+                                 kUPenc_pP,
+                                 reestablishment_ongoing);
             // already the default values
             break;
 
@@ -1615,6 +1621,21 @@ rrc_pdcp_config_asn1_req(const protocol_ctxt_t *const  ctxt_pP,
           drb_report = drb_toaddmod_p->pdcp_Config->rlc_AM->statusReportRequired;
           drb_sn = LTE_PDCP_Config__rlc_UM__pdcp_SN_Size_len12bits; // default SN size
           rlc_type = RLC_MODE_AM;
+          if (reestablishment_ongoing) { // we need to keep previous SN numbers for reestablishment in AM mode
+            key_previous =
+                PDCP_COLL_KEY_VALUE(ctxt_pP->module_id, previous_rnti_for_reestab, ctxt_pP->enb_flag, drb_id, SRB_FLAG_NO);
+            h_rc_previous = hashtable_get(pdcp_coll_p, key_previous, (void **)&pdcp_p_previous);
+            LOG_I(PDCP,
+                  "SEE DRB pdcp_previous->next_pdcp_tx_sn=%d pdcp_previous->next_pdcp_rx_sn=%d\n",
+                  pdcp_p_previous->next_pdcp_tx_sn,
+                  pdcp_p_previous->next_pdcp_rx_sn);
+            pdcp_p->next_pdcp_tx_sn = pdcp_p_previous->next_pdcp_tx_sn;
+            pdcp_p->next_pdcp_rx_sn = pdcp_p_previous->next_pdcp_rx_sn;
+            pdcp_p->tx_hfn = pdcp_p_previous->tx_hfn;
+            pdcp_p->rx_hfn = pdcp_p_previous->rx_hfn;
+            pdcp_p->last_submitted_pdcp_rx_sn = pdcp_p_previous->last_submitted_pdcp_rx_sn;
+            pdcp_p->first_missing_pdu = -1;
+          }
         }
 
         if (drb_toaddmod_p->pdcp_Config->rlc_UM) {
@@ -1663,22 +1684,22 @@ rrc_pdcp_config_asn1_req(const protocol_ctxt_t *const  ctxt_pP,
             break;
         }
 
-        pdcp_config_req_asn1 (
-          ctxt_pP,
-          pdcp_p,
-          SRB_FLAG_NO,
-          rlc_type,
-          action,
-          lc_id,
-          mch_id,
-          drb_id,
-          drb_sn,
-          drb_report,
-          header_compression_profile,
-          security_modeP,
-          kRRCenc_pP,
-          kRRCint_pP,
-          kUPenc_pP);
+        pdcp_config_req_asn1(ctxt_pP,
+                             pdcp_p,
+                             SRB_FLAG_NO,
+                             rlc_type,
+                             action,
+                             lc_id,
+                             mch_id,
+                             drb_id,
+                             drb_sn,
+                             drb_report,
+                             header_compression_profile,
+                             security_modeP,
+                             kRRCenc_pP,
+                             kRRCint_pP,
+                             kUPenc_pP,
+                             reestablishment_ongoing);
       }
     }
   }
@@ -1699,22 +1720,22 @@ rrc_pdcp_config_asn1_req(const protocol_ctxt_t *const  ctxt_pP,
 
       lc_id = pdcp_p->lcid;
       action = CONFIG_ACTION_REMOVE;
-      pdcp_config_req_asn1 (
-        ctxt_pP,
-        pdcp_p,
-        SRB_FLAG_NO,
-        rlc_type,
-        action,
-        lc_id,
-        mch_id,
-        drb_id,
-        0,
-        0,
-        0,
-        security_modeP,
-        kRRCenc_pP,
-        kRRCint_pP,
-        kUPenc_pP);
+      pdcp_config_req_asn1(ctxt_pP,
+                           pdcp_p,
+                           SRB_FLAG_NO,
+                           rlc_type,
+                           action,
+                           lc_id,
+                           mch_id,
+                           drb_id,
+                           0,
+                           0,
+                           0,
+                           security_modeP,
+                           kRRCenc_pP,
+                           kRRCint_pP,
+                           kUPenc_pP,
+                           reestablishment_ongoing);
       h_rc = hashtable_remove(pdcp_coll_p, key);
 
       if ((defaultDRB != NULL) && (*defaultDRB == drb_id)) {
@@ -1774,22 +1795,22 @@ rrc_pdcp_config_asn1_req(const protocol_ctxt_t *const  ctxt_pP,
               MBMS_SessionInfo_p->tmgi_r9.serviceId_r9.buf[2],
               drb_id,
               action);
-        pdcp_config_req_asn1 (
-          ctxt_pP,
-          NULL,  // unused for MBMS
-          SRB_FLAG_NO,
-          RLC_MODE_NONE,
-          action,
-          lc_id,
-          mch_id,
-          drb_id,
-          0,   // unused for MBMS
-          0,   // unused for MBMS
-          0,   // unused for MBMS
-          0,   // unused for MBMS
-          NULL,  // unused for MBMS
-          NULL,  // unused for MBMS
-          NULL); // unused for MBMS
+        pdcp_config_req_asn1(ctxt_pP,
+                             NULL, // unused for MBMS
+                             SRB_FLAG_NO,
+                             RLC_MODE_NONE,
+                             action,
+                             lc_id,
+                             mch_id,
+                             drb_id,
+                             0, // unused for MBMS
+                             0, // unused for MBMS
+                             0, // unused for MBMS
+                             0, // unused for MBMS
+                             NULL, // unused for MBMS
+                             NULL, // unused for MBMS
+                             NULL,
+                             reestablishment_ongoing); // unused for MBMS
       }
     }
   }
@@ -1810,7 +1831,8 @@ static bool pdcp_config_req_asn1(const protocol_ctxt_t *const ctxt_pP,
                                  const uint8_t security_modeP,
                                  uint8_t *const kRRCenc_pP,
                                  uint8_t *const kRRCint_pP,
-                                 uint8_t *const kUPenc_pP)
+                                 uint8_t *const kUPenc_pP,
+                                 bool reestablisment_on_going)
 //-----------------------------------------------------------------------------
 {
 
@@ -1861,12 +1883,14 @@ static bool pdcp_config_req_asn1(const protocol_ctxt_t *const ctxt_pP,
       }
 
       pdcp_pP->rlc_mode                         = rlc_modeP;
-      pdcp_pP->next_pdcp_tx_sn                  = 0;
-      pdcp_pP->next_pdcp_rx_sn                  = 0;
-      pdcp_pP->tx_hfn                           = 0;
-      pdcp_pP->rx_hfn                           = 0;
-      pdcp_pP->last_submitted_pdcp_rx_sn        = 4095;
-      pdcp_pP->first_missing_pdu                = -1;
+      if (!reestablisment_on_going && rlc_modeP != RLC_MODE_AM) {
+        pdcp_pP->next_pdcp_tx_sn = 0;
+        pdcp_pP->next_pdcp_rx_sn = 0;
+        pdcp_pP->tx_hfn = 0;
+        pdcp_pP->rx_hfn = 0;
+        pdcp_pP->last_submitted_pdcp_rx_sn = 4095;
+        pdcp_pP->first_missing_pdu = -1;
+      }
       LOG_I(PDCP, PROTOCOL_PDCP_CTXT_FMT" Action ADD  LCID %d (%s id %ld) "
             "configured with SN size %d bits and RLC %s\n",
             PROTOCOL_PDCP_CTXT_ARGS(ctxt_pP,pdcp_pP),

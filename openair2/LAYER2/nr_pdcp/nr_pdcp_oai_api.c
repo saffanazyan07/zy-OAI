@@ -957,16 +957,17 @@ void nr_pdcp_add_drbs(eNB_flag_t enb_flag,
 }
 
 /* Dummy function due to dependency from LTE libraries */
-bool rrc_pdcp_config_asn1_req(const protocol_ctxt_t *const  ctxt_pP,
-                              LTE_SRB_ToAddModList_t  *const srb2add_list,
-                              LTE_DRB_ToAddModList_t  *const drb2add_list,
+bool rrc_pdcp_config_asn1_req(const protocol_ctxt_t *const ctxt_pP,
+                              LTE_SRB_ToAddModList_t *const srb2add_list,
+                              LTE_DRB_ToAddModList_t *const drb2add_list,
                               LTE_DRB_ToReleaseList_t *const drb2release_list,
-                              const uint8_t                   security_modeP,
-                              uint8_t                  *const kRRCenc,
-                              uint8_t                  *const kRRCint,
-                              uint8_t                  *const kUPenc,
-                              LTE_PMCH_InfoList_r9_t  *pmch_InfoList_r9,
-                              rb_id_t                 *const defaultDRB)
+                              const uint8_t security_modeP,
+                              uint8_t *const kRRCenc,
+                              uint8_t *const kRRCint,
+                              uint8_t *const kUPenc,
+                              LTE_PMCH_InfoList_r9_t *pmch_InfoList_r9,
+                              rb_id_t *const defaultDRB,
+                              const rnti_t previous_rnti_for_reestab)
 {
   return 0;
 }

@@ -292,30 +292,29 @@ void rrc_pdcp_config_req (
   const rb_id_t     rb_idP,
   const uint8_t     security_modeP);
 
-/*! \fn bool rrc_pdcp_config_asn1_req (const protocol_ctxt_t* const , SRB_ToAddModList_t* srb2add_list, DRB_ToAddModList_t* drb2add_list, DRB_ToReleaseList_t*  drb2release_list)
-* \brief  Function for RRC to configure a Radio Bearer.
-* \param[in]  ctxt_pP           Running context.
-* \param[in]  index             index of UE or eNB depending on the eNB_flag
-* \param[in]  srb2add_list      SRB configuration list to be created.
-* \param[in]  drb2add_list      DRB configuration list to be created.
-* \param[in]  drb2release_list  DRB configuration list to be released.
-* \param[in]  security_mode     Security algorithm to apply for integrity/ciphering
-* \param[in]  kRRCenc           RRC encryption key
-* \param[in]  kRRCint           RRC integrity key
-* \param[in]  kUPenc            User-Plane encryption key
-* \param[in]  defaultDRB        Default DRB ID
-* \return     A status about the processing, OK or error code.
-*/
-bool rrc_pdcp_config_asn1_req(const protocol_ctxt_t *const  ctxt_pP,
-                              LTE_SRB_ToAddModList_t  *const srb2add_list,
-                              LTE_DRB_ToAddModList_t  *const drb2add_list,
+/*! \fn bool rrc_pdcp_config_asn1_req (const protocol_ctxt_t* const , SRB_ToAddModList_t* srb2add_list, DRB_ToAddModList_t*
+ * drb2add_list, DRB_ToReleaseList_t*  drb2release_list) \brief  Function for RRC to configure a Radio Bearer. \param[in]  ctxt_pP
+ * Running context. \param[in]  index             index of UE or eNB depending on the eNB_flag \param[in]  srb2add_list      SRB
+ * configuration list to be created. \param[in]  drb2add_list      DRB configuration list to be created. \param[in] drb2release_list
+ * DRB configuration list to be released. \param[in]  security_mode     Security algorithm to apply for integrity/ciphering
+ * \param[in]  kRRCenc           RRC encryption key
+ * \param[in]  kRRCint           RRC integrity key
+ * \param[in]  kUPenc            User-Plane encryption key
+ * \param[in]  defaultDRB        Default DRB ID
+ * \param[in]  previous_rnti_for_reestab     rnti in case of reestablishment to get previous pdcp context
+ * \return     A status about the processing, OK or error code.
+ */
+bool rrc_pdcp_config_asn1_req(const protocol_ctxt_t *const ctxt_pP,
+                              LTE_SRB_ToAddModList_t *const srb2add_list,
+                              LTE_DRB_ToAddModList_t *const drb2add_list,
                               LTE_DRB_ToReleaseList_t *const drb2release_list,
-                              const uint8_t                   security_modeP,
-                              uint8_t                  *const kRRCenc,
-                              uint8_t                  *const kRRCint,
-                              uint8_t                  *const kUPenc,
-                              LTE_PMCH_InfoList_r9_t  *pmch_InfoList_r9,
-                              rb_id_t                 *const defaultDRB);
+                              const uint8_t security_modeP,
+                              uint8_t *const kRRCenc,
+                              uint8_t *const kRRCint,
+                              uint8_t *const kUPenc,
+                              LTE_PMCH_InfoList_r9_t *pmch_InfoList_r9,
+                              rb_id_t *const defaultDRB,
+                              const rnti_t previous_rnti_for_reestab);
 
 /*! \fn void pdcp_add_UE(const protocol_ctxt_t* const  ctxt_pP)
 * \brief  Function (for RRC) to add a new UE in PDCP module

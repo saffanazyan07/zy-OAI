@@ -530,15 +530,17 @@ static void init_MBMS(
     LOG_D(RRC, "[eNB %d] Frame %d : Radio Bearer config request for MBMS\n", enb_mod_idP, frameP);   //check the lcid
     // Configuring PDCP and RLC for MBMS Radio Bearer
     rrc_pdcp_config_asn1_req(&ctxt,
-                             (LTE_SRB_ToAddModList_t *)NULL,   // LTE_SRB_ToAddModList
-                             (LTE_DRB_ToAddModList_t *)NULL,   // LTE_DRB_ToAddModList
+                             (LTE_SRB_ToAddModList_t *)NULL, // LTE_SRB_ToAddModList
+                             (LTE_DRB_ToAddModList_t *)NULL, // LTE_DRB_ToAddModList
                              (LTE_DRB_ToReleaseList_t *)NULL,
-                             0,     // security mode
-                             NULL,  // key rrc encryption
-                             NULL,  // key rrc integrity
-                             NULL   // key encryption
-                             , &(RC.rrc[enb_mod_idP]->carrier[CC_id].mcch_message->pmch_InfoList_r9)
-                             ,NULL);
+                             0, // security mode
+                             NULL, // key rrc encryption
+                             NULL, // key rrc integrity
+                             NULL // key encryption
+                             ,
+                             &(RC.rrc[enb_mod_idP]->carrier[CC_id].mcch_message->pmch_InfoList_r9),
+                             NULL,
+                             0);
 
     rrc_rlc_config_asn1_req(&ctxt,
                             NULL, // LTE_SRB_ToAddModList
@@ -1197,12 +1199,8 @@ rrc_eNB_generate_RRCConnectionReestablishment(
   rrc_eNB_carrier_data_t     *carrier = NULL;
   eNB_RRC_UE_t               *ue_context = NULL;
   module_id_t module_id = ctxt_pP->module_id;
-  uint16_t rnti = ctxt_pP->rntiMaybeUEid;
-  T(T_ENB_RRC_CONNECTION_REESTABLISHMENT,
-    T_INT(module_id),
-    T_INT(ctxt_pP->frame),
-    T_INT(ctxt_pP->subframe),
-    T_INT(rnti));
+  uint16_t new_rnti = ctxt_pP->rntiMaybeUEid;
+  T(T_ENB_RRC_CONNECTION_REESTABLISHMENT, T_INT(module_id), T_INT(ctxt_pP->frame), T_INT(ctxt_pP->subframe), T_INT(new_rnti));
   SRB_configList = &(ue_context_pP->ue_context.SRB_configList);
   carrier = &(RC.rrc[ctxt_pP->module_id]->carrier[CC_id]);
   ue_context = &(ue_context_pP->ue_context);
@@ -1253,7 +1251,7 @@ rrc_eNB_generate_RRCConnectionReestablishment(
   LOG_I(RRC, PROTOCOL_RRC_CTXT_UE_FMT" [RAPROC] Logical Channel DL-CCCH, Generating LTE_RRCConnectionReestablishment (bytes %d)\n",
         PROTOCOL_RRC_CTXT_UE_ARGS(ctxt_pP),
         ue_context->Srb0.Tx_buffer.payload_size);
-  UE_id = find_UE_id(module_id, rnti);
+  UE_id = find_UE_id(module_id, new_rnti);
 
   if (UE_id != -1) {
     /* Activate reject timer, if RRCComplete not received after 10 frames, reject UE */
@@ -1261,9 +1259,10 @@ rrc_eNB_generate_RRCConnectionReestablishment(
     /* Reject UE after 10 frames, LTE_RRCConnectionReestablishmentReject is triggered */
     RC.mac[module_id]->UE_info.UE_sched_ctrl[UE_id].ue_reestablishment_reject_timer_thres = 100;
   } else {
-    LOG_E(RRC, PROTOCOL_RRC_CTXT_UE_FMT" Generating LTE_RRCConnectionReestablishment without UE_id(MAC) rnti %x\n",
+    LOG_E(RRC,
+          PROTOCOL_RRC_CTXT_UE_FMT " Generating LTE_RRCConnectionReestablishment without UE_id(MAC) rnti %x\n",
           PROTOCOL_RRC_CTXT_UE_ARGS(ctxt_pP),
-          rnti);
+          new_rnti);
   }
 }
 
@@ -1795,6 +1794,29 @@ rrc_eNB_process_RRCConnectionReestablishmentComplete(
       size,
       buffer,
       PDCP_TRANSMISSION_MODE_CONTROL);
+
+    rrc_pdcp_config_asn1_req(ctxt_pP,
+                             *SRB_configList2, // NULL,
+                             DRB_configList,
+                             NULL,
+                             0xff, // already configured during the securitymodecommand
+                             NULL,
+                             NULL,
+                             NULL,
+                             (LTE_PMCH_InfoList_r9_t *)NULL,
+                             NULL,
+                             reestablish_rnti);
+
+    // /* Refresh SRBs/DRBs */
+    // if (!NODE_IS_CU(RC.rrc[ctxt_pP->module_id]->node_type))
+    // {
+    //   rrc_rlc_config_asn1_req(ctxt_pP,
+    //                           *SRB_configList2, // NULL,
+    //                           DRB_configList,
+    //                           NULL, (LTE_PMCH_InfoList_r9_t *)NULL,
+    //                           0,
+    //                           0);
+    // }
   }
 
   LOG_I(RRC, "[RRCConnectionReestablishment]put UE %x into freeList\n", reestablish_rnti);
@@ -3219,9 +3241,10 @@ void rrc_eNB_generate_defaultRRCConnectionReconfiguration(const protocol_ctxt_t 
                            0xff, // already configured during the securitymodecommand
                            NULL,
                            NULL,
-                           NULL
-                           , (LTE_PMCH_InfoList_r9_t *) NULL
-                           , NULL);
+                           NULL,
+                           (LTE_PMCH_InfoList_r9_t *)NULL,
+                           NULL,
+                           0);
 
   /* Refresh SRBs/DRBs */
   rrc_rlc_config_asn1_req(ctxt_pP,
@@ -5051,9 +5074,10 @@ rrc_eNB_generate_HO_RRCConnectionReconfiguration(const protocol_ctxt_t *const ct
                            0xff, // already configured during the securitymodecommand
                            NULL,
                            NULL,
-                           NULL
-                           , (LTE_PMCH_InfoList_r9_t *) NULL
-                           , NULL);
+                           NULL,
+                           (LTE_PMCH_InfoList_r9_t *)NULL,
+                           NULL,
+                           0);
 
   /* Refresh SRBs/DRBs */
   rrc_rlc_config_asn1_req(ctxt_pP,
@@ -5100,13 +5124,15 @@ rrc_eNB_configure_rbs_handover(struct rrc_eNB_ue_context_s *ue_context_p, protoc
   // Configure PDCP/RLC for the target
   rrc_pdcp_config_asn1_req(ctxt_pP,
                            ue_context_p->ue_context.SRB_configList,
-                           (LTE_DRB_ToAddModList_t *) NULL,
-                           (LTE_DRB_ToReleaseList_t *) NULL,
+                           (LTE_DRB_ToAddModList_t *)NULL,
+                           (LTE_DRB_ToReleaseList_t *)NULL,
                            0xff,
                            NULL,
                            NULL,
                            NULL,
-                           (LTE_PMCH_InfoList_r9_t *) NULL, NULL);
+                           (LTE_PMCH_InfoList_r9_t *)NULL,
+                           NULL,
+                           0);
 
   rrc_rlc_config_asn1_req(ctxt_pP, ue_context_p->ue_context.SRB_configList, (LTE_DRB_ToAddModList_t *)NULL, (LTE_DRB_ToReleaseList_t *)NULL, (LTE_PMCH_InfoList_r9_t *)NULL, 0, 0);
 
@@ -5197,8 +5223,9 @@ rrc_eNB_process_RRCConnectionReconfigurationComplete(
                            kRRCenc,
                            kRRCint,
                            kUPenc,
-                           (LTE_PMCH_InfoList_r9_t *) NULL,
-                           NULL);
+                           (LTE_PMCH_InfoList_r9_t *)NULL,
+                           NULL,
+                           0);
 
   /* Refresh SRBs/DRBs */
   rrc_rlc_config_asn1_req(ctxt_pP,
@@ -5627,7 +5654,7 @@ rrc_eNB_decode_ccch(
                (rrcConnectionReestablishmentRequest->reestablishmentCause == LTE_ReestablishmentCause_handoverFailure) ? "Handover Failure" :
                "reconfigurationFailure"));
         {
-          uint16_t                          c_rnti = 0;
+          uint16_t old_rnti = 0;
 
           if (rrcConnectionReestablishmentRequest->ue_Identity.physCellId != RC.rrc[ctxt_pP->module_id]->carrier[CC_id].physCellId) {
             /* UE was moving from previous cell so quickly that RRCConnectionReestablishment for previous cell was recieved in this cell */
@@ -5659,9 +5686,9 @@ rrc_eNB_decode_ccch(
             break;
           }
 
-          c_rnti = BIT_STRING_to_uint16(&rrcConnectionReestablishmentRequest->ue_Identity.c_RNTI);
-          LOG_I(RRC, "reestablishment, previous c_rnti is %x (new is %lx)\n", c_rnti, ctxt_pP->rntiMaybeUEid);
-          ue_context_p = rrc_eNB_get_ue_context(RC.rrc[ctxt_pP->module_id], c_rnti);
+          old_rnti = BIT_STRING_to_uint16(&rrcConnectionReestablishmentRequest->ue_Identity.c_RNTI);
+          LOG_I(RRC, "reestablishment, previous rnti is %x (new is %lx)\n", old_rnti, ctxt_pP->rntiMaybeUEid);
+          ue_context_p = rrc_eNB_get_ue_context(RC.rrc[ctxt_pP->module_id], old_rnti);
 
           if (ue_context_p == NULL) {
             LOG_E(RRC,
@@ -5672,12 +5699,14 @@ rrc_eNB_decode_ccch(
             break;
           }
 
-          int UE_id = find_UE_id(ctxt_pP->module_id, c_rnti);
+          int UE_id = find_UE_id(ctxt_pP->module_id, old_rnti);
 
           if(UE_id == -1) {
             LOG_E(RRC,
-                  PROTOCOL_RRC_CTXT_UE_FMT" LTE_RRCConnectionReestablishmentRequest without UE_id(MAC) rnti %x, let's reject the UE\n",
-                  PROTOCOL_RRC_CTXT_UE_ARGS(ctxt_pP),c_rnti);
+                  PROTOCOL_RRC_CTXT_UE_FMT
+                  " LTE_RRCConnectionReestablishmentRequest without UE_id(MAC) rnti %x, let's reject the UE\n",
+                  PROTOCOL_RRC_CTXT_UE_ARGS(ctxt_pP),
+                  old_rnti);
             rrc_eNB_generate_RRCConnectionReestablishmentReject(ctxt_pP, ue_context_p, CC_id);
             break;
           }
@@ -5692,23 +5721,25 @@ rrc_eNB_decode_ccch(
             ue_context_p->ue_context.ue_reestablishment_timer = 0;
           }
 
-          //previous rnti
-          rnti_t previous_rnti = 0;
+          // Check if we already have a request on going for same rnti (old)
+          rnti_t previous_new_rnti = 0;
 
           for (i = 0; i < MAX_MOBILES_PER_ENB; i++) {
-            if (reestablish_rnti_map[i][1] == c_rnti) {
-              previous_rnti = reestablish_rnti_map[i][0];
+            if (reestablish_rnti_map[i][1] == old_rnti) {
+              previous_new_rnti = reestablish_rnti_map[i][0];
               break;
             }
           }
 
-          if(previous_rnti != 0) {
-            UE_id = find_UE_id(ctxt_pP->module_id, previous_rnti);
+          if (previous_new_rnti != 0) {
+            UE_id = find_UE_id(ctxt_pP->module_id, previous_new_rnti);
 
             if(UE_id == -1) {
               LOG_E(RRC,
-                    PROTOCOL_RRC_CTXT_UE_FMT" RRCConnectionReestablishmentRequest without UE_id(MAC) previous rnti %x, let's reject the UE\n",
-                    PROTOCOL_RRC_CTXT_UE_ARGS(ctxt_pP),previous_rnti);
+                    PROTOCOL_RRC_CTXT_UE_FMT
+                    " RRCConnectionReestablishmentRequest without UE_id(MAC) previous rnti %x, let's reject the UE\n",
+                    PROTOCOL_RRC_CTXT_UE_ARGS(ctxt_pP),
+                    previous_new_rnti);
               rrc_eNB_generate_RRCConnectionReestablishmentReject(ctxt_pP, ue_context_p, CC_id);
               break;
             }
@@ -5727,8 +5758,10 @@ rrc_eNB_decode_ccch(
           //c-plane not end
           if((ue_context_p->ue_context.StatusRrc != RRC_RECONFIGURED) && (ue_context_p->ue_context.reestablishment_cause == LTE_ReestablishmentCause_spare1)) {
             LOG_E(RRC,
-                  PROTOCOL_RRC_CTXT_UE_FMT" LTE_RRCConnectionReestablishmentRequest (UE %x c-plane is not end), let's reject the UE\n",
-                  PROTOCOL_RRC_CTXT_UE_ARGS(ctxt_pP),c_rnti);
+                  PROTOCOL_RRC_CTXT_UE_FMT
+                  " LTE_RRCConnectionReestablishmentRequest (UE %x c-plane is not end), let's reject the UE\n",
+                  PROTOCOL_RRC_CTXT_UE_ARGS(ctxt_pP),
+                  old_rnti);
             rrc_eNB_generate_RRCConnectionReestablishmentReject(ctxt_pP, ue_context_p, CC_id);
             break;
           }
@@ -5743,7 +5776,7 @@ rrc_eNB_decode_ccch(
             PROTOCOL_CTXT_SET_BY_INSTANCE(&ctxt_old_p,
                                           ctxt_pP->instance,
                                           ENB_FLAG_YES,
-                                          c_rnti,
+                                          old_rnti,
                                           ctxt_pP->frame,
                                           ctxt_pP->subframe);
             rrc_eNB_process_RRCConnectionReconfigurationComplete(&ctxt_old_p,
@@ -5774,8 +5807,8 @@ rrc_eNB_decode_ccch(
           // insert C-RNTI to map
           for (i = 0; i < MAX_MOBILES_PER_ENB; i++) {
             if (reestablish_rnti_map[i][0] == 0) {
-              reestablish_rnti_map[i][0] = ctxt_pP->rntiMaybeUEid;
-              reestablish_rnti_map[i][1] = c_rnti;
+              reestablish_rnti_map[i][0] = ctxt_pP->rntiMaybeUEid; // New rnti
+              reestablish_rnti_map[i][1] = old_rnti;
               LOG_D(RRC, "reestablish_rnti_map[%d] [0] %x, [1] %x\n",
                     i, reestablish_rnti_map[i][0], reestablish_rnti_map[i][1]);
               break;
@@ -5783,6 +5816,10 @@ rrc_eNB_decode_ccch(
           }
 
           ue_context_p->ue_context.reestablishment_cause = rrcConnectionReestablishmentRequest->reestablishmentCause;
+          ue_context_p->ue_context.StatusRrc = RRC_INACTIVE; // Ue should be inactive !
+          ue_context_p->ue_context.rnti =
+              ctxt_pP->rntiMaybeUEid; // We need to talk to the UE with the new rnti for RRCConnectionReestablishment
+
           LOG_D(RRC, PROTOCOL_RRC_CTXT_UE_FMT" Accept connection reestablishment request from UE physCellId %ld cause %ld\n",
                 PROTOCOL_RRC_CTXT_UE_ARGS(ctxt_pP),
                 rrcConnectionReestablishmentRequest->ue_Identity.physCellId,
@@ -5814,14 +5851,15 @@ rrc_eNB_decode_ccch(
                 Idx);
           rrc_pdcp_config_asn1_req(ctxt_pP,
                                    ue_context_p->ue_context.SRB_configList,
-                                   (LTE_DRB_ToAddModList_t *) NULL,
-                                   (LTE_DRB_ToReleaseList_t *) NULL,
+                                   (LTE_DRB_ToAddModList_t *)NULL,
+                                   (LTE_DRB_ToReleaseList_t *)NULL,
                                    0xff,
                                    NULL,
                                    NULL,
-                                   NULL
-                                   , (LTE_PMCH_InfoList_r9_t *) NULL
-                                   ,NULL);
+                                   NULL,
+                                   (LTE_PMCH_InfoList_r9_t *)NULL,
+                                   NULL,
+                                   0);
 
           rrc_rlc_config_asn1_req(ctxt_pP, ue_context_p->ue_context.SRB_configList, NULL, NULL, NULL, 0, 0);
         }
@@ -5991,13 +6029,15 @@ rrc_eNB_decode_ccch(
               Idx);
         rrc_pdcp_config_asn1_req(ctxt_pP,
                                  ue_context_p->ue_context.SRB_configList,
-                                 (LTE_DRB_ToAddModList_t *) NULL,
-                                 (LTE_DRB_ToReleaseList_t *) NULL,
+                                 (LTE_DRB_ToAddModList_t *)NULL,
+                                 (LTE_DRB_ToReleaseList_t *)NULL,
                                  0xff,
                                  NULL,
                                  NULL,
                                  NULL,
-                                 (LTE_PMCH_InfoList_r9_t *) NULL,NULL);
+                                 (LTE_PMCH_InfoList_r9_t *)NULL,
+                                 NULL,
+                                 0);
 
         rrc_rlc_config_asn1_req(ctxt_pP, ue_context_p->ue_context.SRB_configList, NULL, NULL, NULL, 0, 0);
 
@@ -6560,9 +6600,7 @@ rrc_eNB_decode_dcch(
           for (i = 0; i < MAX_MOBILES_PER_ENB; i++) {
             if (reestablish_rnti_map[i][0] == ctxt_pP->rntiMaybeUEid) {
               reestablish_rnti = reestablish_rnti_map[i][1];
-              ue_context_p = rrc_eNB_get_ue_context(
-                               RC.rrc[ctxt_pP->module_id],
-                               reestablish_rnti);
+              LOG_D(RRC, "reestablish_rnti = %x,\n", reestablish_rnti);
               // clear currentC-RNTI from map
               reestablish_rnti_map[i][0] = 0;
               reestablish_rnti_map[i][1] = 0;

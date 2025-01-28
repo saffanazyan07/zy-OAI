@@ -708,22 +708,46 @@ int gtpv1u_update_s1u_tunnel(
   pthread_mutex_lock(&globGtp.gtp_lock);
   getInstRetInt(compatInst(instance));
 
-  if ( inst->ue2te_mapping.find(create_tunnel_req->rnti) == inst->ue2te_mapping.end() ) {
-    LOG_E(GTPU,"[%ld] Update not already existing tunnel (new rnti %x, old rnti %x)\n", 
-          instance, create_tunnel_req->rnti, prior_rnti);
+  // Check if tunnels already exist for new rnti
+  if (inst->ue2te_mapping.find(create_tunnel_req->rnti) != inst->ue2te_mapping.end()) {
+    LOG_E(GTPU, "[%ld] Update already existing tunnel for new rnti %x\n", instance, create_tunnel_req->rnti);
+    return -1;
   }
 
+  // Check if tunnels exists for old rnti because we should take these tunnels.
+  // If we do not have tunnels, we create new one to not stop the software
   auto it=inst->ue2te_mapping.find(prior_rnti);
-
-  if ( it != inst->ue2te_mapping.end() ) {
+  if (it == inst->ue2te_mapping.end()) {
+    LOG_W(GTPU,
+          "[%ld] Update a not existing tunnel, start create the new one (new rnti %x, old rnti %x)\n",
+          instance,
+          create_tunnel_req->rnti,
+          prior_rnti);
     pthread_mutex_unlock(&globGtp.gtp_lock);
-    AssertFatal(false, "logic bug: update of non-existing tunnel (new ue id %u, old ue id %u)\n", create_tunnel_req->rnti, prior_rnti);
-    /* we don't know if we need 4G or 5G PDCP and can therefore not create a
-     * new tunnel */
+    gtpv1u_enb_create_tunnel_resp_t tmp;
+    (void)gtpv1u_create_s1u_tunnel(instance, create_tunnel_req, &tmp, pdcp_data_req);
     return 0;
   }
 
+  // If tunnels exist for old rnti, we use them for new rnti
   inst->ue2te_mapping[create_tunnel_req->rnti]=it->second;
+
+  // Replace old RNTI by new one in te2ue_mapping
+  teid_t teid_incoming, teid_outcoming = 0;
+  for (int i = 0; i < create_tunnel_req->num_tunnels; i++) {
+    teid_incoming = it->second.bearers[create_tunnel_req->eps_bearer_id[i]].teid_incoming;
+    teid_outcoming = create_tunnel_req->sgw_S1u_teid[i];
+    globGtp.te2ue_mapping[teid_incoming].ue_id = create_tunnel_req->rnti;
+    LOG_I(GTPU,
+          "[%ld] Updated tunnel (new rnti %x, old rnti %x) DL teid =%x UL teid =%x\n",
+          instance,
+          create_tunnel_req->rnti,
+          prior_rnti,
+          teid_incoming,
+          teid_outcoming);
+  }
+
+  // Remove old rnti value from ue2te_mapping
   inst->ue2te_mapping.erase(it);
   pthread_mutex_unlock(&globGtp.gtp_lock);
   return 0;

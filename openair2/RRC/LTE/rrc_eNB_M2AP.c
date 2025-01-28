@@ -268,15 +268,17 @@ static void rrc_M2AP_init_MBMS(
     LOG_I(RRC, "[eNB %d] Frame %d : Radio Bearer config request for MBMS\n", enb_mod_idP, frameP);   //check the lcid
     // Configuring PDCP and RLC for MBMS Radio Bearer
     rrc_pdcp_config_asn1_req(&ctxt,
-                             (LTE_SRB_ToAddModList_t *)NULL,   // LTE_SRB_ToAddModList
-                             (LTE_DRB_ToAddModList_t *)NULL,   // LTE_DRB_ToAddModList
+                             (LTE_SRB_ToAddModList_t *)NULL, // LTE_SRB_ToAddModList
+                             (LTE_DRB_ToAddModList_t *)NULL, // LTE_DRB_ToAddModList
                              (LTE_DRB_ToReleaseList_t *)NULL,
-                             0,     // security mode
-                             NULL,  // key rrc encryption
-                             NULL,  // key rrc integrity
-                             NULL   // key encryption
-                             , &(RC.rrc[enb_mod_idP]->carrier[CC_id].mcch_message->pmch_InfoList_r9)
-                             ,NULL);
+                             0, // security mode
+                             NULL, // key rrc encryption
+                             NULL, // key rrc integrity
+                             NULL // key encryption
+                             ,
+                             &(RC.rrc[enb_mod_idP]->carrier[CC_id].mcch_message->pmch_InfoList_r9),
+                             NULL,
+                             0);
 
     rrc_rlc_config_asn1_req(&ctxt,
                             NULL, // LTE_SRB_ToAddModList
