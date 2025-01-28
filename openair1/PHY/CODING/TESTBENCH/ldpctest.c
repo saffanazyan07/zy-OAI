@@ -403,7 +403,7 @@ int main(int argc, char *argv[])
 {
   short block_length=8448; // decoder supports length: 1201 -> 1280, 2401 -> 2560
   // default to check output inside ldpc, the NR version checks the outer CRC defined by 3GPP
-  char *ldpc_version = "_optim8segmulti";
+  char *ldpc_version = "";
   /* version of the ldpc decoder library to use (XXX suffix to use when loading libldpc_XXX.so */
   short max_iterations=5;
   int n_segments=1;

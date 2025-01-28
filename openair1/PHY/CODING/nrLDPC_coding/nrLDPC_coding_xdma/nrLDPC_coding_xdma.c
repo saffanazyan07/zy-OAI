@@ -62,7 +62,6 @@
 #include "PHY/CODING/nrLDPC_coding/nrLDPC_coding_interface.h"
 
 // Global var to limit the rework of the dirty legacy code
-ldpc_interface_t ldpc_interface_segment;
 int num_threads_prepare_max = 0;
 char *user_device = NULL;
 char *enc_read_device = NULL;
@@ -98,10 +97,8 @@ void nr_ulsch_FPGA_decoding_prepare_blocks(void *args);
 
 int32_t nrLDPC_coding_init(void)
 {
-  char *encoder_shlibversion = NULL;
   paramdef_t LoaderParams[] = {
       {"num_threads_prepare", NULL, 0, .iptr = &num_threads_prepare_max, .defintval = 0, TYPE_INT, 0, NULL},
-      {"encoder_shlibversion", NULL, 0, .strptr = &encoder_shlibversion, .defstrval = "_optim8segmulti", TYPE_STRING, 0, NULL},
       {"user_device", NULL, 0, .strptr = &user_device, .defstrval = DEVICE_NAME_DEFAULT_USER, TYPE_STRING, 0, NULL},
       {"enc_read_device", NULL, 0, .strptr = &enc_read_device, .defstrval = DEVICE_NAME_DEFAULT_ENC_READ, TYPE_STRING, 0, NULL},
       {"enc_write_device", NULL, 0, .strptr = &enc_write_device, .defstrval = DEVICE_NAME_DEFAULT_ENC_WRITE, TYPE_STRING, 0, NULL},
@@ -110,13 +107,11 @@ int32_t nrLDPC_coding_init(void)
   config_get(config_get_if(), LoaderParams, sizeofArray(LoaderParams), "nrLDPC_coding_xdma");
   AssertFatal(num_threads_prepare_max != 0, "nrLDPC_coding_xdma.num_threads_prepare was not provided");
 
-  load_LDPClib(encoder_shlibversion, &ldpc_interface_segment);
   return 0;
 }
 
 int32_t nrLDPC_coding_shutdown(void)
 {
-  free_LDPClib(&ldpc_interface_segment);
   return 0;
 }
 

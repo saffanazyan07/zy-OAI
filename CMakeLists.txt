@@ -776,6 +776,8 @@ set(PHY_NRLDPC_CODINGIF
 
 add_library(dfts MODULE ${OPENAIR1_DIR}/PHY/TOOLS/oai_dfts.c ${OPENAIR1_DIR}/PHY/TOOLS/oai_dfts_neon.c)
 
+add_library(crc_byte ${OPENAIR1_DIR}/PHY/CODING/crc_byte.c)
+
 set(PHY_SRC_COMMON
   ${OPENAIR1_DIR}/PHY/LTE_TRANSPORT/dci_tools_common.c
   ${OPENAIR1_DIR}/PHY/LTE_TRANSPORT/lte_mcs.c
@@ -804,7 +806,6 @@ set(PHY_SRC_COMMON
   ${OPENAIR1_DIR}/PHY/CODING/ccoding_byte.c
   ${OPENAIR1_DIR}/PHY/CODING/ccoding_byte_lte.c
   ${OPENAIR1_DIR}/PHY/CODING/3gpplte_sse.c
-  ${OPENAIR1_DIR}/PHY/CODING/crc_byte.c
   ${PHY_TURBOIF}
   ${OPENAIR1_DIR}/PHY/CODING/lte_rate_matching.c
   ${OPENAIR1_DIR}/PHY/CODING/viterbi.c
@@ -1026,9 +1027,11 @@ if (${SMBV})
 endif  (${SMBV})
 
 add_library(PHY_COMMON ${PHY_SRC_COMMON})
-target_link_libraries(PHY_COMMON PRIVATE shlib_loader)
+target_link_libraries(PHY_COMMON
+  PRIVATE shlib_loader asn1_lte_rrc_hdrs crc_byte
+  PUBLIC UTIL
+)
 add_dependencies(PHY_COMMON dfts)
-target_link_libraries(PHY_COMMON PRIVATE asn1_lte_rrc_hdrs PUBLIC UTIL)
 
 add_library(PHY ${PHY_SRC})
 target_link_libraries(PHY PRIVATE asn1_lte_rrc_hdrs asn1_nr_rrc_hdrs)
@@ -2029,12 +2032,17 @@ target_link_libraries(smallblocktest PRIVATE
 
 
 add_executable(ldpctest
-   ${OPENAIR1_DIR}/PHY/CODING/TESTBENCH/ldpctest.c
-   )
+  ${OPENAIR1_DIR}/PHY/CODING/TESTBENCH/ldpctest.c
+  ${OPENAIR1_DIR}/PHY/CODING/nrLDPC_load.c
+)
 target_link_libraries(ldpctest PRIVATE
   -Wl,--start-group UTIL SIMU PHY_COMMON PHY_NR_COMMON -Wl,--end-group
   m pthread dl shlib_loader ${T_LIB} nr_coding_segment_utils
-  )
+  # link 'check_crc' to make it resolved in the LDPC coding libraries
+  # 'check_crc' is not used in ldpctest so it is not linked in the executable by default
+  # --whole-archive links 'check_crc' in the executable even though it is note used, see 'man ld'
+  -Wl,--whole-archive crc_byte -Wl,--no-whole-archive
+)
 
 add_executable(nr_dlschsim
   ${OPENAIR1_DIR}/SIMULATION/NR_PHY/dlschsim.c
@@ -2192,7 +2200,7 @@ if (${T_TRACER})
         PHY_COMMON PHY PHY_UE PHY_NR PHY_NR_COMMON PHY_NR_UE PHY_RU
         L2 L2_LTE L2_NR L2_LTE_NR L2_UE NR_L2_UE L2_UE_LTE_NR MAC_NR_COMMON MAC_UE_NR ngap
         CN_UTILS GTPV1U SCTP_CLIENT MME_APP LIB_NAS_UE NB_IoT SIMU OPENAIR0_LIB
-        dfts config_internals nr_common)
+        dfts config_internals nr_common crc_byte)
     if (TARGET ${i})
       add_dependencies(${i} generate_T)
     endif()
