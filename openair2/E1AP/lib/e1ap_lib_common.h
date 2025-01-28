@@ -26,6 +26,8 @@
 #include <stdint.h>
 #include <stdio.h>
 #include "openair3/UTILS/conversions.h"
+#include "e1ap_lib_includes.h"
+#include "e1ap_messages_types.h"
 
 #ifdef ENABLE_TESTS
 #define PRINT_ERROR(...) fprintf(stderr, ##__VA_ARGS__);
@@ -65,5 +67,40 @@
       return false;                                                                                          \
     }                                                                                                        \
   } while (0)
+
+/* deep copy of optional E1AP IE */
+#define _E1_CP_OPTIONAL_IE(dest, src, field)                  \
+  do {                                                        \
+    if ((src)->field) {                                       \
+      (dest)->field = malloc_or_fail(sizeof(*(dest)->field)); \
+      *(dest)->field = *(src)->field;                         \
+    }                                                         \
+  } while (0)
+
+#define _E1_EQ_CHECK_OPTIONAL_IE(a, b, field, EQ_MACRO)               \
+  do {                                                                \
+    if (((a)->field && !(b)->field) || (!(a)->field && (b)->field)) { \
+      return false; /* One of the two is not allocated */             \
+    }                                                                 \
+    if ((a)->field && (b)->field) {                                   \
+      EQ_MACRO(*(a)->field, *(b)->field)                              \
+    }                                                                 \
+  } while (0)
+
+#define _E1_EQ_CHECK_OPTIONAL_PTR(a, b, field)                           \
+  do {                                                                   \
+    if (((a)->field && !(b)->field) || (!(a)->field && (b)->field)) {    \
+      PRINT_ERROR("%s:%d: optional IE '%s' not allocated: %p, %p\n",     \
+                  __FILE__,                                              \
+                  __LINE__,                                              \
+                  #field,                                                \
+                  (void *)(a)->field,                                    \
+                  (void *)(b)->field);                                   \
+      return false; /* One of the two is not allocated */                \
+    }                                                                    \
+  } while (0)
+
+E1AP_Cause_t e1_encode_cause_ie(const e1ap_cause_t *cause);
+e1ap_cause_t e1_decode_cause_ie(const E1AP_Cause_t *ie);
 
 #endif /* E1AP_LIB_COMMON_H_ */

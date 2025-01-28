@@ -70,6 +70,14 @@ static void e1ap_msg_free(E1AP_E1AP_PDU_t *pdu)
   ASN_STRUCT_FREE(asn_DEF_E1AP_E1AP_PDU, pdu);
 }
 
+static UP_TL_information_t create_up_tl_info(void)
+{
+    UP_TL_information_t tl_info;
+    tl_info.tlAddress = htonl(0xC0A90001); // 192.169.0.1
+    tl_info.teId = 0x2345;
+    return tl_info;
+}
+
 /**
  * @brief Test E1AP Bearer Context Setup Request encoding/decoding
  */
@@ -107,14 +115,13 @@ static void test_bearer_context_setup_request(void)
   // Step 1: Initialize the E1AP Bearer Context Setup Request
   e1ap_bearer_setup_req_t orig = {
       .gNB_cu_cp_ue_id = 1234,
-      .cipheringAlgorithm = 0x01,
-      .integrityProtectionAlgorithm = 0x01,
+      .secInfo.cipheringAlgorithm = 0x01,
+      .secInfo.integrityProtectionAlgorithm = 0x01,
       .ueDlAggMaxBitRate = 1000000000,
       .bearerContextStatus = 0,
       .servingPLMNid.mcc = 001,
       .servingPLMNid.mnc = 01,
       .servingPLMNid.mnc_digit_length = 0x02,
-      .activityNotificationLevel = ANL_PDU_SESSION,
       .numPDUSessions = 1,
       .pduSession[0].sessionId = 1,
       .pduSession[0].sessionType = E1AP_PDU_Session_Type_ipv4,
@@ -122,8 +129,7 @@ static void test_bearer_context_setup_request(void)
       .pduSession[0].nssai.sst = 0x01,
       .pduSession[0].securityIndication = security,
       .pduSession[0].numDRB2Setup = 1,
-      .pduSession[0].UP_TL_information.tlAddress = 167772161,
-      .pduSession[0].UP_TL_information.teId = 0x12345,
+      .pduSession[0].UP_TL_information = create_up_tl_info(),
       .pduSession[0].DRBnGRanList[0].id = 1,
       .pduSession[0].DRBnGRanList[0].sdap_config = sdap,
       .pduSession[0].DRBnGRanList[0].pdcp_config = pdcp,
@@ -133,8 +139,8 @@ static void test_bearer_context_setup_request(void)
       .pduSession[0].DRBnGRanList[0].numQosFlow2Setup = 1,
       .pduSession[0].DRBnGRanList[0].qosFlows[0] = qos,
   };
-  memset(orig.encryptionKey, 0xAB, sizeof(orig.encryptionKey));
-  memset(orig.integrityProtectionKey, 0xCD, sizeof(orig.integrityProtectionKey));
+  memset(orig.secInfo.encryptionKey, 0xAB, sizeof(orig.secInfo.encryptionKey));
+  memset(orig.secInfo.integrityProtectionKey, 0xCD, sizeof(orig.secInfo.integrityProtectionKey));
   // E1AP encode the original message
   E1AP_E1AP_PDU_t *enc = encode_E1_bearer_context_setup_request(&orig);
   // E1AP decode the encoded message
@@ -172,8 +178,7 @@ static void test_bearer_context_setup_response(void)
       .gNB_cu_up_ue_id = 5678,
       .numPDUSessions = 1,
       .pduSession[0].id = 1,
-      .pduSession[0].tlAddress = 167772161,
-      .pduSession[0].teId = 0x12345,
+      .pduSession[0].tl_info = create_up_tl_info(),
       .pduSession[0].numDRBSetup = 1,
       .pduSession[0].numDRBFailed = 0,
       .pduSession[0].DRBnGRanList[0].id = 1,
@@ -181,8 +186,7 @@ static void test_bearer_context_setup_response(void)
       .pduSession[0].DRBnGRanList[0].numQosFlowSetup = 1,
       .pduSession[0].DRBnGRanList[0].qosFlows[0].qfi = 1,
       .pduSession[0].DRBnGRanList[0].UpParamList[0].cell_group_id = MCG,
-      .pduSession[0].DRBnGRanList[0].UpParamList[0].teId = 0x34345,
-      .pduSession[0].DRBnGRanList[0].UpParamList[0].tlAddress = 167772161,
+      .pduSession[0].DRBnGRanList[0].UpParamList[0].tl_info = create_up_tl_info(),
   };
   // E1AP encode the original message
   E1AP_E1AP_PDU_t *enc = encode_E1_bearer_context_setup_response(&orig);

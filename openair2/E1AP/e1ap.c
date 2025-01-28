@@ -429,7 +429,7 @@ int e1apCUCP_handle_BEARER_CONTEXT_SETUP_FAILURE(sctp_assoc_t assoc_id, e1ap_upc
   BEARER CONTEXT MODIFICATION REQUEST
 */
 
-static int fill_BEARER_CONTEXT_MODIFICATION_REQUEST(e1ap_bearer_setup_req_t *const bearerCxt, E1AP_E1AP_PDU_t *pdu)
+static int fill_BEARER_CONTEXT_MODIFICATION_REQUEST(e1ap_bearer_mod_req_t *const bearerCxt, E1AP_E1AP_PDU_t *pdu)
 {
   pdu->present = E1AP_E1AP_PDU_PR_initiatingMessage;
   asn1cCalloc(pdu->choice.initiatingMessage, msg);
@@ -451,6 +451,21 @@ static int fill_BEARER_CONTEXT_MODIFICATION_REQUEST(e1ap_bearer_setup_req_t *con
   ieC2->criticality                = E1AP_Criticality_reject;
   ieC2->value.present              = E1AP_BearerContextModificationRequestIEs__value_PR_GNB_CU_UP_UE_E1AP_ID;
   ieC2->value.choice.GNB_CU_UP_UE_E1AP_ID = bearerCxt->gNB_cu_up_ue_id;
+   /* optional */
+  /* Security Information */
+  if (bearerCxt->secInfo) {
+    asn1cSequenceAdd(out->protocolIEs.list, E1AP_BearerContextModificationRequestIEs_t, ie);
+    ie->id = E1AP_ProtocolIE_ID_id_SecurityInformation;
+    ie->criticality = E1AP_Criticality_reject;
+    ie->value.present = E1AP_BearerContextModificationRequestIEs__value_PR_SecurityInformation;
+    E1AP_SecurityAlgorithm_t *securityAlgorithm = &ie->value.choice.SecurityInformation.securityAlgorithm;
+    E1AP_UPSecuritykey_t *uPSecuritykey = &ie->value.choice.SecurityInformation.uPSecuritykey;
+    securityAlgorithm->cipheringAlgorithm = bearerCxt->secInfo->cipheringAlgorithm;
+    OCTET_STRING_fromBuf(&uPSecuritykey->encryptionKey, bearerCxt->secInfo->encryptionKey, E1AP_SECURITY_KEY_SIZE);
+    asn1cCallocOne(securityAlgorithm->integrityProtectionAlgorithm, bearerCxt->secInfo->integrityProtectionAlgorithm);
+    asn1cCalloc(uPSecuritykey->integrityProtectionKey, protKey);
+    OCTET_STRING_fromBuf(protKey, bearerCxt->secInfo->integrityProtectionKey, E1AP_SECURITY_KEY_SIZE);
+  }
   /* optional */
   /* c3. E1AP_ProtocolIE_ID_id_System_BearerContextModificationRequest */
   asn1cSequenceAdd(out->protocolIEs.list, E1AP_BearerContextModificationRequestIEs_t, ieC3);
@@ -473,7 +488,7 @@ static int fill_BEARER_CONTEXT_MODIFICATION_REQUEST(e1ap_bearer_setup_req_t *con
       asn1cSequenceAdd(drb2Mod_List->list, E1AP_DRB_To_Modify_Item_NG_RAN_t, drb2Mod);
       drb2Mod->dRB_ID = j->id;
       asn1cCalloc(drb2Mod->pDCP_Configuration, pDCP_Configuration);
-      if (j->pdcp_config.pDCP_Reestablishment) {
+      if (j->pdcp_config && j->pdcp_config->pDCP_Reestablishment) {
         asn1cCallocOne(pDCP_Configuration->pDCP_Reestablishment, E1AP_PDCP_Reestablishment_true);
       }
       if (j->numDlUpParam > 0) {
@@ -482,8 +497,8 @@ static int fill_BEARER_CONTEXT_MODIFICATION_REQUEST(e1ap_bearer_setup_req_t *con
           asn1cSequenceAdd(DL_UP_Param_List->list, E1AP_UP_Parameters_Item_t, DL_UP_Param);
           DL_UP_Param->uP_TNL_Information.present = E1AP_UP_TNL_Information_PR_gTPTunnel;
           asn1cCalloc(DL_UP_Param->uP_TNL_Information.choice.gTPTunnel, gTPTunnel);
-          TRANSPORT_LAYER_ADDRESS_IPv4_TO_BIT_STRING(k->tlAddress, &gTPTunnel->transportLayerAddress);
-          INT32_TO_OCTET_STRING(k->teId, &gTPTunnel->gTP_TEID);
+          TRANSPORT_LAYER_ADDRESS_IPv4_TO_BIT_STRING(k->tl_info.tlAddress, &gTPTunnel->transportLayerAddress);
+          INT32_TO_OCTET_STRING(k->tl_info.teId, &gTPTunnel->gTP_TEID);
 
           DL_UP_Param->cell_Group_ID = k->cell_group_id;
         }
@@ -491,7 +506,7 @@ static int fill_BEARER_CONTEXT_MODIFICATION_REQUEST(e1ap_bearer_setup_req_t *con
     }
   }
   /* c4. E1AP_ProtocolIE_ID_id_BearerContextStatusChange */
-  if (bearerCxt->bearerContextStatus == BEARER_SUSPEND) {
+  if (bearerCxt->bearerContextStatus && *bearerCxt->bearerContextStatus == BEARER_SUSPEND) {
     asn1cSequenceAdd(out->protocolIEs.list, E1AP_BearerContextModificationRequestIEs_t, ieC4);
     ieC4->id            = E1AP_ProtocolIE_ID_id_BearerContextStatusChange;
     ieC4->criticality   = E1AP_Criticality_reject;
@@ -606,6 +621,26 @@ static void extract_BEARER_CONTEXT_MODIFICATION_REQUEST(const E1AP_E1AP_PDU_t *p
         bearerCxt->gNB_cu_up_ue_id = ie->value.choice.GNB_CU_UP_UE_E1AP_ID;
         break;
 
+      case E1AP_ProtocolIE_ID_id_SecurityInformation: {
+        DevAssert(ie->criticality == E1AP_Criticality_reject);
+        DevAssert(ie->value.present == E1AP_BearerContextModificationRequestIEs__value_PR_SecurityInformation);
+        E1AP_SecurityInformation_t *sec = &ie->value.choice.SecurityInformation;
+        DevAssert(sec->uPSecuritykey.encryptionKey.size == E1AP_SECURITY_KEY_SIZE);
+        DevAssert(sec->uPSecuritykey.integrityProtectionKey == NULL
+                  || sec->uPSecuritykey.integrityProtectionKey->size == E1AP_SECURITY_KEY_SIZE);
+        bearerCxt->secInfo = malloc_or_fail(sizeof(*bearerCxt->secInfo));
+        bearerCxt->secInfo->cipheringAlgorithm = sec->securityAlgorithm.cipheringAlgorithm;
+        bearerCxt->secInfo->integrityProtectionAlgorithm = sec->securityAlgorithm.integrityProtectionAlgorithm == NULL
+                                                ? 0
+                                                : *sec->securityAlgorithm.integrityProtectionAlgorithm;
+        memcpy(bearerCxt->secInfo->encryptionKey, sec->uPSecuritykey.encryptionKey.buf, E1AP_SECURITY_KEY_SIZE);
+        if (sec->securityAlgorithm.integrityProtectionAlgorithm == NULL)
+          memset(bearerCxt->secInfo->integrityProtectionKey, 0, E1AP_SECURITY_KEY_SIZE);
+        else
+          memcpy(bearerCxt->secInfo->integrityProtectionKey, sec->uPSecuritykey.integrityProtectionKey->buf, E1AP_SECURITY_KEY_SIZE);
+        break;
+      }
+
       case E1AP_ProtocolIE_ID_id_System_BearerContextModificationRequest:
         DevAssert(ie->criticality == E1AP_Criticality_reject);
         DevAssert(ie->value.present == E1AP_BearerContextModificationRequestIEs__value_PR_System_BearerContextModificationRequest);
@@ -635,7 +670,8 @@ static void extract_BEARER_CONTEXT_MODIFICATION_REQUEST(const E1AP_E1AP_PDU_t *p
             if (drb2Mod->pDCP_Configuration != NULL
                 && drb2Mod->pDCP_Configuration->pDCP_Reestablishment != NULL
                 && *drb2Mod->pDCP_Configuration->pDCP_Reestablishment == E1AP_PDCP_Reestablishment_true) {
-              drb->pdcp_config.pDCP_Reestablishment = true;
+              drb->pdcp_config = malloc_or_fail(sizeof(*drb->pdcp_config));
+              drb->pdcp_config->pDCP_Reestablishment = true;
             }
             if (drb2Mod->dL_UP_Parameters) { /* Optional IE in the DRB To Modify Item */
               E1AP_UP_Parameters_t *dl_up_paramList = drb2Mod->dL_UP_Parameters;
@@ -647,8 +683,8 @@ static void extract_BEARER_CONTEXT_MODIFICATION_REQUEST(const E1AP_E1AP_PDU_t *p
                   DevAssert(dl_up_param_in->uP_TNL_Information.present = E1AP_UP_TNL_Information_PR_gTPTunnel);
                   BIT_STRING_TO_TRANSPORT_LAYER_ADDRESS_IPv4(
                       &dl_up_param_in->uP_TNL_Information.choice.gTPTunnel->transportLayerAddress,
-                      dl_up_param->tlAddress);
-                  OCTET_STRING_TO_INT32(&dl_up_param_in->uP_TNL_Information.choice.gTPTunnel->gTP_TEID, dl_up_param->teId);
+                      dl_up_param->tl_info.tlAddress);
+                  OCTET_STRING_TO_INT32(&dl_up_param_in->uP_TNL_Information.choice.gTPTunnel->gTP_TEID, dl_up_param->tl_info.teId);
                 } else {
                   AssertFatal(false, "gTPTunnel IE is missing. It is mandatory at this point\n");
                 }
@@ -663,7 +699,8 @@ static void extract_BEARER_CONTEXT_MODIFICATION_REQUEST(const E1AP_E1AP_PDU_t *p
         /* Bearer Context Status Change */
         DevAssert(ie->criticality == E1AP_Criticality_reject);
         DevAssert(ie->value.present == E1AP_BearerContextModificationRequestIEs__value_PR_BearerContextStatusChange);
-        bearerCxt->bearerContextStatus = (ie->value.choice.BearerContextStatusChange == E1AP_BearerContextStatusChange_suspend) ? BEARER_SUSPEND : BEARER_ACTIVE;
+        bearerCxt->bearerContextStatus = malloc_or_fail(*bearerCxt->bearerContextStatus);
+        *bearerCxt->bearerContextStatus = (ie->value.choice.BearerContextStatusChange == E1AP_BearerContextStatusChange_suspend) ? BEARER_SUSPEND : BEARER_ACTIVE;
         break;
 
       default:
@@ -1129,7 +1166,7 @@ static void e1_task_handle_sctp_association_resp(E1_t type,
     if (getCxtE1(instance)->gtpInstF1U < 0)
       getCxtE1(instance)->gtpInstF1U = cuup_task_create_gtpu_instance_to_du(&IPaddr);
     if (getCxtE1(instance)->gtpInstF1U < 0)
-      LOG_E(E1AP, "Failed to create CUUP F1-U UDP listener");
+      LOG_E(E1AP, "Failed to create CUUP F1-U UDP listener\n");
     extern instance_t CUuniqInstance;
     CUuniqInstance = getCxtE1(instance)->gtpInstF1U;
     cuup_init_n3(instance);
@@ -1152,7 +1189,7 @@ void cuup_init_n3(instance_t instance)
     legacyInstanceMapping = getCxtE1(instance)->gtpInstN3 = gtpv1Init(tmp);
   }
   if (getCxtE1(instance)->gtpInstN3 < 0)
-    LOG_E(E1AP, "Failed to create CUUP N3 UDP listener");
+    LOG_E(E1AP, "Failed to create CUUP N3 UDP listener\n");
   extern instance_t *N3GTPUInst;
   N3GTPUInst = &getCxtE1(instance)->gtpInstN3;
 }

@@ -138,12 +138,6 @@ typedef enum BEARER_CONTEXT_STATUS_e {
   BEARER_RESUME,
 } BEARER_CONTEXT_STATUS_t;
 
-typedef enum activity_notification_level_e {
-  ANL_DRB = 0,
-  ANL_PDU_SESSION,
-  ANL_UE,
-} activity_notification_level_t;
-
 typedef enum cell_group_id_e {
   MCG = 0,
   SCG,
@@ -258,10 +252,16 @@ typedef struct e1ap_setup_fail_s {
   criticality_diagnostics_t *crit_diag;
 } e1ap_setup_fail_t;
 
-typedef struct up_params_s {
+typedef struct UP_TL_information_s {
   in_addr_t tlAddress;
-  long teId;
-  int cell_group_id;
+  int32_t teId;
+} UP_TL_information_t;
+
+typedef struct up_params_s {
+  // Transport layer info
+  UP_TL_information_t tl_info;
+  // Cell Group ID (M)
+  cell_group_id_t cell_group_id;
 } up_params_t;
 
 /* IE SDAP Configuration (clause 9.3.1.39 of 3GPP TS 38.463) */
@@ -331,38 +331,66 @@ typedef struct qos_flow_level_qos_parameters_s {
   ngran_allocation_retention_priority_t alloc_reten_priority; // additional members should be added!!
 } qos_flow_level_qos_parameters_t;
 
+// QoS Flow QoS Parameters List 9.3.1.25
 typedef struct qos_flow_setup_e {
   long qfi; // qos flow identifier
   qos_flow_level_qos_parameters_t qos_params;
 } qos_flow_to_setup_t;
 
-/* DRB To Setup List according to 3GPP TS 38.463 */
+// 9.3.1.60 QoS Flow Mapping Indication
+typedef enum qos_flow_mapping_indication_e {
+  QF_UL = 0,
+  QF_DL,
+  QF_BOTH
+} qos_flow_mapping_indication_t;
+
+typedef struct qos_flow_list_s {
+  long qfi; // qos flow identifier
+  qos_flow_mapping_indication_t *indication;
+} qos_flow_list_t;
+
+/**
+ * DRB To Setup List according to 3GPP TS 38.463
+ */
 typedef struct DRB_nGRAN_to_setup_s {
-  /* DRB ID (clause 9.3.1.16) */
+  // DRB ID (M) (clause 9.3.1.16)
   long id;
-
-  /* SDAP Configuration (clause 9.3.1.39) */
+  // SDAP Configuration (M) (clause 9.3.1.39)
   bearer_context_sdap_config_t sdap_config;
-  /* PDCP Configuration (clause 9.3.1.38) */
+  // PDCP Configuration (M) (clause 9.3.1.38)
   bearer_context_pdcp_config_t pdcp_config;
-
-  /* DRB Data Forwarding Information (clause 9.3.2.6) */
-  /* Transport Layer Address (clause 9.3.2.4) */
-  in_addr_t tlAddress;
-  /* GTP-TEID (clause 9.3.2.3) */
-  int teId;
-  /* DL UP Transport Layer Information (clause 9.3.2.1) */
-  int numDlUpParam;
-  up_params_t DlUpParamList[E1AP_MAX_NUM_UP_PARAM];
-
-  /* Cell Group Information (clause 9.3.1.11) */
+  // DRB Inactivity Timer (O)
+  int *drb_inactivity_timer;
+  // Cell Group Information (M) (clause 9.3.1.11)
   int numCellGroups;
   cell_group_id_t cellGroupList[E1AP_MAX_NUM_CELL_GROUPS];
-
-  /* DRB QoS Flows Parameters (clause 9.3.1.26) */
+  // QoS Flows Information To Setup (M) (clause 9.3.1.25, 9.3.1.26)
   int numQosFlow2Setup;
   qos_flow_to_setup_t qosFlows[E1AP_MAX_NUM_QOS_FLOWS];
-} DRB_nGRAN_to_setup_t, DRB_nGRAN_to_mod_t;
+} DRB_nGRAN_to_setup_t;
+
+/**
+ * DRB To Modify List according to 3GPP TS 38.463
+ */
+typedef struct DRB_nGRAN_to_modify_s {
+  // DRB ID (M) (clause 9.3.1.16)
+  long id;
+  // SDAP Configuration (M) (clause 9.3.1.39)
+  bearer_context_sdap_config_t *sdap_config;
+  // PDCP Configuration (M) (clause 9.3.1.38)
+  bearer_context_pdcp_config_t *pdcp_config;
+  // PDCP SN Status Request (O)
+  bool pdcp_sn_status_requested;
+  // DL UP Transport Layer Information (O) (clause 9.3.1.13, 9.3.2.1)
+  int numDlUpParam;
+  up_params_t DlUpParamList[E1AP_MAX_NUM_UP_PARAM];
+  // Cell Group Information (M) (clause 9.3.1.11)
+  int numCellGroups;
+  cell_group_id_t cellGroupList[E1AP_MAX_NUM_CELL_GROUPS];
+  // QoS Flows Information To Modify (O) (clause 9.3.1.25, 9.3.1.26)
+  int numQosFlow2Setup;
+  qos_flow_to_setup_t qosFlows[E1AP_MAX_NUM_QOS_FLOWS];
+} DRB_nGRAN_to_mod_t;
 
 typedef enum e1ap_indication_e {
   SECURITY_REQUIRED = 0,
@@ -377,48 +405,112 @@ typedef struct security_indication_s {
   long maxIPrate;
 } security_indication_t;
 
-typedef struct UP_TL_information_s {
-  in_addr_t tlAddress;
-  int32_t teId;
-} UP_TL_information_t;
-
-/**
- * PDU Session Resource To Setup List (clause 9.3.3.10)
- * PDU Session Resource To Modify List (clause 9.3.3.11)
-*/
-typedef struct pdu_session_to_setup_s {
-  long sessionId;
-  long sessionType;
-  e1ap_nssai_t nssai;
-  security_indication_t securityIndication;
-  UP_TL_information_t UP_TL_information;
-  long numDRB2Setup;
-  DRB_nGRAN_to_setup_t DRBnGRanList[E1AP_MAX_NUM_DRBS];
-  long numDRB2Modify;
-  DRB_nGRAN_to_mod_t DRBnGRanModList[E1AP_MAX_NUM_DRBS];
-} pdu_session_to_setup_t, pdu_session_to_mod_t;
-
-/**
- * Bearer Context Setup Request message, clause 9.2.2.1 of 3GPP TS 38.463
- * out of simplicity, this same struct is used for clause 9.2.2.4
- * i.e. Bearer Context Modification Request message
- */
-typedef struct e1ap_bearer_setup_req_s {
-  uint32_t gNB_cu_cp_ue_id;
-  uint32_t gNB_cu_up_ue_id; // Bearer Context Modification Request only
+// Security Information (9.3.1.10)
+typedef struct security_information_s {
   uint64_t cipheringAlgorithm;
   uint64_t integrityProtectionAlgorithm;
   char encryptionKey[E1AP_SECURITY_KEY_SIZE];
   char integrityProtectionKey[E1AP_SECURITY_KEY_SIZE];
-  long     ueDlAggMaxBitRate;
+} security_information_t;
+
+/**
+ * PDU Session Resource To Setup List (clause 9.3.3.10)
+ */
+typedef struct pdu_session_to_setup_s {
+  // PDU Session ID (M)
+  long sessionId;
+  // PDU Session Type (M)
+  long sessionType;
+  // S-NSSAI (M)
+  e1ap_nssai_t nssai;
+  // Security Indication (M)
+  security_indication_t securityIndication;
+  // PDU Session Resource DL Aggregate Maximum Bit Rate (O)
+  long *dlAggregateMaxBitRate;
+  // NG UL UP Transport Layer Information (M)
+  UP_TL_information_t UP_TL_information;
+  // PDU Session Inactivity Timer (O)
+  int *inactivityTimer;
+  // Existing Allocated NG DL UP Transport Layer Information (O)
+  UP_TL_information_t *existing_DL_UP_TL_info;
+  // Network Instance (O)
+  uint8_t *networkInstance;
+  // DRB To Setup List (M)
+  int numDRB2Setup;
+  // DRB To Setup Item (1..<E1AP_MAX_NUM_DRBS>)
+  DRB_nGRAN_to_setup_t DRBnGRanList[E1AP_MAX_NUM_DRBS];
+} pdu_session_to_setup_t;
+
+/**
+ * PDU Session Resource To Modify List (clause 9.3.3.11)
+ */
+typedef struct pdu_session_to_mod_s {
+  // PDU Session ID (M)
+  long sessionId;
+  // Security Indication (O)
+  security_indication_t *securityIndication;
+  // NG UL UP Transport Layer Information (O)
+  UP_TL_information_t *UP_TL_information;
+  // DRB To Setup List (0..1)
+  int numDRB2Setup;
+  // DRB To Setup Item (1..<E1AP_MAX_NUM_DRBS>)
+  DRB_nGRAN_to_setup_t DRBnGRanList[E1AP_MAX_NUM_DRBS];
+  // DRB To Modify List (0..1)
+  long numDRB2Modify;
+  // DRB To Modify Item (1..<E1AP_MAX_NUM_DRBS>)
+  DRB_nGRAN_to_mod_t DRBnGRanModList[E1AP_MAX_NUM_DRBS];
+} pdu_session_to_mod_t;
+
+/**
+ * Bearer Context Setup Request message, clause 9.2.2.1 of 3GPP TS 38.463
+ */
+typedef struct e1ap_bearer_setup_req_s {
+  // gNB-CU-CP UE E1AP ID (M)
+  uint32_t gNB_cu_cp_ue_id;
+  // Security Information (M)
+  security_information_t secInfo;
+  // UE DL Aggregate Maximum Bit Rate (M)
+  long ueDlAggMaxBitRate;
+  // UE DL Maximum Integrity Protected Data Rate (O)
+  long *ueDlMaxIPBitRate;
+  // Serving PLMN (M)
   PLMN_ID_t servingPLMNid;
+  // Bearer Context Status Change (O)
   BEARER_CONTEXT_STATUS_t bearerContextStatus;
-  activity_notification_level_t activityNotificationLevel;
+  // UE Inactivity Timer (O)
+  int *inactivityTimerUE;
+  // NG-RAN PDU Session Resource To Setup List (M)
   int numPDUSessions;
   pdu_session_to_setup_t pduSession[E1AP_MAX_NUM_PDU_SESSIONS];
+} e1ap_bearer_setup_req_t;
+
+/**
+ * Bearer Context Modification Request, clause 9.2.2.4 of 3GPP TS 38.463
+ */
+typedef struct e1ap_bearer_mod_req_s {
+  // gNB-CU-CP UE E1AP ID (M)
+  uint32_t gNB_cu_cp_ue_id;
+  // gNB-CU-UP UE E1AP ID (M)
+  uint32_t gNB_cu_up_ue_id;
+  // Security Information (O)
+  security_information_t *secInfo;
+  // UE DL Aggregate Maximum Bit Rate (O)
+  uint32_t *ueDlAggMaxBitRate;
+  // UE DL Maximum Integrity Protected Data Rate (O)
+  uint32_t *ueDlMaxIPBitRate;
+  // Bearer Context Status Change (O)
+  BEARER_CONTEXT_STATUS_t *bearerContextStatus;
+  // UE Inactivity Timer (O)
+  int *inactivityTimer;
+  // Data Discard Required (O)
+  bool dataDiscardRequired;
+  // NG-RAN PDU Session Resource To Setup List (O)
+  int numPDUSessions;
+  pdu_session_to_setup_t pduSession[E1AP_MAX_NUM_PDU_SESSIONS];
+  // NG-RAN PDU Session Resource To Modify List (O)
   int numPDUSessionsMod;
   pdu_session_to_mod_t pduSessionMod[E1AP_MAX_NUM_PDU_SESSIONS];
-} e1ap_bearer_setup_req_t, e1ap_bearer_mod_req_t;
+} e1ap_bearer_mod_req_t;
 
 typedef struct e1ap_bearer_release_cmd_s {
   uint32_t gNB_cu_cp_ue_id;
@@ -432,43 +524,61 @@ typedef struct e1ap_bearer_release_cplt_s {
   uint32_t gNB_cu_up_ue_id;
 } e1ap_bearer_release_cplt_t;
 
-typedef struct qos_flow_setup_s {
-  long qfi;
-} qos_flow_setup_t;
-
 typedef struct DRB_nGRAN_setup_s {
+  // DRB ID (M)
   long id;
   int numUpParam;
   up_params_t UpParamList[E1AP_MAX_NUM_UP_PARAM];
+  // Flow Setup List (M)
   int numQosFlowSetup;
-  qos_flow_setup_t qosFlows[E1AP_MAX_NUM_QOS_FLOWS];
+  qos_flow_list_t qosFlows[E1AP_MAX_NUM_QOS_FLOWS];
 } DRB_nGRAN_setup_t;
 
+/* DRB Modified Item */
 typedef struct DRB_nGRAN_modified_s {
+  // DRB ID (M)
   long id;
+  // UL UP Parameters (O)
+  int numUpParam;
+  up_params_t ul_UP_Params[E1AP_MAX_NUM_UP_PARAM];
+  // Flow Setup List (O)
+  int numQosFlowSetup;
+  qos_flow_list_t qosFlows[E1AP_MAX_NUM_QOS_FLOWS];
+  // Old QoS Flow List (O)
+  int numOldQosFlow;
+  qos_flow_list_t oldQosFlows[E1AP_MAX_NUM_QOS_FLOWS];
 } DRB_nGRAN_modified_t;
 
 typedef struct DRB_nGRAN_failed_s {
   long id;
-  long cause_type;
-  long cause;
+  e1ap_cause_t cause;
 } DRB_nGRAN_failed_t;
 
 typedef struct pdu_session_setup_s {
   long id;
-  in_addr_t tlAddress;
-  long teId;
+  // Transport layer info
+  UP_TL_information_t tl_info;
   int numDRBSetup;
   DRB_nGRAN_setup_t DRBnGRanList[E1AP_MAX_NUM_DRBS];
   int numDRBFailed;
   DRB_nGRAN_failed_t DRBnGRanFailedList[E1AP_MAX_NUM_DRBS];
 } pdu_session_setup_t;
 
+/* PDU Session Resource Modified List (9.3.3.17) */
 typedef struct pdu_session_modif_s {
+  // PDU Session ID (M)
   long id;
-  // setup as part of PDU session modification not supported yet
+  // Security Result (O)
+  e1ap_indication_t *integrityProtectionIndication;
+  e1ap_indication_t *confidentialityProtectionIndication;
+  // NG DL UP Transport Layer Information (O)
+  UP_TL_information_t *ng_DL_UP_TL_info;
+  // DRB Modified List (O)
   int numDRBModified;
   DRB_nGRAN_modified_t DRBnGRanModList[E1AP_MAX_NUM_DRBS];
+  // DRB Setup List (O)
+  int numDRBSetup;
+  DRB_nGRAN_setup_t DRBnGRanSetupList[E1AP_MAX_NUM_DRBS];
 } pdu_session_modif_t;
 
 typedef struct e1ap_bearer_setup_resp_s {
@@ -479,8 +589,11 @@ typedef struct e1ap_bearer_setup_resp_s {
 } e1ap_bearer_setup_resp_t;
 
 typedef struct e1ap_bearer_modif_resp_s {
+  // gNB-CU-CP UE E1AP ID (M)
   uint32_t gNB_cu_cp_ue_id;
+  // gNB-CU-UP UE E1AP ID (M)
   uint32_t gNB_cu_up_ue_id;
+  // NG-RAN PDU Session Resource Modified List (O)
   int numPDUSessionsMod;
   pdu_session_modif_t pduSessionMod[E1AP_MAX_NUM_PDU_SESSIONS];
 } e1ap_bearer_modif_resp_t;

@@ -48,6 +48,7 @@
 #include "E1AP_System-BearerContextSetupRequest.h"
 #include "E1AP_MaximumIPdatarate.h"
 #include "E1AP_PDU-Session-Type.h"
+#include "E1AP_Data-Forwarding-Information.h"
 // E1 Bearer Context Setup Response
 #include "E1AP_PDU-Session-Resource-Setup-Item.h"
 #include "E1AP_DRB-Setup-Item-NG-RAN.h"
