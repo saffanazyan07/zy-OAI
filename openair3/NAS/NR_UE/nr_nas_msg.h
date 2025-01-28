@@ -103,8 +103,6 @@ typedef struct {
   stream_security_container_t *security_container;
   Guti5GSMobileIdentity_t *guti;
   bool termination_procedure;
-  uint8_t *registration_request_buf;
-  uint32_t registration_request_len;
   instance_t UE_id;
   /* RRC Inactive Indication */
   bool is_rrc_inactive;
@@ -189,7 +187,7 @@ typedef struct {
 } dl_nas_transport_t;
 
 nr_ue_nas_t *get_ue_nas_info(module_id_t module_id);
-void generateRegistrationRequest(as_nas_info_t *initialNasMsg, nr_ue_nas_t *nas);
+void generateRegistrationRequest(as_nas_info_t *initialNasMsg, nr_ue_nas_t *nas, bool is_security_mode);
 void generateServiceRequest(as_nas_info_t *initialNasMsg, nr_ue_nas_t *nas);
 void *nas_nrue_task(void *args_p);
 void *nas_nrue(void *args_p);
