@@ -1595,8 +1595,7 @@ static void nr_rrc_ue_process_measConfig(rrcPerNB_t *rrc, NR_MeasConfig_t *const
   if (measConfig->measIdToAddModList)
     handle_measid_addmod(rrc, measConfig->measIdToAddModList, timers);
 
-  AssertFatal(!measConfig->measGapConfig, "Measurement gaps not yet supported\n");
-  AssertFatal(!measConfig->measGapSharingConfig, "Measurement gaps not yet supported\n");
+  LOG_W(NR_RRC, "Measurement gaps not yet supported!\n");
 
   if (measConfig->s_MeasureConfig) {
     if (measConfig->s_MeasureConfig->present == NR_MeasConfig__s_MeasureConfig_PR_ssb_RSRP) {

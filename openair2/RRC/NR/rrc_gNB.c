@@ -2830,6 +2830,30 @@ void rrc_gNB_generate_UeContextSetupRequest(const gNB_RRC_INST *rrc,
     cu2du.uE_CapabilityRAT_ContainerList_length = ue_p->ue_cap_buffer.len;
   }
 
+  const nr_rrc_du_container_t *du = get_du_for_ue((gNB_RRC_INST *)rrc, ue_p->rrc_ue_id);
+  DevAssert(du != NULL);
+  f1ap_served_cell_info_t *cell_info = &du->setup_req->cell[0].info;
+  NR_MeasConfig_t *measconfig = NULL;
+  if (du->mtc != NULL) {
+    int scs = get_ssb_scs(cell_info);
+    int band = get_dl_band(cell_info);
+    const NR_MeasTimingList_t *mtlist = du->mtc->criticalExtensions.choice.c1->choice.measTimingConf->measTiming;
+    const NR_MeasTiming_t *mt = mtlist->list.array[0];
+    const neighbour_cell_configuration_t *neighbour_config = get_neighbour_config(cell_info->nr_cellid);
+    seq_arr_t *neighbour_cells = NULL;
+    if (neighbour_config)
+      neighbour_cells = neighbour_config->neighbour_cells;
+
+    measconfig = get_MeasConfig(mt, band, scs, &rrc->measurementConfiguration, neighbour_cells);
+  }
+  if (measconfig) {
+    uint8_t buf[NR_RRC_BUF_SIZE];
+    int size = do_NR_MeasConfig(measconfig, buf, NR_RRC_BUF_SIZE);
+    cu2du_p = &cu2du;
+    cu2du.measConfig = buf;
+    cu2du.measConfig_length = size;
+  }
+
   int nb_srb = 1;
   f1ap_srb_to_be_setup_t srbs[1] = {{.srb_id = 2, .lcid = 2}};
   activate_srb(ue_p, 2);

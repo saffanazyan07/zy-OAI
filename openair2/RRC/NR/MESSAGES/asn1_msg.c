@@ -1206,6 +1206,76 @@ const nr_a3_event_t *get_a3_configuration(int pci)
   return NULL;
 }
 
+static void get_gap_config_from_smtc(const NR_SSB_MTC_t *ssb_mtc, NR_GapConfig_t *gap_config)
+{
+  // mgta = Measurement Gap Timing Advance, to provide sufficient time for the UE to re-tune its transceiver
+  // This allows the Measurement Gap to extend mgta ms either side of the SS/PBCH Measurement Window.
+  gap_config->mgta = NR_GapConfig__mgta_ms0dot5;
+
+  // mgrp = Measurement Gap Repetition Period
+  // gapOffset = It defines the start of the Measurement Gaps relative to the start of the radio frame with SFN = 0
+  // The Measurement Gaps need to be synchronized with the SS/PBCH transmissions which are to be measured
+  switch (ssb_mtc->periodicityAndOffset.present) {
+    case NR_SSB_MTC__periodicityAndOffset_PR_sf20:
+      gap_config->mgrp = NR_GapConfig__mgrp_ms20;
+      gap_config->gapOffset = ssb_mtc->periodicityAndOffset.choice.sf20;
+      break;
+    case NR_SSB_MTC__periodicityAndOffset_PR_sf40:
+      gap_config->mgrp = NR_GapConfig__mgrp_ms40;
+      gap_config->gapOffset = ssb_mtc->periodicityAndOffset.choice.sf40;
+      break;
+    case NR_SSB_MTC__periodicityAndOffset_PR_sf80:
+      gap_config->mgrp = NR_GapConfig__mgrp_ms80;
+      gap_config->gapOffset = ssb_mtc->periodicityAndOffset.choice.sf80;
+      break;
+    case NR_SSB_MTC__periodicityAndOffset_PR_sf160:
+      gap_config->mgrp = NR_GapConfig__mgrp_ms160;
+      gap_config->gapOffset = ssb_mtc->periodicityAndOffset.choice.sf160;
+      break;
+    default:
+      LOG_E(NR_RRC, "SMTC periodicity higher than MGRP\n");
+      gap_config->mgrp = NR_GapConfig__mgrp_ms20;
+      gap_config->gapOffset = 0;
+      if (ssb_mtc->periodicityAndOffset.present == NR_SSB_MTC__periodicityAndOffset_PR_sf5) {
+        gap_config->gapOffset = ssb_mtc->periodicityAndOffset.choice.sf5;
+      } else if (ssb_mtc->periodicityAndOffset.present == NR_SSB_MTC__periodicityAndOffset_PR_sf10) {
+        gap_config->gapOffset = ssb_mtc->periodicityAndOffset.choice.sf10;
+      }
+  }
+
+  // mgl = Measurement Gap Length
+  // FIXME: At least the duration of the SMTC plus 2 times the mgta should be enough,
+  //  however, at the moment it only works by setting the maximum value
+  gap_config->mgl = NR_GapConfig__mgl_ms6;
+}
+
+static NR_MeasObjectToAddMod_t *get_MeasObject(const struct NR_MeasTiming__frequencyAndTiming *ft,
+                                               int band,
+                                               NR_ARFCN_ValueNR_t ssbFrequency,
+                                               NR_MeasObjectId_t measObjectId)
+{
+  const NR_SSB_MTC_t *ssb_mtc = &ft->ssb_MeasurementTimingConfiguration;
+  NR_MeasObjectToAddMod_t *mo = calloc(1, sizeof(*mo));
+  mo->measObjectId = measObjectId;
+  mo->measObject.present = NR_MeasObjectToAddMod__measObject_PR_measObjectNR;
+  NR_MeasObjectNR_t *monr = calloc(1, sizeof(*monr));
+  asn1cCallocOne(monr->ssbFrequency, ssbFrequency);
+  asn1cCallocOne(monr->ssbSubcarrierSpacing, ft->ssbSubcarrierSpacing);
+  monr->referenceSignalConfig.ssb_ConfigMobility = calloc(1, sizeof(*monr->referenceSignalConfig.ssb_ConfigMobility));
+  monr->referenceSignalConfig.ssb_ConfigMobility->deriveSSB_IndexFromCell = true;
+  monr->absThreshSS_BlocksConsolidation = calloc(1, sizeof(*monr->absThreshSS_BlocksConsolidation));
+  asn1cCallocOne(monr->absThreshSS_BlocksConsolidation->thresholdRSRP, 36);
+  asn1cCallocOne(monr->nrofSS_BlocksToAverage, 8);
+  monr->smtc1 = calloc(1, sizeof(*monr->smtc1));
+  monr->smtc1->periodicityAndOffset = ssb_mtc->periodicityAndOffset;
+  monr->smtc1->duration = ssb_mtc->duration;
+  monr->quantityConfigIndex = 1;
+  monr->ext1 = calloc(1, sizeof(*monr->ext1));
+  asn1cCallocOne(monr->ext1->freqBandIndicatorNR, band);
+  mo->measObject.choice.measObjectNR = monr;
+  return mo;
+}
+
 NR_MeasConfig_t *get_MeasConfig(const NR_MeasTiming_t *mt,
                                 int band,
                                 int scs,
@@ -1252,8 +1322,6 @@ NR_MeasConfig_t *get_MeasConfig(const NR_MeasTiming_t *mt,
     for (uint8_t neighbourIdx = 0; neighbourIdx < neighbourConfiguration->size; neighbourIdx++) {
       const nr_neighbour_gnb_configuration_t *neighbourCell =
           (const nr_neighbour_gnb_configuration_t *)seq_arr_at(neighbourConfiguration, neighbourIdx);
-      if (!neighbourCell->isIntraFrequencyNeighbour)
-        continue;
 
       const nr_a3_event_t *a3Event = get_a3_configuration(neighbourCell->physicalCellId);
       if (!a3Event || is_default_a3_added)
@@ -1273,31 +1341,13 @@ NR_MeasConfig_t *get_MeasConfig(const NR_MeasTiming_t *mt,
 
   // Measurement Objects: Specifies what is to be measured. For NR and inter-RAT E-UTRA measurements, this may include
   // cell-specific offsets, blacklisted cells to be ignored and whitelisted cells to consider for measurements.
-  NR_MeasObjectToAddMod_t *mo1 = calloc(1, sizeof(*mo1));
-  mo1->measObjectId = 1;
-  mo1->measObject.present = NR_MeasObjectToAddMod__measObject_PR_measObjectNR;
-  NR_MeasObjectNR_t *monr1 = calloc(1, sizeof(*monr1));
-  asn1cCallocOne(monr1->ssbFrequency, ft->carrierFreq);
-  asn1cCallocOne(monr1->ssbSubcarrierSpacing, ft->ssbSubcarrierSpacing);
-  monr1->referenceSignalConfig.ssb_ConfigMobility = calloc(1, sizeof(*monr1->referenceSignalConfig.ssb_ConfigMobility));
-  monr1->referenceSignalConfig.ssb_ConfigMobility->deriveSSB_IndexFromCell = true;
-  monr1->absThreshSS_BlocksConsolidation = calloc(1, sizeof(*monr1->absThreshSS_BlocksConsolidation));
-  asn1cCallocOne(monr1->absThreshSS_BlocksConsolidation->thresholdRSRP, 36);
-  asn1cCallocOne(monr1->nrofSS_BlocksToAverage, 8);
-  monr1->smtc1 = calloc(1, sizeof(*monr1->smtc1));
-  monr1->smtc1->periodicityAndOffset = ssb_mtc->periodicityAndOffset;
-  monr1->smtc1->duration = ssb_mtc->duration;
-  monr1->quantityConfigIndex = 1;
-  monr1->ext1 = calloc(1, sizeof(*monr1->ext1));
-  asn1cCallocOne(monr1->ext1->freqBandIndicatorNR, band);
-
+  NR_MeasObjectToAddMod_t *mo1 = get_MeasObject(ft, band, ft->carrierFreq, 1);
   if (neighbourConfiguration && measurementConfiguration->a3_event_list) {
     for (uint8_t nCell = 0; nCell < neighbourConfiguration->size; nCell++) {
       const nr_neighbour_gnb_configuration_t *neighbourCell =
           (const nr_neighbour_gnb_configuration_t *)seq_arr_at(neighbourConfiguration, nCell);
-      if (!neighbourCell->isIntraFrequencyNeighbour)
-        continue;
 
+      NR_MeasObjectNR_t *monr1 = mo1->measObject.choice.measObjectNR;
       if (monr1->cellsToAddModList == NULL) {
         monr1->cellsToAddModList = calloc(1, sizeof(*monr1->cellsToAddModList));
       }
@@ -1307,12 +1357,11 @@ NR_MeasConfig_t *get_MeasConfig(const NR_MeasTiming_t *mt,
       ASN_SEQUENCE_ADD(&monr1->cellsToAddModList->list, cell);
     }
   }
-
-  mo1->measObject.choice.measObjectNR = monr1;
   asn1cSeqAdd(&mc->measObjectToAddModList->list, mo1);
 
   // Preparation of measId
-  for (uint8_t reportIdx = 0; reportIdx < mc->reportConfigToAddModList->list.count; reportIdx++) {
+  uint8_t reportIdx = 0;
+  for (; reportIdx < mc->reportConfigToAddModList->list.count; reportIdx++) {
     const NR_ReportConfigId_t reportId = mc->reportConfigToAddModList->list.array[reportIdx]->reportConfigId;
     NR_MeasIdToAddMod_t *measid = calloc(1, sizeof(NR_MeasIdToAddMod_t));
     measid->measId = reportIdx + 1;
@@ -1321,13 +1370,47 @@ NR_MeasConfig_t *get_MeasConfig(const NR_MeasTiming_t *mt,
     asn1cSeqAdd(&mc->measIdToAddModList->list, measid);
   }
 
+  if (neighbourConfiguration) {
+    // Measurement Gap Configuration
+    mc->measGapConfig = calloc(1, sizeof(*mc->measGapConfig));
+    mc->measGapConfig->ext1 = calloc(1, sizeof(*mc->measGapConfig->ext1));
+    mc->measGapConfig->ext1->gapUE = calloc(1, sizeof(*mc->measGapConfig->ext1->gapUE));
+    mc->measGapConfig->ext1->gapUE->present = NR_SetupRelease_GapConfig_PR_setup;
+    mc->measGapConfig->ext1->gapUE->choice.setup = calloc(1, sizeof(*mc->measGapConfig->ext1->gapUE->choice.setup));
+    get_gap_config_from_smtc(ssb_mtc, mc->measGapConfig->ext1->gapUE->choice.setup);
+
+    // Preparation of measId for neighbour cells for periodic report
+    if (measurementConfiguration->per_event) {
+      for (uint8_t neighbourIdx = 0; neighbourIdx < neighbourConfiguration->size; neighbourIdx++) {
+        const nr_neighbour_gnb_configuration_t *neighbourCell =
+            (const nr_neighbour_gnb_configuration_t *)seq_arr_at(neighbourConfiguration, neighbourIdx);
+        NR_MeasObjectToAddMod_t *mo_neighbour = get_MeasObject(ft, band, neighbourCell->absoluteFrequencySSB, neighbourIdx + 2);
+        NR_MeasObjectNR_t *monr = mo_neighbour->measObject.choice.measObjectNR;
+        if (monr->cellsToAddModList == NULL) {
+          monr->cellsToAddModList = calloc(1, sizeof(*monr->cellsToAddModList));
+        }
+        NR_CellsToAddMod_t *cell = calloc(1, sizeof(*cell));
+        cell->physCellId = neighbourCell->physicalCellId;
+        ASN_SEQUENCE_ADD(&monr->cellsToAddModList->list, cell);
+        asn1cSeqAdd(&mc->measObjectToAddModList->list, mo_neighbour);
+        const NR_ReportConfigId_t reportId = mc->reportConfigToAddModList->list.array[0]->reportConfigId;
+        NR_MeasIdToAddMod_t *measid = calloc(1, sizeof(NR_MeasIdToAddMod_t));
+        measid->measId = reportIdx + 1;
+        measid->reportConfigId = reportId;
+        measid->measObjectId = neighbourIdx + 2;
+        asn1cSeqAdd(&mc->measIdToAddModList->list, measid);
+        reportIdx++;
+      }
+    }
+  }
+
   mc->quantityConfig = calloc(1, sizeof(*mc->quantityConfig));
   mc->quantityConfig->quantityConfigNR_List = calloc(1, sizeof(*mc->quantityConfig->quantityConfigNR_List));
   NR_QuantityConfigNR_t *qcnr = calloc(1, sizeof(*qcnr));
   asn1cCallocOne(qcnr->quantityConfigCell.ssb_FilterConfig.filterCoefficientRSRP, NR_FilterCoefficient_fc6);
   asn1cCallocOne(qcnr->quantityConfigCell.csi_RS_FilterConfig.filterCoefficientRSRP, NR_FilterCoefficient_fc6);
   asn1cSeqAdd(&mc->quantityConfig->quantityConfigNR_List->list, qcnr);
-
+  
   return mc;
 }
 
@@ -1412,5 +1495,12 @@ int do_NR_HandoverPreparationInformation(const uint8_t *uecap_buf, int uecap_buf
   AssertFatal(enc_rval.encoded > 0, "ASN1 message encoding failed (%s, %lu)!\n", enc_rval.failed_type->name, enc_rval.encoded);
 
   ASN_STRUCT_FREE(asn_DEF_NR_HandoverPreparationInformation, hpi);
+  return (enc_rval.encoded + 7) / 8;
+}
+
+int do_NR_MeasConfig(NR_MeasConfig_t *measconfig, uint8_t *buf, int buf_size)
+{
+  asn_enc_rval_t enc_rval = uper_encode_to_buffer(&asn_DEF_NR_MeasConfig, NULL, measconfig, buf, buf_size);
+  AssertFatal(enc_rval.encoded > 0, "ASN1 message encoding failed (%s, %lu)!\n", enc_rval.failed_type->name, enc_rval.encoded);
   return (enc_rval.encoded + 7) / 8;
 }

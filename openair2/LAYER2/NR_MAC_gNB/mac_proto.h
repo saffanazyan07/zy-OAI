@@ -186,6 +186,8 @@ void nr_csi_meas_reporting(int Mod_idP,
                            frame_t frameP,
                            sub_frame_t slotP);
 
+void nr_measgap_scheduling(module_id_t module_id, frame_t frame, sub_frame_t slot);
+
 int nr_acknack_scheduling(gNB_MAC_INST *mac,
                           NR_UE_info_t *UE,
                           frame_t frameP,

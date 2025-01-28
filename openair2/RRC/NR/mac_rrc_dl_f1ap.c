@@ -85,7 +85,6 @@ static void ue_context_setup_request_f1ap(sctp_assoc_t assoc_id, const f1ap_ue_c
     f1ap_msg->cu_to_du_rrc_information = calloc(1, sizeof(*f1ap_msg->cu_to_du_rrc_information));
     AssertFatal(f1ap_msg->cu_to_du_rrc_information != NULL, "out of memory\n");
     AssertFatal(req->cu_to_du_rrc_information->cG_ConfigInfo == NULL && req->cu_to_du_rrc_information->cG_ConfigInfo_length == 0, "cg_ConfigInfo not implemented\n");
-    AssertFatal(req->cu_to_du_rrc_information->measConfig == NULL && req->cu_to_du_rrc_information->measConfig_length == 0, "cg_ConfigInfo not implemented\n");
     const cu_to_du_rrc_information_t *du2cu_req = req->cu_to_du_rrc_information;
     if (req->cu_to_du_rrc_information->uE_CapabilityRAT_ContainerList != NULL) {
       cu_to_du_rrc_information_t* du2cu_new = f1ap_msg->cu_to_du_rrc_information;
@@ -94,6 +93,14 @@ static void ue_context_setup_request_f1ap(sctp_assoc_t assoc_id, const f1ap_ue_c
       du2cu_new->uE_CapabilityRAT_ContainerList = malloc(du2cu_new->uE_CapabilityRAT_ContainerList_length);
       AssertFatal(du2cu_new->uE_CapabilityRAT_ContainerList != NULL, "out of memory\n");
       memcpy(du2cu_new->uE_CapabilityRAT_ContainerList, du2cu_req->uE_CapabilityRAT_ContainerList, du2cu_new->uE_CapabilityRAT_ContainerList_length);
+    }
+    if (req->cu_to_du_rrc_information->measConfig != NULL) {
+      cu_to_du_rrc_information_t *du2cu_new = f1ap_msg->cu_to_du_rrc_information;
+      DevAssert(du2cu_req->measConfig_length > 0);
+      du2cu_new->measConfig_length = du2cu_req->measConfig_length;
+      du2cu_new->measConfig = malloc(du2cu_new->measConfig_length);
+      AssertFatal(du2cu_new->measConfig != NULL, "out of memory\n");
+      memcpy(du2cu_new->measConfig, du2cu_req->measConfig, du2cu_new->measConfig_length);
     }
     if (req->cu_to_du_rrc_information->handoverPreparationInfo != NULL) {
       cu_to_du_rrc_information_t *du2cu_new = f1ap_msg->cu_to_du_rrc_information;
