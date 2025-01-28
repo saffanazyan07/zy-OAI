@@ -335,6 +335,12 @@ typedef struct {
   fapi_nr_dl_ntn_config_command_pdu ntn_config_params;
 } ntn_config_message_t;
 
+typedef enum {
+  NO_SCAN = 0,
+  SCAN_BW,
+  SCAN_BAND,
+} nr_ue_scan_enum_t;
+
 /// Top-level PHY Data Structure for UE
 typedef struct PHY_VARS_NR_UE_s {
   /// \brief Module ID indicator for this instance
@@ -346,7 +352,7 @@ typedef struct PHY_VARS_NR_UE_s {
   /// \brief Indicator that UE should perform band scanning
   int UE_scan;
   /// \brief Indicator that UE should perform coarse scanning around carrier
-  int UE_scan_carrier;
+  nr_ue_scan_enum_t UE_scan_carrier;
   /// \brief Indicator that UE should enable estimation and compensation of frequency offset
   int UE_fo_compensation;
   /// IF frequency for RF
@@ -397,7 +403,6 @@ typedef struct PHY_VARS_NR_UE_s {
   NR_UE_COMMON    common_vars;
 
   nr_ue_if_module_t *if_inst;
-  bool received_config_request;
   fapi_nr_config_request_t nrUE_config;
   nr_synch_request_t synch_request;
 

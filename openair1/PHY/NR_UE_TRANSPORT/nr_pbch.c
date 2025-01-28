@@ -449,19 +449,9 @@ int nr_rx_pbch(PHY_VARS_NR_UE *ue,
                                                     NR_POLAR_PBCH_AGGREGATION_LEVEL);
   pbch_a_prime = tmp;
 
-  nr_downlink_indication_t dl_indication;
-  fapi_nr_rx_indication_t rx_ind = {0};
-  uint16_t number_pdus = 1;
+  if (decoderState)
+    return decoderState;
 
-  if (decoderState) {
-    if (ue) { // decoding failed in synced state
-      nr_fill_dl_indication(&dl_indication, NULL, &rx_ind, proc, ue, NULL);
-      nr_fill_rx_indication(&rx_ind, FAPI_NR_RX_PDU_TYPE_SSB, ue, NULL, NULL, number_pdus, proc, NULL, NULL);
-      if (ue->if_inst && ue->if_inst->dl_indication)
-        ue->if_inst->dl_indication(&dl_indication);
-    }
-    return(decoderState);
-  }
   //  printf("polar decoder output 0x%08x\n",pbch_a_prime);
   // Decoder reversal
   pbch_a_prime = (uint32_t)reverse_bits(pbch_a_prime, NR_POLAR_PBCH_PAYLOAD_BITS);
@@ -513,14 +503,6 @@ int nr_rx_pbch(PHY_VARS_NR_UE *ue,
   }
 
 #endif
-
-  if (ue) {
-    nr_fill_dl_indication(&dl_indication, NULL, &rx_ind, proc, ue, NULL);
-    nr_fill_rx_indication(&rx_ind, FAPI_NR_RX_PDU_TYPE_SSB, ue, NULL, NULL, number_pdus, proc, (void *)result, NULL);
-
-    if (ue->if_inst && ue->if_inst->dl_indication)
-      ue->if_inst->dl_indication(&dl_indication);
-  }
 
   TracyCZoneEnd(ctx);
   return 0;

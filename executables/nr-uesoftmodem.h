@@ -49,7 +49,7 @@
   {"ue-txgain",                    CONFIG_HLP_UETXG,           0,               .dblptr=&nrUE_params.tx_gain,               .defdblval=0,      TYPE_DOUBLE,   0}, \
   {"ue-nb-ant-rx",                 CONFIG_HLP_UENANTR,         0,               .iptr=&(nrUE_params.nb_antennas_rx),        .defuintval=1,     TYPE_UINT8,    0}, \
   {"ue-nb-ant-tx",                 CONFIG_HLP_UENANTT,         0,               .iptr=&(nrUE_params.nb_antennas_tx),        .defuintval=1,     TYPE_UINT8,    0}, \
-  {"ue-scan-carrier",              CONFIG_HLP_UESCAN,          PARAMFLAG_BOOL,  .iptr=&(nrUE_params.UE_scan_carrier),        .defintval=0,      TYPE_INT,      0}, \
+  {"ue-scan-carrier",              CONFIG_HLP_UESCAN,          0,               .iptr=&(nrUE_params.UE_scan_carrier),        .defintval=0,      TYPE_INT,      0}, \
   {"ue-fo-compensation",           CONFIG_HLP_UEFO,            PARAMFLAG_BOOL,  .iptr=&(nrUE_params.UE_fo_compensation),     .defintval=0,      TYPE_INT,      0}, \
   {"ue-max-power",                 NULL,                       0,               .iptr=&(nrUE_params.tx_max_power),            .defintval=90,     TYPE_INT,      0}, \
   {"r"  ,                          CONFIG_HLP_PRB_SA,          0,               .iptr=&(nrUE_params.N_RB_DL),                .defintval=106,    TYPE_UINT,     0}, \

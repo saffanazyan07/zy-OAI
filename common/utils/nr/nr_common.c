@@ -1081,16 +1081,16 @@ uint32_t get_ssb_offset_to_pointA(uint32_t absoluteFrequencySSB,
   return ssb_offset_point_a;
 }
 
-static double get_start_freq(const double fc, const int nbRB, const int mu)
+static uint32_t get_start_freq(const uint32_t fc_khz, const int nbRB, const int mu)
 {
-  const int scs = MU_SCS(mu) * 1000;
-  return fc - ((double)nbRB / 2 * NR_NB_SC_PER_RB * scs);
+  const int scs = MU_SCS(mu);
+  return fc_khz - (nbRB * NR_NB_SC_PER_RB / 2 * scs);
 }
 
-static double get_stop_freq(const double fc, const int nbRB, const int mu)
+static uint32_t get_stop_freq(const uint32_t fc_khz, const int nbRB, const int mu)
 {
-  int scs = MU_SCS(mu) * 1000;
-  return fc + ((double)nbRB / 2 * NR_NB_SC_PER_RB * scs);
+  const int scs = MU_SCS(mu);
+  return fc_khz + (nbRB * NR_NB_SC_PER_RB / 2 * scs);
 }
 
 static void compute_M_and_N(const int gscn, int *rM, int *rN)
@@ -1117,38 +1117,78 @@ static void compute_M_and_N(const int gscn, int *rM, int *rN)
 }
 
 // Section 5.4.3 of 38.101-1 and -2
-static double get_ssref_from_gscn(const int gscn)
+// Returns SSRef in kHz
+uint32_t get_ssref_from_gscn(const int gscn)
 {
   int M, N = -1;
   compute_M_and_N(gscn, &M, &N);
   if (gscn > 1 && gscn < 7499) { // Sub 3GHz
     AssertFatal(N > 0 && N < 2500, "Invalid N\n");
     AssertFatal(M > 0 && M < 6 && (M & 0x1), "Invalid M\n");
-    return (N * 1200e3 + M * 50e3);
+    return (N * 1200 + M * 50);
   } else if (gscn > 7498 && gscn < 22256) {
     AssertFatal(N > -1 && N < 14757, "Invalid N\n");
-    return (3000e6 + N * 1.44e6);
+    return (3000000 + N * 1440);
   } else if (gscn > 22255 && gscn < 26638) {
     AssertFatal(N > -1 && N < 4382, "Invalid N\n");
-    return (24250.08e6 + N * 17.28e6);
+    return (24250080 + N * 17280);
   } else {
     LOG_E(NR_PHY, "Invalid GSCN\n");
     abort();
   }
 }
 
-static void find_gscn_to_scan(const double startFreq,
-                              const double stopFreq,
+static void compute_M_and_N_from_ssref(const uint32_t ssref, int *rM, int *rN)
+{
+  if (ssref < 3000000) {
+    for (int M = 1; M < 6; M += 2) {
+      if (((ssref - M * 50) % 1200) == 0) {
+        *rM = M;
+        *rN = (ssref - M * 50) / 1200;
+        break;
+      }
+    }
+  } else if (ssref >= 3000000 && ssref < 24250000) {
+    *rN = (ssref - 3000000) / 1440;
+  } else if (ssref >= 24250000 && ssref < 100000000) {
+    *rN = (ssref - 24250080) / 17280;
+  } else {
+    AssertFatal(0, "Invalid ssref %u kHz\n", ssref);
+  }
+}
+
+int get_gscn_from_nrarfcn(const int band, const int scs, const uint32_t arfcn)
+{
+  int M, N = -1;
+  const uint32_t ssref = from_nrarfcn(band, scs, arfcn) / 1000;
+  compute_M_and_N_from_ssref(ssref, &M, &N);
+  if (ssref < 3000000) {
+    AssertFatal(N > 0 && N < 2500, "Invalid N\n");
+    AssertFatal(M > 0 && M < 6 && (M & 0x1), "Invalid M\n");
+    return 3 * N + (M - 3) / 2;
+  } else if (ssref >= 3000000 && ssref < 24250000) {
+    AssertFatal(N > -1 && N < 14757, "Invalid N\n");
+    return 7499 + N;
+  } else if (ssref >= 24250000 && ssref < 100000000) {
+    AssertFatal(N > -1 && N < 4382, "Invalid N\n");
+    return 22256 + N;
+  } else {
+    AssertFatal(0, "Invalid ssref %u kHz\n", ssref);
+  }
+}
+
+static void find_gscn_to_scan(const uint32_t startFreq,
+                              const uint32_t stopFreq,
                               const sync_raster_t gscn,
                               int *scanGscnStart,
                               int *scanGscnStop)
 {
-  const double scs = MU_SCS(gscn.scs_index) * 1e3;
-  const double ssbBW = 20 * NR_NB_SC_PER_RB * scs;
+  const int scs = MU_SCS(gscn.scs_index);
+  const uint32_t ssbBW = 20 * NR_NB_SC_PER_RB * scs;
 
   for (int g = gscn.first_gscn; g < gscn.last_gscn; g += gscn.step_gscn) {
-    const double centerSSBFreq = get_ssref_from_gscn(g);
-    const double startSSBFreq = centerSSBFreq - ssbBW / 2;
+    const uint32_t centerSSBFreq = get_ssref_from_gscn(g);
+    const uint32_t startSSBFreq = centerSSBFreq - ssbBW / 2;
     if (startSSBFreq < startFreq)
       continue;
 
@@ -1158,8 +1198,8 @@ static void find_gscn_to_scan(const double startFreq,
   *scanGscnStop = *scanGscnStart;
 
   for (int g = gscn.last_gscn; g > gscn.first_gscn; g -= gscn.step_gscn) {
-    const double centerSSBFreq = get_ssref_from_gscn(g);
-    const double stopSSBFreq = centerSSBFreq + ssbBW / 2 - 1;
+    const uint32_t centerSSBFreq = get_ssref_from_gscn(g);
+    const uint32_t stopSSBFreq = centerSSBFreq + ssbBW / 2 - scs;
     if (stopSSBFreq > stopFreq)
       continue;
 
@@ -1168,23 +1208,23 @@ static void find_gscn_to_scan(const double startFreq,
   }
 }
 
-static int get_ssb_first_sc(const double pointA, const double ssbCenter, const int mu)
+int get_ssb_first_sc(const uint32_t pointA_kHz, const uint32_t ssbCenter_kHz, const int mu)
 {
-  const double scs = MU_SCS(mu) * 1e3;
+  const uint32_t scs = MU_SCS(mu);
   const int ssbRBs = 20;
-  return (int)((ssbCenter - pointA) / scs - (ssbRBs / 2 * NR_NB_SC_PER_RB));
+  return ((ssbCenter_kHz - pointA_kHz) / scs - (ssbRBs * NR_NB_SC_PER_RB / 2));
 }
 
 /* Returns array of first SCS offset in the scanning window */
-int get_scan_ssb_first_sc(const double fc, const int nbRB, const int nrBand, const int mu, nr_gscn_info_t ssbInfo[MAX_GSCN_BAND])
+int get_scan_ssb_first_sc(uint32_t *fc_khz_p,
+                          const int nbRB,
+                          const int nrBand,
+                          const int mu,
+                          const int lastScannedGscn,
+                          nr_gscn_info_t ssbInfo[MAX_GSCN_BAND])
 {
-  const double startFreq = get_start_freq(fc, nbRB, mu);
-  const double stopFreq = get_stop_freq(fc, nbRB, mu);
-
-  int scanGscnStart = 0;
-  int scanGscnStop = 0;
   const sync_raster_t *tmpRaster = sync_raster;
-  const sync_raster_t * end=sync_raster + sizeofArray(sync_raster);
+  const sync_raster_t *end = sync_raster + sizeofArray(sync_raster);
   while (tmpRaster < end && (tmpRaster->band != nrBand || tmpRaster->scs_index != mu))
     tmpRaster++;
   if (tmpRaster >= end) {
@@ -1192,10 +1232,33 @@ int get_scan_ssb_first_sc(const double fc, const int nbRB, const int nrBand, con
     return 0;
   }
 
+  const uint32_t scs = MU_SCS(mu);
+  uint32_t fc_khz = *fc_khz_p;
+  uint32_t startFreq;
+  if (fc_khz != 0) {
+    // center freq provided, return list of GSCN in current bandwidth
+    startFreq = get_start_freq(fc_khz, nbRB, mu);
+  } else {
+    // center freq not provided
+    // compute startFreq from first GSCN to be scanned in this run
+    int first_gscn = (lastScannedGscn == -1) ? tmpRaster->first_gscn : lastScannedGscn + tmpRaster->step_gscn;
+    if (first_gscn > tmpRaster->last_gscn) {
+      // Repeat search
+      first_gscn = tmpRaster->first_gscn;
+    }
+    const uint32_t fistSSRef = get_ssref_from_gscn(first_gscn);
+    const int ssbRBs = 20;
+    startFreq = fistSSRef - (ssbRBs * NR_NB_SC_PER_RB / 2 * scs);
+    fc_khz = startFreq + (nbRB * NR_NB_SC_PER_RB / 2 * scs);
+    // return new center frequency
+    *fc_khz_p = fc_khz;
+  }
+  const uint32_t stopFreq = get_stop_freq(fc_khz, nbRB, mu);
+  int scanGscnStart = 0;
+  int scanGscnStop = 0;
   find_gscn_to_scan(startFreq, stopFreq, *tmpRaster, &scanGscnStart, &scanGscnStop);
 
-  const double scs = MU_SCS(mu) * 1e3;
-  const double pointA = fc - ((double)nbRB / 2 * scs * NR_NB_SC_PER_RB);
+  const uint32_t pointA = fc_khz - (nbRB * NR_NB_SC_PER_RB / 2 * scs);
   int numGscn = 0;
   for (int g = scanGscnStart; (g <= scanGscnStop) && (numGscn < MAX_GSCN_BAND); g += tmpRaster->step_gscn) {
     ssbInfo[numGscn].ssRef = get_ssref_from_gscn(g);

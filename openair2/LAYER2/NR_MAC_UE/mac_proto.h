@@ -80,12 +80,9 @@ void nr_rrc_mac_config_req_cg(module_id_t module_id,
                               NR_CellGroupConfig_t *cell_group_config,
                               NR_UE_NR_Capability_t *ue_Capability);
 
-void nr_rrc_mac_config_req_mib(module_id_t module_id,
-                               int cc_idP,
-                               NR_MIB_t *mibP,
-                               int sched_sib1);
+void nr_rrc_mac_config_req_mib(module_id_t module_id, int cc_idP, NR_MIB_t *mibP, const long ssb_arfcn, int sched_sib1);
 
-void nr_rrc_mac_config_req_sib1(module_id_t module_id, int cc_idP, NR_SIB1_t *sib1);
+void nr_rrc_mac_config_req_sib1(module_id_t module_id, int cc_idP, NR_SIB1_t *sib1, int ssb_arfcn);
 
 struct position; /* forward declaration */
 void nr_rrc_mac_config_other_sib(module_id_t module_id, NR_SIB19_r17_t *sib19_r17);

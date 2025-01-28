@@ -106,9 +106,33 @@ void set_tdd_config_nr_ue(fapi_nr_tdd_table_t *tdd_table,
   }
 }
 
-static void config_common_ue_sa(NR_UE_MAC_INST_t *mac,
-                                NR_ServingCellConfigCommonSIB_t *scc,
-                                int cc_idP)
+static uint32_t get_pointA_frequency(const int arfcn_ssb,
+                                     const int k_ssb,
+                                     const int offsetToPointA,
+                                     const int system_mu,
+                                     const int scc_common,
+                                     const int nr_band,
+                                     const frequency_range_t fr)
+{
+  const uint32_t ssb_center = from_nrarfcn(nr_band, system_mu, arfcn_ssb) / 1000;
+  const uint32_t ssb_prbs = 20;
+  const uint32_t scs_khz = MU_SCS(system_mu);
+  const uint32_t ssb_start = ssb_center - (ssb_prbs / 2 * NR_NB_SC_PER_RB * scs_khz);
+  uint32_t pointA;
+  if (fr == FR1) {
+    const uint32_t ssb_crb_start = ssb_start - ((k_ssb >> system_mu) * scs_khz);
+    pointA = ssb_crb_start - (((offsetToPointA * NR_NB_SC_PER_RB) >> system_mu) * scs_khz);
+  } else {
+    AssertFatal(system_mu >= 2, "Invalid numerology %d for FR2\n", system_mu);
+    /* for FR2, mu of k_ssb is subCarrierSpacingCommon as specified in 38.211 7.4.3.1 */
+    const uint32_t ssb_crb_start = ssb_start - ((k_ssb >> (system_mu - scc_common)) * scs_khz);
+    /* FR2, offsetToPointA represented as 60kHz SCS */
+    pointA = ssb_crb_start - (((offsetToPointA * NR_NB_SC_PER_RB) >> (system_mu - 2)) * scs_khz);
+  }
+  return pointA;
+}
+
+static void config_common_ue_sa(NR_UE_MAC_INST_t *mac, NR_ServingCellConfigCommonSIB_t *scc, int cc_idP, const int arfcn_ssb)
 {
   fapi_nr_config_request_t *cfg = &mac->phy_config.config_req;
   mac->phy_config.Mod_id = mac->ue_id;
@@ -124,11 +148,24 @@ static void config_common_ue_sa(NR_UE_MAC_INST_t *mac,
   int bw_index = get_supported_band_index(frequencyInfoDL->scs_SpecificCarrierList.list.array[0]->subcarrierSpacing,
                                           mac->frequency_range,
                                           frequencyInfoDL->scs_SpecificCarrierList.list.array[0]->carrierBandwidth);
+  SETBIT(cfg->config_mask, PHY_CONFIG_BIT_MASK_CARRIER);
   cfg->carrier_config.dl_bandwidth = get_supported_bw_mhz(mac->frequency_range, bw_index);
 
-  uint64_t dl_bw_khz = (12 * frequencyInfoDL->scs_SpecificCarrierList.list.array[0]->carrierBandwidth) *
-                       (15 << frequencyInfoDL->scs_SpecificCarrierList.list.array[0]->subcarrierSpacing);
-  cfg->carrier_config.dl_frequency = (downlink_frequency[cc_idP][0]/1000) - (dl_bw_khz>>1);
+  const frequency_range_t fr = mac->frequency_range;
+  const int sccCommon = (fr == FR2) ? (2 + mac->mib->subCarrierSpacingCommon) : mac->mib->subCarrierSpacingCommon;
+  const uint32_t pointA = get_pointA_frequency(arfcn_ssb,
+                                               mac->ssb_subcarrier_offset,
+                                               frequencyInfoDL->offsetToPointA,
+                                               mac->mu,
+                                               sccCommon,
+                                               mac->nr_band,
+                                               fr);
+  cfg->carrier_config.dl_frequency = pointA;
+  // Update cset0 start RB
+  NR_Type0_PDCCH_CSS_config_t *cset0 = &mac->type0_PDCCH_CSS_config;
+  // FR2, offsetToPointA represented as 60kHz SCS
+  const int offsetToPointA_mu = (fr == FR2) ? mac->mu - 2 : mac->mu;
+  cset0->cset_start_rb = (frequencyInfoDL->offsetToPointA >> offsetToPointA_mu) - cset0->rb_offset;
 
   for (int i = 0; i < 5; i++) {
     if (i == frequencyInfoDL->scs_SpecificCarrierList.list.array[0]->subcarrierSpacing) {
@@ -149,11 +186,15 @@ static void config_common_ue_sa(NR_UE_MAC_INST_t *mac,
                                       frequencyInfoUL->scs_SpecificCarrierList.list.array[0]->carrierBandwidth);
   cfg->carrier_config.uplink_bandwidth = get_supported_bw_mhz(mac->frequency_range, bw_index);
 
+  mac->frame_type = get_frame_type(mac->nr_band, get_softmodem_params()->numerology);
   if (frequencyInfoUL->absoluteFrequencyPointA == NULL)
     cfg->carrier_config.uplink_frequency = cfg->carrier_config.dl_frequency;
-  else
-    // TODO check if corresponds to what reported in SIB1
-    cfg->carrier_config.uplink_frequency = (downlink_frequency[cc_idP][0]/1000) + uplink_frequency_offset[cc_idP][0];
+  else {
+    const uint32_t pointA_UL = from_nrarfcn(mac->nr_band, mac->mu, *frequencyInfoUL->absoluteFrequencyPointA) / 1000;
+    if ((mac->frame_type == TDD) && (pointA_UL != pointA))
+      LOG_E(NR_MAC, "absoluteFrequencyPointA is not consistent with offsetToPointA in SIB1\n");
+    cfg->carrier_config.uplink_frequency = pointA_UL;
+  }
 
   for (int i = 0; i < 5; i++) {
     if (i == frequencyInfoUL->scs_SpecificCarrierList.list.array[0]->subcarrierSpacing) {
@@ -166,12 +207,13 @@ static void config_common_ue_sa(NR_UE_MAC_INST_t *mac,
     }
   }
 
-  mac->frame_type = get_frame_type(mac->nr_band, get_softmodem_params()->numerology);
   // cell config
+  SETBIT(cfg->config_mask, PHY_CONFIG_BIT_MASK_CELL);
   cfg->cell_config.phy_cell_id = mac->physCellId;
   cfg->cell_config.frame_duplex_type = mac->frame_type;
 
   // SSB config
+  SETBIT(cfg->config_mask, PHY_CONFIG_BIT_MASK_SSB);
   cfg->ssb_config.ss_pbch_power = scc->ss_PBCH_BlockPower;
   cfg->ssb_config.scs_common = get_softmodem_params()->numerology;
 
@@ -192,6 +234,7 @@ static void config_common_ue_sa(NR_UE_MAC_INST_t *mac,
   }
 
   // TDD Table Configuration
+  SETBIT(cfg->config_mask, PHY_CONFIG_BIT_MASK_TDD);
   if (cfg->cell_config.frame_duplex_type == TDD){
     set_tdd_config_nr_ue(&cfg->tdd_table_1, cfg->ssb_config.scs_common, &mac->tdd_UL_DL_ConfigurationCommon->pattern1);
     if (mac->tdd_UL_DL_ConfigurationCommon->pattern2) {
@@ -202,6 +245,7 @@ static void config_common_ue_sa(NR_UE_MAC_INST_t *mac,
 
   // PRACH configuration
 
+  SETBIT(cfg->config_mask, PHY_CONFIG_BIT_MASK_PRACH);
   uint8_t nb_preambles = 64;
   NR_RACH_ConfigCommon_t *rach_ConfigCommon = scc->uplinkConfigCommon->initialUplinkBWP.rach_ConfigCommon->choice.setup;
   if(rach_ConfigCommon->totalNumberOfRA_Preambles != NULL)
@@ -311,6 +355,7 @@ static void config_common_ue(NR_UE_MAC_INST_t *mac,
   AssertFatal(scc->downlinkConfigCommon, "Not expecting downlinkConfigCommon to be NULL here\n");
 
   NR_FrequencyInfoDL_t *frequencyInfoDL = scc->downlinkConfigCommon->frequencyInfoDL;
+  SETBIT(cfg->config_mask, PHY_CONFIG_BIT_MASK_CARRIER);
   if (frequencyInfoDL) { // NeedM for inter-freq handover
     mac->nr_band = *frequencyInfoDL->frequencyBandList.list.array[0];
     mac->frame_type = get_frame_type(mac->nr_band, get_softmodem_params()->numerology);
@@ -370,10 +415,12 @@ static void config_common_ue(NR_UE_MAC_INST_t *mac,
   }
 
   // cell config
+  SETBIT(cfg->config_mask, PHY_CONFIG_BIT_MASK_CELL);
   cfg->cell_config.phy_cell_id = *scc->physCellId;
   cfg->cell_config.frame_duplex_type = mac->frame_type;
 
   // SSB config
+  SETBIT(cfg->config_mask, PHY_CONFIG_BIT_MASK_SSB);
   cfg->ssb_config.ss_pbch_power = scc->ss_PBCH_BlockPower;
   cfg->ssb_config.scs_common = *scc->ssbSubcarrierSpacing;
 
@@ -413,6 +460,7 @@ static void config_common_ue(NR_UE_MAC_INST_t *mac,
   }
 
   // TDD Table Configuration
+  SETBIT(cfg->config_mask, PHY_CONFIG_BIT_MASK_TDD);
   if (cfg->cell_config.frame_duplex_type == TDD){
     set_tdd_config_nr_ue(&cfg->tdd_table_1, cfg->ssb_config.scs_common, &mac->tdd_UL_DL_ConfigurationCommon->pattern1);
     if (mac->tdd_UL_DL_ConfigurationCommon->pattern2) {
@@ -422,6 +470,7 @@ static void config_common_ue(NR_UE_MAC_INST_t *mac,
   }
 
   // PRACH configuration
+  SETBIT(cfg->config_mask, PHY_CONFIG_BIT_MASK_PRACH);
   uint8_t nb_preambles = 64;
   if (scc->uplinkConfigCommon && scc->uplinkConfigCommon->initialUplinkBWP
       && scc->uplinkConfigCommon->initialUplinkBWP->rach_ConfigCommon) { // all NeedM
@@ -919,10 +968,71 @@ static void update_mib_conf(NR_MIB_t *target, NR_MIB_t *source)
   target->intraFreqReselection = source->intraFreqReselection;
 }
 
-void nr_rrc_mac_config_req_mib(module_id_t module_id,
-                               int cc_idP,
-                               NR_MIB_t *mib,
-                               int sched_sib)
+void configure_ue_phy_for_sib1_reception(NR_UE_MAC_INST_t *mac, const int cc_id, const long ssb_arfcn)
+{
+  const int ssb_scs = mac->mu;
+  int ssb_sc_offset_norm;
+  if (mac->ssb_subcarrier_offset < 24 && mac->frequency_range == FR1)
+    ssb_sc_offset_norm = mac->ssb_subcarrier_offset >> ssb_scs;
+  else
+    ssb_sc_offset_norm = mac->ssb_subcarrier_offset;
+
+  const NR_SubcarrierSpacing_t scs_pdcch = get_type0_PDCCH_scs(mac->frequency_range, mac->mib->subCarrierSpacingCommon);
+  const channel_bandwidth_t min_ch_bw = get_type0_PDCCH_min_channel_bw(mac->nr_band);
+  const uint32_t index_4msb = (mac->mib->pdcch_ConfigSIB1.controlResourceSetZero);
+
+  NR_Type0_PDCCH_CSS_config_t dummy_cset0 = {0};
+  /* first we obtain RB offset of type 0 PDCCH from MIB */
+  fill_type0_PDCCH_coreset_config(&dummy_cset0, ssb_scs, scs_pdcch, index_4msb, min_ch_bw, (ssb_sc_offset_norm == 0), 0);
+  /* SC offset from current point A to CRB SSB start */
+  const int ssb_sc_crb_offset_point_a = mac->ssb_start_subcarrier - ssb_sc_offset_norm;
+  /* check if type0 PDCCH is within current bandwidth */
+  /* Here we don't consider cset_start_rb from NR_Type0_PDCCH_CSS_config_t becuase the varialbe has PRB granularity but
+     the UE could have arbitrary SC as the start RB. This is because the UE can start with a center frequency that is
+     not PRB aligned wrt the gNB. Hence, the following code uses type0 coreset start SC computed from current point A. */
+  int type0cset_start_sc = ssb_sc_crb_offset_point_a - dummy_cset0.rb_offset * NR_NB_SC_PER_RB;
+  int pointA_adj = 0;
+  if (type0cset_start_sc < 0) { // type 0 PDCCH coreset starts below current point A
+    pointA_adj = type0cset_start_sc;
+    type0cset_start_sc = 0; // adjusted start SC
+  } else {
+    /* check if cset0 start is PRB aligned with current point A. PHY can only handle PDCCH config with RB start wrt point A. */
+    pointA_adj = type0cset_start_sc % NR_NB_SC_PER_RB;
+    type0cset_start_sc -= pointA_adj;
+  }
+
+  AssertFatal(dummy_cset0.num_rbs <= mac->N_RB_DL, "Cannot receive SIB1 with current configured bandwidth %d\n", mac->N_RB_DL);
+
+  const int type0cset_stop_sc = type0cset_start_sc + dummy_cset0.num_rbs * NR_NB_SC_PER_RB;
+  if (type0cset_stop_sc > mac->N_RB_DL * NR_NB_SC_PER_RB) // type 0 PDCCH coreset goes beyond current bw
+    pointA_adj += mac->N_RB_DL * NR_NB_SC_PER_RB - type0cset_stop_sc;
+
+  if (pointA_adj == 0) // no need to change carrier freq
+    return;
+
+  const uint32_t ssb_abs_freq = from_nrarfcn(mac->nr_band, ssb_scs, ssb_arfcn) / 1000; // in khz
+  const uint32_t ssb_rbs = 20;
+  const uint32_t scs_khz = MU_SCS(ssb_scs);
+  const uint32_t ssb_start_abs_freq = ssb_abs_freq - ssb_rbs / 2 * NR_NB_SC_PER_RB * scs_khz;
+  const uint32_t pointA_abs_current = ssb_start_abs_freq - mac->ssb_start_subcarrier * scs_khz;
+  const uint32_t pointA_abs_new = pointA_abs_current + pointA_adj * scs_khz;
+
+  /* set new center frequency to receive SIB1 */
+  fapi_nr_config_request_t *cfg = &mac->phy_config.config_req;
+  cfg->carrier_config.dl_frequency = pointA_abs_new;
+  cfg->carrier_config.uplink_frequency = cfg->carrier_config.dl_frequency;
+  /* send sync request so PHY can sync again with new carrier freq */
+  if (!get_softmodem_params()->emulate_l1) {
+    mac->synch_request.Mod_id = mac->ue_id;
+    mac->synch_request.CC_id = cc_id;
+    fapi_nr_synch_request_t s = {.target_Nid_cell = mac->physCellId, .ssb_bw_scan = false, .ssb_arfcn = ssb_arfcn};
+    mac->synch_request.synch_req = s;
+    mac->if_module->synch_request(&mac->synch_request);
+    mac->if_module->phy_config_request(&mac->phy_config);
+  }
+}
+
+void nr_rrc_mac_config_req_mib(module_id_t module_id, int cc_idP, NR_MIB_t *mib, const long ssb_arfcn, int sched_sib)
 {
   NR_UE_MAC_INST_t *mac = get_mac_inst(module_id);
   int ret = pthread_mutex_lock(&mac->if_mutex);
@@ -938,6 +1048,8 @@ void nr_rrc_mac_config_req_mib(module_id_t module_id,
   else if (sched_sib == 2)
     mac->get_otherSI = true;
   nr_ue_decode_mib(mac, cc_idP);
+  if (mac->get_sib1)
+    configure_ue_phy_for_sib1_reception(mac, cc_idP, ssb_arfcn);
   ret = pthread_mutex_unlock(&mac->if_mutex);
   AssertFatal(!ret, "mutex failed %d\n", ret);
 }
@@ -1755,7 +1867,7 @@ static void configure_si_schedulingInfo(NR_UE_MAC_INST_t *mac,
   }
 }
 
-void nr_rrc_mac_config_req_sib1(module_id_t module_id, int cc_idP, NR_SIB1_t *sib1)
+void nr_rrc_mac_config_req_sib1(module_id_t module_id, int cc_idP, NR_SIB1_t *sib1, int ssb_arfcn)
 {
   NR_UE_MAC_INST_t *mac = get_mac_inst(module_id);
   int ret = pthread_mutex_lock(&mac->if_mutex);
@@ -1772,7 +1884,7 @@ void nr_rrc_mac_config_req_sib1(module_id_t module_id, int cc_idP, NR_SIB1_t *si
   configure_si_schedulingInfo(mac, si_SchedulingInfo, si_SchedulingInfo_v1700);
   mac->n_ta_offset = get_ta_offset(scc->n_TimingAdvanceOffset);
 
-  config_common_ue_sa(mac, scc, cc_idP);
+  config_common_ue_sa(mac, scc, cc_idP, ssb_arfcn);
   configure_common_BWP_dl(mac,
                           0, // bwp-id
                           &scc->downlinkConfigCommon.initialDownlinkBWP);
@@ -1795,8 +1907,20 @@ void nr_rrc_mac_config_req_sib1(module_id_t module_id, int cc_idP, NR_SIB1_t *si
   // Setup the SSB to Rach Occasions mapping according to the config
   build_ssb_to_ro_map(mac);
 
-  if (!get_softmodem_params()->emulate_l1)
+  if (!get_softmodem_params()->emulate_l1) {
+    const int new_ssb_start_sc = get_ssb_first_sc(mac->phy_config.config_req.carrier_config.dl_frequency,
+                                                  from_nrarfcn(mac->nr_band, mac->mu, ssb_arfcn) / 1000,
+                                                  mac->mu);
+    /* send sync request only if center frequency changes */
+    if (new_ssb_start_sc != mac->ssb_start_subcarrier) {
+      mac->synch_request.Mod_id = mac->ue_id;
+      mac->synch_request.CC_id = cc_idP;
+      fapi_nr_synch_request_t s = {.target_Nid_cell = mac->physCellId, .ssb_bw_scan = false, .ssb_arfcn = ssb_arfcn};
+      mac->synch_request.synch_req = s;
+      mac->if_module->synch_request(&mac->synch_request);
+    }
     mac->if_module->phy_config_request(&mac->phy_config);
+  }
   ret = pthread_mutex_unlock(&mac->if_mutex);
   AssertFatal(!ret, "mutex failed %d\n", ret);
 }

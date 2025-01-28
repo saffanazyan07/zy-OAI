@@ -644,6 +644,10 @@ typedef struct NR_UE_MAC_INST_s {
   uint16_t nr_band;
   uint8_t ssb_subcarrier_offset;
   int ssb_start_subcarrier;
+  /// Initial bandwidth set in PHY
+  uint16_t N_RB_DL;
+  /// Initial numerology set in PHY
+  uint8_t mu;
 
   NR_SSB_meas_t ssb_measurements;
 

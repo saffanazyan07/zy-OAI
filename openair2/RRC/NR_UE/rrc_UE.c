@@ -336,6 +336,7 @@ static void nr_rrc_process_sib1(NR_UE_RRC_INST_t *rrc, NR_UE_RRC_SI_INFO *SI_inf
   UPDATE_IE(rrc->timers_and_constants.sib1_TimersAndConstants, sib1->ue_TimersAndConstants, NR_UE_TimersAndConstants_t);
   MessageDef *msg = itti_alloc_new_message(TASK_RRC_NRUE, 0, NR_MAC_RRC_CONFIG_SIB1);
   NR_MAC_RRC_CONFIG_SIB1(msg).sib1 = sib1;
+  NR_MAC_RRC_CONFIG_SIB1(msg).ssb_arfcn = rrc->arfcn_ssb;
   itti_send_msg_to_task(TASK_MAC_UE, rrc->ue_id, msg);
 }
 
@@ -859,6 +860,7 @@ static void nr_rrc_ue_decode_NR_BCCH_BCH_Message(NR_UE_RRC_INST_t *rrc,
     // mac will manage the pointer
     NR_MAC_RRC_CONFIG_MIB(msg).bcch = bcch_message;
     NR_MAC_RRC_CONFIG_MIB(msg).get_sib = get_sib;
+    NR_MAC_RRC_CONFIG_MIB(msg).ssb_arfcn = ssb_arfcn;
     itti_send_msg_to_task(TASK_MAC_UE, rrc->ue_id, msg);
   } else {
     LOG_E(NR_RRC, "RRC-received BCCH message is not a MIB\n");

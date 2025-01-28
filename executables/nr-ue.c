@@ -465,7 +465,7 @@ static void RU_write(nr_rxtx_thread_data_t *rxtxD, bool sl_tx_action)
 
   radio_tx_burst_flag_t flags = TX_BURST_INVALID;
 
-  if (UE->received_config_request) {
+  if (GETBIT(cfg->config_mask, PHY_CONFIG_BIT_MASK_TDD)) {
     if (openair0_cfg[0].duplex_mode == duplex_mode_FDD || get_softmodem_params()->continuous_tx) {
       flags = TX_BURST_MIDDLE;
     // In case of Sidelink, USRP write needed only in case transmission
@@ -579,20 +579,34 @@ static uint64_t get_carrier_frequency(const int N_RB, const int mu, const uint32
   return carrier_freq;
 }
 
+void readFrame(PHY_VARS_NR_UE *UE,  openair0_timestamp *timestamp, bool toTrash);
+
 static int handle_sync_req_from_mac(PHY_VARS_NR_UE *UE)
 {
   NR_DL_FRAME_PARMS *fp = &UE->frame_parms;
+  const fapi_nr_ue_carrier_config_t *cfg = &UE->nrUE_config.carrier_config;
   // Start synchronization with a target gNB
   if (UE->synch_request.received_synch_request == 1) {
     // if upper layers signal BW scan we do as instructed by command line parameter
     // if upper layers disable BW scan we set it to false
-    if (UE->synch_request.synch_req.ssb_bw_scan)
+    const fapi_nr_synch_request_t *s = &UE->synch_request.synch_req;
+    if (s->ssb_bw_scan)
       UE->UE_scan_carrier = get_nrUE_params()->UE_scan_carrier;
-    else
-      UE->UE_scan_carrier = false;
+    else {
+      UE->UE_scan_carrier = NO_SCAN;
+      if (s->ssb_arfcn == 0) {
+        LOG_E(PHY,
+              "Received sync request without BW scan and no SSB position. Either one should be provided. Attempting sync with "
+              "default SSB position\n");
+      } else {
+        fp->ssb_start_subcarrier = get_ssb_first_sc(cfg->dl_frequency,
+                                                    from_nrarfcn(fp->nr_band, fp->numerology_index, s->ssb_arfcn) / 1000,
+                                                    fp->numerology_index);
+        fp->ssb_arfcn = s->ssb_arfcn;
+      }
+    }
     UE->target_Nid_cell = UE->synch_request.synch_req.target_Nid_cell;
 
-    const fapi_nr_ue_carrier_config_t *cfg = &UE->nrUE_config.carrier_config;
     uint64_t dl_CarrierFreq = get_carrier_frequency(fp->N_RB_DL, fp->numerology_index, cfg->dl_frequency);
     uint64_t ul_CarrierFreq = get_carrier_frequency(fp->N_RB_UL, fp->numerology_index, cfg->uplink_frequency);
     if (dl_CarrierFreq != fp->dl_CarrierFreq || ul_CarrierFreq != fp->ul_CarrierFreq) {
@@ -601,6 +615,10 @@ static int handle_sync_req_from_mac(PHY_VARS_NR_UE *UE)
       nr_rf_card_config_freq(&openair0_cfg[UE->rf_map.card], ul_CarrierFreq, dl_CarrierFreq, 0);
       UE->rfdevice.trx_set_freq_func(&UE->rfdevice, &openair0_cfg[0]);
       init_symbol_rotation(fp);
+      // warm up the RF board after changing frequency
+      int64_t tmp;
+      for (int i = 0; i < 50; i++)
+        readFrame(UE, &tmp, true);
     }
 
     /* Clearing UE harq while DL actors are active causes race condition.
@@ -874,6 +892,7 @@ void *UE_thread(void *arg)
   int duration_rx_to_tx = NR_UE_CAPABILITY_SLOT_RX_TO_TX;
   int nr_slot_tx_offset = 0;
   bool update_ntn_system_information = false;
+  int last_scanned_gscn = -1;
 
   while (!oai_exit) {
     nr_slot_tx_offset = 0;
@@ -883,7 +902,6 @@ void *UE_thread(void *arg)
       if (res) {
         syncRunning = false;
         if (UE->is_synchronized) {
-          UE->synch_request.received_synch_request = 0;
           if (UE->sl_mode == SL_MODE2_SUPPORTED)
             decoded_frame_rx = UE->SL_UE_PHY_PARAMS.sync_params.DFN;
           else {
@@ -929,21 +947,50 @@ void *UE_thread(void *arg)
     AssertFatal(!syncRunning, "At this point synchronization can't be running\n");
 
     if (!UE->is_synchronized) {
-      readFrame(UE, &sync_timestamp, false);
       notifiedFIFO_elt_t *Msg = newNotifiedFIFO_elt(sizeof(syncData_t), 0, &nf, UE_synch);
       syncData_t *syncMsg = (syncData_t *)NotifiedFifoData(Msg);
       *syncMsg = (syncData_t){0};
       NR_DL_FRAME_PARMS *fp = &UE->frame_parms;
-      if (UE->UE_scan_carrier) {
+      if (fp->dl_CarrierFreq % 1000)
+        LOG_E(PHY, "Center frequency %lu is not multiple of kHz\n", fp->dl_CarrierFreq);
+      if (UE->UE_scan_carrier == SCAN_BW) {
         // Get list of GSCN in this band for UE's bandwidth and center frequency.
         LOG_W(PHY, "UE set to scan all GSCN in current bandwidth\n");
+        uint32_t dl_freq_khz = fp->dl_CarrierFreq / 1000;
         syncMsg->numGscn =
-            get_scan_ssb_first_sc(fp->dl_CarrierFreq, fp->N_RB_DL, fp->nr_band, fp->numerology_index, syncMsg->gscnInfo);
+            get_scan_ssb_first_sc(&dl_freq_khz, fp->N_RB_DL, fp->nr_band, fp->numerology_index, 0 /*not used*/, syncMsg->gscnInfo);
+      } else if (UE->UE_scan_carrier == SCAN_BAND) {
+        // Get list of GSCN after last scanned GSCN in this band
+        LOG_W(PHY, "UE set to scan full NR band\n");
+        uint32_t dlFreq = 0;
+        syncMsg->numGscn =
+            get_scan_ssb_first_sc(&dlFreq, fp->N_RB_DL, fp->nr_band, fp->numerology_index, last_scanned_gscn, syncMsg->gscnInfo);
+        // save last gscn from current list to continune in next scan
+        last_scanned_gscn = syncMsg->gscnInfo[syncMsg->numGscn - 1].gscn;
+        // set dl freqeuncy for current scan
+        fp->dl_CarrierFreq = dlFreq * 1000;
+        nr_rf_card_config_freq(&openair0_cfg[UE->rf_map.card], 0, fp->dl_CarrierFreq, 0); // no need to set UL freq for cell search
+        UE->rfdevice.trx_set_freq_func(&UE->rfdevice, &openair0_cfg[0]);
+        init_symbol_rotation(fp);
       } else {
         LOG_W(PHY, "SSB position provided\n");
-        syncMsg->gscnInfo[0] = (nr_gscn_info_t){.ssbFirstSC = fp->ssb_start_subcarrier};
+        nr_gscn_info_t *g = syncMsg->gscnInfo;
+        g->ssbFirstSC = fp->ssb_start_subcarrier;
+        if (fp->ssb_arfcn) {
+          g->gscn = get_gscn_from_nrarfcn(fp->nr_band, fp->numerology_index, fp->ssb_arfcn);
+          g->ssRef = get_ssref_from_gscn(g->gscn);
+        } else {
+          g->gscn = g->ssRef = 0;
+        }
         syncMsg->numGscn = 1;
       }
+      // warm up the RF board after changing frequency
+      int64_t tmp;
+      for (int i = 0; i < 50; i++)
+        readFrame(UE, &tmp, true);
+
+      // read 2 frames to do initial sync
+      readFrame(UE, &sync_timestamp, false);
       syncMsg->UE = UE;
       memset(&syncMsg->proc, 0, sizeof(syncMsg->proc));
       pushNotifiedFIFO(&UE->sync_actor.fifo, Msg);
@@ -1023,16 +1070,15 @@ void *UE_thread(void *arg)
     curMsg.proc.nr_slot_tx  = (absolute_slot + duration_rx_to_tx) % nb_slot_frame;
     curMsg.proc.frame_rx    = (absolute_slot / nb_slot_frame) % MAX_FRAME_NUMBER;
     curMsg.proc.frame_tx    = ((absolute_slot + duration_rx_to_tx) / nb_slot_frame) % MAX_FRAME_NUMBER;
-    if (UE->received_config_request) {
-      if (UE->sl_mode) {
+    if (sl_cfg) {
+      if (sl_cfg->config_mask == 0xf && UE->sl_mode) {
         curMsg.proc.rx_slot_type = sl_nr_ue_slot_select(sl_cfg, curMsg.proc.nr_slot_rx, TDD);
         curMsg.proc.tx_slot_type = sl_nr_ue_slot_select(sl_cfg, curMsg.proc.nr_slot_tx, TDD);
-      } else {
-        curMsg.proc.rx_slot_type = nr_ue_slot_select(cfg, curMsg.proc.nr_slot_rx);
-        curMsg.proc.tx_slot_type = nr_ue_slot_select(cfg, curMsg.proc.nr_slot_tx);
       }
-    }
-    else {
+    } else if (GETBIT(cfg->config_mask, PHY_CONFIG_BIT_MASK_TDD)) {
+      curMsg.proc.rx_slot_type = nr_ue_slot_select(cfg, curMsg.proc.nr_slot_rx);
+      curMsg.proc.tx_slot_type = nr_ue_slot_select(cfg, curMsg.proc.nr_slot_tx);
+    } else {
       curMsg.proc.rx_slot_type = NR_DOWNLINK_SLOT;
       curMsg.proc.tx_slot_type = NR_DOWNLINK_SLOT;
     }

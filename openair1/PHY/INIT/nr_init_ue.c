@@ -275,10 +275,6 @@ int init_nr_ue_signal(PHY_VARS_NR_UE *ue, int nb_connected_gNB)
   init_symbol_rotation(fp);
   init_timeshift_rotation(fp);
 
-  // initialize to false only for SA since in do-ra and phy-test it is already set to true before getting here
-  if (IS_SA_MODE(get_softmodem_params()))
-    ue->received_config_request = false;
-
   return 0;
 }
 
