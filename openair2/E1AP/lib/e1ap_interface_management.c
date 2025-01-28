@@ -508,61 +508,6 @@ bool eq_e1ap_cuup_setup_response(const e1ap_setup_resp_t *a, const e1ap_setup_re
  *     GNB-CU-UP E1 SETUP FAILURE
  * ==================================== */
 
-static E1AP_Cause_t encode_e1ap_cause_ie(const e1ap_cause_t *cause)
-{
-  E1AP_Cause_t ie;
-  switch (cause->type) {
-    case E1AP_CAUSE_RADIO_NETWORK:
-      ie.present = E1AP_Cause_PR_radioNetwork;
-      ie.choice.radioNetwork = cause->value;
-      break;
-    case E1AP_CAUSE_TRANSPORT:
-      ie.present = E1AP_Cause_PR_transport;
-      ie.choice.transport = cause->value;
-      break;
-    case E1AP_CAUSE_PROTOCOL:
-      ie.present = E1AP_Cause_PR_protocol;
-      ie.choice.protocol = cause->value;
-      break;
-    case E1AP_CAUSE_MISC:
-      ie.present = E1AP_Cause_PR_misc;
-      ie.choice.misc = cause->value;
-      break;
-    default:
-      ie.present = E1AP_Cause_PR_NOTHING;
-      break;
-  }
-  return ie;
-}
-
-static e1ap_cause_t decode_e1ap_cause_ie(const E1AP_Cause_t *ie)
-{
-  e1ap_cause_t cause;
-  // Decode the 'choice' field based on the 'present' value
-  switch (ie->present) {
-    case E1AP_Cause_PR_radioNetwork:
-      cause.value = ie->choice.radioNetwork;
-      cause.type = E1AP_CAUSE_RADIO_NETWORK;
-      break;
-    case E1AP_Cause_PR_transport:
-      cause.value = ie->choice.transport;
-      cause.type = E1AP_CAUSE_TRANSPORT;
-      break;
-    case E1AP_Cause_PR_protocol:
-      cause.value = ie->choice.protocol;
-      cause.type = E1AP_CAUSE_PROTOCOL;
-      break;
-    case E1AP_Cause_PR_misc:
-      cause.value = ie->choice.misc;
-      cause.type = E1AP_CAUSE_MISC;
-      break;
-    default:
-      cause.type = E1AP_CAUSE_NOTHING;
-      break;
-  }
-  return cause;
-}
-
 /**
  * @brief Encoder for GNB-CU-UP E1 Setup Failure
  * @ref 9.2.1.6 GNB-CU-UP E1 SETUP FAILURE of 3GPP TS 38.463
@@ -588,7 +533,7 @@ E1AP_E1AP_PDU_t *encode_e1ap_cuup_setup_failure(const e1ap_setup_fail_t *msg)
   ie2->id = E1AP_ProtocolIE_ID_id_Cause;
   ie2->criticality = E1AP_Criticality_ignore;
   ie2->value.present = E1AP_GNB_CU_UP_E1SetupFailureIEs__value_PR_Cause;
-  ie2->value.choice.Cause = encode_e1ap_cause_ie(&msg->cause);
+  ie2->value.choice.Cause = e1_encode_cause_ie(&msg->cause);
   // Time To Wait (O)
   if (msg->time_to_wait) {
     asn1cSequenceAdd(out->protocolIEs.list, E1AP_GNB_CU_UP_E1SetupFailureIEs_t, ie3);
@@ -630,7 +575,7 @@ bool decode_e1ap_cuup_setup_failure(const E1AP_E1AP_PDU_t *pdu, e1ap_setup_fail_
       case E1AP_ProtocolIE_ID_id_Cause:
         // Cause
         E1AP_LIB_FIND_IE(E1AP_GNB_CU_UP_E1SetupFailureIEs_t, ie, in, E1AP_ProtocolIE_ID_id_Cause, true);
-        out->cause = decode_e1ap_cause_ie(&ie->value.choice.Cause);
+        out->cause = e1_decode_cause_ie(&ie->value.choice.Cause);
         break;
       case E1AP_ProtocolIE_ID_id_Transport_Layer_Address_Info:
         // Time To Wait (O)
