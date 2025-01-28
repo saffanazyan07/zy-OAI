@@ -76,9 +76,18 @@ void init_RA(NR_UE_MAC_INST_t *mac,
   fapi_nr_config_request_t *cfg = &mac->phy_config.config_req;
 
   prach_resources->RA_PREAMBLE_BACKOFF = 0;
-  AssertFatal(nr_rach_ConfigCommon && nr_rach_ConfigCommon->msg1_SubcarrierSpacing,
-              "Cannot handle yet the scenario without msg1_SubcarrierSpacing (L839)\n");
-  NR_SubcarrierSpacing_t prach_scs = *nr_rach_ConfigCommon->msg1_SubcarrierSpacing;
+  NR_SubcarrierSpacing_t prach_scs;
+  int scs_for_pcmax; // for long prach the UL BWP SCS is used for calculating RA_PCMAX
+  if (nr_rach_ConfigCommon && nr_rach_ConfigCommon->msg1_SubcarrierSpacing) {
+    prach_scs = *nr_rach_ConfigCommon->msg1_SubcarrierSpacing;
+    scs_for_pcmax = prach_scs;
+  } else {
+    const unsigned int index = rach_ConfigGeneric->prach_ConfigurationIndex;
+    const unsigned int unpaired = mac->phy_config.config_req.cell_config.frame_duplex_type;
+    const unsigned int format = get_format0(index, unpaired, mac->frequency_range);
+    prach_scs = get_delta_f_RA_long(format);
+    scs_for_pcmax = mac->current_UL_BWP->scs;
+  }
   int n_prbs = get_N_RA_RB(prach_scs, mac->current_UL_BWP->scs);
   int start_prb = rach_ConfigGeneric->msg1_FrequencyStart + mac->current_UL_BWP->BWPStart;
   // PRACH shall be as specified for QPSK modulated DFT-s-OFDM of equivalent RB allocation (38.101-1)
@@ -89,8 +98,8 @@ void init_RA(NR_UE_MAC_INST_t *mac,
                                            mac->current_UL_BWP->channel_bandwidth,
                                            2,
                                            false,
-                                           prach_scs,
-                                           cfg->carrier_config.dl_grid_size[prach_scs],
+                                           scs_for_pcmax,
+                                           cfg->carrier_config.dl_grid_size[scs_for_pcmax],
                                            true,
                                            n_prbs,
                                            start_prb);
@@ -212,57 +221,16 @@ void init_RA(NR_UE_MAC_INST_t *mac,
 }
 
 /* TS 38.321 subclause 7.3 - return DELTA_PREAMBLE values in dB */
-static int8_t nr_get_DELTA_PREAMBLE(NR_UE_MAC_INST_t *mac, int CC_id, uint16_t prach_format)
+static int8_t nr_get_DELTA_PREAMBLE(const NR_UE_MAC_INST_t *mac, int CC_id, uint16_t prach_format)
 {
-  NR_RACH_ConfigCommon_t *nr_rach_ConfigCommon = mac->current_UL_BWP->rach_ConfigCommon;
-  NR_SubcarrierSpacing_t scs = *nr_rach_ConfigCommon->msg1_SubcarrierSpacing;
+  const NR_RACH_ConfigCommon_t *nr_rach_ConfigCommon = mac->current_UL_BWP->rach_ConfigCommon;
   int prach_sequence_length = nr_rach_ConfigCommon->prach_RootSequenceIndex.present - 1;
-  uint8_t prachConfigIndex, mu;
 
   AssertFatal(CC_id == 0, "Transmission on secondary CCs is not supported yet\n");
 
-  // SCS configuration from msg1_SubcarrierSpacing and table 4.2-1 in TS 38.211
-
-  switch (scs){
-    case NR_SubcarrierSpacing_kHz15:
-    mu = 0;
-    break;
-
-    case NR_SubcarrierSpacing_kHz30:
-    mu = 1;
-    break;
-
-    case NR_SubcarrierSpacing_kHz60:
-    mu = 2;
-    break;
-
-    case NR_SubcarrierSpacing_kHz120:
-    mu = 3;
-    break;
-
-    case NR_SubcarrierSpacing_kHz240:
-    mu = 4;
-    break;
-
-    case NR_SubcarrierSpacing_kHz480_v1700:
-    mu = 5;
-    break;
-
-    case NR_SubcarrierSpacing_kHz960_v1700:
-    mu = 6;
-    break;
-
-    case NR_SubcarrierSpacing_spare1:
-    mu = 7;
-    break;
-
-    default:
-    AssertFatal(1 == 0,"Unknown msg1_SubcarrierSpacing %lu\n", scs);
-  }
-
   // Preamble formats given by prach_ConfigurationIndex and tables 6.3.3.2-2 and 6.3.3.2-2 in TS 38.211
 
-  prachConfigIndex = nr_rach_ConfigCommon->rach_ConfigGeneric.prach_ConfigurationIndex;
+  unsigned int prachConfigIndex = nr_rach_ConfigCommon->rach_ConfigGeneric.prach_ConfigurationIndex;
 
   if (prach_sequence_length == 0) {
     AssertFatal(prach_format < 4, "Illegal PRACH format %d for sequence length 839\n", prach_format);
@@ -278,8 +246,21 @@ static int8_t nr_get_DELTA_PREAMBLE(NR_UE_MAC_INST_t *mac, int CC_id, uint16_t p
 
       case 2:
       return -6;
+
+      default:
+      AssertFatal(1 == 0, "[UE %d] ue_procedures.c: FATAL, Illegal preambleFormat %d, prachConfigIndex %d\n",
+                  mac->ue_id,
+                  prach_format,
+                  prachConfigIndex);
     }
   } else {
+    // SCS configuration from msg1_SubcarrierSpacing and table 4.2-1 in TS 38.211
+
+    AssertFatal(nr_rach_ConfigCommon->msg1_SubcarrierSpacing, "msg1_SubcarrierSpacing required but missing\n");
+    NR_SubcarrierSpacing_t scs = *nr_rach_ConfigCommon->msg1_SubcarrierSpacing;
+    AssertFatal(scs >= NR_SubcarrierSpacing_kHz15 && scs <= NR_SubcarrierSpacing_spare1, "Unknown msg1_SubcarrierSpacing %lu\n", scs);
+    const unsigned int mu = scs;
+
     switch (prach_format) { // short preamble formats
       case 0:
       case 3:

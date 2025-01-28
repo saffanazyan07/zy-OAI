@@ -216,7 +216,7 @@ static void config_common_ue_sa(NR_UE_MAC_INST_t *mac,
     int config_index = rach_ConfigCommon->rach_ConfigGeneric.prach_ConfigurationIndex;
     const int64_t *prach_config_info_p = get_prach_config_info(mac->frequency_range, config_index, mac->frame_type);
     int format = prach_config_info_p[0];
-    cfg->prach_config.prach_sub_c_spacing = format == 3 ? 5 : 4;
+    cfg->prach_config.prach_sub_c_spacing = get_delta_f_RA_long(format);
   }
 
   cfg->prach_config.restricted_set_config = rach_ConfigCommon->restrictedSetConfig;

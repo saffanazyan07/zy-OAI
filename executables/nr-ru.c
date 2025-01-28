@@ -1295,24 +1295,30 @@ void *ru_thread(void *param)
         if (prach_id >= 0) {
           VCD_SIGNAL_DUMPER_DUMP_FUNCTION_BY_NAME( VCD_SIGNAL_DUMPER_FUNCTIONS_PHY_RU_PRACH_RX, 1 );
 
-          T(T_GNB_PHY_PRACH_INPUT_SIGNAL, T_INT(proc->frame_rx), T_INT(proc->tti_rx), T_INT(0),
-          T_BUFFER(&ru->common.rxdata[0][fp->get_samples_slot_timestamp(proc->tti_rx-1,fp,0)]/*-ru->N_TA_offset*/, fp->get_samples_per_slot(proc->tti_rx,fp)*4*2));
-          int N_dur = get_nr_prach_duration(ru->prach_list[prach_id].fmt);
+          T(T_GNB_PHY_PRACH_INPUT_SIGNAL,
+            T_INT(proc->frame_rx),
+            T_INT(proc->tti_rx),
+            T_INT(0),
+            T_BUFFER(&ru->common.rxdata[0][fp->get_samples_slot_timestamp(proc->tti_rx - 1, fp, 0) /*-ru->N_TA_offset*/],
+                     (fp->get_samples_per_slot(proc->tti_rx - 1, fp) + fp->get_samples_per_slot(proc->tti_rx, fp)) * 4));
+          RU_PRACH_list_t *p = ru->prach_list + prach_id;
+          int N_dur = get_nr_prach_duration(p->fmt);
 
-          for (int prach_oc = 0; prach_oc<ru->prach_list[prach_id].num_prach_ocas; prach_oc++) {
-            int prachStartSymbol = ru->prach_list[prach_id].prachStartSymbol + prach_oc * N_dur;
+          for (int prach_oc = 0; prach_oc < p->num_prach_ocas; prach_oc++) {
+            int prachStartSymbol = p->prachStartSymbol + prach_oc * N_dur;
             //comment FK: the standard 38.211 section 5.3.2 has one extra term +14*N_RA_slot. This is because there prachStartSymbol is given wrt to start of the 15kHz slot or 60kHz slot. Here we work slot based, so this function is anyway only called in slots where there is PRACH. Its up to the MAC to schedule another PRACH PDU in the case there are there N_RA_slot \in {0,1}.
             rx_nr_prach_ru(ru,
-                           ru->prach_list[prach_id].fmt, //could also use format
-                           ru->prach_list[prach_id].numRA,
+                           p->fmt, // could also use format
+                           p->numRA,
                            prachStartSymbol,
+                           p->slot,
                            prach_oc,
                            proc->frame_rx,
                            proc->tti_rx);
           }
           free_nr_ru_prach_entry(ru,prach_id);
           VCD_SIGNAL_DUMPER_DUMP_FUNCTION_BY_NAME(VCD_SIGNAL_DUMPER_FUNCTIONS_PHY_RU_PRACH_RX, 0);
-        } // end if (prach_id > 0)
+        } // end if (prach_id >= 0)
       } // end if (ru->feprx)
     } // end if (slot_type == NR_UPLINK_SLOT || slot_type == NR_MIXED_SLOT) {
 #endif

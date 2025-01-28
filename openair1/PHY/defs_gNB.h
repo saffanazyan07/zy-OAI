@@ -141,6 +141,8 @@ typedef struct {
   int slot;
   // identifier for concurrent beams
   int beam_nb;
+  // prach duration in slots
+  int num_slots;
   nfapi_nr_prach_pdu_t pdu;  
 } gNB_PRACH_list_t;
 

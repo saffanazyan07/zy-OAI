@@ -135,6 +135,8 @@ void find_aggregation_candidates(uint8_t *aggregation_level,
                                  const NR_SearchSpace_t *ss,
                                  int maxL);
 
+uint16_t get_nr_prach_format_from_index(uint8_t index, uint32_t pointa, uint8_t unpaired);
+
 int get_nr_prach_info_from_index(uint8_t index,
                                  int frame,
                                  int slot,
@@ -256,7 +258,8 @@ uint16_t compute_pucch_prb_size(uint8_t format,
 float get_max_code_rate(NR_PUCCH_MaxCodeRate_t *maxCodeRate);
 int get_f3_dmrs_symbols(NR_PUCCH_Resource_t *pucchres, NR_PUCCH_Config_t *pucch_Config);
 
-int16_t get_N_RA_RB (int delta_f_RA_PRACH,int delta_f_PUSCH);
+unsigned int get_delta_f_RA_long(const unsigned int format);
+unsigned int get_N_RA_RB(const unsigned int delta_f_RA_PRACH, const unsigned int delta_f_PUSCH);
 
 void find_period_offset_SR(const NR_SchedulingRequestResourceConfig_t *SchedulingReqRec, int *period, int *offset);
 
@@ -328,6 +331,6 @@ int get_nrofHARQ_ProcessesForPDSCH(const NR_UE_ServingCell_Info_t *sc_info);
 
 int get_nrofHARQ_ProcessesForPUSCH(const NR_UE_ServingCell_Info_t *sc_info);
 
-int nr_get_prach_mu(const NR_MsgA_ConfigCommon_r16_t *msgacc, const NR_RACH_ConfigCommon_t *rach_ConfigCommon);
+int nr_get_prach_or_ul_mu(const NR_MsgA_ConfigCommon_r16_t *msgacc, const NR_RACH_ConfigCommon_t *rach_ConfigCommon, const int ul_mu);
 
 #endif

@@ -232,11 +232,12 @@ void gNB_dlsch_ulsch_scheduler(module_id_t module_idP, frame_t frame, sub_frame_
   if (get_softmodem_params()->phy_test == 0) {
     /* we need to make sure that resources for PRACH are free. To avoid that
        e.g. PUSCH has already been scheduled, make sure we schedule before
-       anything else: below, we simply assume an advance one frame (minus one
-       slot, because otherwise we would allocate the current slot in
+       anything else: below, we simply assume an advance one frame (minus
+       prach duration, because otherwise we would allocate the current slot in
        UL_tti_req_ahead), but be aware that, e.g., K2 is allowed to be larger
        (schedule_nr_prach will assert if resources are not free). */
-    const sub_frame_t n_slots_ahead = nr_slots_per_frame[*scc->ssbSubcarrierSpacing] - 1 + get_NTN_Koffset(scc);
+
+    const int n_slots_ahead = nr_slots_per_frame[*scc->ssbSubcarrierSpacing] - cc->prach_len + get_NTN_Koffset(scc);
     const frame_t f = (frame + (slot + n_slots_ahead) / nr_slots_per_frame[*scc->ssbSubcarrierSpacing]) % 1024;
     const sub_frame_t s = (slot + n_slots_ahead) % nr_slots_per_frame[*scc->ssbSubcarrierSpacing];
     schedule_nr_prach(module_idP, f, s);

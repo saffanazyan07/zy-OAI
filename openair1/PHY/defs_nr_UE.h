@@ -298,6 +298,7 @@ typedef struct {
 typedef struct {
   int16_t amp;
   bool active;
+  int num_prach_slots;
   fapi_nr_ul_config_prach_pdu prach_pdu;
 } NR_UE_PRACH;
 

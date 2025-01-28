@@ -255,6 +255,7 @@ void check_ssb_raster(uint64_t freq, int band, int scs);
 int get_smallest_supported_bandwidth_index(int scs, frequency_range_t frequency_range, int n_rbs);
 unsigned short get_m_srs(int c_srs, int b_srs);
 unsigned short get_N_b_srs(int c_srs, int b_srs);
+uint8_t get_long_prach_dur(unsigned int format, unsigned int num_slots_subframe);
 
 #define CEILIDIV(a,b) ((a+b-1)/b)
 #define ROUNDIDIV(a,b) (((a<<1)+b)/(b<<1))
