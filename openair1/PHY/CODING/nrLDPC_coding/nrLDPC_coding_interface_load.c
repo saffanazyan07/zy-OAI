@@ -63,6 +63,21 @@ int load_nrLDPC_coding_interface(char *version, nrLDPC_coding_interface_t *itf)
   itf->nrLDPC_coding_decoder = (nrLDPC_coding_decoder_t *)shlib_fdesc[2].fptr;
   itf->nrLDPC_coding_encoder = (nrLDPC_coding_encoder_t *)shlib_fdesc[3].fptr;
 
+  // Retrieve LDPC shlibversion
+  char *shlibpath = NULL;
+  char *shlibversion = NULL;
+  paramdef_t LoaderParams[] = {
+    {"shlibpath",    NULL, 0, .strptr = &shlibpath,    .defstrval = NULL, TYPE_STRING, 0, NULL},
+    {"shlibversion", NULL, 0, .strptr = &shlibversion, .defstrval = "",   TYPE_STRING, 0, NULL}
+  };
+
+  char cfgprefix[sizeof(LOADER_CONFIG_PREFIX)+strlen(libname)+16];
+  sprintf(cfgprefix,LOADER_CONFIG_PREFIX ".%s",libname);
+  ret = config_get(config_get_if(), LoaderParams, sizeofArray(LoaderParams), cfgprefix);
+
+  // Save the version string in the interface
+  snprintf(itf->version, sizeof(itf->version), "%s", shlibversion);
+
   AssertFatal(itf->nrLDPC_coding_init() == 0, "error starting LDPC library %s %s\n", libname, version);
 
   return 0;

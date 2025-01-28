@@ -124,7 +124,8 @@ void nr_pusch_codeword_scrambling(uint8_t *in,
                                   uint32_t Nid,
                                   uint32_t n_RNTI,
                                   bool uci_on_pusch,
-                                  uint32_t* out);
+                                  uint32_t* out,
+                                  char *version);
 
 
 /** \brief Alternative entry point to UE uplink shared channels procedures.

@@ -77,12 +77,17 @@ void nr_pusch_codeword_scrambling_uci(uint8_t *in, uint32_t size, uint32_t Nid, 
   }
 }
 
-void nr_pusch_codeword_scrambling(uint8_t *in, uint32_t size, uint32_t Nid, uint32_t n_RNTI, bool uci_on_pusch, uint32_t* out)
+void nr_pusch_codeword_scrambling(uint8_t *in, uint32_t size, uint32_t Nid, uint32_t n_RNTI, bool uci_on_pusch, uint32_t* out, char *ldpc_version)
 {
-  if (uci_on_pusch)
+  if (uci_on_pusch) {
     nr_pusch_codeword_scrambling_uci(in, size, Nid, n_RNTI, out);
-  else
-    nr_codeword_scrambling(in, size, 0, Nid, n_RNTI, out);
+  } else {
+    if (strcmp(ldpc_version, "_t2") == 0) {
+      nr_codeword_scrambling_t2(in, size, 0, Nid, n_RNTI, out);
+    } else {
+      nr_codeword_scrambling(in, size, 0, Nid, n_RNTI, out);
+    }
+  }
 }
 
 /*
@@ -599,7 +604,8 @@ void nr_ue_ulsch_procedures(PHY_VARS_NR_UE *UE,
                                pusch_pdu->data_scrambling_id,
                                rnti,
                                false,
-                               scrambled_output);
+                               scrambled_output,
+                               UE->nrLDPC_coding_interface.version);
 
   /////////////////////////ULSCH modulation/////////////////////////
 
