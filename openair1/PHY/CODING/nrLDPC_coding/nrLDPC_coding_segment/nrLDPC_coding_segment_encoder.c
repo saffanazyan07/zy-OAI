@@ -51,7 +51,7 @@ typedef struct ldpc8blocks_args_s {
   encoder_implemparams_t impp;
 } ldpc8blocks_args_t;
 
-static void ldpc8blocks_coding_segment(void *p)
+static void ldpc8blocks(void *p)
 {
   ldpc8blocks_args_t *args = (ldpc8blocks_args_t *)p;
   nrLDPC_TB_encoding_parameters_t *nrLDPC_TB_encoding_parameters = args->nrLDPC_TB_encoding_parameters;
@@ -194,7 +194,7 @@ static int nrLDPC_prepare_TB_encoding(nrLDPC_slot_encoding_parameters_t *nrLDPC_
     perJobImpp->impp = impp;
     perJobImpp->nrLDPC_TB_encoding_parameters = nrLDPC_TB_encoding_parameters;
 
-    task_t t = {.func = ldpc8blocks_coding_segment, .args = perJobImpp};
+    task_t t = {.func = ldpc8blocks, .args = perJobImpp};
     pushTpool(nrLDPC_slot_encoding_parameters->threadPool, t);
   }
   return n_seg;

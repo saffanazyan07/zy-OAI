@@ -20,8 +20,8 @@
  */
 
 /*! \file PHY/NR_TRANSPORT/nr_dlsch_coding_slot.c
-* \brief Top-level routines for implementing LDPC-coded (DLSCH) transport channels from 38-212, 15.2
-*/
+ * \brief Top-level routines for implementing LDPC-coded (DLSCH) transport channels from 38-212, 15.2
+ */
 
 #include "PHY/defs_gNB.h"
 #include "PHY/CODING/coding_extern.h"
@@ -39,17 +39,17 @@
 #include <syscall.h>
 #include <openair2/UTIL/OPT/opt.h>
 
-//#define DEBUG_DLSCH_CODING
-//#define DEBUG_DLSCH_FREE 1
+// #define DEBUG_DLSCH_CODING
+// #define DEBUG_DLSCH_FREE 1
 
 void free_gNB_dlsch(NR_gNB_DLSCH_t *dlsch, uint16_t N_RB, const NR_DL_FRAME_PARMS *frame_parms)
 {
-  int max_layers = (frame_parms->nb_antennas_tx<NR_MAX_NB_LAYERS) ? frame_parms->nb_antennas_tx : NR_MAX_NB_LAYERS;
-  uint16_t a_segments = MAX_NUM_NR_DLSCH_SEGMENTS_PER_LAYER*max_layers;
+  int max_layers = (frame_parms->nb_antennas_tx < NR_MAX_NB_LAYERS) ? frame_parms->nb_antennas_tx : NR_MAX_NB_LAYERS;
+  uint16_t a_segments = MAX_NUM_NR_DLSCH_SEGMENTS_PER_LAYER * max_layers;
 
   if (N_RB != 273) {
-    a_segments = a_segments*N_RB;
-    a_segments = a_segments/273 +1;
+    a_segments = a_segments * N_RB;
+    a_segments = a_segments / 273 + 1;
   }
 
   NR_DL_gNB_HARQ_t *harq = &dlsch->harq_process;
@@ -70,16 +70,16 @@ void free_gNB_dlsch(NR_gNB_DLSCH_t *dlsch, uint16_t N_RB, const NR_DL_FRAME_PARM
 
 NR_gNB_DLSCH_t new_gNB_dlsch(NR_DL_FRAME_PARMS *frame_parms, uint16_t N_RB)
 {
-  int max_layers = (frame_parms->nb_antennas_tx<NR_MAX_NB_LAYERS) ? frame_parms->nb_antennas_tx : NR_MAX_NB_LAYERS;
-  uint16_t a_segments = MAX_NUM_NR_DLSCH_SEGMENTS_PER_LAYER*max_layers;  //number of segments to be allocated
+  int max_layers = (frame_parms->nb_antennas_tx < NR_MAX_NB_LAYERS) ? frame_parms->nb_antennas_tx : NR_MAX_NB_LAYERS;
+  uint16_t a_segments = MAX_NUM_NR_DLSCH_SEGMENTS_PER_LAYER * max_layers; // number of segments to be allocated
 
   if (N_RB != 273) {
-    a_segments = a_segments*N_RB;
-    a_segments = a_segments/273 +1;
+    a_segments = a_segments * N_RB;
+    a_segments = a_segments / 273 + 1;
   }
 
-  LOG_D(PHY,"Allocating %d segments (MAX %d, N_PRB %d)\n",a_segments,MAX_NUM_NR_DLSCH_SEGMENTS_PER_LAYER,N_RB);
-  uint32_t dlsch_bytes = a_segments*1056;  // allocated bytes per segment
+  LOG_D(PHY, "Allocating %d segments (MAX %d, N_PRB %d)\n", a_segments, MAX_NUM_NR_DLSCH_SEGMENTS_PER_LAYER, N_RB);
+  uint32_t dlsch_bytes = a_segments * 1056; // allocated bytes per segment
   NR_gNB_DLSCH_t dlsch;
 
   NR_DL_gNB_HARQ_t *harq = &dlsch.harq_process;
@@ -88,7 +88,7 @@ NR_gNB_DLSCH_t new_gNB_dlsch(NR_DL_FRAME_PARMS *frame_parms, uint16_t N_RB)
   AssertFatal(harq->b, "cannot allocate memory for harq->b\n");
   bzero(harq->b, dlsch_bytes);
 
-  harq->c = (uint8_t **)malloc16(a_segments*sizeof(uint8_t *));
+  harq->c = (uint8_t **)malloc16(a_segments * sizeof(uint8_t *));
   for (int r = 0; r < a_segments; r++) {
     // account for filler in first segment and CRCs for multiple segment case
     // [hna] 8448 is the maximum CB size in NR
@@ -103,7 +103,7 @@ NR_gNB_DLSCH_t new_gNB_dlsch(NR_DL_FRAME_PARMS *frame_parms, uint16_t N_RB)
   AssertFatal(harq->f, "cannot allocate harq->f\n");
   bzero(harq->f, N_RB * NR_SYMBOLS_PER_SLOT * NR_NB_SC_PER_RB * 8 * NR_MAX_NB_LAYERS);
 
-  return(dlsch);
+  return (dlsch);
 }
 
 int nr_dlsch_encoding(PHY_VARS_gNB *gNB,
@@ -120,34 +120,30 @@ int nr_dlsch_encoding(PHY_VARS_gNB *gNB,
                       time_stats_t *dlsch_interleaving_stats,
                       time_stats_t *dlsch_segmentation_stats)
 {
-
   VCD_SIGNAL_DUMPER_DUMP_FUNCTION_BY_NAME(VCD_SIGNAL_DUMPER_FUNCTIONS_gNB_DLSCH_ENCODING, VCD_FUNCTION_IN);
 
   nrLDPC_TB_encoding_parameters_t TBs[msgTx->num_pdsch_slot];
   memset(TBs, 0, sizeof(TBs));
-  nrLDPC_slot_encoding_parameters_t slot_parameters = {
-    .frame = frame,
-    .slot = slot,
-    .nb_TBs = msgTx->num_pdsch_slot,
-    .threadPool = &gNB->threadPool,
-    .tinput = tinput,
-    .tprep = tprep,
-    .tparity = tparity,
-    .toutput = toutput,
-    .TBs = TBs
-  };
+  nrLDPC_slot_encoding_parameters_t slot_parameters = {.frame = frame,
+                                                       .slot = slot,
+                                                       .nb_TBs = msgTx->num_pdsch_slot,
+                                                       .threadPool = &gNB->threadPool,
+                                                       .tinput = tinput,
+                                                       .tprep = tprep,
+                                                       .tparity = tparity,
+                                                       .toutput = toutput,
+                                                       .TBs = TBs};
 
   int num_segments = 0;
 
-  for (int dlsch_id=0; dlsch_id<msgTx->num_pdsch_slot; dlsch_id++) {
-
+  for (int dlsch_id = 0; dlsch_id < msgTx->num_pdsch_slot; dlsch_id++) {
     NR_gNB_DLSCH_t *dlsch = msgTx->dlsch[dlsch_id];
 
     NR_DL_gNB_HARQ_t *harq = &dlsch->harq_process;
-    unsigned int crc=1;
+    unsigned int crc = 1;
     nfapi_nr_dl_tti_pdsch_pdu_rel15_t *rel15 = &harq->pdsch_pdu.pdsch_pdu_rel15;
-    uint32_t A = rel15->TBSize[0]<<3;
-    unsigned char *a=harq->pdu;
+    uint32_t A = rel15->TBSize[0] << 3;
+    unsigned char *a = harq->pdu;
     if (rel15->rnti != SI_RNTI) {
       ws_trace_t tmp = {.nr = true,
                         .direction = DIRECTION_DOWNLINK,
@@ -175,38 +171,30 @@ int nr_dlsch_encoding(PHY_VARS_gNB *gNB,
       phy_stats->dlsch_stats.current_Qm = rel15->qamModOrder[0];
     }
 
-    int max_bytes = MAX_NUM_NR_DLSCH_SEGMENTS_PER_LAYER*rel15->nrOfLayers*1056;
+    int max_bytes = MAX_NUM_NR_DLSCH_SEGMENTS_PER_LAYER * rel15->nrOfLayers * 1056;
     int B;
     if (A > NR_MAX_PDSCH_TBS) {
       // Add 24-bit crc (polynomial A) to payload
-      crc = crc24a(a,A)>>8;
-      a[A>>3] = ((uint8_t *)&crc)[2];
-      a[1+(A>>3)] = ((uint8_t *)&crc)[1];
-      a[2+(A>>3)] = ((uint8_t *)&crc)[0];
-      //printf("CRC %x (A %d)\n",crc,A);
-      //printf("a0 %d a1 %d a2 %d\n", a[A>>3], a[1+(A>>3)], a[2+(A>>3)]);
+      crc = crc24a(a, A) >> 8;
+      a[A >> 3] = ((uint8_t *)&crc)[2];
+      a[1 + (A >> 3)] = ((uint8_t *)&crc)[1];
+      a[2 + (A >> 3)] = ((uint8_t *)&crc)[0];
+      // printf("CRC %x (A %d)\n",crc,A);
+      // printf("a0 %d a1 %d a2 %d\n", a[A>>3], a[1+(A>>3)], a[2+(A>>3)]);
       B = A + 24;
       //    harq->b = a;
-      AssertFatal((A / 8) + 4 <= max_bytes,
-                  "A %d is too big (A/8+4 = %d > %d)\n",
-                  A,
-                  (A / 8) + 4,
-                  max_bytes);
+      AssertFatal((A / 8) + 4 <= max_bytes, "A %d is too big (A/8+4 = %d > %d)\n", A, (A / 8) + 4, max_bytes);
       memcpy(harq->b, a, (A / 8) + 4); // why is this +4 if the CRC is only 3 bytes?
     } else {
       // Add 16-bit crc (polynomial A) to payload
-      crc = crc16(a,A)>>16;
-      a[A>>3] = ((uint8_t *)&crc)[1];
-      a[1+(A>>3)] = ((uint8_t *)&crc)[0];
-      //printf("CRC %x (A %d)\n",crc,A);
-      //printf("a0 %d a1 %d \n", a[A>>3], a[1+(A>>3)]);
+      crc = crc16(a, A) >> 16;
+      a[A >> 3] = ((uint8_t *)&crc)[1];
+      a[1 + (A >> 3)] = ((uint8_t *)&crc)[0];
+      // printf("CRC %x (A %d)\n",crc,A);
+      // printf("a0 %d a1 %d \n", a[A>>3], a[1+(A>>3)]);
       B = A + 16;
       //    harq->b = a;
-      AssertFatal((A / 8) + 3 <= max_bytes,
-                  "A %d is too big (A/8+3 = %d > %d)\n",
-                  A,
-                  (A / 8) + 3,
-                  max_bytes);
+      AssertFatal((A / 8) + 3 <= max_bytes, "A %d is too big (A/8+3 = %d > %d)\n", A, (A / 8) + 3, max_bytes);
       memcpy(harq->b, a, (A / 8) + 3); // using 3 bytes to mimic the case of 24 bit crc
     }
 
@@ -228,12 +216,11 @@ int nr_dlsch_encoding(PHY_VARS_gNB *gNB,
                                         TB_parameters->BG);
     stop_meas(dlsch_segmentation_stats);
 
-    if (TB_parameters->C>MAX_NUM_NR_DLSCH_SEGMENTS_PER_LAYER*rel15->nrOfLayers) {
+    if (TB_parameters->C > MAX_NUM_NR_DLSCH_SEGMENTS_PER_LAYER * rel15->nrOfLayers) {
       LOG_E(PHY, "nr_segmentation.c: too many segments %d, B %d\n", TB_parameters->C, B);
-      return(-1);
+      return (-1);
     }
     num_segments += TB_parameters->C;
-
   }
 
   nrLDPC_segment_encoding_parameters_t segments[num_segments];
@@ -284,18 +271,13 @@ int nr_dlsch_encoding(PHY_VARS_gNB *gNB,
     for (int r = 0; r < TB_parameters->C; r++) {
       nrLDPC_segment_encoding_parameters_t *segment_parameters = &TB_parameters->segments[r];
       segment_parameters->c = harq->c[r];
-      segment_parameters->E = nr_get_E(TB_parameters->G,
-                                       TB_parameters->C,
-                                       TB_parameters->Qm,
-                                       rel15->nrOfLayers,
-                                       r);
+      segment_parameters->E = nr_get_E(TB_parameters->G, TB_parameters->C, TB_parameters->Qm, rel15->nrOfLayers, r);
       segment_parameters->output = &output[dlsch_offset + r_offset];
       r_offset += segment_parameters->E;
 
       reset_meas(&segment_parameters->ts_interleave);
       reset_meas(&segment_parameters->ts_rate_match);
       reset_meas(&segment_parameters->ts_ldpc_encode);
-
     }
 
     segments_offset += TB_parameters->C;
@@ -308,6 +290,16 @@ int nr_dlsch_encoding(PHY_VARS_gNB *gNB,
   }
 
   gNB->nrLDPC_coding_interface.nrLDPC_coding_encoder(&slot_parameters);
+
+  for (int dlsch_id = 0; dlsch_id < msgTx->num_pdsch_slot; dlsch_id++) {
+    nrLDPC_TB_encoding_parameters_t *TB_parameters = &TBs[dlsch_id];
+    for (int r = 0; r < TB_parameters->C; r++) {
+      nrLDPC_segment_encoding_parameters_t *segment_parameters = &TB_parameters->segments[r];
+      merge_meas(dlsch_interleaving_stats, &segment_parameters->ts_interleave);
+      merge_meas(dlsch_rate_matching_stats, &segment_parameters->ts_rate_match);
+      // merge_meas(, &segment_parameters->ts_ldpc_encode);
+    }
+  }
 
   VCD_SIGNAL_DUMPER_DUMP_FUNCTION_BY_NAME(VCD_SIGNAL_DUMPER_FUNCTIONS_gNB_DLSCH_ENCODING, VCD_FUNCTION_OUT);
   return 0;
