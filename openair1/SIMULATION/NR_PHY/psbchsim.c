@@ -51,7 +51,7 @@ void e1_bearer_context_setup(const e1ap_bearer_setup_req_t *req)
 {
   abort();
 }
-void e1_bearer_context_modif(const e1ap_bearer_setup_req_t *req)
+void e1_bearer_context_modif(const e1ap_bearer_mod_req_t *req)
 {
   abort();
 }

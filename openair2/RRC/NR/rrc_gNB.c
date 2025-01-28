@@ -740,6 +740,14 @@ void rrc_gNB_generate_dedicatedRRCReconfiguration_release(gNB_RRC_INST *rrc,
   nr_rrc_transfer_protected_rrc_message(rrc, ue_p, DL_SCH_LCID_DCCH, buffer, size);
 }
 
+static void fill_security_info(gNB_RRC_INST *rrc, gNB_RRC_UE_t *UE, security_information_t *secInfo)
+{
+  secInfo->cipheringAlgorithm = rrc->security.do_drb_ciphering ? UE->ciphering_algorithm : 0;
+  secInfo->integrityProtectionAlgorithm = rrc->security.do_drb_integrity ? UE->integrity_algorithm : 0;
+  nr_derive_key(UP_ENC_ALG, secInfo->cipheringAlgorithm, UE->kgnb, (uint8_t *)secInfo->encryptionKey);
+  nr_derive_key(UP_INT_ALG, secInfo->integrityProtectionAlgorithm, UE->kgnb, (uint8_t *)secInfo->integrityProtectionKey);
+}
+
 /* \brief find existing PDU session inside E1AP Bearer Modif message, or
  * point to new one.
  * \param bearer_modif E1AP Bearer Modification Message
@@ -797,21 +805,20 @@ static void cuup_notify_reestablishment(gNB_RRC_INST *rrc, gNB_RRC_UE_t *ue_p)
     DRB_nGRAN_to_mod_t *drb_e1 = &pdu_e1->DRBnGRanModList[pdu_e1->numDRB2Modify];
     drb_e1->id = drb_id;
     drb_e1->numDlUpParam = 1;
-    memcpy(&drb_e1->DlUpParamList[0].tlAddress, &drb->du_tunnel_config.addr.buffer, sizeof(uint8_t) * 4);
-    drb_e1->DlUpParamList[0].teId = drb->du_tunnel_config.teid;
+    memcpy(&drb_e1->DlUpParamList[0].tl_info.tlAddress, &drb->du_tunnel_config.addr.buffer, sizeof(uint8_t) * 4);
+    drb_e1->DlUpParamList[0].tl_info.teId = drb->du_tunnel_config.teid;
     /* PDCP configuration */
-    bearer_context_pdcp_config_t *pdcp_config = &drb_e1->pdcp_config;
+    if (!drb_e1->pdcp_config)
+      drb_e1->pdcp_config = malloc_or_fail(sizeof(*drb_e1->pdcp_config));
+    bearer_context_pdcp_config_t *pdcp_config = drb_e1->pdcp_config;
     set_bearer_context_pdcp_config(pdcp_config, drb, rrc->configuration.um_on_default_drb);
     pdcp_config->pDCP_Reestablishment = true;
     /* increase DRB to modify counter */
     pdu_e1->numDRB2Modify += 1;
   }
-
-  req.cipheringAlgorithm = rrc->security.do_drb_ciphering ? ue_p->ciphering_algorithm : 0;
-  req.integrityProtectionAlgorithm = rrc->security.do_drb_integrity ? ue_p->integrity_algorithm : 0;
-  nr_derive_key(UP_ENC_ALG, req.cipheringAlgorithm, ue_p->kgnb, (uint8_t *)req.encryptionKey);
-  nr_derive_key(UP_INT_ALG, req.integrityProtectionAlgorithm, ue_p->kgnb, (uint8_t *)req.integrityProtectionKey);
-
+  // Always send security information
+  req.secInfo = malloc_or_fail(sizeof(*req.secInfo));
+  fill_security_info(rrc, ue_p, req.secInfo);
   /* Send E1 Bearer Context Modification Request (3GPP TS 38.463) */
   sctp_assoc_t assoc_id = get_existing_cuup_for_ue(rrc, ue_p);
   rrc->cucp_cuup.bearer_context_mod(assoc_id, &req);
@@ -1859,12 +1866,12 @@ void rrc_gNB_process_dc_overall_timeout(const module_id_t gnb_mod_idP, x2ap_ENDC
 /* \brief fill E1 bearer modification's DRB from F1 DRB
  * \param drb_e1 pointer to a DRB inside an E1 bearer modification message
  * \param drb_f1 pointer to a DRB inside an F1 UE Ctxt modification Response */
-static void fill_e1_bearer_modif(DRB_nGRAN_to_setup_t *drb_e1, const f1ap_drb_to_be_setup_t *drb_f1)
+static void fill_e1_bearer_modif(DRB_nGRAN_to_mod_t *drb_e1, const f1ap_drb_to_be_setup_t *drb_f1)
 {
   drb_e1->id = drb_f1->drb_id;
   drb_e1->numDlUpParam = drb_f1->up_dl_tnl_length;
-  drb_e1->DlUpParamList[0].tlAddress = drb_f1->up_dl_tnl[0].tl_address;
-  drb_e1->DlUpParamList[0].teId = drb_f1->up_dl_tnl[0].teid;
+  drb_e1->DlUpParamList[0].tl_info.tlAddress = drb_f1->up_dl_tnl[0].tl_address;
+  drb_e1->DlUpParamList[0].tl_info.teId = drb_f1->up_dl_tnl[0].teid;
 }
 
 /**
@@ -1896,8 +1903,8 @@ static void store_du_f1u_tunnel(const f1ap_drb_to_be_setup_t *drbs, int n, gNB_R
  */
 static void f1u_ul_gtp_update(f1u_tunnel_t *f1u, const up_params_t *p)
 {
-  f1u->teid = p->teId;
-  memcpy(&f1u->addr.buffer, &p->tlAddress, sizeof(uint8_t) * 4);
+  f1u->teid = p->tl_info.teId;
+  memcpy(&f1u->addr.buffer, &p->tl_info.tlAddress, sizeof(uint8_t) * 4);
   f1u->addr.length = sizeof(in_addr_t);
 }
 
@@ -1923,10 +1930,10 @@ static void e1_send_bearer_updates(gNB_RRC_INST *rrc, gNB_RRC_UE_t *UE, int n, f
       LOG_E(RRC, "UE %d: UE Context Modif Response: no PDU session for DRB ID %ld\n", UE->rrc_ue_id, drb_f1->drb_id);
       continue;
     }
-    pdu_session_to_setup_t *pdu_e1 = find_or_next_pdu_session(&req, pdu_ue->param.pdusession_id);
+    pdu_session_to_mod_t *pdu_e1 = find_or_next_pdu_session(&req, pdu_ue->param.pdusession_id);
     DevAssert(pdu_e1 != NULL);
     pdu_e1->sessionId = pdu_ue->param.pdusession_id;
-    DRB_nGRAN_to_setup_t *drb_e1 = &pdu_e1->DRBnGRanModList[pdu_e1->numDRB2Modify];
+    DRB_nGRAN_to_mod_t *drb_e1 = &pdu_e1->DRBnGRanModList[pdu_e1->numDRB2Modify];
     /* Fill E1 bearer context modification */
     fill_e1_bearer_modif(drb_e1, drb_f1);
     pdu_e1->numDRB2Modify += 1;
@@ -1934,10 +1941,9 @@ static void e1_send_bearer_updates(gNB_RRC_INST *rrc, gNB_RRC_UE_t *UE, int n, f
   DevAssert(req.numPDUSessionsMod > 0);
   DevAssert(req.numPDUSessions == 0);
 
-  req.cipheringAlgorithm = rrc->security.do_drb_ciphering ? UE->ciphering_algorithm : 0;
-  req.integrityProtectionAlgorithm = rrc->security.do_drb_integrity ? UE->integrity_algorithm : 0;
-  nr_derive_key(UP_ENC_ALG, req.cipheringAlgorithm, UE->kgnb, (uint8_t *)req.encryptionKey);
-  nr_derive_key(UP_INT_ALG, req.integrityProtectionAlgorithm, UE->kgnb, (uint8_t *)req.integrityProtectionKey);
+  // Always send security information
+  req.secInfo = malloc_or_fail(sizeof(*req.secInfo));
+  fill_security_info(rrc, UE, req.secInfo);
 
   // send the E1 bearer modification request message to update F1-U tunnel info
   sctp_assoc_t assoc_id = get_existing_cuup_for_ue(rrc, UE);
@@ -2275,9 +2281,9 @@ static int fill_drb_to_be_setup_from_e1_resp(const gNB_RRC_INST *rrc,
       f1ap_drb_to_be_setup_t *drb = &drbs[nb_drb];
       drb->drb_id = pduSession[p].DRBnGRanList[i].id;
       drb->rlc_mode = rrc->configuration.um_on_default_drb ? F1AP_RLC_MODE_UM_BIDIR : F1AP_RLC_MODE_AM;
-      drb->up_ul_tnl[0].tl_address = drb_config->UpParamList[0].tlAddress;
+      drb->up_ul_tnl[0].tl_address = drb_config->UpParamList[0].tl_info.tlAddress;
       drb->up_ul_tnl[0].port = rrc->eth_params_s.my_portd;
-      drb->up_ul_tnl[0].teid = drb_config->UpParamList[0].teId;
+      drb->up_ul_tnl[0].teid = drb_config->UpParamList[0].tl_info.teId;
       drb->up_ul_tnl_length = 1;
 
       /* pass QoS info to MAC */
@@ -2328,8 +2334,8 @@ void rrc_gNB_process_e1_bearer_context_setup_resp(e1ap_bearer_setup_resp_t *resp
       LOG_W(RRC, "E1: received setup for PDU session %ld, but has not been requested\n", e1_pdu->id);
       continue;
     }
-    rrc_pdu->param.gNB_teid_N3 = e1_pdu->teId;
-    memcpy(&rrc_pdu->param.gNB_addr_N3.buffer, &e1_pdu->tlAddress, sizeof(uint8_t) * 4);
+    rrc_pdu->param.gNB_teid_N3 = e1_pdu->tl_info.teId;
+    memcpy(&rrc_pdu->param.gNB_addr_N3.buffer, &e1_pdu->tl_info.tlAddress, sizeof(uint8_t) * 4);
     rrc_pdu->param.gNB_addr_N3.length = sizeof(in_addr_t);
 
     // save the tunnel address for the DRBs

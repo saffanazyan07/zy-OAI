@@ -168,7 +168,6 @@ void e1_bearer_context_setup(const e1ap_bearer_setup_req_t *req)
     const pdu_session_to_setup_t *req_pdu = req->pduSession + i;
     resp_pdu->id = req_pdu->sessionId;
 
-    AssertFatal(req_pdu->numDRB2Modify == 0, "DRB modification not implemented\n");
     AssertFatal(req_pdu->numDRB2Setup == 1, "can only handle one DRB per PDU session\n");
     resp_pdu->numDRBSetup = req_pdu->numDRB2Setup;
     const DRB_nGRAN_to_setup_t *req_drb = &req_pdu->DRBnGRanList[0];
@@ -178,7 +177,7 @@ void e1_bearer_context_setup(const e1ap_bearer_setup_req_t *req)
     resp_drb->numQosFlowSetup = req_drb->numQosFlow2Setup;
     for (int k = 0; k < resp_drb->numQosFlowSetup; k++) {
       const qos_flow_to_setup_t *qosflow2Setup = &req_drb->qosFlows[k];
-      qos_flow_setup_t *qosflowSetup = &resp_drb->qosFlows[k];
+      qos_flow_list_t *qosflowSetup = &resp_drb->qosFlows[k];
       qosflowSetup->qfi = qosflow2Setup->qfi;
     }
 
@@ -197,17 +196,17 @@ void e1_bearer_context_setup(const e1ap_bearer_setup_req_t *req)
                               &resp_n3);
     AssertFatal(ret >= 0, "Unable to create GTP Tunnel for NG-U\n");
     AssertFatal(resp_n3.num_tunnels == req_pdu->numDRB2Setup, "could not create all tunnels\n");
-    resp_pdu->teId = resp_n3.gnb_NGu_teid[0];
-    memcpy(&resp_pdu->tlAddress, &resp_n3.gnb_addr.buffer, 4);
+    resp_pdu->tl_info.teId = resp_n3.gnb_NGu_teid[0];
+    memcpy(&resp_pdu->tl_info.tlAddress, &resp_n3.gnb_addr.buffer, 4);
 
     // create PDCP bearers. This will also create SDAP bearers
     NR_DRB_ToAddModList_t DRB_configList = {0};
     fill_DRB_configList_e1(&DRB_configList, req_pdu);
     nr_pdcp_entity_security_keys_and_algos_t security_parameters;
-    security_parameters.ciphering_algorithm = req->cipheringAlgorithm;
-    security_parameters.integrity_algorithm = req->integrityProtectionAlgorithm;
-    memcpy(security_parameters.ciphering_key, req->encryptionKey, NR_K_KEY_SIZE);
-    memcpy(security_parameters.integrity_key, req->integrityProtectionKey, NR_K_KEY_SIZE);
+    security_parameters.ciphering_algorithm = req->secInfo.cipheringAlgorithm;
+    security_parameters.integrity_algorithm = req->secInfo.integrityProtectionAlgorithm;
+    memcpy(security_parameters.ciphering_key, req->secInfo.encryptionKey, NR_K_KEY_SIZE);
+    memcpy(security_parameters.integrity_key, req->secInfo.integrityProtectionKey, NR_K_KEY_SIZE);
     nr_pdcp_add_drbs(true, // set this to notify PDCP that his not UE
                      cu_up_ue_id,
                      &DRB_configList,
@@ -230,8 +229,8 @@ void e1_bearer_context_setup(const e1ap_bearer_setup_req_t *req)
                                 &resp_f1);
       resp_drb->numUpParam = 1;
       AssertFatal(ret >= 0, "Unable to create GTP Tunnel for F1-U\n");
-      memcpy(&resp_drb->UpParamList[0].tlAddress, &resp_f1.gnb_addr.buffer, 4);
-      resp_drb->UpParamList[0].teId = resp_f1.gnb_NGu_teid[0];
+      memcpy(&resp_drb->UpParamList[0].tl_info.tlAddress, &resp_f1.gnb_addr.buffer, 4);
+      resp_drb->UpParamList[0].tl_info.teId = resp_f1.gnb_NGu_teid[0];
     }
 
     // We assume all DRBs to setup have been setup successfully, so we always
@@ -273,12 +272,14 @@ void e1_bearer_context_modif(const e1ap_bearer_mod_req_t *req)
       DRB_nGRAN_modified_t *modified = &modif.pduSessionMod[i].DRBnGRanModList[j];
       modified->id = to_modif->id;
 
-      if (to_modif->pdcp_config.pDCP_Reestablishment) {
+      if (to_modif->pdcp_config && to_modif->pdcp_config->pDCP_Reestablishment) {
         nr_pdcp_entity_security_keys_and_algos_t security_parameters;
-        security_parameters.ciphering_algorithm = req->cipheringAlgorithm;
-        security_parameters.integrity_algorithm = req->integrityProtectionAlgorithm;
-        memcpy(security_parameters.ciphering_key, req->encryptionKey, NR_K_KEY_SIZE);
-        memcpy(security_parameters.integrity_key, req->integrityProtectionKey, NR_K_KEY_SIZE);
+        if (req->secInfo) {
+          security_parameters.ciphering_algorithm = req->secInfo->cipheringAlgorithm;
+          security_parameters.integrity_algorithm = req->secInfo->integrityProtectionAlgorithm;
+          memcpy(security_parameters.ciphering_key, req->secInfo->encryptionKey, NR_K_KEY_SIZE);
+          memcpy(security_parameters.integrity_key, req->secInfo->integrityProtectionKey, NR_K_KEY_SIZE);
+        }
         nr_pdcp_reestablishment(req->gNB_cu_up_ue_id,
                                 to_modif->id,
                                 false,
@@ -291,8 +292,8 @@ void e1_bearer_context_modif(const e1ap_bearer_mod_req_t *req)
       /* Loop through DL UP Transport Layer params list
        * and update GTP tunnel outgoing addr and TEID */
       for (int k = 0; k < to_modif->numDlUpParam; k++) {
-        in_addr_t addr = to_modif->DlUpParamList[k].tlAddress;
-        GtpuUpdateTunnelOutgoingAddressAndTeid(f1inst, req->gNB_cu_cp_ue_id, to_modif->id, addr, to_modif->DlUpParamList[k].teId);
+        in_addr_t addr = to_modif->DlUpParamList[k].tl_info.tlAddress;
+        GtpuUpdateTunnelOutgoingAddressAndTeid(f1inst, req->gNB_cu_cp_ue_id, to_modif->id, addr, to_modif->DlUpParamList[k].tl_info.teId);
       }
     }
   }
