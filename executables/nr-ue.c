@@ -569,6 +569,7 @@ void processSlotTX(void *arg)
     }
   }
   RU_write(rxtxD, sl_tx_action);
+  dynamic_barrier_join(rxtxD->next_barrier);
   TracyCZoneEnd(ctx);
 }
 
@@ -1111,8 +1112,19 @@ void *UE_thread(void *arg)
     int slot = curMsgTx->proc.nr_slot_tx;
     int slot_and_frame = slot + curMsgTx->proc.frame_tx * UE->frame_parms.slots_per_frame;
 
+    int wait_for_prev_slot = stream_status == STREAM_STATUS_SYNCED ? 1 : 0;
+
+    int next_duration_rx_to_tx =
+        update_ntn_system_information
+            ? NR_UE_CAPABILITY_SLOT_RX_TO_TX + UE->ntn_config_message->ntn_config_params.cell_specific_k_offset
+            : duration_rx_to_tx;
+    int next_nr_slot_tx = (absolute_slot + next_duration_rx_to_tx) % nb_slot_frame;
+    int next_frame_tx = ((absolute_slot + next_duration_rx_to_tx) / nb_slot_frame) % MAX_FRAME_NUMBER;
+    int next_tx_slot_and_frame = next_nr_slot_tx + next_frame_tx * UE->frame_parms.slots_per_frame + 1;
+    dynamic_barrier_t *next_barrier = &UE->process_slot_tx_barriers[next_tx_slot_and_frame % NUM_PROCESS_SLOT_TX_BARRIERS];
+    curMsgTx->next_barrier = next_barrier;
     dynamic_barrier_update(&UE->process_slot_tx_barriers[slot_and_frame % NUM_PROCESS_SLOT_TX_BARRIERS],
-                           tx_wait_for_dlsch[slot],
+                           tx_wait_for_dlsch[slot] + wait_for_prev_slot,
                            start_process_slot_tx,
                            newTx);
     stream_status = STREAM_STATUS_SYNCED;
