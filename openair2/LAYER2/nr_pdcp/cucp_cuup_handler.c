@@ -275,10 +275,16 @@ void e1_bearer_context_modif(const e1ap_bearer_mod_req_t *req)
 
       if (to_modif->pdcp_config.pDCP_Reestablishment) {
         nr_pdcp_entity_security_keys_and_algos_t security_parameters;
-        security_parameters.ciphering_algorithm = req->cipheringAlgorithm;
-        security_parameters.integrity_algorithm = req->integrityProtectionAlgorithm;
-        memcpy(security_parameters.ciphering_key, req->encryptionKey, NR_K_KEY_SIZE);
-        memcpy(security_parameters.integrity_key, req->integrityProtectionKey, NR_K_KEY_SIZE);
+        if (req->has_security_information) {
+          security_parameters.ciphering_algorithm = req->cipheringAlgorithm;
+          security_parameters.integrity_algorithm = req->integrityProtectionAlgorithm;
+          memcpy(security_parameters.ciphering_key, req->encryptionKey, NR_K_KEY_SIZE);
+          memcpy(security_parameters.integrity_key, req->integrityProtectionKey, NR_K_KEY_SIZE);
+        } else {
+          /* don't change security settings if not present in the Bearer Context Modification Request */
+          security_parameters.ciphering_algorithm = -1;
+          security_parameters.integrity_algorithm = -1;
+        }
         nr_pdcp_reestablishment(req->gNB_cu_up_ue_id,
                                 to_modif->id,
                                 false,

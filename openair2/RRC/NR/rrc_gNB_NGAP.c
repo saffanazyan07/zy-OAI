@@ -355,10 +355,10 @@ bool trigger_bearer_setup(gNB_RRC_INST *rrc, gNB_RRC_UE_t *UE, int n, pdusession
     session->nssai = sessions[i].nssai;
     decodePDUSessionResourceSetup(session);
     bearer_req.gNB_cu_cp_ue_id = UE->rrc_ue_id;
-    bearer_req.cipheringAlgorithm = UE->ciphering_algorithm;
-    bearer_req.integrityProtectionAlgorithm = UE->integrity_algorithm;
-    nr_derive_key(UP_ENC_ALG, UE->ciphering_algorithm, UE->kgnb, (uint8_t *)bearer_req.encryptionKey);
-    nr_derive_key(UP_INT_ALG, UE->integrity_algorithm, UE->kgnb, (uint8_t *)bearer_req.integrityProtectionKey);
+    bearer_req.cipheringAlgorithm = rrc->security.do_drb_ciphering ? UE->ciphering_algorithm : 0;
+    bearer_req.integrityProtectionAlgorithm = rrc->security.do_drb_integrity ? UE->integrity_algorithm : 0;
+    nr_derive_key(UP_ENC_ALG, bearer_req.cipheringAlgorithm, UE->kgnb, (uint8_t *)bearer_req.encryptionKey);
+    nr_derive_key(UP_INT_ALG, bearer_req.integrityProtectionAlgorithm, UE->kgnb, (uint8_t *)bearer_req.integrityProtectionKey);
     bearer_req.ueDlAggMaxBitRate = ueAggMaxBitRateDownlink;
     pdu_session_to_setup_t *pdu = bearer_req.pduSession + bearer_req.numPDUSessions;
     bearer_req.numPDUSessions++;

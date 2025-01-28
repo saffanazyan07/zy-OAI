@@ -406,6 +406,7 @@ typedef struct pdu_session_to_setup_s {
 typedef struct e1ap_bearer_setup_req_s {
   uint32_t gNB_cu_cp_ue_id;
   uint32_t gNB_cu_up_ue_id; // Bearer Context Modification Request only
+  bool has_security_information;
   uint64_t cipheringAlgorithm;
   uint64_t integrityProtectionAlgorithm;
   char encryptionKey[E1AP_SECURITY_KEY_SIZE];

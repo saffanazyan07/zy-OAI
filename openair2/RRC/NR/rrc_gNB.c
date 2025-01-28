@@ -807,10 +807,18 @@ static void cuup_notify_reestablishment(gNB_RRC_INST *rrc, gNB_RRC_UE_t *ue_p)
     pdu_e1->numDRB2Modify += 1;
   }
 
+  req.has_security_information = false;
+#if 0
+  /* According to current understanding of E1 specifications, it is not needed
+   * to send security information because this does not change.
+   * But let's keep the code here in case it's needed.
+   */
+  req.has_security_information = true;
   req.cipheringAlgorithm = rrc->security.do_drb_ciphering ? ue_p->ciphering_algorithm : 0;
   req.integrityProtectionAlgorithm = rrc->security.do_drb_integrity ? ue_p->integrity_algorithm : 0;
   nr_derive_key(UP_ENC_ALG, req.cipheringAlgorithm, ue_p->kgnb, (uint8_t *)req.encryptionKey);
   nr_derive_key(UP_INT_ALG, req.integrityProtectionAlgorithm, ue_p->kgnb, (uint8_t *)req.integrityProtectionKey);
+#endif
 
   /* Send E1 Bearer Context Modification Request (3GPP TS 38.463) */
   sctp_assoc_t assoc_id = get_existing_cuup_for_ue(rrc, ue_p);
