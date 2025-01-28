@@ -38,7 +38,7 @@
 int nas_sock_fd[MAX_MOBILES_PER_ENB * 2]; // Allocated for both LTE UE and NR UE.
 int nas_sock_mbms_fd;
 
-static int tun_alloc(char *dev)
+int tun_alloc(char *dev)
 {
   struct ifreq ifr;
   int fd, err;
@@ -180,8 +180,7 @@ static bool setInterfaceParameter(int sock_fd, const char *ifn, int af, const ch
 /*
  * \brief bring interface up (up != 0) or down (up == 0)
  */
-typedef enum { INTERFACE_DOWN, INTERFACE_UP } if_action_t;
-static bool change_interface_state(int sock_fd, const char *ifn, if_action_t if_action)
+bool change_interface_state(int sock_fd, const char *ifn, if_action_t if_action)
 {
   const char* action = if_action == INTERFACE_DOWN ? "DOWN" : "UP";
 
@@ -210,10 +209,10 @@ fail_interface_state:
 }
 
 // non blocking full configuration of the interface (address, and the two lest octets of the address)
-bool tun_config(int interface_id, const char *ipv4, const char *ipv6, const char *ifpref)
+bool tun_config(int interface_id, const char *ipv4, const char *ipv6, const char *ifpref, const char *ifsuffix)
 {
   char interfaceName[IFNAMSIZ];
-  snprintf(interfaceName, sizeof(interfaceName), "%s%d", ifpref, interface_id);
+  snprintf(interfaceName, sizeof(interfaceName), "%s%d%s", ifpref, interface_id, (ifsuffix) ? ifsuffix : "");
 
   AssertFatal(ipv4 != NULL || ipv6 != NULL, "need to have IP address, but none given\n");
 
@@ -256,11 +255,15 @@ bool tun_config(int interface_id, const char *ipv4, const char *ipv6, const char
   return success;
 }
 
-void setup_ue_ipv4_route(int interface_id, const char *ipv4, const char *ifpref)
+#define MAX_NUM_UE_PDU_SESSIONS 8
+
+void setup_ue_ipv4_route(int interface_id, int pdu_id, const char *ipv4, const char *ifpref, const char *ifsuffix)
 {
-  int table_id = interface_id - 1 + 10000;
+  if (!ipv4)
+    return;
+  int table_id = (interface_id - 1) * MAX_NUM_UE_PDU_SESSIONS + pdu_id + 10000;
   char interfaceName[IFNAMSIZ];
-  snprintf(interfaceName, sizeof(interfaceName), "%s%d", ifpref, interface_id);
+  snprintf(interfaceName, sizeof(interfaceName), "%s%d%s", ifpref, interface_id, (ifsuffix) ? ifsuffix : "");
 
   char command_line[500];
   int res = sprintf(command_line,
@@ -279,5 +282,24 @@ void setup_ue_ipv4_route(int interface_id, const char *ipv4, const char *ifpref)
     return;
   }
   background_system(command_line);
+}
+
+bool doesInterfaceExist(const char *interfaceName)
+{
+  int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+
+  AssertFatal(sockfd != -1, "Failed to create socket\n");
+
+  struct ifreq ifr;
+  memset(&ifr, 0, sizeof(struct ifreq));
+  strncpy(ifr.ifr_name, interfaceName, IFNAMSIZ - 1);
+
+  if (ioctl(sockfd, SIOCGIFFLAGS, &ifr) == -1) {
+    close(sockfd);
+    return false;
+  }
+
+  close(sockfd);
+  return true;
 }
 

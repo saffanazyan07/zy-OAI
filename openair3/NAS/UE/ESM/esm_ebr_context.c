@@ -207,8 +207,8 @@ int esm_ebr_context_create(
               char *ip_addr = pdn->ip_addr;
               snprintf(ip, sizeof(ip), "%d.%d.%d.%d", ip_addr[0], ip_addr[1], ip_addr[2], ip_addr[3]);
               const char *ifn = get_softmodem_params()->nsa ? "oaitun_nru" : "oaitun_ue";
-              tun_config(1, ip, NULL, ifn);
-              setup_ue_ipv4_route(1, ip, ifn);
+              tun_config(1, ip, NULL, ifn, NULL);
+              setup_ue_ipv4_route(1, 0, ip, ifn, NULL);
             } break;
 
             case NET_PDN_TYPE_IPV6:

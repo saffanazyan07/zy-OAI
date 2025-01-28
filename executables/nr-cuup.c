@@ -31,6 +31,7 @@
 #include "openair2/F1AP/f1ap_ids.h"
 #include "openair2/GNB_APP/gnb_config.h"
 #include "nr_pdcp/nr_pdcp_oai_api.h"
+#include "openair2/SDAP/nr_sdap/nr_sdap_entity.h"
 
 RAN_CONTEXT_t RC;
 THREAD_STRUCT thread_struct;

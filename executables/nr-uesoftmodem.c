@@ -446,6 +446,11 @@ int main(int argc, char **argv)
     }
   }
 
+  if (create_tasks_nrue(1) < 0) {
+    printf("cannot create ITTI tasks\n");
+    exit(-1); // need a softer mode
+  }
+
   int mode_offset = get_softmodem_params()->nsa ? NUMBER_OF_UE_MAX : 1;
   uint16_t node_number = get_softmodem_params()->node_number;
   ue_id_g = (node_number == 0) ? 0 : node_number - 2;
@@ -542,11 +547,6 @@ int main(int argc, char **argv)
 
   // wait for end of program
   printf("TYPE <CTRL-C> TO TERMINATE\n");
-
-  if (create_tasks_nrue(1) < 0) {
-    printf("cannot create ITTI tasks\n");
-    exit(-1); // need a softer mode
-  }
 
   // Sleep a while before checking all parameters have been used
   // Some are used directly in external threads, asynchronously
