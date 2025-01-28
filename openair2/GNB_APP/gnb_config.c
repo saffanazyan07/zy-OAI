@@ -271,15 +271,29 @@ void fill_scc_sim(NR_ServingCellConfigCommon_t *scc, uint64_t *ssb_bitmap, int N
   scc->dmrs_TypeA_Position = NR_ServingCellConfigCommon__dmrs_TypeA_Position_pos2;
   *scc->ssbSubcarrierSpacing = mu_dl;
 
-  struct NR_FrequencyInfoDL *frequencyInfoDL = scc->downlinkConfigCommon->frequencyInfoDL;
-  if (mu_dl == 0) {
-    *frequencyInfoDL->absoluteFrequencySSB = 520432;
-    *frequencyInfoDL->frequencyBandList.list.array[0] = 38;
-    frequencyInfoDL->absoluteFrequencyPointA = 520000;
-  } else {
-    *frequencyInfoDL->absoluteFrequencySSB = 641032;
-    *frequencyInfoDL->frequencyBandList.list.array[0] = 78;
-    frequencyInfoDL->absoluteFrequencyPointA = 640000;
+  NR_FrequencyInfoDL_t *frequencyInfoDL = scc->downlinkConfigCommon->frequencyInfoDL;
+  NR_TDD_UL_DL_ConfigCommon_t *tdd_UL_DL_Config = scc->tdd_UL_DL_ConfigurationCommon;
+  switch (mu_dl) {
+    case 0 :
+      *frequencyInfoDL->absoluteFrequencySSB = 520432;
+      *frequencyInfoDL->frequencyBandList.list.array[0] = 38;
+      frequencyInfoDL->absoluteFrequencyPointA = 520000;
+      tdd_UL_DL_Config->pattern1.dl_UL_TransmissionPeriodicity = NR_TDD_UL_DL_Pattern__dl_UL_TransmissionPeriodicity_ms10;
+      break;
+    case 1 :
+      *frequencyInfoDL->absoluteFrequencySSB = 641032;
+      *frequencyInfoDL->frequencyBandList.list.array[0] = 78;
+      frequencyInfoDL->absoluteFrequencyPointA = 640000;
+      tdd_UL_DL_Config->pattern1.dl_UL_TransmissionPeriodicity = NR_TDD_UL_DL_Pattern__dl_UL_TransmissionPeriodicity_ms5;
+      break;
+    case 3 :
+      *frequencyInfoDL->absoluteFrequencySSB = 2071387;
+      *frequencyInfoDL->frequencyBandList.list.array[0] = 257;
+      frequencyInfoDL->absoluteFrequencyPointA = 2071003;
+      tdd_UL_DL_Config->pattern1.dl_UL_TransmissionPeriodicity = NR_TDD_UL_DL_Pattern__dl_UL_TransmissionPeriodicity_ms1p25;
+      break;
+     default :
+       AssertFatal(false, "Numerolgy %d not supported\n", mu_dl);
   }
 
   *frequencyInfoDL->scs_SpecificCarrierList.list.array[0] = configure_scs_carrier(mu_dl, N_RB_DL);
@@ -303,7 +317,19 @@ void fill_scc_sim(NR_ServingCellConfigCommon_t *scc, uint64_t *ssb_bitmap, int N
               timedomainresourceallocation1);
 
   struct NR_FrequencyInfoUL *frequencyInfoUL = scc->uplinkConfigCommon->frequencyInfoUL;
-  *frequencyInfoUL->frequencyBandList->list.array[0] = mu_ul ? 78 : 38;
+  switch (mu_ul) {
+    case 0 :
+      *frequencyInfoUL->frequencyBandList->list.array[0] = 38;
+      break;
+    case 1 :
+      *frequencyInfoUL->frequencyBandList->list.array[0] = 78;
+      break;
+    case 3 :
+      *frequencyInfoUL->frequencyBandList->list.array[0] = 257;
+      break;
+     default :
+       AssertFatal(false, "Numerolgy %d not supported\n", mu_ul);
+  }
   *frequencyInfoUL->absoluteFrequencyPointA = -1;
   *frequencyInfoUL->scs_SpecificCarrierList.list.array[0] = configure_scs_carrier(mu_ul, N_RB_UL);
   *frequencyInfoUL->p_Max = 20;
@@ -345,18 +371,15 @@ void fill_scc_sim(NR_ServingCellConfigCommon_t *scc, uint64_t *ssb_bitmap, int N
   scc->ssb_PositionsInBurst->present = NR_ServingCellConfigCommon__ssb_PositionsInBurst_PR_mediumBitmap;
   *ssb_bitmap = 0xff;
 
-  struct NR_TDD_UL_DL_ConfigCommon *tdd_UL_DL_ConfigurationCommon = scc->tdd_UL_DL_ConfigurationCommon;
-  tdd_UL_DL_ConfigurationCommon->referenceSubcarrierSpacing = mu_dl;
+  tdd_UL_DL_Config->referenceSubcarrierSpacing = mu_dl;
 
-  NR_TDD_UL_DL_Pattern_t *p1 = &tdd_UL_DL_ConfigurationCommon->pattern1;
-  p1->dl_UL_TransmissionPeriodicity = (mu_dl == 0) ? NR_TDD_UL_DL_Pattern__dl_UL_TransmissionPeriodicity_ms10
-                                                   : NR_TDD_UL_DL_Pattern__dl_UL_TransmissionPeriodicity_ms5;
+  NR_TDD_UL_DL_Pattern_t *p1 = &tdd_UL_DL_Config->pattern1;
   p1->nrofDownlinkSlots = 7;
   p1->nrofDownlinkSymbols = 6;
   p1->nrofUplinkSlots = 2;
   p1->nrofUplinkSymbols = 4;
 
-  struct NR_TDD_UL_DL_Pattern *p2 = tdd_UL_DL_ConfigurationCommon->pattern2;
+  struct NR_TDD_UL_DL_Pattern *p2 = tdd_UL_DL_Config->pattern2;
   p2->dl_UL_TransmissionPeriodicity = 321;
   p2->nrofDownlinkSlots = -1;
   p2->nrofDownlinkSymbols = -1;
