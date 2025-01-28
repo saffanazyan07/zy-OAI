@@ -182,6 +182,7 @@ void prepare_scc(NR_ServingCellConfigCommon_t *scc)
 
   scc->ext2->ntn_Config_r17->ephemerisInfo_r17 = calloc_or_fail(1, sizeof(*scc->ext2->ntn_Config_r17->ephemerisInfo_r17));
   scc->ext2->ntn_Config_r17->ta_Info_r17 = calloc_or_fail(1, sizeof(*scc->ext2->ntn_Config_r17->ta_Info_r17));
+  scc->ext2->ntn_Config_r17->ta_Info_r17->ta_CommonDrift_r17 = calloc_or_fail(1, sizeof(*scc->ext2->ntn_Config_r17->ta_Info_r17->ta_CommonDrift_r17));
 
   scc->ext2->ntn_Config_r17->ephemerisInfo_r17->present = NR_EphemerisInfo_r17_PR_positionVelocity_r17;
   scc->ext2->ntn_Config_r17->ephemerisInfo_r17->choice.positionVelocity_r17 =
@@ -469,7 +470,12 @@ void fix_scc(NR_ServingCellConfigCommon_t *scc, uint64_t ssbmap)
     free(scc->ext2->ntn_Config_r17->cellSpecificKoffset_r17);
     scc->ext2->ntn_Config_r17->cellSpecificKoffset_r17 = NULL;
   }
+  if (*scc->ext2->ntn_Config_r17->ta_Info_r17->ta_CommonDrift_r17 == 0) {
+    free(scc->ext2->ntn_Config_r17->ta_Info_r17->ta_CommonDrift_r17);
+    scc->ext2->ntn_Config_r17->ta_Info_r17->ta_CommonDrift_r17 = NULL;
+  }
   if (scc->ext2->ntn_Config_r17->ta_Info_r17->ta_Common_r17 == -1) {
+    free(scc->ext2->ntn_Config_r17->ta_Info_r17->ta_CommonDrift_r17);
     free(scc->ext2->ntn_Config_r17->ta_Info_r17);
     scc->ext2->ntn_Config_r17->ta_Info_r17 = NULL;
   }

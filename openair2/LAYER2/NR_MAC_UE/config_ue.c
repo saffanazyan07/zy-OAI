@@ -937,6 +937,8 @@ void nr_rrc_mac_config_req_mib(module_id_t module_id,
     mac->get_sib1 = true;
   else if (sched_sib == 2)
     mac->get_otherSI = true;
+  else if (sched_sib == 0 && mac->state == UE_RECEIVING_SIB)
+    mac->state = UE_PERFORMING_RA;
   nr_ue_decode_mib(mac, cc_idP);
   ret = pthread_mutex_unlock(&mac->if_mutex);
   AssertFatal(!ret, "mutex failed %d\n", ret);
@@ -1690,7 +1692,7 @@ void nr_rrc_mac_config_req_reset(module_id_t module_id, NR_UE_MAC_reset_cause_t 
     case T300_EXPIRY:
       reset_ra(mac, false);
       reset_mac_inst(mac);
-      mac->state = UE_SYNC; // still in sync but need to restart RA
+      mac->state = UE_PERFORMING_RA; // still in sync but need to restart RA
       break;
     case RE_ESTABLISHMENT:
       reset_mac_inst(mac);

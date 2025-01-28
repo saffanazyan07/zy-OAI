@@ -1041,7 +1041,7 @@ void nr_ra_failed(NR_UE_MAC_INST_t *mac, uint8_t CC_id, NR_PRACH_RESOURCES_t *pr
 void trigger_MAC_UE_RA(NR_UE_MAC_INST_t *mac)
 {
   LOG_W(NR_MAC, "Triggering new RA procedure for UE with RNTI %x\n", mac->crnti);
-  mac->state = UE_SYNC;
+  mac->state = UE_PERFORMING_RA;
   reset_ra(mac, false);
   mac->ra.msg3_C_RNTI = true;
 }

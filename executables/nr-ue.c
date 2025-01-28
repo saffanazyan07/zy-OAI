@@ -491,9 +491,10 @@ static void RU_write(nr_rxtx_thread_data_t *rxtxD, bool sl_tx_action)
 
   openair0_timestamp writeTimestamp = proc->timestamp_tx;
   int writeBlockSize = rxtxD->writeBlockSize;
-  if ( writeBlockSize > fp->get_samples_per_slot(proc->nr_slot_tx, fp)) {
-    // if writeBlockSize gets longer that slot size, fill with dummy
-    const int dummyBlockSize = writeBlockSize - fp->get_samples_per_slot(proc->nr_slot_tx, fp);
+  // if writeBlockSize gets longer that slot size, fill with dummy
+  const int maxWriteBlockSize = fp->get_samples_per_slot(proc->nr_slot_tx, fp);
+  while (writeBlockSize > maxWriteBlockSize) {
+    const int dummyBlockSize = min(writeBlockSize - maxWriteBlockSize, maxWriteBlockSize);
     int tmp = openair0_write_reorder(&UE->rfdevice, writeTimestamp, txp, dummyBlockSize, fp->nb_antennas_tx, flags);
     AssertFatal(tmp == dummyBlockSize, "");
 
@@ -740,29 +741,32 @@ void readFrame(PHY_VARS_NR_UE *UE,  openair0_timestamp *timestamp, bool toTrash)
   }
 
   void *rxp[NB_ANTENNAS_RX];
+  if (toTrash)
+    for (int i = 0; i < fp->nb_antennas_rx; i++)
+      rxp[i] = malloc16(fp->samples_per_slot0 * 4);
 
   for (int x = 0; x < num_frames * NR_NUMBER_OF_SUBFRAMES_PER_FRAME; x++) { // two frames for initial sync
     for (int slot = 0; slot < fp->slots_per_subframe; slot++) {
-      for (int i = 0; i < fp->nb_antennas_rx; i++) {
-        if (toTrash)
-          rxp[i] = malloc16(fp->get_samples_per_slot(slot, fp) * 4);
-        else
+      if (!toTrash)
+        for (int i = 0; i < fp->nb_antennas_rx; i++)
           rxp[i] = ((void *)&UE->common_vars.rxdata[i][0])
                    + 4 * ((x * fp->samples_per_subframe) + fp->get_samples_slot_timestamp(slot, fp, 0));
-      }
 
       int read_block_size = fp->get_samples_per_slot(slot, fp);
       int tmp = UE->rfdevice.trx_read_func(&UE->rfdevice, timestamp, rxp, read_block_size, fp->nb_antennas_rx);
       UEscopeCopy(UE, ueTimeDomainSamplesBeforeSync, rxp[0], sizeof(c16_t), 1, read_block_size, 0);
       AssertFatal(read_block_size == tmp, "");
 
-      if (IS_SOFTMODEM_RFSIM)
-        dummyWrite(UE, *timestamp, fp->get_samples_per_slot(slot, fp));
-      if (toTrash)
-        for (int i = 0; i < fp->nb_antennas_rx; i++)
-          free(rxp[i]);
+      if (IS_SOFTMODEM_RFSIM) {
+        const openair0_timestamp writeTimestamp = *timestamp + fp->get_samples_slot_timestamp(slot, fp, NR_UE_CAPABILITY_SLOT_RX_TO_TX) - UE->N_TA_offset;
+        dummyWrite(UE, writeTimestamp, fp->get_samples_per_slot(slot, fp));
+      }
     }
   }
+
+  if (toTrash)
+    for (int i = 0; i < fp->nb_antennas_rx; i++)
+      free(rxp[i]);
 }
 
 static void syncInFrame(PHY_VARS_NR_UE *UE, openair0_timestamp *timestamp, openair0_timestamp rx_offset)
@@ -773,27 +777,18 @@ static void syncInFrame(PHY_VARS_NR_UE *UE, openair0_timestamp *timestamp, opena
 
   LOG_I(PHY, "Resynchronizing RX by %ld samples\n", rx_offset);
 
-  if (IS_SOFTMODEM_IQPLAYER || IS_SOFTMODEM_IQRECORDER) {
-    // Resynchonize by slot (will work with numerology 1 only)
-    for (int size = rx_offset; size > 0; size -= fp->samples_per_subframe / 2) {
-      int unitTransfer = size > fp->samples_per_subframe / 2 ? fp->samples_per_subframe / 2 : size;
-      int tmp =
-          UE->rfdevice.trx_read_func(&UE->rfdevice, timestamp, (void **)UE->common_vars.rxdata, unitTransfer, fp->nb_antennas_rx);
-      DevAssert(unitTransfer == tmp);
+  int slot = 0;
+  int size = rx_offset;
+  while (size > 0) {
+    const int unitTransfer = min(fp->get_samples_per_slot(slot, fp), size);
+    const int res = UE->rfdevice.trx_read_func(&UE->rfdevice, timestamp, (void **)UE->common_vars.rxdata, unitTransfer, fp->nb_antennas_rx);
+    DevAssert(unitTransfer == res);
+    if (IS_SOFTMODEM_RFSIM) {
+      const openair0_timestamp writeTimestamp = *timestamp + fp->get_samples_slot_timestamp(slot, fp, NR_UE_CAPABILITY_SLOT_RX_TO_TX) - UE->N_TA_offset;
+      dummyWrite(UE, writeTimestamp, unitTransfer);
     }
-  } else {
-    *timestamp += fp->get_samples_per_slot(1, fp);
-    for (int size = rx_offset; size > 0; size -= fp->samples_per_subframe) {
-      int unitTransfer = size > fp->samples_per_subframe ? fp->samples_per_subframe : size;
-      // we write before read because gNB waits for UE to write and both executions halt
-      // this happens here as the read size is samples_per_subframe which is very much larger than samp_per_slot
-      if (IS_SOFTMODEM_RFSIM)
-        dummyWrite(UE, *timestamp, unitTransfer);
-      int res =
-          UE->rfdevice.trx_read_func(&UE->rfdevice, timestamp, (void **)UE->common_vars.rxdata, unitTransfer, fp->nb_antennas_rx);
-      DevAssert(unitTransfer == res);
-      *timestamp += unitTransfer; // this does not affect the read but needed for RFSIM write
-    }
+    slot = (slot + 1) % fp->slots_per_subframe;
+    size -= unitTransfer;
   }
 }
 
@@ -868,7 +863,7 @@ void *UE_thread(void *arg)
       readFrame(UE, &tmp, true);
   }
 
-  double ntn_ta_common = 0;
+  double ntn_ta_commondrift = get_nrUE_params()->ntn_ta_commondrift;
   int ntn_koffset = 0;
 
   int duration_rx_to_tx = NR_UE_CAPABILITY_SLOT_RX_TO_TX;
@@ -958,7 +953,7 @@ void *UE_thread(void *arg)
       openair0_write_reorder_clear_context(&UE->rfdevice);
       if (get_nrUE_params()->time_sync_I)
         // ntn_ta_commondrift is in µs/s, max_pos_acc * time_sync_I is in samples/frame
-        UE->max_pos_acc = mac->ntn_ta.ntn_ta_commondrift * 1e-6 * fp->samples_per_frame / get_nrUE_params()->time_sync_I;
+        UE->max_pos_acc = ntn_ta_commondrift * 1e-6 * fp->samples_per_frame / get_nrUE_params()->time_sync_I;
       else
         UE->max_pos_acc = 0;
       shiftForNextFrame = -(UE->init_sync_frame + trashed_frames + 2) * UE->max_pos_acc * get_nrUE_params()->time_sync_I; // compensate for the time drift that happened during initial sync
@@ -998,16 +993,6 @@ void *UE_thread(void *arg)
     // start of normal case, the UE is in sync
     absolute_slot++;
     TracyCFrameMark;
-
-    if (update_ntn_system_information) {
-      update_ntn_system_information = false;
-      int ta_offset = UE->frame_parms.samples_per_subframe * (UE->ntn_config_message->ntn_config_params.ntn_total_time_advance_ms - ntn_ta_common);
-
-      UE->timing_advance += ta_offset;
-      ntn_ta_common = UE->ntn_config_message->ntn_config_params.ntn_total_time_advance_ms;
-      ntn_koffset = UE->ntn_config_message->ntn_config_params.cell_specific_k_offset;
-      timing_advance = ntn_koffset * (UE->frame_parms.samples_per_subframe >> mac->current_UL_BWP->scs);
-    }
 
     if (UE->ntn_config_message->update) {
       UE->ntn_config_message->update = false;
@@ -1117,9 +1102,19 @@ void *UE_thread(void *arg)
                            newTx);
     stream_status = STREAM_STATUS_SYNCED;
     tx_wait_for_dlsch[slot] = 0;
+
     // apply new duration next run to avoid thread dead lock
     if (update_ntn_system_information) {
+      update_ntn_system_information = false;
+
       duration_rx_to_tx = NR_UE_CAPABILITY_SLOT_RX_TO_TX + UE->ntn_config_message->ntn_config_params.cell_specific_k_offset;
+      UE->timing_advance = fp->samples_per_subframe * UE->ntn_config_message->ntn_config_params.ntn_total_time_advance_ms;
+      timing_advance += fp->get_samples_slot_timestamp(slot_nr, fp, UE->ntn_config_message->ntn_config_params.cell_specific_k_offset - ntn_koffset);
+
+      ntn_ta_commondrift = UE->ntn_config_message->ntn_config_params.ntn_ta_commondrift;
+      ntn_koffset = UE->ntn_config_message->ntn_config_params.cell_specific_k_offset;
+
+      LOG_I(PHY, "cell_specific_k_offset = %d ms, ntn_total_time_advance_ms = %f ms (%d samples)\n", ntn_koffset, UE->ntn_config_message->ntn_config_params.ntn_total_time_advance_ms, UE->timing_advance);
     }
   }
 
