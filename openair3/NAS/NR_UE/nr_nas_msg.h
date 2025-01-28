@@ -30,6 +30,7 @@
 #ifndef __NR_NAS_MSG_SIM_H__
 #define __NR_NAS_MSG_SIM_H__
 
+#include "common/utils/nr/nr_common.h"
 #include "RegistrationRequest.h"
 #include "FGSIdentityResponse.h"
 #include "FGSAuthenticationResponse.h"
@@ -60,6 +61,24 @@ typedef struct {
   int hplmn_sd;
 } nr_nas_msg_snssai_t;
 
+typedef enum fgs_mm_state_e {
+  FGS_DEREGISTERED,
+  FGS_DEREGISTERED_INITIATED,
+  FGS_REGISTERED_INITIATED,
+  FGS_REGISTERED,
+  FGS_SERVICE_REQUEST_INITIATED,
+} fgs_mm_state_t;
+
+/*
+ * 5GS mobility management (5GMM) modes
+ * 5.1.3.2.1.1 of TS 24.501
+ */
+typedef enum fgs_mm_mode_e {
+  FGS_NOT_CONNECTED,
+  FGS_IDLE,
+  FGS_CONNECTED,
+} fgs_mm_mode_t;
+
 /* Security Key for SA UE */
 typedef struct {
   uint8_t kausf[32];
@@ -75,14 +94,20 @@ typedef struct {
 } ue_sa_security_key_t;
 
 typedef struct {
+  /* 5GS Mobility Management States (5.1.3.2.1 of 3GPP TS 24.501) */
+  fgs_mm_state_t fiveGMM_state;
+  /* 5GS Mobility Management mode */
+  fgs_mm_mode_t fiveGMM_mode;
   uicc_t *uicc;
   ue_sa_security_key_t security;
   stream_security_container_t *security_container;
   Guti5GSMobileIdentity_t *guti;
   bool termination_procedure;
-  uint8_t *registration_request_buf;
-  uint32_t registration_request_len;
   instance_t UE_id;
+  /* RRC Inactive Indication */
+  bool is_rrc_inactive;
+  /* Timer T3512 */
+  NR_timer_t t3512;
 } nr_ue_nas_t;
 
 typedef enum fgs_protocol_discriminator_e {
@@ -162,7 +187,7 @@ typedef struct {
 } dl_nas_transport_t;
 
 nr_ue_nas_t *get_ue_nas_info(module_id_t module_id);
-void generateRegistrationRequest(as_nas_info_t *initialNasMsg, nr_ue_nas_t *nas);
+void generateRegistrationRequest(as_nas_info_t *initialNasMsg, nr_ue_nas_t *nas, bool is_security_mode);
 void generateServiceRequest(as_nas_info_t *initialNasMsg, nr_ue_nas_t *nas);
 void *nas_nrue_task(void *args_p);
 void *nas_nrue(void *args_p);

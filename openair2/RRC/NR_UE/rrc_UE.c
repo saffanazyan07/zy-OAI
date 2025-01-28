@@ -1106,7 +1106,8 @@ static void rrc_ue_generate_RRCSetupComplete(const NR_UE_RRC_INST_t *rrc, const 
   if (IS_SA_MODE(get_softmodem_params())) {
     as_nas_info_t initialNasMsg;
     nr_ue_nas_t *nas = get_ue_nas_info(rrc->ue_id);
-    generateRegistrationRequest(&initialNasMsg, nas);
+    // Send Initial NAS message (Registration Request) before Security Mode control procedure
+    generateRegistrationRequest(&initialNasMsg, nas, false);
     nas_msg = (char *)initialNasMsg.nas_data;
     nas_msg_length = initialNasMsg.length;
   } else {
