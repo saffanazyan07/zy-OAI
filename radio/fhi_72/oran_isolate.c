@@ -329,11 +329,10 @@ __attribute__((__visibility__("default"))) int transport_init(openair0_device *d
     AssertFatal(false, "[MPLANE] Stoping M-plane.\n");
   }
 
-  // the following is just temporary
-  bool success = get_xran_config(openair0_cfg, &fh_init, fh_config);
-  AssertFatal(success, "cannot get configuration for xran\n");
+  bool success = get_xran_config(&ru_session_list, openair0_cfg, &fh_init, fh_config);
+  AssertFatal(success, "[MPLANE] Cannot configure xran with M-plane info.\n");
 #else
-  bool success = get_xran_config(openair0_cfg, &fh_init, fh_config);
+  bool success = get_xran_config(NULL, openair0_cfg, &fh_init, fh_config);
   AssertFatal(success, "cannot get configuration for xran\n");
 #endif
 

@@ -29,7 +29,11 @@ struct xran_fh_init;
 struct xran_fh_config;
 struct openair0_config;
 
-bool get_xran_config(const struct openair0_config *openair0_cfg, struct xran_fh_init *fh_init, struct xran_fh_config *fh_config);
+#ifdef OAI_MPLANE
+#include "mplane/ru-mplane-api.h"
+#endif
+
+bool get_xran_config(const ru_session_list_t *ru_session_list, const struct openair0_config *openair0_cfg, struct xran_fh_init *fh_init, struct xran_fh_config *fh_config);
 
 void print_fh_init(const struct xran_fh_init *fh_init);
 void print_fh_config(const struct xran_fh_config *fh_config);
