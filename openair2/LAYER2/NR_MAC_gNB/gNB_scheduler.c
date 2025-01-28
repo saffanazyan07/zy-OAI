@@ -181,16 +181,6 @@ void gNB_dlsch_ulsch_scheduler(module_id_t module_idP, frame_t frame, sub_frame_
   start_meas(&gNB->eNB_scheduler);
   VCD_SIGNAL_DUMPER_DUMP_FUNCTION_BY_NAME(VCD_SIGNAL_DUMPER_FUNCTIONS_gNB_DLSCH_ULSCH_SCHEDULER,VCD_FUNCTION_IN);
 
-  /* send tick to RLC, PDCP, and X2AP every ms */
-  if ((slot & ((1 << *scc->ssbSubcarrierSpacing) - 1)) == 0) {
-    void nr_rlc_tick(int frame, int subframe);
-    void nr_pdcp_tick(int frame, int subframe);
-    nr_rlc_tick(frame, slot >> *scc->ssbSubcarrierSpacing);
-    nr_pdcp_tick(frame, slot >> *scc->ssbSubcarrierSpacing);
-    if (is_x2ap_enabled())
-      x2ap_trigger();
-  }
-
   for (int CC_id = 0; CC_id < MAX_NUM_CCs; CC_id++) {
     int num_beams = 1;
     if(gNB->beam_info.beam_allocation)

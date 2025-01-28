@@ -31,6 +31,7 @@
 #include "openair2/F1AP/f1ap_ids.h"
 #include "openair2/GNB_APP/gnb_config.h"
 #include "nr_pdcp/nr_pdcp_oai_api.h"
+#include "common/utils/time_manager/time_manager.h"
 
 RAN_CONTEXT_t RC;
 THREAD_STRUCT thread_struct;
@@ -155,6 +156,11 @@ int main(int argc, char **argv)
     exit_fun("[SOFTMODEM] Error, configuration module init failed\n");
   }
   logInit();
+
+  // start time manager with some reasonable default for the running mode
+  // (may be overwritten in configuration file or command line)
+  time_manager_start(TIME_MANAGER_GNB_CU, TIME_MANAGER_REALTIME);
+
   // strdup to put the sring in the core file for post mortem identification
   LOG_I(HW, "Version: %s\n", strdup(OAI_PACKAGE_VERSION));
   set_softmodem_sighandler();
@@ -192,6 +198,8 @@ int main(int argc, char **argv)
 
   printf("TYPE <CTRL-C> TO TERMINATE\n");
   itti_wait_tasks_end(NULL);
+
+  time_manager_finish();
 
   logClean();
   printf("Bye.\n");

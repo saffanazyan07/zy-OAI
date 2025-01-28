@@ -298,7 +298,7 @@ Even, a future evolution could remove this global rlc layer: rlc can be only a l
 When adding a UE, external code have to call `add_rlc_srb()` and/or `add_rlc_drb()`, to remove it: `rrc_rlc_remove_ue()`
 Inside UE, channels called drd or srb can be created: ??? and deleted: rrc_rlc_config_req()
 
-nr_rlc_tick() must be called periodically to manage the internal timers 
+nr_rlc_ms_tick() must be called periodically to manage the internal timers
 
 successful_delivery() and max_retx_reached(): in ??? trigger, the RLC sends a itti message to RRC: RLC_SDU_INDICATION (neutralized by #if 0 right now)
 
