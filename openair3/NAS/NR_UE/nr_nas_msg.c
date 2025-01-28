@@ -50,6 +50,7 @@
 #include "openair2/SDAP/nr_sdap/nr_sdap.h"
 #include "openair3/SECU/nas_stream_eia2.h"
 #include "openair3/UTILS/conversions.h"
+#include "fgmm_service_accept.h"
 
 #define MAX_NAS_UE 4
 
@@ -64,6 +65,16 @@ typedef enum {
   NAS_SECURITY_INTEGRITY_PASSED,
   NAS_SECURITY_BAD_INPUT
 } security_state_t;
+
+static const char *print_info(uint8_t id, const text_info_t *array, size_t array_size)
+{
+  for (size_t i = 0; i < array_size; i++) {
+    if (array[i].id == id) {
+      return array[i].text;
+    }
+  }
+  return "N/A";
+}
 
 security_state_t nas_security_rx_process(nr_ue_nas_t *nas, uint8_t *pdu_buffer, int pdu_length)
 {
@@ -1328,6 +1339,22 @@ static void handle_registration_accept(nr_ue_nas_t *nas, const uint8_t *pdu_buff
   }
 }
 
+static void handle_service_accept(nr_ue_nas_t *nas, const uint8_t *buf, uint32_t buf_len)
+{
+  LOG_I(NAS, "Received NAS Service Accept message\n");
+  fgs_service_accept_msg_t msg = {0};
+  decode_fgs_service_accept(&msg, buf, buf_len);
+  // Extract timer t3448 (optional)
+  if (msg.t3448_value)
+    nas->t3448 = *msg.t3448_value;
+  // Extract possible reactivation errors
+  for (int i = 0; i < msg.num_errors; i++)
+    LOG_E(NAS,
+          "Received PDU Session %d reactivation result error cause %s\n",
+          msg.cause->pdu_session_id,
+          print_info(msg.cause->cause, cause_text_info, sizeofArray(cause_text_info)));
+}
+
 void *nas_nrue(void *args_p)
 {
   // Wait for a message or an event
@@ -1519,6 +1546,9 @@ void *nas_nrue(void *args_p)
           case REGISTRATION_REJECT:
             LOG_E(NAS, "Received Registration reject cause: %s\n", cause_text_info[pdu_buffer[17]].text);
             exit(1);
+            break;
+          case FGS_SERVICE_ACCEPT:
+            handle_service_accept(nas, pdu_buffer, pdu_length);
             break;
           default:
             LOG_W(NR_RRC, "unknown message type %d\n", msg_type);
