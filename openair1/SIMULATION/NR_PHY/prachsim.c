@@ -132,7 +132,7 @@ int main(int argc, char **argv){
   get_softmodem_params()->sl_mode = 0;
   double sigma2, sigma2_dB = 0, SNR, snr0 = -2.0, snr1 = 0.0, ue_speed0 = 0.0, ue_speed1 = 0.0;
   double **s_re, **s_im, **r_re, **r_im, iqim = 0.0, delay_avg = 0, ue_speed = 0, fs=-1, bw;
-  int i, l, aa, aarx, trial, n_frames = 1, prach_start, rx_prach_start; //, ntrials=1;
+  int i, l, aa, aarx, trial, n_frames = 1, rx_prach_start; //, ntrials=1;
   c16_t **txdata;
   int N_RB_UL = 106, delay = 0, NCS_config = 13, rootSequenceIndex = 1, threequarter_fs = 0, mu = 1, fd_occasion = 0, loglvl = OAILOG_INFO, numRA = 0, prachStartSymbol = 0;
   uint8_t snr1set = 0, ue_speed1set = 0, transmission_mode = 1, n_tx = 1, n_rx = 1, awgn_flag = 0, msg1_frequencystart = 0, num_prach_fd_occasions = 1, prach_format=0;
@@ -663,14 +663,17 @@ int main(int argc, char **argv){
                        ue_prach_config->num_prach_fd_occasions_list[fd_occasion].prach_root_sequence_index,
                        UE->X_u);
 
-  generate_nr_prach(UE, 0, frame, slot);
+  int prach_start = subframe * frame_parms->samples_per_subframe;
+  int slot_start = frame_parms->get_samples_slot_timestamp(slot, frame_parms, 0);
+  c16_t *tx[frame_parms->nb_antennas_rx];
+  for (int i = 0; i < frame_parms->nb_antennas_rx; i++)
+    tx[i] = txdata[i] + slot_start;
+  generate_nr_prach(UE, 0, frame, slot, tx);
 
   /* tx_lev_dB not used later, no need to set */
   //tx_lev_dB = (unsigned int) dB_fixed(tx_lev);
 
-  prach_start = subframe*frame_parms->samples_per_subframe;
-
-  #ifdef NR_PRACH_DEBUG
+#ifdef NR_PRACH_DEBUG
   LOG_M("txsig0.m", "txs0", &txdata[0][subframe*frame_parms->samples_per_subframe], frame_parms->samples_per_subframe, 1, 1);
     LOG_M("txsig0_frame.m","txs0", txdata[0],frame_parms->samples_per_frame,1,1);
   #endif
@@ -678,16 +681,16 @@ int main(int argc, char **argv){
   for (i = 0; i < frame_parms->samples_per_subframe; i++) {
     for (aa=0; aa<1; aa++) {
       if (awgn_flag == 0) {
-        s_re[aa][i] = ((double)(((short *)&txdata[aa][prach_start]))[(i<<1)]);
-        s_im[aa][i] = ((double)(((short *)&txdata[aa][prach_start]))[(i<<1)+1]);
+        s_re[aa][i] = txdata[aa][prach_start + i].r;
+        s_im[aa][i] = txdata[aa][prach_start + i].i;
       } else {
         for (aarx=0; aarx<gNB->frame_parms.nb_antennas_rx; aarx++) {
           if (aa==0) {
-            r_re[aarx][i] = ((double)(((short *)&txdata[aa][prach_start]))[(i<<1)]);
-            r_im[aarx][i] = ((double)(((short *)&txdata[aa][prach_start]))[(i<<1)+1]);
+            r_re[aarx][i] = txdata[aa][prach_start + i].r;
+            r_im[aarx][i] = txdata[aa][prach_start + i].i;
           } else {
-            r_re[aarx][i] += ((double)(((short *)&txdata[aa][prach_start]))[(i<<1)]);
-            r_im[aarx][i] += ((double)(((short *)&txdata[aa][prach_start]))[(i<<1)+1]);
+            r_re[aarx][i] += txdata[aa][prach_start + i].r;
+            r_im[aarx][i] += txdata[aa][prach_start + i].i;
           }
         }
       }
@@ -747,8 +750,9 @@ int main(int argc, char **argv){
 
           for (i = 0; i< frame_parms->samples_per_subframe; i++) {
             for (aa = 0; aa < frame_parms->nb_antennas_rx; aa++) {
-              ((short*) &ru->common.rxdata[aa][rx_prach_start])[2*i] = (short) (.167*(r_re[aa][i] +sqrt(sigma2/2)*gaussdouble(0.0,1.0)));
-              ((short*) &ru->common.rxdata[aa][rx_prach_start])[2*i+1] = (short) (.167*(r_im[aa][i] + (iqim*r_re[aa][i]) + sqrt(sigma2/2)*gaussdouble(0.0,1.0)));
+              c16_t *tmp = (c16_t *)ru->common.rxdata[aa] + rx_prach_start + i;
+              tmp->r = (short)(.167 * (r_re[aa][i] + sqrt(sigma2 / 2) * gaussdouble(0.0, 1.0)));
+              tmp->i = (short)(.167 * (r_im[aa][i] + (iqim * r_re[aa][i]) + sqrt(sigma2 / 2) * gaussdouble(0.0, 1.0)));
             }
           }
 	} else {
@@ -762,14 +766,9 @@ int main(int argc, char **argv){
 
 	for (l = 0; l < frame_parms->symbols_per_slot; l++) {
 	  for (aa = 0; aa < frame_parms->nb_antennas_rx; aa++) {
-	    nr_slot_fep_ul(frame_parms,
-			   (int32_t *)ru->common.rxdata[aa],
-			   (int32_t *)ru->common.rxdataF[aa],
-			   l,
-			   slot,
-			   ru->N_TA_offset);
-	  }
-	}
+      nr_slot_fep_ul(frame_parms, ru->common.rxdata[aa], ru->common.rxdataF[aa], l, slot, ru->N_TA_offset);
+    }
+  }
 	
         rx_nr_prach_ru(ru, prach_format, numRA, prachStartSymbol, prachOccasion, frame, slot);
 

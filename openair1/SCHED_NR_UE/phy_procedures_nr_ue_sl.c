@@ -264,7 +264,7 @@ int psbch_pscch_processing(PHY_VARS_NR_UE *ue, const UE_nr_rxtx_proc_t *proc, nr
   return sampleShift;
 }
 
-void phy_procedures_nrUE_SL_TX(PHY_VARS_NR_UE *ue, const UE_nr_rxtx_proc_t *proc, nr_phy_data_tx_t *phy_data)
+void phy_procedures_nrUE_SL_TX(PHY_VARS_NR_UE *ue, const UE_nr_rxtx_proc_t *proc, nr_phy_data_tx_t *phy_data, c16_t **txp)
 {
   int slot_tx = proc->nr_slot_tx;
   int frame_tx = proc->frame_tx;
@@ -310,7 +310,7 @@ void phy_procedures_nrUE_SL_TX(PHY_VARS_NR_UE *ue, const UE_nr_rxtx_proc_t *proc
 
   if (tx_action) {
     LOG_D(NR_PHY, "Sending Uplink data \n");
-    nr_ue_pusch_common_procedures(ue, proc->nr_slot_tx, fp, fp->nb_antennas_tx, txdataF, link_type_sl);
+    nr_ue_pusch_common_procedures(ue, proc->nr_slot_tx, fp, fp->nb_antennas_tx, txdataF, txp, link_type_sl);
   }
 
   LOG_D(NR_PHY, "****** end Sidelink TX-Chain for AbsSubframe %d.%d ******\n", frame_tx, slot_tx);

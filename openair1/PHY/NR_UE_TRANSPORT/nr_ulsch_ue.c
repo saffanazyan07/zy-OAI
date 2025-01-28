@@ -831,13 +831,11 @@ uint8_t nr_ue_pusch_common_procedures(PHY_VARS_NR_UE *UE,
                                       const NR_DL_FRAME_PARMS *frame_parms,
                                       const uint8_t n_antenna_ports,
                                       c16_t **txdataF,
+                                      c16_t **txdata,
                                       uint32_t linktype)
 {
-  const int tx_offset = frame_parms->get_samples_slot_timestamp(slot, frame_parms, 0);
-
   int N_RB = (linktype == link_type_sl) ? frame_parms->N_RB_SL : frame_parms->N_RB_UL;
 
-  c16_t **txdata = UE->common_vars.txData;
   for(int ap = 0; ap < n_antenna_ports; ap++) {
     apply_nr_rotation_TX(frame_parms,
                          txdataF[ap],
@@ -851,17 +849,13 @@ uint8_t nr_ue_pusch_common_procedures(PHY_VARS_NR_UE *UE,
   for (int ap = 0; ap < n_antenna_ports; ap++) {
     if (frame_parms->Ncp == 1) { // extended cyclic prefix
       PHY_ofdm_mod((int *)txdataF[ap],
-                   (int *)&txdata[ap][tx_offset],
+                   (int *)txdata[ap],
                    frame_parms->ofdm_symbol_size,
                    12,
                    frame_parms->nb_prefix_samples,
                    CYCLIC_PREFIX);
     } else { // normal cyclic prefix
-      nr_normal_prefix_mod(txdataF[ap],
-                           &txdata[ap][tx_offset],
-                           14,
-                           frame_parms,
-                           slot);
+      nr_normal_prefix_mod(txdataF[ap], txdata[ap], 14, frame_parms, slot);
     }
   }
 
