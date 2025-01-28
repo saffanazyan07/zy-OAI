@@ -73,6 +73,8 @@ tested any RU without S-plane. Radio units we are testing/integrating:
 |Benetel 650      |RAN650-1v1.0.4-dda1bf5|
 |Benetel 550 CAT-A|RAN550-1v1.0.4-605a25a|
 
+We recommend using LLS-C3. In case you do not have a PTP GM or a PTP aware switch then you can try LLS-C1 configuration tested by some community members.
+
 Tested libxran releases:
 
 | Vendor                                  |
@@ -185,10 +187,9 @@ The above information we have gathered either from O-RAN documents or via our ow
 
 ## PTP configuration
 
-**Note**: You may run OAI with O-RAN 7.2 Fronthaul without a RU attached (e.g. for benchmarking).
-In such case, you can skip PTP configuration and go to DPDK section.
+**Note**: You may run OAI with O-RAN 7.2 Fronthaul without a RU attached (e.g. for bench-marking). In such case, you can skip PTP configuration and go to DPDK section.
 
-1. You can install `linuxptp` rpm or debian package. It will install ptp4l and phc2sys.
+You can install `linuxptp` rpm or Debian package. It will install ptp4l and phc2sys.
 
 ```bash
 #RHEL
@@ -197,7 +198,11 @@ sudo dnf install linuxptp -y
 sudo apt install linuxptp -y
 ```
 
-Once installed you can use this configuration file for ptp4l (`/etc/ptp4l.conf`). Here the clock domain is 24 so you can adjust it according to your PTP GM clock domain
+### LLS-C3
+
+We assume that you have configured PTP GM and PTP aware boundary clock with PTP telco profile 8275.1. 
+
+Use this configuration file for ptp4l (`/etc/ptp4l.conf`). Here the clock domain is 24 so you can adjust it according to your PTP GM clock domain
 
 ```
 [global]
@@ -261,6 +266,161 @@ ExecStart=/usr/sbin/phc2sys $OPTIONS
 WantedBy=multi-user.target
 ```
 
+### LLS-C1
+
+Use this mode if you don't have a PTP enabled boundary clock or Grandmaster. In this setup the NIC was not receiving GPS signals. This setup might work for GPS enabled NICs:  
+
+Only tested with Intel E810 XXVDA4T NIC. You have to change the stock NIC driver to 1.12.7 or above
+
+Download and install ice.1.12.7
+
+```bash
+git clone https://github.com/intel/ethernet-linux-ice.git /tmp/ethernet-linux-ice
+cd /tmp/ethernet-linux-ice
+git checkout v1.12.7
+cd /tmp/ethernet-linux-ice/src/
+## We recommend you to read /tmp/ethernet-linux-ice/README.md
+sudo make install
+```
+
+Create ptp4l and phyc2sys configuration files:
+
+<details>
+<summary>Ptp4l configuration file `/etc/ptp4l.conf`</summary>
+
+```console
+#
+# Default Data Set
+#
+twoStepFlag             1
+slaveOnly                 0
+#socket_priority                0
+priority1               128
+priority2               128
+domainNumber            24
+#utc_offset             37
+clockClass              248
+clockAccuracy           0xFE
+offsetScaledLogVariance 0xFFFF
+free_running            0
+freq_est_interval       1
+dscp_event              0
+dscp_general            0
+dataset_comparison      ieee1588
+G.8275.defaultDS.localPriority  128
+maxStepsRemoved         255
+#
+# Port Data Set
+#
+logAnnounceInterval     -3
+logSyncInterval         -4
+#operLogSyncInterval    0
+logMinDelayReqInterval  -4
+logMinPdelayReqInterval 0
+#operLogPdelayReqInterval 0
+announceReceiptTimeout  3
+syncReceiptTimeout      0
+delayAsymmetry          0
+fault_reset_interval    4
+neighborPropDelayThresh 20000000
+#masterOnly             0
+G.8275.portDS.localPriority     128
+asCapable               auto
+BMCA                    ptp
+inhibit_announce        0
+#inhibit_delay_req       0
+ignore_source_id        0
+#
+# Run time options
+#
+assume_two_step         0
+logging_level           6
+path_trace_enabled      0
+follow_up_info          0
+hybrid_e2e              0
+inhibit_multicast_service       0
+net_sync_monitor        0
+tc_spanning_tree        0
+tx_timestamp_timeout    1
+unicast_listen          0
+unicast_master_table    0
+unicast_req_duration    3600
+use_syslog              1
+verbose                 0
+summary_interval        0
+kernel_leap             1
+check_fup_sync          0
+#
+# Servo Options
+#
+pi_proportional_const   0.0
+pi_integral_const       0.0
+pi_proportional_scale   0.0
+pi_proportional_exponent        -0.3
+pi_proportional_norm_max        0.7
+pi_integral_scale       0.0
+pi_integral_exponent    0.4
+pi_integral_norm_max    0.3
+step_threshold          0.0
+first_step_threshold    0.00002
+max_frequency           900000000
+clock_servo             linreg
+sanity_freq_limit       200000000
+ntpshm_segment          0
+#msg_interval_request   0
+#servo_num_offset_values 10
+#servo_offset_threshold  0
+#write_phase_mode       0
+#
+# Transport options
+#
+transportSpecific       0x0
+ptp_dst_mac             01:1B:19:00:00:00
+p2p_dst_mac             01:80:C2:00:00:0E
+udp_ttl                 1
+udp6_scope              0x0E
+uds_address             /var/run/ptp4l
+#
+# Default interface options
+#
+clock_type              OC
+network_transport       UDPv4
+#network_transport       L2
+delay_mechanism         E2E
+time_stamping           hardware
+tsproc_mode             filter
+delay_filter            moving_median
+delay_filter_length     10
+egressLatency           0
+ingressLatency          0
+boundary_clock_jbod     0
+#
+# Clock description
+#
+productDescription      ;;
+revisionData            ;;
+manufacturerIdentity    00:00:00
+userDescription         ;
+timeSource              0xA0
+```
+</details>
+
+Phc2sys configuration `/etc/sysconfig/phc2sys`
+
+```
+OPTIONS="-s <PTP_ENABLED_NIC> -w -R 8 -f /etc/ptp4l.conf"
+```
+
+Create the ptp4l and phc2sys services as defined in the previous LLS-C3 section. 
+
+To uninstall custom ice driver
+
+```bash
+cd /tmp/ethernet-linux-ice/src/
+sudo make uninstall
+sudo reboot
+```
+
 ### Debugging PTP issues
 
 You can see these steps in case your ptp logs have erorrs or `rms` reported in `ptp4l` logs is more than 100ms.
@@ -270,7 +430,7 @@ Beware that PTP issues may show up only when running OAI and XRAN. If you are us
 2. For Intel E-810 cards set `tx_timestamp_timeout` to 50 or 100 if there are errors in ptp4l logs
 3. Other time sources than PTP, such as NTP or chrony timesources, should be disabled. Make sure they are enabled as further below.
 4. Make sure you set `kthread_cpus=<cpu_list>` in `/proc/cmdline`.
-5. If `rms` or `delay` in `ptp4l` or `offset` in `phc2sys` logs remain high then you can try pinning the `ptp4l` and `phc2sys` processes to an isolated CPU.
+5. If `rms` or `delay` in `ptp4l` or `offset` in `phc2sys` logs remain high then you can try pinning (`CPUAffinity` and `Nice`) the `ptp4l` and `phc2sys` processes to an isolated CPU.
 
 ```bash
 #to check there is NTP enabled or not
