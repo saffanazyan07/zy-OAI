@@ -724,13 +724,13 @@ int nr_rx_pdsch(PHY_VARS_NR_UE *ue,
       metadata mt = {.frame = proc->frame_rx, .slot = proc->nr_slot_rx };
       int total_valid_res = 0;
       for (int i = startSymbIdx; i < startSymbIdx + nbSymb; i++) {
-        total_valid_res = dl_valid_re[i - 1];
+        total_valid_res += dl_valid_re[i];
       }
       if (UETryLockScopeData(ue, pdschRxdataF_comp, sizeof(c16_t), 1,  total_valid_res, &mt)) {
         size_t offset = 0;
         for (int i = startSymbIdx; i < startSymbIdx + nbSymb; i++) {
-          size_t data_size = sizeof(c16_t) * dl_valid_re[i - i];
-          UEscopeCopyUnsafe(ue, pdschRxdataF_comp, &rxdataF_comp[0][0][rx_size_symbol * i], data_size, offset, i - startSymbIdx);
+          size_t data_size = sizeof(c16_t) * dl_valid_re[i];
+          UEscopeCopyUnsafe(ue, pdschRxdataF_comp, &rxdataF_comp[0][0][rx_size_symbol * i], data_size, offset, i);
           offset += data_size;
         }
         UEunlockScopeData(ue, pdschRxdataF_comp)

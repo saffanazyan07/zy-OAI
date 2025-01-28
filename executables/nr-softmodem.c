@@ -701,7 +701,7 @@ int main( int argc, char **argv ) {
     wait_RUs();
     // once all RUs are ready initialize the rest of the gNBs ((dependence on final RU parameters after configuration)
 
-    if (IS_SOFTMODEM_DOSCOPE || IS_SOFTMODEM_IMSCOPE_ENABLED) {
+    if (IS_SOFTMODEM_DOSCOPE || IS_SOFTMODEM_IMSCOPE_ENABLED || IS_SOFTMODEM_IMSCOPE_RECORD_ENABLED) {
       sleep(1);
       scopeParms_t p;
       p.argc = &argc;
@@ -713,6 +713,11 @@ int main( int argc, char **argv ) {
       }
       if (IS_SOFTMODEM_IMSCOPE_ENABLED) {
         load_softscope("im", &p);
+      }
+      AssertFatal(!(IS_SOFTMODEM_IMSCOPE_ENABLED && IS_SOFTMODEM_IMSCOPE_RECORD_ENABLED),
+                  "Data recoding and ImScope cannot be enabled at the same time\n");
+      if (IS_SOFTMODEM_IMSCOPE_RECORD_ENABLED) {
+        load_module_shlib("imscope_record", NULL, 0, &p);
       }
     }
 

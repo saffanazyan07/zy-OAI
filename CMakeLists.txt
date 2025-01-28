@@ -298,6 +298,7 @@ message(STATUS "Selected KPM Version: ${KPM_VERSION}")
 
 
 add_boolean_option(ENABLE_IMSCOPE OFF "Enable phy scope based on imgui" OFF)
+add_boolean_option(ENABLE_IMSCOPE_RECORD OFF "Enable recording IQ data for imscope" OFF)
 
 ##################################################
 # ASN.1 grammar C code generation & dependencies #

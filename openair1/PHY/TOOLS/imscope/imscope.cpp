@@ -42,8 +42,11 @@ extern "C" {
 #include <sstream>
 #include <mutex>
 #include <thread>
+#include <fstream>
+#include "imscope_internal.h"
+#include <cstdlib>
+#include <vector>
 
-#define MAX_OFFSETS 14
 #define NR_MAX_RB 273
 #define N_SC_PER_RB NR_NB_SC_PER_RB
 
@@ -66,77 +69,9 @@ static void glfw_error_callback(int error, const char *description)
   fprintf(stderr, "GLFW Error %d: %s\n", error, description);
 }
 
-typedef struct ImScopeData {
-  std::mutex write_mutex;
-  scopeGraphData_t *scope_graph_data;
-  bool is_data_ready;
-  metadata meta;
-  uint64_t time_taken_in_ns;
-  uint64_t time_taken_in_ns_per_offset[MAX_OFFSETS];
-  size_t data_copied_per_offset[MAX_OFFSETS];
-} ImScopeData;
-
-typedef struct MovingAverageTimer {
-  uint64_t sum = 0;
-  float average = 0;
-  float last_update_time = 0;
-  void UpdateAverage(float time)
-  {
-    if (time > last_update_time + 1) {
-      float new_average = sum / (float)((time - last_update_time) / 1000);
-      average = 0.95 * average + 0.05 * new_average;
-      sum = 0;
-    }
-  }
-  void Add(uint64_t ns)
-  {
-    sum += ns;
-  }
-} MovingAverageTimer;
-
 MovingAverageTimer iq_procedure_timer;
 
-static ImScopeData scope_array[EXTRA_SCOPE_TYPES];
-
-typedef struct IQData {
-  std::vector<int16_t> real;
-  std::vector<int16_t> imag;
-  int16_t max_iq;
-  std::vector<float> power;
-  float max_power;
-  float timestamp;
-  int nonzero_count;
-  int len = 0;
-  metadata meta;
-
-  bool TryCollect(ImScopeData *imscope_data, float time, float epsilon)
-  {
-    if (imscope_data->is_data_ready) {
-      iq_procedure_timer.Add(imscope_data->time_taken_in_ns);
-      timestamp = time;
-      scopeGraphData_t *iq_header = imscope_data->scope_graph_data;
-      len = iq_header->lineSz;
-      real.reserve(len);
-      imag.reserve(len);
-      power.reserve(len);
-      c16_t *source = (c16_t *)(iq_header + 1);
-      max_iq = 0;
-      nonzero_count = 0;
-      for (auto i = 0; i < len; i++) {
-        real[i] = source[i].r;
-        imag[i] = source[i].i;
-        max_iq = std::max(max_iq, (int16_t)std::abs(source[i].r));
-        max_iq = std::max(max_iq, (int16_t)std::abs(source[i].i));
-        nonzero_count = std::abs(source[i].r) > epsilon || std::abs(source[i].i) > epsilon ? nonzero_count + 1 : nonzero_count;
-        power[i] = std::sqrt(std::pow(source[i].r, 2) + std::pow(source[i].i, 2));
-      }
-      meta = imscope_data->meta;
-      imscope_data->is_data_ready = false;
-      return true;
-    }
-    return false;
-  }
-} IQData;
+ImScopeDataWrapper scope_array[EXTRA_SCOPE_TYPES];
 
 class LLRPlot {
   int len = 0;
@@ -163,19 +98,19 @@ class LLRPlot {
       ImGui::EndDisabled();
     }
 
-    ImScopeData &scope_data = scope_array[type];
+    ImScopeDataWrapper &scope_data = scope_array[type];
     if (ImPlot::BeginPlot(label)) {
       if (!frozen || next) {
         if (scope_data.is_data_ready) {
-          iq_procedure_timer.Add(scope_data.time_taken_in_ns);
+          iq_procedure_timer.Add(scope_data.data.time_taken_in_ns);
           timestamp = time;
-          const int16_t *tmp = (int16_t *)(scope_data.scope_graph_data + 1);
-          len = scope_data.scope_graph_data->lineSz;
+          const int16_t *tmp = (int16_t *)(scope_data.data.scope_graph_data + 1);
+          len = scope_data.data.scope_graph_data->lineSz;
           llr.reserve(len);
           for (auto i = 0; i < len; i++) {
             llr[i] = tmp[i];
           }
-          meta = scope_data.meta;
+          meta = scope_data.data.meta;
           scope_data.is_data_ready = false;
           if (frozen) {
             next = false;
@@ -323,14 +258,14 @@ class IQSlotHeatmap {
   bool next = false;
   float timestamp = 0;
   std::vector<float> power;
-  ImScopeData *scope_data;
+  ImScopeDataWrapper *scope_data;
   std::string label;
   int len = 0;
   float max = 0;
   float stop_at_min = 1000;
 
  public:
-  IQSlotHeatmap(ImScopeData *scope_data_, const char *label_)
+  IQSlotHeatmap(ImScopeDataWrapper *scope_data_, const char *label_)
   {
     scope_data = scope_data_;
     label = label_;
@@ -341,7 +276,7 @@ class IQSlotHeatmap {
     auto num_sc = num_rb * NR_NB_SC_PER_RB;
     if (!frozen || next) {
       if (scope_data->is_data_ready) {
-        iq_procedure_timer.Add(scope_data->time_taken_in_ns);
+        iq_procedure_timer.Add(scope_data->data.time_taken_in_ns);
         uint16_t first_sc = first_carrier_offset;
         uint16_t last_sc = first_sc + num_rb * NR_NB_SC_PER_RB;
         bool wrapped = false;
@@ -354,7 +289,7 @@ class IQSlotHeatmap {
           wrapped_last_sc = wrapped_first_sc + num_sc_left - 1;
         }
         timestamp = time;
-        scopeGraphData_t *iq_header = scope_data->scope_graph_data;
+        scopeGraphData_t *iq_header = scope_data->data.scope_graph_data;
         len = iq_header->lineSz;
         c16_t *source = (c16_t *)(iq_header + 1);
 
@@ -458,8 +393,9 @@ struct ScrollingBuffer {
   }
 };
 
-void ShowUeScope(PHY_VARS_NR_UE *ue, float t)
+void ShowUeScope(void *data_void_ptr, float t)
 {
+  PHY_VARS_NR_UE *ue = (PHY_VARS_NR_UE *)data_void_ptr;
   ImGui::Begin("UE KPI");
   if (ImPlot::BeginPlot("##Scrolling", ImVec2(-1, 150))) {
     static float history = 10.0f;
@@ -490,7 +426,7 @@ void ShowUeScope(PHY_VARS_NR_UE *ue, float t)
     static auto pdsch_iq_hist = new IQHist("PDSCH IQ");
     bool new_data = false;
     if (pdsch_iq_hist->ShouldReadData()) {
-      new_data = iq_data->TryCollect(&scope_array[pdschRxdataF_comp], t, pdsch_iq_hist->GetEpsilon());
+      new_data = iq_data->TryCollect(&scope_array[pdschRxdataF_comp], t, pdsch_iq_hist->GetEpsilon(), iq_procedure_timer);
     }
     pdsch_iq_hist->Draw(iq_data, t, new_data);
   }
@@ -503,7 +439,7 @@ void ShowUeScope(PHY_VARS_NR_UE *ue, float t)
     static auto time_domain_iq = new IQHist("Time domain samples", disable_scatterplot);
     bool new_data = false;
     if (time_domain_iq->ShouldReadData()) {
-      new_data = iq_data->TryCollect(&scope_array[ueTimeDomainSamples], t, time_domain_iq->GetEpsilon());
+      new_data = iq_data->TryCollect(&scope_array[ueTimeDomainSamples], t, time_domain_iq->GetEpsilon(), iq_procedure_timer);
     }
     time_domain_iq->Draw(iq_data, t, new_data);
   }
@@ -516,7 +452,7 @@ void ShowUeScope(PHY_VARS_NR_UE *ue, float t)
     static auto time_domain_iq = new IQHist("Time domain samples - before sync", disable_scatterplot);
     bool new_data = false;
     if (time_domain_iq->ShouldReadData()) {
-      new_data = iq_data->TryCollect(&scope_array[ueTimeDomainSamplesBeforeSync], t, time_domain_iq->GetEpsilon());
+      new_data = iq_data->TryCollect(&scope_array[ueTimeDomainSamplesBeforeSync], t, time_domain_iq->GetEpsilon(), iq_procedure_timer);
     }
     time_domain_iq->Draw(iq_data, t, new_data);
   }
@@ -531,7 +467,7 @@ void ShowUeScope(PHY_VARS_NR_UE *ue, float t)
       if (broadcast_iq_hist->ShouldReadData()) {
         new_data = iq_data->TryCollect(&scope_array[ue->sl_mode ? psbchRxdataF_comp : pbchRxdataF_comp],
                                        t,
-                                       broadcast_iq_hist->GetEpsilon());
+                                       broadcast_iq_hist->GetEpsilon(), iq_procedure_timer);
       }
       broadcast_iq_hist->Draw(iq_data, t, new_data);
       ImGui::TreePop();
@@ -543,7 +479,7 @@ void ShowUeScope(PHY_VARS_NR_UE *ue, float t)
       if (broadcast_iq_chest->ShouldReadData()) {
         new_data = chest_iq_data->TryCollect(&scope_array[ue->sl_mode ? psbchDlChEstimateTime : pbchDlChEstimateTime],
                                              t,
-                                             broadcast_iq_chest->GetEpsilon());
+                                             broadcast_iq_chest->GetEpsilon(), iq_procedure_timer);
       }
       broadcast_iq_chest->Draw(chest_iq_data, t, new_data);
       ImGui::TreePop();
@@ -568,8 +504,9 @@ void ShowUeScope(PHY_VARS_NR_UE *ue, float t)
   // ImGui::End();
 }
 
-void ShowGnbScope(PHY_VARS_gNB *gNB, float t)
+void ShowGnbScope(void *data_void_ptr, float t)
 {
+  (void)data_void_ptr;
   // if (ImGui::TreeNode("RX IQ")) {
   //   static auto gnb_heatmap = new IQSlotHeatmap(&scope_array[gNBRxdataF], "common RX IQ");
 
@@ -585,7 +522,7 @@ void ShowGnbScope(PHY_VARS_gNB *gNB, float t)
     static auto pusch_iq_display = new IQHist("PUSCH compensated IQ");
     bool new_data = false;
     if (pusch_iq_display->ShouldReadData()) {
-      new_data = pusch_iq->TryCollect(&scope_array[gNBPuschRxIq], t, pusch_iq_display->GetEpsilon());
+      new_data = pusch_iq->TryCollect(&scope_array[gNBPuschRxIq], t, pusch_iq_display->GetEpsilon(), iq_procedure_timer);
     }
     pusch_iq_display->Draw(pusch_iq, t, new_data);
   }
@@ -604,9 +541,29 @@ void ShowGnbScope(PHY_VARS_gNB *gNB, float t)
     static auto time_domain_iq = new IQHist("Time domain samples", disable_scatterplot);
     bool new_data = false;
     if (time_domain_iq->ShouldReadData()) {
-      new_data = iq_data->TryCollect(&scope_array[gNbTimeDomainSamples], t, time_domain_iq->GetEpsilon());
+      new_data = iq_data->TryCollect(&scope_array[gNbTimeDomainSamples], t, time_domain_iq->GetEpsilon(), iq_procedure_timer);
     }
     time_domain_iq->Draw(iq_data, t, new_data);
+  }
+  ImGui::End();
+}
+
+void ShowIQFileViewer(void *data_void_ptr)
+{
+  auto iq_data = static_cast<std::vector<IQData> *>(data_void_ptr);
+  if (ImGui::Begin("Scope selection")) {
+    static int selected_scope = 0;
+    ImGui::Combo(
+        "Select scope",
+        &selected_scope,
+        [](void *userdata, int idx) {
+          std::vector<IQData> *iq_data = static_cast<std::vector<IQData>*>(userdata);
+          return scope_id_to_string(static_cast<scopeDataType>((*iq_data)[idx].scope_id));
+        },
+        iq_data,
+        iq_data->size());
+    static auto iq_display = new IQHist("IQ File Viewer");
+    iq_display->Draw(&(*iq_data)[selected_scope], 0, false);
   }
   ImGui::End();
 }
@@ -678,6 +635,7 @@ void *imscope_thread(void *data_void_ptr)
   static int target_fps = 24;
 
   bool is_ue = IS_SOFTMODEM_5GUE;
+  bool is_gnb = IS_SOFTMODEM_GNB;
   bool close_window = false;
   while (!glfwWindowShouldClose(window) && close_window == false) {
     // Poll and handle events (inputs, window resize, etc.)
@@ -694,8 +652,7 @@ void *imscope_thread(void *data_void_ptr)
     ImGui_ImplGlfw_NewFrame();
 
     static bool reset_ini_settings = false;
-    if (reset_ini_settings)
-    {
+    if (reset_ini_settings) {
       ImGui::LoadIniSettingsFromDisk("imscope-init.ini");
       reset_ini_settings = false;
     }
@@ -722,7 +679,7 @@ void *imscope_thread(void *data_void_ptr)
       }
       if (ImGui::BeginMenu("Layout")) {
         if (ImGui::MenuItem("Reset")) {
-           reset_ini_settings = true;
+          reset_ini_settings = true;
         }
         ImGui::EndMenu();
       }
@@ -750,12 +707,11 @@ void *imscope_thread(void *data_void_ptr)
     iq_procedure_timer.UpdateAverage(t);
 
     if (is_ue) {
-      PHY_VARS_NR_UE *ue = (PHY_VARS_NR_UE *)data_void_ptr;
-      ShowUeScope(ue, t);
+      ShowUeScope(data_void_ptr, t);
+    } else if (is_gnb) {
+      ShowGnbScope(data_void_ptr, t);
     } else {
-      scopeParms_t *scope_params = (scopeParms_t *)data_void_ptr;
-      PHY_VARS_gNB *gNB = scope_params->gNB;
-      ShowGnbScope(gNB, t);
+      ShowIQFileViewer(data_void_ptr);
     }
 
     // For reference
@@ -790,148 +746,4 @@ void *imscope_thread(void *data_void_ptr)
   glfwTerminate();
 
   return nullptr;
-}
-
-extern "C" void imscope_autoinit(void *dataptr)
-{
-  AssertFatal(IS_SOFTMODEM_5GUE || IS_SOFTMODEM_GNB, "Scope cannot find NRUE or GNB context");
-
-  for (auto i = 0U; i < EXTRA_SCOPE_TYPES; i++) {
-    scope_array[i].is_data_ready = false;
-    scope_array[i].scope_graph_data = nullptr;
-    scope_array[i].meta = {-1, -1};
-  }
-
-  if (IS_SOFTMODEM_GNB) {
-    scopeParms_t *scope_params = (scopeParms_t *)dataptr;
-    scopeData_t *scope = (scopeData_t *)calloc(1, sizeof(scopeData_t));
-    scope->copyData = copyDataThreadSafe;
-    scope->tryLockScopeData = tryLockScopeData;
-    scope->copyDataUnsafeWithOffset = copyDataUnsafeWithOffset;
-    scope->unlockScopeData = unlockScopeData;
-    scope_params->gNB->scopeData = scope;
-    scope_params->ru->scopeData = scope;
-  } else {
-    PHY_VARS_NR_UE *ue = (PHY_VARS_NR_UE *)dataptr;
-    scopeData_t *scope = (scopeData_t *)calloc(1, sizeof(scopeData_t));
-    scope->copyData = copyDataThreadSafe;
-    ue->scopeData = scope;
-  }
-  pthread_t thread;
-  threadCreate(&thread, imscope_thread, dataptr, (char *)"imscope", -1, sched_get_priority_min(SCHED_RR));
-}
-
-void copyDataThreadSafe(void *scopeData,
-                        enum scopeDataType type,
-                        void *dataIn,
-                        int elementSz,
-                        int colSz,
-                        int lineSz,
-                        int offset,
-                        metadata *meta)
-{
-  ImScopeData &scope_data = scope_array[type];
-
-  if (scope_data.is_data_ready) {
-    // data is ready, wasn't consumed yet by scope
-    return;
-  }
-
-  if (scope_data.write_mutex.try_lock()) {
-    auto start = std::chrono::high_resolution_clock::now();
-    scopeGraphData_t *data = scope_data.scope_graph_data;
-    int oldDataSz = data ? data->dataSize : 0;
-    int newSz = elementSz * colSz * lineSz;
-    if (data == NULL || oldDataSz < newSz) {
-      free(data);
-      scopeGraphData_t *ptr = (scopeGraphData_t *)malloc(sizeof(scopeGraphData_t) + newSz);
-      if (!ptr) {
-        LOG_E(PHY, "can't realloc\n");
-        return;
-      } else {
-        data = ptr;
-      }
-    }
-
-    data->elementSz = elementSz;
-    data->colSz = colSz;
-    data->lineSz = lineSz;
-    data->dataSize = newSz;
-    memcpy(((void *)(data + 1)), dataIn, newSz);
-    scope_data.scope_graph_data = data;
-    scope_data.meta = *meta;
-    scope_data.time_taken_in_ns =
-        std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - start).count();
-    scope_data.is_data_ready = true;
-    scope_data.write_mutex.unlock();
-  }
-}
-
-bool tryLockScopeData(enum scopeDataType type, int elementSz, int colSz, int lineSz, metadata *meta)
-{
-  ImScopeData &scope_data = scope_array[type];
-
-  if (scope_data.is_data_ready) {
-    // data is ready, wasn't consumed yet by scope
-    return false;
-  }
-
-  if (scope_data.write_mutex.try_lock()) {
-    auto start = std::chrono::high_resolution_clock::now();
-    scopeGraphData_t *data = scope_data.scope_graph_data;
-    int oldDataSz = data ? data->dataSize : 0;
-    int newSz = elementSz * colSz * lineSz;
-    if (data == NULL || oldDataSz < newSz) {
-      free(data);
-      scopeGraphData_t *ptr = (scopeGraphData_t *)malloc(sizeof(scopeGraphData_t) + newSz);
-      if (!ptr) {
-        LOG_E(PHY, "can't realloc\n");
-        return false;
-      } else {
-        data = ptr;
-      }
-    }
-
-    data->elementSz = elementSz;
-    data->colSz = colSz;
-    data->lineSz = lineSz;
-    data->dataSize = newSz;
-    scope_data.scope_graph_data = data;
-    scope_data.meta = *meta;
-    scope_data.time_taken_in_ns =
-        std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - start).count();
-    memset(scope_data.time_taken_in_ns_per_offset, 0, sizeof(scope_data.time_taken_in_ns_per_offset));
-    memset(scope_data.data_copied_per_offset, 0, sizeof(scope_data.data_copied_per_offset));
-    return true;
-  }
-  return false;
-}
-
-void copyDataUnsafeWithOffset(enum scopeDataType type, void *dataIn, size_t size, size_t offset, int copy_index)
-{
-  AssertFatal(copy_index < MAX_OFFSETS, "Unexpected number of copies per sink. copy_index = %d\n", copy_index);
-  ImScopeData &scope_data = scope_array[type];
-  auto start = std::chrono::high_resolution_clock::now();
-  scopeGraphData_t *data = scope_data.scope_graph_data;
-  uint8_t *outptr = (uint8_t *)(data + 1);
-  memcpy(&outptr[offset], dataIn, size);
-  scope_data.time_taken_in_ns_per_offset[copy_index] =
-      std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now() - start).count();
-  scope_data.data_copied_per_offset[copy_index] = size;
-}
-
-void unlockScopeData(enum scopeDataType type)
-{
-  ImScopeData &scope_data = scope_array[type];
-  size_t total_size = 0;
-  for (auto i = 0; i < MAX_OFFSETS; i++) {
-    scope_data.time_taken_in_ns += scope_data.time_taken_in_ns_per_offset[i];
-    total_size += scope_data.data_copied_per_offset[i];
-  }
-  if (total_size != (uint64_t)scope_data.scope_graph_data->dataSize) {
-    LOG_E(PHY,
-          "Scope is missing data - not all data that was expected was copied - possibly missed copyDataUnsafeWithOffset call\n");
-  }
-  scope_data.is_data_ready = true;
-  scope_data.write_mutex.unlock();
 }

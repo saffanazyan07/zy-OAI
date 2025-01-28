@@ -532,6 +532,11 @@ int main(int argc, char **argv)
     if (IS_SOFTMODEM_IMSCOPE_ENABLED) {
       load_softscope("im", PHY_vars_UE_g[0][0]);
     }
+    AssertFatal(!(IS_SOFTMODEM_IMSCOPE_ENABLED && IS_SOFTMODEM_IMSCOPE_RECORD_ENABLED),
+                "Data recoding and ImScope cannot be enabled at the same time\n");
+    if (IS_SOFTMODEM_IMSCOPE_RECORD_ENABLED) {
+      load_module_shlib("imscope_record", NULL, 0, PHY_vars_UE_g[0][0]);
+    }
 
     for (int inst = 0; inst < NB_UE_INST; inst++) {
       LOG_I(PHY,"Intializing UE Threads for instance %d ...\n", inst);

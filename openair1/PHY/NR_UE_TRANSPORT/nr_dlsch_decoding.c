@@ -321,6 +321,7 @@ uint32_t nr_dlsch_decoding(PHY_VARS_NR_UE *phy_vars_ue,
       LOG_D(PHY, "DLSCH received nok \n");
       kpiStructure.nb_nack++;
       dlsch->last_iteration_cnt = dlsch->max_ldpc_iterations + 1;
+      UEdumpScopeData(phy_vars_ue, proc->nr_slot_rx, proc->frame_rx, "DLSCH_NACK");
     }
 
     uint8_t dmrs_Type = dlsch_config->dmrsConfigType;

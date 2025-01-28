@@ -40,6 +40,7 @@
 #include "assertions.h"
 #include <time.h>
 #include <stdint.h>
+#include <openair1/PHY/TOOLS/phy_scope_interface.h>
 
 //#define DEBUG_RXDATA
 //#define SRS_IND_DEBUG
@@ -438,6 +439,7 @@ static int nr_ulsch_procedures(PHY_VARS_gNB *gNB, int frame_rx, int slot_rx, boo
             ulsch_harq->ulsch_pdu.rb_size,
             ulsch_harq->TBS);
       nr_fill_indication(gNB, ulsch->frame, ulsch->slot, ULSCH_id, ulsch->harq_pid, 1, 0, crc, pdu);
+      gNBdumpScopeData(gNB, ulsch->slot, ulsch->frame, "ULSCH_NACK");
       ulsch->handled = 1;
       LOG_D(PHY, "ULSCH %d in error\n",ULSCH_id);
       ulsch->last_iteration_cnt = ulsch->max_ldpc_iterations + 1; // Setting to max_ldpc_iterations + 1 is sufficient given that this variable is only used for checking for failure
@@ -868,6 +870,7 @@ int phy_procedures_gNB_uespec_RX(PHY_VARS_gNB *gNB, int frame_rx, int slot_rx, N
           nfapi_nr_rx_data_pdu_t *pdu = &UL_INFO->rx_ind.pdu_list[UL_INFO->rx_ind.number_of_pdus++];
           nr_fill_indication(gNB, frame_rx, slot_rx, ULSCH_id, ulsch->harq_pid, 1, 1, crc, pdu);
           pusch_DTX++;
+          gNBdumpScopeData(gNB, ulsch->slot, ulsch->frame, "ULSCH_DTX");
           continue;
         }
       } else {

@@ -292,7 +292,7 @@ static inline void nr_polar_deinterleaver(uint8_t *input, uint8_t *output, uint1
  * De-interleaving of coded bits implementation
  * TS 138.212: Section 5.4.1.3 - Interleaving of coded bits
  */
-static inline void nr_polar_rm_deinterleaving_lut(uint16_t *out, const uint E)
+static inline void nr_polar_rm_deinterleaving_lut(uint16_t *out, const int E)
 {
   int16_t in[E];
   for (uint i = 0; i < E; i++)
