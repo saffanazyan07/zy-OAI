@@ -158,10 +158,12 @@ static void trigger_regular_bsr(NR_UE_MAC_INST_t *mac, NR_LogicalChannelIdentity
   // if the BSR is triggered for a logical channel for which logicalChannelSR-DelayTimerApplied with value true
   // start or restart the logicalChannelSR-DelayTimer
   // else stop the logicalChannelSR-DelayTimer
-  if (sr_DelayTimerApplied)
-    nr_timer_start(&mac->scheduling_info.sr_DelayTimer);
-  else
-    nr_timer_stop(&mac->scheduling_info.sr_DelayTimer);
+  if (mac->scheduling_info.sr_DelayTimer) {
+    if (sr_DelayTimerApplied)
+      nr_timer_start(mac->scheduling_info.sr_DelayTimer);
+    else
+      nr_timer_stop(mac->scheduling_info.sr_DelayTimer);
+  }
 }
 
 void handle_time_alignment_timer_expired(NR_UE_MAC_INST_t *mac)
@@ -201,7 +203,8 @@ void update_mac_timers(NR_UE_MAC_INST_t *mac)
   nr_timer_tick(&mac->ra.contention_resolution_timer);
   for (int j = 0; j < NR_MAX_SR_ID; j++)
     nr_timer_tick(&mac->scheduling_info.sr_info[j].prohibitTimer);
-  nr_timer_tick(&mac->scheduling_info.sr_DelayTimer);
+  if (mac->scheduling_info.sr_DelayTimer)
+    nr_timer_tick(mac->scheduling_info.sr_DelayTimer);
   bool retxBSR_expired = nr_timer_tick(&mac->scheduling_info.retxBSR_Timer);
   if (retxBSR_expired) {
     LOG_D(NR_MAC, "retxBSR timer expired\n");
@@ -229,18 +232,16 @@ void update_mac_timers(NR_UE_MAC_INST_t *mac)
                 i);
 
   nr_phr_info_t *phr_info = &mac->scheduling_info.phr_info;
-  if (phr_info->is_configured) {
-    bool prohibit_expired = nr_timer_tick(&phr_info->prohibitPHR_Timer);
-    if (prohibit_expired) {
-      int16_t pathloss = compute_nr_SSB_PL(mac, mac->ssb_measurements.ssb_rsrp_dBm);
-      if (abs(pathloss - phr_info->PathlossLastValue) > phr_info->PathlossChange_db) {
-        phr_info->phr_reporting |= (1 << phr_cause_prohibit_timer);
-      }
+  bool prohibit_expired = nr_timer_tick(&phr_info->prohibitPHR_Timer);
+  if (prohibit_expired) {
+    int16_t pathloss = compute_nr_SSB_PL(mac, mac->ssb_measurements.ssb_rsrp_dBm);
+    if (abs(pathloss - phr_info->PathlossLastValue) > phr_info->PathlossChange_db) {
+      phr_info->phr_reporting |= (1 << phr_cause_prohibit_timer);
     }
-    bool periodic_expired = nr_timer_tick(&phr_info->periodicPHR_Timer);
-    if (periodic_expired) {
-      phr_info->phr_reporting |= (1 << phr_cause_periodic_timer);
-    }
+  }
+  bool periodic_expired = nr_timer_tick(&phr_info->periodicPHR_Timer);
+  if (periodic_expired) {
+    phr_info->phr_reporting |= (1 << phr_cause_periodic_timer);
   }
 }
 
@@ -1084,12 +1085,11 @@ int nr_config_pusch_pdu(NR_UE_MAC_INST_t *mac,
   // 38.321 5.4.6
   //  if it is the first UL resource allocated for a new transmission since the last MAC reset:
   //  2> start phr-PeriodicTimer;
-  if (mac->scheduling_info.phr_info.is_configured) {
-    if (mac->scheduling_info.phr_info.was_mac_reset && pusch_config_pdu->pusch_data.new_data_indicator) {
-      mac->scheduling_info.phr_info.was_mac_reset = false;
-      nr_timer_start(&mac->scheduling_info.phr_info.periodicPHR_Timer);
-    }
+  if (mac->scheduling_info.phr_info.was_mac_reset && pusch_config_pdu->pusch_data.new_data_indicator) {
+    mac->scheduling_info.phr_info.was_mac_reset = false;
+    nr_timer_start(&mac->scheduling_info.phr_info.periodicPHR_Timer);
   }
+
   if (mac->ul_harq_info[pid].round < sizeofArray(mac->stats.ul.rounds))
     mac->stats.ul.rounds[mac->ul_harq_info[pid].round]++;
   int bits = pusch_config_pdu->pusch_data.tb_size;
@@ -1453,7 +1453,8 @@ static void nr_update_sr(NR_UE_MAC_INST_t *mac, bool BSRsent)
   }
 
   // if a Regular BSR has been triggered and logicalChannelSR-DelayTimer is not running
-  if (BSRsent || nr_timer_is_active(&sched_info->sr_DelayTimer))
+  bool delay_SR = sched_info->sr_DelayTimer ? nr_timer_is_active(sched_info->sr_DelayTimer) : false;
+  if (BSRsent || delay_SR)
     return;
 
   // if there is no UL-SCH resource available for a new transmission (ie we are at this point)
@@ -3086,7 +3087,7 @@ static void nr_ue_get_sdu_mac_ce_pre(NR_UE_MAC_INST_t *mac,
       bsr_len = size_for_short;
   }
   nr_phr_info_t *phr_info = &mac->scheduling_info.phr_info;
-  if (phr_info->is_configured && phr_info->phr_reporting > 0) {
+  if (phr_info->phr_reporting > 0) {
     int needed = sizeof(NR_MAC_SUBHEADER_FIXED) + sizeof(NR_SINGLE_ENTRY_PHR_MAC_CE);
     if (buflen >= bsr_len + needed) {
       if (mac->scheduling_info.phr_info.phr_reporting) {

@@ -101,8 +101,8 @@ NR_UE_MAC_INST_t *get_mac_inst(module_id_t module_id);
 
 void reset_mac_inst(NR_UE_MAC_INST_t *nr_mac);
 void reset_ra(NR_UE_MAC_INST_t *nr_mac, bool free_prach);
-void release_mac_configuration(NR_UE_MAC_INST_t *mac,
-                               NR_UE_MAC_reset_cause_t cause);
+void release_mac_config(NR_UE_MAC_INST_t *mac);
+void release_mac_asn_structures(NR_UE_MAC_INST_t *mac, NR_UE_MAC_reset_cause_t cause);
 
 /**\brief called at each slot, slot length based on numerology. now use u=0, scs=15kHz, slot=1ms
           performs BSR/SR/PHR procedures, random access procedure handler and DLSCH/ULSCH procedures.
@@ -457,4 +457,5 @@ void nr_mac_rrc_sl_mib_ind(const module_id_t module_id,
                            const sdu_size_t pdu_len,
                            const uint16_t rx_slss_id);
 
+void set_default_phr(NR_UE_MAC_INST_t *mac, int slots_per_subframe);
 #endif

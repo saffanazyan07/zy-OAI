@@ -73,9 +73,6 @@ void nr_ue_init_mac(NR_UE_MAC_INST_t *mac)
   pthread_mutex_init(&mac->if_mutex, NULL);
   reset_mac_inst(mac);
 
-  // need to inizialize because might not been setup (optional timer)
-  nr_timer_stop(&mac->scheduling_info.sr_DelayTimer);
-
   memset(&mac->ssb_measurements, 0, sizeof(mac->ssb_measurements));
   memset(&mac->ul_time_alignment, 0, sizeof(mac->ul_time_alignment));
   memset(mac->ssb_list, 0, sizeof(mac->ssb_list));
@@ -88,20 +85,24 @@ void nr_ue_init_mac(NR_UE_MAC_INST_t *mac)
   mac->pusch_power_control_initialized = false;
 }
 
+void set_default_phr(NR_UE_MAC_INST_t *mac, int slots_per_subframe)
+{
+  mac->scheduling_info.phr_info.PathlossChange_db = 1;
+  nr_timer_setup(&mac->scheduling_info.phr_info.periodicPHR_Timer, 10 * slots_per_subframe, 1);
+  nr_timer_setup(&mac->scheduling_info.phr_info.prohibitPHR_Timer, 10 * slots_per_subframe, 1);
+}
+
 void nr_ue_mac_default_configs(NR_UE_MAC_INST_t *mac)
 {
   // default values as defined in 38.331 sec 9.2.2
 
   // sf80 default for retxBSR_Timer sf10 for periodicBSR_Timer
   int mu = mac->current_UL_BWP ? mac->current_UL_BWP->scs : get_softmodem_params()->numerology;
-  int subframes_per_slot = nr_slots_per_frame[mu] / 10;
-  nr_timer_setup(&mac->scheduling_info.retxBSR_Timer, 80 * subframes_per_slot, 1); // 1 slot update rate
-  nr_timer_setup(&mac->scheduling_info.periodicBSR_Timer, 10 * subframes_per_slot, 1); // 1 slot update rate
+  int slots_per_subframe = nr_slots_per_frame[mu] / 10;
+  nr_timer_setup(&mac->scheduling_info.retxBSR_Timer, 80 * slots_per_subframe, 1); // 1 slot update rate
+  nr_timer_setup(&mac->scheduling_info.periodicBSR_Timer, 10 * slots_per_subframe, 1); // 1 slot update rate
 
-  mac->scheduling_info.phr_info.is_configured = true;
-  mac->scheduling_info.phr_info.PathlossChange_db = 1;
-  nr_timer_setup(&mac->scheduling_info.phr_info.periodicPHR_Timer, 10 * subframes_per_slot, 1);
-  nr_timer_setup(&mac->scheduling_info.phr_info.prohibitPHR_Timer, 10 * subframes_per_slot, 1);
+  set_default_phr(mac, slots_per_subframe);
 }
 
 void nr_ue_send_synch_request(NR_UE_MAC_INST_t *mac, module_id_t module_id, int cc_id, const fapi_nr_synch_request_t *sync_req)
@@ -181,7 +182,8 @@ void reset_mac_inst(NR_UE_MAC_INST_t *nr_mac)
     nr_timer_stop(nr_mac->data_inactivity_timer);
   nr_timer_stop(&nr_mac->time_alignment_timer);
   nr_timer_stop(&nr_mac->ra.contention_resolution_timer);
-  nr_timer_stop(&nr_mac->scheduling_info.sr_DelayTimer);
+  if (nr_mac->scheduling_info.sr_DelayTimer)
+    nr_timer_stop(nr_mac->scheduling_info.sr_DelayTimer);
   nr_timer_stop(&nr_mac->scheduling_info.retxBSR_Timer);
   for (int i = 0; i < NR_MAX_SR_ID; i++)
     nr_timer_stop(&nr_mac->scheduling_info.sr_info[i].prohibitTimer);
@@ -230,7 +232,28 @@ void reset_mac_inst(NR_UE_MAC_INST_t *nr_mac)
   // TODO beam failure procedure not implemented
 }
 
-void release_mac_configuration(NR_UE_MAC_INST_t *mac, NR_UE_MAC_reset_cause_t cause)
+void release_mac_config(NR_UE_MAC_INST_t *mac)
+{
+  // release schedulingRequestConfig
+  for (int i = 0; i < NR_MAX_SR_ID; i++)
+    memset(&mac->scheduling_info.sr_info[i], 0, sizeof(mac->scheduling_info.sr_info[i]));
+
+  // reset BSR and PHR values to default
+  nr_ue_mac_default_configs(mac);
+  // release SR Delay Timer (BSR-Config)
+  free_and_zero(mac->scheduling_info.sr_DelayTimer);
+
+  // TODO release tag-Config
+
+  // release dataInactivityTimer
+  free_and_zero(mac->data_inactivity_timer);
+
+  memset(&mac->ssb_measurements, 0, sizeof(mac->ssb_measurements));
+  memset(&mac->csirs_measurements, 0, sizeof(mac->csirs_measurements));
+  memset(&mac->ul_time_alignment, 0, sizeof(mac->ul_time_alignment));
+}
+
+void release_mac_asn_structures(NR_UE_MAC_INST_t *mac, NR_UE_MAC_reset_cause_t cause)
 {
   NR_UE_ServingCell_Info_t *sc = &mac->sc_info;
   // if cause is Re-establishment, release spCellConfig only
@@ -253,14 +276,14 @@ void release_mac_configuration(NR_UE_MAC_INST_t *mac, NR_UE_MAC_reset_cause_t ca
   asn1cFreeStruc(asn_DEF_NR_CSI_AperiodicTriggerStateList, sc->aperiodicTriggerStateList);
   asn1cFreeStruc(asn_DEF_NR_NTN_Config_r17, sc->ntn_Config_r17);
   asn1cFreeStruc(asn_DEF_NR_DownlinkHARQ_FeedbackDisabled_r17, sc->downlinkHARQ_FeedbackDisabled_r17);
-  free(sc->xOverhead_PDSCH);
-  free(sc->nrofHARQ_ProcessesForPDSCH);
-  free(sc->nrofHARQ_ProcessesForPDSCH_v1700);
-  free(sc->nrofHARQ_ProcessesForPUSCH_r17);
-  free(sc->rateMatching_PUSCH);
-  free(sc->xOverhead_PUSCH);
-  free(sc->maxMIMO_Layers_PDSCH);
-  free(sc->maxMIMO_Layers_PUSCH);
+  free_and_zero(sc->xOverhead_PDSCH);
+  free_and_zero(sc->nrofHARQ_ProcessesForPDSCH);
+  free_and_zero(sc->nrofHARQ_ProcessesForPDSCH_v1700);
+  free_and_zero(sc->nrofHARQ_ProcessesForPUSCH_r17);
+  free_and_zero(sc->rateMatching_PUSCH);
+  free_and_zero(sc->xOverhead_PUSCH);
+  free_and_zero(sc->maxMIMO_Layers_PDSCH);
+  free_and_zero(sc->maxMIMO_Layers_PUSCH);
   memset(&mac->sc_info, 0, sizeof(mac->sc_info));
 
   mac->current_DL_BWP = NULL;
@@ -295,9 +318,6 @@ void release_mac_configuration(NR_UE_MAC_INST_t *mac, NR_UE_MAC_reset_cause_t ca
   for (int i = first_bwp_rel; i < mac->ul_BWPs.count; i++)
     release_ul_BWP(mac, i);
 
-  memset(&mac->ssb_measurements, 0, sizeof(mac->ssb_measurements));
-  memset(&mac->csirs_measurements, 0, sizeof(mac->csirs_measurements));
-  memset(&mac->ul_time_alignment, 0, sizeof(mac->ul_time_alignment));
   for (int i = mac->TAG_list.count; i > 0 ; i--)
     asn_sequence_del(&mac->TAG_list, i - 1, 1);
 }
