@@ -282,12 +282,12 @@ static void configure_ratematching_csi(fapi_nr_dl_config_dlsch_pdu_rel15_t *dlsc
   }
 }
 
-int8_t nr_ue_decode_BCCH_DL_SCH(NR_UE_MAC_INST_t *mac,
-                                int cc_id,
-                                unsigned int gNB_index,
-                                uint8_t ack_nack,
-                                uint8_t *pduP,
-                                uint32_t pdu_len)
+void nr_ue_decode_BCCH_DL_SCH(NR_UE_MAC_INST_t *mac,
+                              int cc_id,
+                              unsigned int gNB_index,
+                              uint8_t ack_nack,
+                              uint8_t *pduP,
+                              uint32_t pdu_len)
 {
   if(ack_nack) {
     LOG_D(NR_MAC, "Decoding NR-BCCH-DL-SCH-Message (SIB1 or SI)\n");
@@ -305,9 +305,10 @@ int8_t nr_ue_decode_BCCH_DL_SCH(NR_UE_MAC_INST_t *mac,
       T_INT(0 /* harq_pid */),
       T_BUFFER(pduP, pdu_len));
   }
-  else
+  else {
     LOG_E(NR_MAC, "Got NACK on NR-BCCH-DL-SCH-Message (%s)\n", mac->get_sib1 ? "SIB1" : "other SI");
-  return 0;
+    nr_mac_rrc_data_ind_ue(mac->ue_id, cc_id, gNB_index, 0, 0, 0, mac->physCellId, 0, NR_BCCH_DL_SCH, NULL, 0);
+  }
 }
 
 /*

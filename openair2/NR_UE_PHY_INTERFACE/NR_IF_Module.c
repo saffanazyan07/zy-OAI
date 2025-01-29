@@ -1110,7 +1110,8 @@ static int handle_bcch_dlsch(NR_UE_MAC_INST_t *mac,
                              uint8_t *pduP,
                              uint32_t pdu_len)
 {
-  return nr_ue_decode_BCCH_DL_SCH(mac, cc_id, gNB_index, ack_nack, pduP, pdu_len);
+  nr_ue_decode_BCCH_DL_SCH(mac, cc_id, gNB_index, ack_nack, pduP, pdu_len);
+  return 0;
 }
 
 //  L2 Abstraction Layer
