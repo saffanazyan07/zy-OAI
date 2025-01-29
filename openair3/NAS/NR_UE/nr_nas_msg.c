@@ -50,6 +50,7 @@
 #include "openair2/SDAP/nr_sdap/nr_sdap.h"
 #include "openair3/SECU/nas_stream_eia2.h"
 #include "openair3/UTILS/conversions.h"
+#include "fgmm_security_mode_reject.h"
 
 #define MAX_NAS_UE 4
 
@@ -264,6 +265,9 @@ int mm_msg_encode(MM_msg *mm_msg, uint8_t *buffer, uint32_t len)
       break;
     case FGS_SECURITY_MODE_COMPLETE:
       encode_result = encode_fgs_security_mode_complete(&mm_msg->fgs_security_mode_complete, buffer, len);
+      break;
+    case FGS_SECURITY_MODE_REJECT:
+      encode_result = encode_fgmm_sec_mode_reject(buffer, &mm_msg->fgs_security_mode_reject, len);
       break;
     case FGS_UPLINK_NAS_TRANSPORT:
       encode_result = encode_fgs_uplink_nas_transport(&mm_msg->uplink_nas_transport, buffer, len);
@@ -794,10 +798,37 @@ static void generateSecurityModeComplete(nr_ue_nas_t *nas, as_nas_info_t *initia
   }
 }
 
+static void generateSecurityModeReject(nr_ue_nas_t *nas, as_nas_info_t *initialNasMsg)
+{
+  int size = sizeof(mm_msg_header_t);
+  fgs_nas_message_t nas_msg;
+  MM_msg *mm_msg;
+
+  mm_msg = &nas_msg.security_protected.plain.mm_msg;
+
+  // set header
+  mm_msg->header.ex_protocol_discriminator = FGS_MOBILITY_MANAGEMENT_MESSAGE;
+  mm_msg->header.security_header_type = PLAIN_5GS_MSG;
+  mm_msg->header.message_type = FGS_SECURITY_MODE_REJECT;
+  size += 7;
+
+  // set security mode complete
+  mm_msg->fgs_security_mode_reject.cause = Security_mode_rejected_unspecified;
+  size += 1;
+
+  // encode the message
+  initialNasMsg->nas_data = malloc_or_fail(size * sizeof(uint8_t));
+  initialNasMsg->length = mm_msg_encode(mm_msg, initialNasMsg->nas_data, size);
+}
+
 static void handle_security_mode_command(nr_ue_nas_t *nas, as_nas_info_t *initialNasMsg, uint8_t *pdu, int pdu_length)
 {
   /* retrieve integrity and ciphering algorithms  */
-  AssertFatal(pdu_length > 10, "nas: bad pdu\n");
+  if (pdu_length > 10) {
+    LOG_E(NAS, "PDU length is bigger than expected: send Security Mode Reject\n");
+    generateSecurityModeReject(nas, initialNasMsg);
+  }
+
   int ciphering_algorithm = (pdu[10] >> 4) & 0x0f;
   int integrity_algorithm = pdu[10] & 0x0f;
 

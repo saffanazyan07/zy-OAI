@@ -111,7 +111,7 @@ typedef enum {
   TYPE_DEF(FGS_IDENTITY_RESPONSE, 0x5c)                      \
   TYPE_DEF(FGS_SECURITY_MODE_COMMAND, 0x5d)                  \
   TYPE_DEF(FGS_SECURITY_MODE_COMPLETE, 0x5e)                 \
-  TYPE_DEF(Securitymodereject, 0x5f)                         \
+  TYPE_DEF(FGS_SECURITY_MODE_REJECT, 0x5f)                   \
   TYPE_DEF(SGMMstatus, 0x64)                                 \
   TYPE_DEF(Notification, 0x65)                               \
   TYPE_DEF(Notificationresponse, 0x66)                       \

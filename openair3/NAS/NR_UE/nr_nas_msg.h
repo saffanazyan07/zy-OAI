@@ -37,6 +37,7 @@
 #include "FGSDeregistrationRequestUEOriginating.h"
 #include "RegistrationComplete.h"
 #include "EMM/MSG/fgs_service_request.h"
+#include "fgmm_security_mode_reject.h"
 #include "as_message.h"
 #include "FGSUplinkNasTransport.h"
 #include <openair3/UICC/usim_interface.h>
@@ -115,6 +116,7 @@ typedef union {
   fgs_authentication_response_msg fgs_auth_response;
   fgs_deregistration_request_ue_originating_msg fgs_deregistration_request_ue_originating;
   fgs_security_mode_complete_msg fgs_security_mode_complete;
+  fgmm_sec_mode_reject_msg_t fgs_security_mode_reject;
   registration_complete_msg registration_complete;
   fgs_uplink_nas_transport_msg uplink_nas_transport;
 } MM_msg;
