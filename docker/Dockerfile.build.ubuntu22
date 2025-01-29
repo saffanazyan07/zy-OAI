@@ -31,15 +31,24 @@ ARG BUILD_OPTION
 ARG E2AP_VERSION=E2AP_V3
 ARG KPM_VERSION=KPM_V3_00
 
-RUN rm -Rf /oai-ran
-WORKDIR /oai-ran
-COPY . .
-
 # build all targets so final targets can be created afterwards
-RUN /bin/sh oaienv && \
+RUN \
+    # Mount CCache cache direrctory
+    --mount=type=cache,target=/root/.cache/ccache/ \
+    # Mount CPM package cache
+    --mount=type=cache,target=/root/.cache/cpm/ \
+    # Mount source directory to avoid copying
+    --mount=type=bind,source=../,target=/oai-src/,rw \
+    # Mount cmake output directory as cache
+    --mount=type=cache,target=/oai-src/cmake_targets/oai-bin/ \
+    # Remove CMakeCache.txt in case it contains non-default settings
+    rm -f /oai-bin/build/CMakeCache.txt && \
+    cd /oai-src/ && \
+    /bin/sh oaienv && \
     cd cmake_targets && \
     mkdir -p log && \
-    ./build_oai -c --ninja \
+    ./build_oai --ninja \
+      -d oai-bin \
       --eNB --gNB --RU --UE --nrUE \
       --build-lib "telnetsrv enbscope uescope nrscope" \
       -w USRP -t Ethernet \
@@ -47,15 +56,33 @@ RUN /bin/sh oaienv && \
       --noavx512 \
       --build-tool-opt -k10 \
       --cmake-opt -DCMAKE_C_FLAGS="-Werror" --cmake-opt -DCMAKE_CXX_FLAGS="-Werror" $BUILD_OPTION && \
+    # copy the output to a directory on the container
+    mkdir -p /oai-ran/cmake_targets/nas_sim_tools/build && \
+    cd nas_sim_tools/build && \
+    cp conf2uedata nvram usim /oai-ran/cmake_targets/nas_sim_tools/build/ && \
+    mkdir -p /oai-ran/cmake_targets/ran_build/build && \
+    cd ../../oai-bin/build/ && \
+    cp \
+      *.so \
+      *softmodem* \
+      nr-cuup \
+      oairu \
+      /oai-ran/cmake_targets/ran_build/build/ && \
     # Mainly to see if the sanitize option was perfectly executed
     echo "---- ldd on executables ----" && \
-    ldd ran_build/build/*softmodem* ran_build/build/nr-cuup ran_build/build/oairu && \
+    ldd *softmodem* nr-cuup oairu && \
     echo "---- ldd on shared libraries ----" && \
-    ldd ran_build/build/*.so
+    ldd *.so
 
 ## Build FlexRIC for SM Models
-RUN mkdir -p openair2/E2AP/flexric/build && \
-    cd openair2/E2AP/flexric/build && \
+RUN \
+    # Mount CCache cache direrctory
+    --mount=type=cache,target=/root/.cache/ccache/ \
+    # Mount source directory to avoid copying
+    --mount=type=bind,source=../,target=/oai-src/,rw \
+    # Mount cmake output directory as cache
+    --mount=type=cache,target=/oai-src/openair2/E2AP/flexric/build \
+    cd /oai-src/openair2/E2AP/flexric/build && \
     cmake -GNinja -DCMAKE_BUILD_TYPE=Release \
           -DXAPP_MULTILANGUAGE=OFF \
           -DKPM_VERSION=$KPM_VERSION \

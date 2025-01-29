@@ -414,6 +414,9 @@ class Containerize():
 		if self.host == 'Red Hat':
 			cmd.run('mkdir -p ./etc-pki-entitlement')
 			cmd.run('cp /etc/pki/entitlement/*.pem ./etc-pki-entitlement/')
+		# Fetch submodules
+		cmd.run("git submodule init")
+		cmd.run("git submodule update")
 
 		baseImage = 'ran-base'
 		baseTag = 'develop'
