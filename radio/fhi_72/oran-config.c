@@ -522,8 +522,12 @@ static bool set_fh_io_cfg(struct xran_io_cfg *io_cfg, const paramdef_t *fhip, in
   return true;
 }
 
-static bool set_fh_eaxcid_conf(struct xran_eaxcid_config *eaxcid_conf, enum xran_category cat)
+static bool set_fh_eaxcid_conf(struct xran_eaxcid_config *eaxcid_conf, enum xran_category cat, const ru_session_list_t *ru_session_list)
 {
+  xran_mplane_t *xran_mplane = NULL;
+#ifdef OAI_MPLANE
+  xran_mplane = &ru_session_list->ru_session[0].xran_mplane;
+#endif
   /* CUS specification, section 3.1.3.1.6
     DU_port_ID - used to differentiate processing units at O-DU (e.g., different baseband cards).
     BandSector_ID - aggregated cell identifier (distinguishes bands and sectors supported by the O-RU).
@@ -535,14 +539,14 @@ static bool set_fh_eaxcid_conf(struct xran_eaxcid_config *eaxcid_conf, enum xran
     Each ID field has a flexible bit allocation, but the total eAxC ID field length is fixed, 16 bits. */
   switch (cat) {
     case XRAN_CATEGORY_A:
-      eaxcid_conf->mask_cuPortId = 0xf000;
-      eaxcid_conf->mask_bandSectorId = 0x0f00;
-      eaxcid_conf->mask_ccId = 0x00f0;
-      eaxcid_conf->mask_ruPortId = 0x000f;
-      eaxcid_conf->bit_cuPortId = 0;
-      eaxcid_conf->bit_bandSectorId = 0; // total number of band sectors supported by O-RU should be retreived by M-plane - <max-num-bands> && <max-num-sectors>
-      eaxcid_conf->bit_ccId = 0; // total number of CC supported by O-RU should be retreived by M-plane - <max-num-component-carriers>
-      eaxcid_conf->bit_ruPortId = 0;
+      eaxcid_conf->mask_cuPortId = (xran_mplane != NULL) ? xran_mplane->du_port_bitmask : 0xf000;
+      eaxcid_conf->mask_bandSectorId = (xran_mplane != NULL) ? xran_mplane->band_sector_bitmask : 0x0f00;
+      eaxcid_conf->mask_ccId = (xran_mplane != NULL) ? xran_mplane->ccid_bitmask : 0x00f0;
+      eaxcid_conf->mask_ruPortId = (xran_mplane != NULL) ? xran_mplane->ru_port_bitmask : 0x000f;
+      eaxcid_conf->bit_cuPortId = (xran_mplane != NULL) ? xran_mplane->du_port : 0;
+      eaxcid_conf->bit_bandSectorId = (xran_mplane != NULL) ? xran_mplane->band_sector : 0; // total number of band sectors supported by O-RU should be retreived by M-plane - <max-num-bands> && <max-num-sectors>
+      eaxcid_conf->bit_ccId = (xran_mplane != NULL) ? xran_mplane->ccid : 0; // total number of CC supported by O-RU should be retreived by M-plane - <max-num-component-carriers>
+      eaxcid_conf->bit_ruPortId = (xran_mplane != NULL) ? xran_mplane->ru_port : 0;
       break;
     case XRAN_CATEGORY_B:
       eaxcid_conf->mask_cuPortId = 0xf000;
@@ -573,7 +577,7 @@ uint8_t *get_ether_addr(const char *addr, struct rte_ether_addr *ether_addr)
   return NULL;
 }
 
-static bool set_fh_init(struct xran_fh_init *fh_init, enum xran_category xran_cat)
+static bool set_fh_init(const ru_session_list_t *ru_session_list, struct xran_fh_init *fh_init, enum xran_category xran_cat)
 {
   memset(fh_init, 0, sizeof(*fh_init));
 
@@ -606,11 +610,16 @@ static bool set_fh_init(struct xran_fh_init *fh_init, enum xran_category xran_ca
   const int nfh = sizeofArray(FHconfigs);
   config_getlist(config_get_if(), &FH_ConfigList, FHconfigs, nfh, aprefix);
 
-  int num_rus = FH_ConfigList.numelt; // based on the number of fh_config sections -> number of RUs
+  int num_rus = 0;
+#ifdef OAI_MPLANE
+  num_rus = ru_session_list->num_rus;
+#else
+  num_rus = FH_ConfigList.numelt; // based on the number of fh_config sections -> number of RUs
+#endif
 
   if (!set_fh_io_cfg(&fh_init->io_cfg, fhip, nump, num_rus))
     return false;
-  if (!set_fh_eaxcid_conf(&fh_init->eAxCId_conf, xran_cat))
+  if (!set_fh_eaxcid_conf(&fh_init->eAxCId_conf, xran_cat, ru_session_list))
     return false;
 
   fh_init->xran_ports = num_rus; // since we use xran as O-DU, xran_ports is set to the number of RUs
@@ -622,14 +631,32 @@ static bool set_fh_init(struct xran_fh_init *fh_init, enum xran_category xran_ca
   /* maximum transmission unit (MTU) is the size of the largest protocol data unit (PDU) that can be
     communicated in a single xRAN network layer transaction. Supported 1500 bytes and 9600 bytes (Jumbo Frame);
     xran only checks if (MTU <= 1500), therefore setting any value > 1500, xran assumes 9600 value is used */
+#ifdef OAI_MPLANE
+  fh_init->mtu = ru_session_list->ru_session[0].xran_mplane.mtu; // we suppose that each RU supports the same MTU size
+#else
   fh_init->mtu = *gpd(fhip, nump, ORAN_CONFIG_MTU)->uptr;
+#endif
 
   fh_init->p_o_du_addr = NULL; // DPDK retreives DU MAC address within the xran library with rte_eth_macaddr_get() function
 
+#ifdef OAI_MPLANE
+  int num_ru_addr = (fh_init->io_cfg.one_vf_cu_plane) ? num_rus : 2*num_rus;
+  fh_init->p_o_ru_addr = calloc(num_ru_addr, sizeof(struct rte_ether_addr));
+  AssertFatal(fh_init->p_o_ru_addr != NULL, "out of memory\n");
+  for (int i = 0; i < num_rus; i++) {
+    struct rte_ether_addr *ea = (struct rte_ether_addr *)fh_init->p_o_ru_addr;
+    for (int j = 0; j < num_ru_addr/num_rus; j++) {
+      if (get_ether_addr(ru_session_list->ru_session[i].xran_mplane.ru_mac_addr, &ea[i+j]) == NULL) {
+        printf("could not read ethernet address '%s' for RU!\n", ru_session_list->ru_session[i].xran_mplane.ru_mac_addr);
+        return false;
+      }
+    }
+  }
+#else
   int num_ru_addr = gpd(fhip, nump, ORAN_CONFIG_RU_ADDR)->numelt;
   fh_init->p_o_ru_addr = calloc(num_ru_addr, sizeof(struct rte_ether_addr));
-  char **ru_addrs = gpd(fhip, nump, ORAN_CONFIG_RU_ADDR)->strlistptr;
   AssertFatal(fh_init->p_o_ru_addr != NULL, "out of memory\n");
+  char **ru_addrs = gpd(fhip, nump, ORAN_CONFIG_RU_ADDR)->strlistptr;
   for (int i = 0; i < num_ru_addr; ++i) {
     struct rte_ether_addr *ea = (struct rte_ether_addr *)fh_init->p_o_ru_addr;
     if (get_ether_addr(ru_addrs[i], &ea[i]) == NULL) {
@@ -637,6 +664,7 @@ static bool set_fh_init(struct xran_fh_init *fh_init, enum xran_category xran_ca
       return false;
     }
   }
+#endif
 
   fh_init->totalBfWeights = 0; // only used if id = O_RU (for emulation); C-plane extension types; section 5.4.6 of CUS spec
 
@@ -656,7 +684,8 @@ static bool set_fh_init(struct xran_fh_init *fh_init, enum xran_category xran_ca
 // this is a hack
 int g_kbar;
 
-static bool set_fh_prach_config(const openair0_config_t *oai0,
+static bool set_fh_prach_config(const xran_mplane_t *xran_mplane,
+                                const openair0_config_t *oai0,
                                 const uint32_t max_num_ant,
                                 const paramdef_t *prachp,
                                 int nprach,
@@ -692,8 +721,12 @@ static bool set_fh_prach_config(const openair0_config_t *oai0,
      xran assumes PRACH offset >= max(Ntx, Nrx). However, we made a workaround that xran supports PRACH eAxC IDs same as PUSCH eAxC IDs.
      This is achieved with is_prach and filter_id parameters in the patch.
      Please note that this approach only applies to the RUs that support this functionality, e.g. LITEON RU. */
+#ifdef OAI_MPLANE
+  prach_config->eAxC_offset = xran_mplane->prach_offset;
+#else
   uint8_t offset = *gpd(prachp, nprach, ORAN_PRACH_CONFIG_EAXC_OFFSET)->u8ptr;
   prach_config->eAxC_offset = (offset != 0) ? offset : max_num_ant;
+#endif
 
   g_kbar = *gpd(prachp, nprach, ORAN_PRACH_CONFIG_KBAR)->uptr;
 
@@ -722,17 +755,23 @@ static bool set_fh_frame_config(const openair0_config_t *oai0, struct xran_frame
   return true;
 }
 
-static bool set_fh_ru_config(const paramdef_t *rup, uint16_t fftSize, int nru, enum xran_category xran_cat, struct xran_ru_config *ru_config)
+static bool set_fh_ru_config(const xran_mplane_t *xran_mplane, const paramdef_t *rup, uint16_t fftSize, int nru, enum xran_category xran_cat, struct xran_ru_config *ru_config)
 {
   ru_config->xranTech = XRAN_RAN_5GNR; // 5GNR or LTE
   ru_config->xranCat = xran_cat; // mode: Catergory A or Category B
   ru_config->xranCompHdrType = XRAN_COMP_HDR_TYPE_STATIC; // dynamic or static udCompHdr handling
+#ifdef OAI_MPLANE
+  ru_config->iqWidth = xran_mplane->iq_width;
+  ru_config->iqWidth_PRACH = xran_mplane->iq_width;
+#else
   ru_config->iqWidth = *gpd(rup, nru, ORAN_RU_CONFIG_IQWIDTH)->uptr; // IQ bit width
   AssertFatal(ru_config->iqWidth <= 16, "IQ Width cannot be > 16!\n");
-  ru_config->compMeth = ru_config->iqWidth < 16 ? XRAN_COMPMETHOD_BLKFLOAT : XRAN_COMPMETHOD_NONE; // compression method
   ru_config->iqWidth_PRACH = *gpd(rup, nru, ORAN_RU_CONFIG_IQWIDTH_PRACH)->uptr; // IQ bit width for PRACH
   AssertFatal(ru_config->iqWidth_PRACH <= 16, "IQ Width for PRACH cannot be > 16!\n");
+#endif
+  ru_config->compMeth = ru_config->iqWidth < 16 ? XRAN_COMPMETHOD_BLKFLOAT : XRAN_COMPMETHOD_NONE; // compression method
   ru_config->compMeth_PRACH = ru_config->iqWidth_PRACH < 16 ? XRAN_COMPMETHOD_BLKFLOAT : XRAN_COMPMETHOD_NONE; // compression method for PRACH
+
   AssertFatal(fftSize > 0, "FFT size cannot be 0\n");
   ru_config->fftSize = fftSize; // FFT Size
   ru_config->byteOrder = XRAN_NE_BE_BYTE_ORDER; // order of bytes in int16_t in buffer; big or little endian
@@ -757,7 +796,7 @@ static bool set_maxmin_pd(const paramdef_t *pd, int num, const char *name, uint1
   return true;
 }
 
-static bool set_fh_config(int ru_idx, int num_rus, enum xran_category xran_cat, const openair0_config_t *oai0, struct xran_fh_config *fh_config)
+static bool set_fh_config(const xran_mplane_t *xran_mplane, int ru_idx, int num_rus, enum xran_category xran_cat, const openair0_config_t *oai0, struct xran_fh_config *fh_config)
 {
   AssertFatal(num_rus == 1 || num_rus == 2, "only support 1 or 2 RUs as of now\n");
   AssertFatal(ru_idx < num_rus, "illegal ru_idx %d: must be < %d\n", ru_idx, num_rus);
@@ -839,22 +878,22 @@ static bool set_fh_config(int ru_idx, int num_rus, enum xran_category xran_cat, 
 #endif
   fh_config->puschMaskEnable = 0; // enable PUSCH mask; only used if id = O_RU
   fh_config->puschMaskSlot = 0; // specific which slot PUSCH channel masked; only used if id = O_RU
-  fh_config->cp_vlan_tag = *gpd(fhp, nfh, ORAN_FH_CONFIG_CP_VLAN_TAG)->uptr; // C-plane VLAN tag; not used in xran; needed for M-plane
-  fh_config->up_vlan_tag = *gpd(fhp, nfh, ORAN_FH_CONFIG_UP_VLAN_TAG)->uptr; // U-plane VLAN tag; not used in xran; needed for M-plane
+  fh_config->cp_vlan_tag = 0; // C-plane VLAN tag; not used in xran; needed for M-plane
+  fh_config->up_vlan_tag = 0; // U-plane VLAN tag; not used in xran; needed for M-plane
   fh_config->debugStop = 0; // enable auto stop; only used if id = O_RU
   fh_config->debugStopCount = 0; // enable auto stop after number of Tx packets; not used in xran
   fh_config->DynamicSectionEna = 0; // enable dynamic C-Plane section allocation
   fh_config->GPS_Alpha = 0; // refers to alpha as defined in section 9.7.2 of ORAN spec. this value should be alpha*(1/1.2288ns), range 0 - 1e7 (ns); offset_nsec = (pConf->GPS_Beta - offset_sec * 100) * 1e7 + pConf->GPS_Alpha
   fh_config->GPS_Beta = 0; // beta value as defined in section 9.7.2 of ORAN spec. range -32767 ~ +32767; offset_sec = pConf->GPS_Beta / 100
 
-  if (!set_fh_prach_config(oai0, fh_config->neAxc, prachp, nprach, &fh_config->prach_conf))
+  if (!set_fh_prach_config(xran_mplane, oai0, fh_config->neAxc, prachp, nprach, &fh_config->prach_conf))
     return false;
   /* SRS only used if XRAN_CATEGORY_B
     Note: srs_config->eAxC_offset >= prach_config->eAxC_offset + PRACH */
   // fh_config->srs_conf = {0};
   if (!set_fh_frame_config(oai0, &fh_config->frame_conf))
     return false;
-  if (!set_fh_ru_config(rup, oai0->split7.fftSize, nru, xran_cat, &fh_config->ru_conf))
+  if (!set_fh_ru_config(xran_mplane, rup, oai0->split7.fftSize, nru, xran_cat, &fh_config->ru_conf))
     return false;
 
   fh_config->bbdev_enc = NULL; // call back to poll BBDev encoder
@@ -889,20 +928,24 @@ static bool set_fh_config(int ru_idx, int num_rus, enum xran_category xran_cat, 
   return true;
 }
 
-bool get_xran_config(const openair0_config_t *openair0_cfg, struct xran_fh_init *fh_init, struct xran_fh_config *fh_config)
+bool get_xran_config(const ru_session_list_t *ru_session_list, const struct openair0_config *openair0_cfg, struct xran_fh_init *fh_init, struct xran_fh_config *fh_config)
 {
   /* This xran integration release is only valid for O-RU CAT A.
     Therefore, each FH parameter is hardcoded to CAT A.
     If you are interested in CAT B, please be aware that parameters of fh_init and fh_config structs must be modified accordingly. */
   enum xran_category xran_cat = XRAN_CATEGORY_A;
 
-  if (!set_fh_init(fh_init, xran_cat)) {
+  if (!set_fh_init(ru_session_list, fh_init, xran_cat)) {
     printf("could not read FHI 7.2/ORAN config\n");
     return false;
   }
 
   for (int32_t o_xu_id = 0; o_xu_id < fh_init->xran_ports; o_xu_id++) {
-    if (!set_fh_config(o_xu_id, fh_init->xran_ports, xran_cat, openair0_cfg, &fh_config[o_xu_id])) {
+    xran_mplane_t *xran_mplane = NULL;
+#ifdef OAI_MPLANE
+    xran_mplane = &ru_session_list->ru_session[o_xu_id].xran_mplane;
+#endif
+    if (!set_fh_config(xran_mplane, o_xu_id, fh_init->xran_ports, xran_cat, openair0_cfg, &fh_config[o_xu_id])) {
       printf("could not read FHI 7.2/RU-specific config\n");
       return false;
     }

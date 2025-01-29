@@ -39,11 +39,17 @@
 // line and the use of VERSIONX further below. It is relative to phy/fhi_lib/lib/api
 #include "../../app/src/common.h"
 
+#ifdef OAI_MPLANE
+#include "mplane/init-mplane.h"
+#include "mplane/connect-mplane.h"
+#endif
+
 typedef struct {
   eth_state_t e;
   rru_config_msg_type_t last_msg;
   int capabilities_sent;
   void *oran_priv;
+  void *mplane_priv;
 } oran_eth_state_t;
 
 notifiedFIFO_t oran_sync_fifo;
@@ -76,6 +82,10 @@ int trx_oran_stop(openair0_device *device)
   printf("ORAN: %s\n", __FUNCTION__);
   oran_eth_state_t *s = device->priv;
   xran_stop(s->oran_priv);
+#ifdef OAI_MPLANE
+  printf("[MPLANE] Stopping M-plane.\n");
+  disconnect_mplane(s->mplane_priv);
+#endif
   return (0);
 }
 
@@ -204,11 +214,11 @@ void oran_fh_if4p5_south_in(RU_t *ru, int *frame, int *slot)
 
   RU_proc_t *proc = &ru->proc;
   int f, sl;
-  LOG_D(PHY, "Read rxdataF %p,%p\n", ru_info.rxdataF[0], ru_info.rxdataF[1]);
+  LOG_D(HW, "Read rxdataF %p,%p\n", ru_info.rxdataF[0], ru_info.rxdataF[1]);
   start_meas(&ru->rx_fhaul);
   int ret = xran_fh_rx_read_slot(&ru_info, &f, &sl);
   stop_meas(&ru->rx_fhaul);
-  LOG_D(PHY, "Read %d.%d rxdataF %p,%p\n", f, sl, ru_info.rxdataF[0], ru_info.rxdataF[1]);
+  LOG_D(HW, "Read %d.%d rxdataF %p,%p\n", f, sl, ru_info.rxdataF[0], ru_info.rxdataF[1]);
   if (ret != 0) {
     printf("ORAN: %d.%d ORAN_fh_if4p5_south_in ERROR in RX function \n", f, sl);
   }
@@ -221,7 +231,7 @@ void oran_fh_if4p5_south_in(RU_t *ru, int *frame, int *slot)
 
   if (proc->first_rx == 0) {
     if (proc->tti_rx != *slot) {
-      LOG_E(PHY,
+      LOG_E(HW,
             "Received Time doesn't correspond to the time we think it is (slot mismatch, received %d.%d, expected %d.%d)\n",
             proc->frame_rx,
             proc->tti_rx,
@@ -231,7 +241,7 @@ void oran_fh_if4p5_south_in(RU_t *ru, int *frame, int *slot)
     }
 
     if (proc->frame_rx != *frame) {
-      LOG_E(PHY,
+      LOG_E(HW,
             "Received Time doesn't correspond to the time we think it is (frame mismatch, %d.%d , expected %d.%d)\n",
             proc->frame_rx,
             proc->tti_rx,
@@ -241,10 +251,10 @@ void oran_fh_if4p5_south_in(RU_t *ru, int *frame, int *slot)
     }
   } else {
     proc->first_rx = 0;
-    LOG_I(PHY, "before adjusting, OAI: frame=%d slot=%d, XRAN: frame=%d slot=%d\n", *frame, *slot, proc->frame_rx, proc->tti_rx);
+    LOG_I(HW, "before adjusting, OAI: frame=%d slot=%d, XRAN: frame=%d slot=%d\n", *frame, *slot, proc->frame_rx, proc->tti_rx);
     *frame = proc->frame_rx;
     *slot = proc->tti_rx;
-    LOG_I(PHY, "After adjusting, OAI: frame=%d slot=%d, XRAN: frame=%d slot=%d\n", *frame, *slot, proc->frame_rx, proc->tti_rx);
+    LOG_I(HW, "After adjusting, OAI: frame=%d slot=%d, XRAN: frame=%d slot=%d\n", *frame, *slot, proc->frame_rx, proc->tti_rx);
   }
 }
 
@@ -279,7 +289,63 @@ __attribute__((__visibility__("default"))) int transport_init(openair0_device *d
                                                               openair0_config_t *openair0_cfg,
                                                               eth_params_t *eth_params)
 {
-  oran_eth_state_t *eth;
+  oran_eth_state_t *eth =(oran_eth_state_t *)calloc(1, sizeof(oran_eth_state_t));
+  if (eth == NULL) {
+    AssertFatal(0 == 1, "out of memory\n");
+  }
+
+  struct xran_fh_init fh_init = {0};
+  struct xran_fh_config fh_config[XRAN_PORTS_NUM] = {0};
+
+#ifdef OAI_MPLANE
+  ru_session_list_t ru_session_list = {0};
+  int ret = init_mplane(&ru_session_list);
+  AssertFatal(ret == 0, "[MPLANE] Cannot initialize M-plane\n");
+
+  bool ru_configured[ru_session_list.num_rus];
+  for (size_t i = 0; i < ru_session_list.num_rus; i++) {
+    ru_session_t *ru_session = &ru_session_list.ru_session[i];
+    ret = connect_mplane(ru_session, ru_session_list.du_key_pair);
+    if (ret != 0) {
+      ru_configured[i] = false;
+      continue;
+    }
+    ru_configured[i] = manage_ru(ru_session, openair0_cfg, ru_session_list.num_rus);
+  }
+
+  bool all_ok = true;
+  for (size_t i = 0; i < ru_session_list.num_rus; i++) {
+    if (!ru_configured[i]) {
+      LOG_I(HW, "[MPLANE] RU with IP %s couldn't be configured.\n", ru_session_list.ru_session[i].ru_ip_add);
+      all_ok = false;
+    }
+  }
+
+  if (all_ok) {
+    eth->mplane_priv = (void *)&ru_session_list;
+  } else {
+    disconnect_mplane((void *)&ru_session_list);
+    AssertFatal(false, "[MPLANE] Stoping M-plane.\n");
+  }
+
+  bool success = get_xran_config(&ru_session_list, openair0_cfg, &fh_init, fh_config);
+  AssertFatal(success, "[MPLANE] Cannot configure xran with M-plane info.\n");
+#else
+  bool success = get_xran_config(NULL, openair0_cfg, &fh_init, fh_config);
+  AssertFatal(success, "cannot get configuration for xran\n");
+#endif
+
+  LOG_I(HW, "Initializing O-RAN 7.2 FH interface through xran library (compiled against headers of %s)\n", VERSIONX);
+  eth->oran_priv = oai_oran_initialize(&fh_init, fh_config);
+  AssertFatal(eth->oran_priv != NULL, "can not initialize fronthaul");
+  // create message queues for ORAN sync
+
+  initNotifiedFIFO(&oran_sync_fifo);
+
+  eth->e.flags = ETH_RAW_IF4p5_MODE;
+  eth->e.compression = NO_COMPRESS;
+  eth->e.if_name = eth_params->local_if_name;
+  eth->last_msg = (rru_config_msg_type_t)-1;
 
   device->Mod_id = 0;
   device->transp_type = ETHERNET_TP;
@@ -290,43 +356,13 @@ __attribute__((__visibility__("default"))) int transport_init(openair0_device *d
   device->trx_stop_func = trx_oran_stop;
   device->trx_set_freq_func = trx_oran_set_freq;
   device->trx_set_gains_func = trx_oran_set_gains;
-
   device->trx_write_func = trx_oran_write_raw;
   device->trx_read_func = trx_oran_read_raw;
-
   device->trx_ctlsend_func = trx_oran_ctlsend;
   device->trx_ctlrecv_func = trx_oran_ctlrecv;
-
   device->get_internal_parameter = get_internal_parameter;
-
-  eth = (oran_eth_state_t *)calloc(1, sizeof(oran_eth_state_t));
-  if (eth == NULL) {
-    AssertFatal(0 == 1, "out of memory\n");
-  }
-
-  eth->e.flags = ETH_RAW_IF4p5_MODE;
-  eth->e.compression = NO_COMPRESS;
-  eth->e.if_name = eth_params->local_if_name;
-  eth->oran_priv = NULL; // define_oran_pointer();
   device->priv = eth;
   device->openair0_cfg = &openair0_cfg[0];
 
-  eth->last_msg = (rru_config_msg_type_t)-1;
-
-  LOG_I(HW, "Initializing O-RAN 7.2 FH interface through xran library (compiled against headers of %s)\n", VERSIONX);
-
-  initNotifiedFIFO(&oran_sync_fifo);
-
-  struct xran_fh_init fh_init = {0};
-  struct xran_fh_config fh_config[XRAN_PORTS_NUM] = {0};
-#ifndef OAI_MPLANE_SUPPORT
-  bool success = get_xran_config(openair0_cfg, &fh_init, fh_config);
-  AssertFatal(success, "cannot get configuration for xran\n");
-#else
-  /* TODO: M-plane integration */
-#endif
-  eth->oran_priv = oai_oran_initialize(&fh_init, fh_config);
-  AssertFatal(eth->oran_priv != NULL, "can not initialize fronthaul");
-  // create message queues for ORAN sync
   return 0;
 }

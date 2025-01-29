@@ -9,7 +9,7 @@ endif()
 pkg_check_modules(dpdk REQUIRED libdpdk)
 pkg_check_modules(numa REQUIRED numa)
 
-add_library(oran_fhlib_5g MODULE
+add_library(oran_fhlib_5g SHARED
             oran_isolate.c
             oaioran.c
             oran-config.c
@@ -40,9 +40,14 @@ target_link_libraries(oran_fhlib_5g PRIVATE ${T_LIB})
 target_include_directories(oran_fhlib_5g PRIVATE ${xran_INCLUDE_DIRS}/../src/)
 
 set_target_properties(oran_fhlib_5g PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
-add_custom_command(TARGET oran_fhlib_5g POST_BUILD
-                   COMMAND ${CMAKE_COMMAND} -E create_symlink liboran_fhlib_5g.so liboai_transpro.so
-                   WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+# just temporary
+# add_custom_command(TARGET oran_fhlib_5g POST_BUILD
+#                    COMMAND ${CMAKE_COMMAND} -E create_symlink liboran_fhlib_5g.so liboai_transpro.so
+#                    WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
 message(STATUS "Temporary added -DOAI_FHI72")
 target_compile_definitions(nr-softmodem PUBLIC OAI_FHI72)
+
+if(OAI_MPLANE)
+  add_subdirectory(mplane)
+endif()

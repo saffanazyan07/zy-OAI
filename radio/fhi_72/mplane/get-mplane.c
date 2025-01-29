@@ -19,26 +19,28 @@
  *      contact@openairinterface.org
  */
 
-#ifndef ORAN_CONFIG_H
-#define ORAN_CONFIG_H
+#include "get-mplane.h"
+#include "rpc-send-recv.h"
 
-#include "stdbool.h"
-#include "stdint.h"
+#include "common/utils/assertions.h"
 
-struct xran_fh_init;
-struct xran_fh_config;
-struct openair0_config;
+int get_mplane(ru_session_t *ru_session, char **answer)
+{
+  int timeout = CLI_RPC_REPLY_TIMEOUT;
+  struct nc_rpc *rpc;
+  char *filter = NULL;   // e.g. "/o-ran-delay-management:delay-management";
+  NC_WD_MODE wd = NC_WD_UNKNOWN;  // try with explicit!
+  NC_PARAMTYPE param = NC_PARAMTYPE_CONST;
 
-#ifdef OAI_MPLANE
-#include "mplane/ru-mplane-api.h"
-#endif
+  /* create request */
+  rpc = nc_rpc_get(filter, wd, param);
+  AssertError(rpc != NULL, return EXIT_FAILURE, "[MPLANE] <get> RPC creation failed.\n");
 
-bool get_xran_config(const ru_session_list_t *ru_session_list, const struct openair0_config *openair0_cfg, struct xran_fh_init *fh_init, struct xran_fh_config *fh_config);
+  int ret = rpc_send_recv((struct nc_session *)ru_session->session, rpc, wd, timeout, answer);
+  AssertError(ret == 0, return EXIT_FAILURE, "[MPLANE] Unable to retreive operational datastore\n.");
+  LOG_I(HW, "[MPLANE] Successfully retreived operational datastore\n");
 
-void print_fh_init(const struct xran_fh_init *fh_init);
-void print_fh_config(const struct xran_fh_config *fh_config);
+  nc_rpc_free(rpc);
 
-// hack to workaround LiteOn limitation
-extern int g_kbar;
-
-#endif /* ORAN_CONFIG_H */
+  return EXIT_SUCCESS;
+}

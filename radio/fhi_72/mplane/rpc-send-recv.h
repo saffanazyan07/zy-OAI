@@ -19,26 +19,16 @@
  *      contact@openairinterface.org
  */
 
-#ifndef ORAN_CONFIG_H
-#define ORAN_CONFIG_H
+#ifndef RPC_SEND_RECEIVE_MPLANE_H
+#define RPC_SEND_RECEIVE_MPLANE_H
 
-#include "stdbool.h"
-#include "stdint.h"
+#include "ru-mplane-api.h"
 
-struct xran_fh_init;
-struct xran_fh_config;
-struct openair0_config;
+#include <libyang/libyang.h>
+#include <nc_client.h>
 
-#ifdef OAI_MPLANE
-#include "mplane/ru-mplane-api.h"
-#endif
+#define CLI_RPC_REPLY_TIMEOUT 5   // time to wait for server reply
 
-bool get_xran_config(const ru_session_list_t *ru_session_list, const struct openair0_config *openair0_cfg, struct xran_fh_init *fh_init, struct xran_fh_config *fh_config);
+int rpc_send_recv(struct nc_session *session, struct nc_rpc *rpc, NC_WD_MODE wd_mode, int timeout_s, char **answer);
 
-void print_fh_init(const struct xran_fh_init *fh_init);
-void print_fh_config(const struct xran_fh_config *fh_config);
-
-// hack to workaround LiteOn limitation
-extern int g_kbar;
-
-#endif /* ORAN_CONFIG_H */
+#endif /* RPC_SEND_RECEIVE_MPLANE_H */
