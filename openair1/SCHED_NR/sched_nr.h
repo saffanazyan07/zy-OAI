@@ -44,7 +44,7 @@ void nr_feptx_prec_control(RU_t *ru,int frame,int tti_tx);
 void nr_fep_tp(RU_t *ru, int slot);
 void nr_feptx_tp(RU_t *ru, int frame_tx, int slot);
 void feptx_prec(RU_t *ru,int frame_tx,int tti_tx);
-int nr_phy_init_RU(RU_t *ru);
+void nr_phy_init_RU(RU_t *ru);
 void nr_phy_free_RU(RU_t *ru);
 void clear_slot_beamid(PHY_VARS_gNB *gNB, int slot);
 int beam_index_allocation(int fapi_beam_index, NR_gNB_COMMON *common_vars, int slot, int symbols_per_slot, int bitmap_symbols);

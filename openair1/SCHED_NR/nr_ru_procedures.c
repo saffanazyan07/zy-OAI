@@ -47,7 +47,7 @@
 
 // RU OFDM Modulator gNodeB
 // OFDM modulation core routine, generates a first_symbol to first_symbol+num_symbols on a particular slot and TX antenna port
-void nr_feptx0(RU_t *ru,int tti_tx,int first_symbol, int num_symbols, int aa)
+void nr_feptx0(RU_t *ru, int tti_tx, int first_symbol, int num_symbols, int aa)
 {
   NR_DL_FRAME_PARMS *fp = ru->nr_frame_parms;
 
@@ -345,24 +345,24 @@ void nr_feptx_tp(RU_t *ru, int frame_tx, int slot)
 void nr_fep(void* arg)
 {
   feprx_cmd_t *feprx_cmd = (feprx_cmd_t *)arg;
-  RU_t *ru         = feprx_cmd->ru;
-  int aid          = feprx_cmd->aid;
-  int tti_rx       = feprx_cmd->slot;
-  int startSymbol  = feprx_cmd->startSymbol;
-  int endSymbol    = feprx_cmd->endSymbol;
+  RU_t *ru = feprx_cmd->ru;
+  int aid = feprx_cmd->aid;
+  int slot = feprx_cmd->slot;
+  int startSymbol = feprx_cmd->startSymbol;
+  int endSymbol = feprx_cmd->endSymbol;
   NR_DL_FRAME_PARMS *fp = ru->nr_frame_parms;
   
-  LOG_D(PHY,"aid %d, frame %d slot %d, startSymbol %d, endSymbol %d\n", aid, ru->proc.frame_rx, tti_rx, startSymbol, endSymbol);
+  LOG_D(PHY,"aid %d, frame %d slot %d, startSymbol %d, endSymbol %d\n", aid, ru->proc.frame_rx, slot, startSymbol, endSymbol);
 
   VCD_SIGNAL_DUMPER_DUMP_FUNCTION_BY_NAME(VCD_SIGNAL_DUMPER_FUNCTIONS_PHY_PROCEDURES_RU_FEPRX+aid, 1);
 
-  int offset = (tti_rx % RU_RX_SLOT_DEPTH) * fp->symbols_per_slot * fp->ofdm_symbol_size;
+  int offset = (slot % RU_RX_SLOT_DEPTH) * fp->symbols_per_slot * fp->ofdm_symbol_size;
   for (int l = startSymbol; l <= endSymbol; l++) 
       nr_slot_fep_ul(fp,
                      ru->common.rxdata[aid],
                      &ru->common.rxdataF[aid][offset],
                      l,
-                     tti_rx,
+                     slot,
                      ru->N_TA_offset);
   VCD_SIGNAL_DUMPER_DUMP_FUNCTION_BY_NAME(VCD_SIGNAL_DUMPER_FUNCTIONS_PHY_PROCEDURES_RU_FEPRX+aid, 0);
 

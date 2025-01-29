@@ -29,7 +29,7 @@
 
 void init_prach_ru_list(RU_t *ru);
 
-int nr_phy_init_RU(RU_t *ru)
+void nr_phy_init_RU(RU_t *ru)
 {
   NR_DL_FRAME_PARMS *fp = ru->nr_frame_parms;
 
@@ -53,30 +53,30 @@ int nr_phy_init_RU(RU_t *ru)
 
   if (ru->if_south <= REMOTE_IF5) { // this means REMOTE_IF5 or LOCAL_RF, so allocate memory for time-domain signals 
     // Time-domain signals
-    ru->common.txdata        = (int32_t**)malloc16(ru->nb_tx*sizeof(int32_t*));
-    ru->common.rxdata        = (int32_t**)malloc16(ru->nb_rx*sizeof(int32_t*) );
+    ru->common.txdata = (int32_t**)malloc16(ru->nb_tx * sizeof(int32_t*));
+    ru->common.rxdata = (int32_t**)malloc16(ru->nb_rx * sizeof(int32_t*));
 
 
     for (int i = 0; i < ru->nb_tx; i++) {
       // Allocate 10 subframes of I/Q TX signal data (time) if not
-      ru->common.txdata[i]  = (int32_t*)malloc16_clear((ru->sf_extension + fp->samples_per_frame)*sizeof(int32_t));
+      ru->common.txdata[i] = (int32_t*)malloc16_clear((ru->sf_extension + fp->samples_per_frame) * sizeof(int32_t));
       LOG_D(PHY,
             "[INIT] common.txdata[%d] = %p (%lu bytes,sf_extension %d)\n",
             i,
             ru->common.txdata[i],
             (ru->sf_extension + fp->samples_per_frame) * sizeof(int32_t),
             ru->sf_extension);
-      ru->common.txdata[i] =  &ru->common.txdata[i][ru->sf_extension];
+      ru->common.txdata[i] = &ru->common.txdata[i][ru->sf_extension];
 
       LOG_D(PHY, "[INIT] common.txdata[%d] = %p \n", i, ru->common.txdata[i]);
     }
     for (int i = 0; i < ru->nb_rx; i++) {
-      ru->common.rxdata[i] = (int32_t*)malloc16_clear( fp->samples_per_frame*sizeof(int32_t) );
+      ru->common.rxdata[i] = (int32_t*)malloc16_clear(fp->samples_per_frame * sizeof(int32_t));
     }
   } // IF5 or local RF
   else {
-    ru->common.txdata        = (int32_t**)NULL;
-    ru->common.rxdata        = (int32_t**)NULL;
+    ru->common.txdata = (int32_t**)NULL;
+    ru->common.rxdata = (int32_t**)NULL;
   }
   if (ru->function != NGFI_RRU_IF5) { // we need to do RX/TX RU processing
     LOG_D(PHY, "nb_tx %d\n", ru->nb_tx);
@@ -85,7 +85,6 @@ int nr_phy_init_RU(RU_t *ru)
       ru->common.rxdata_7_5kHz[i] = (int32_t*)malloc16_clear( 2*fp->samples_per_subframe*2*sizeof(int32_t) );
       LOG_D(PHY, "rxdata_7_5kHz[%d] %p for RU %d\n", i, ru->common.rxdata_7_5kHz[i], ru->idx);
     }
-  
 
     // allocate precoding input buffers (TX)
     ru->common.txdataF = (int32_t **)malloc16(ru->nb_tx*sizeof(int32_t*));
@@ -97,11 +96,11 @@ int nr_phy_init_RU(RU_t *ru)
     ru->common.txdataF_BF = (int32_t **)malloc16(ru->nb_tx*sizeof(int32_t*));
     LOG_D(PHY, "[INIT] common.txdata_BF= %p (%lu bytes)\n", ru->common.txdataF_BF, ru->nb_tx * sizeof(int32_t *));
     for (int i = 0; i < ru->nb_tx; i++) {
-      ru->common.txdataF_BF[i] = (int32_t*)malloc16_clear(fp->samples_per_subframe_wCP*sizeof(int32_t) );
+      ru->common.txdataF_BF[i] = (int32_t*)malloc16_clear(fp->samples_per_subframe_wCP * sizeof(int32_t));
       LOG_D(PHY, "txdataF_BF[%d] %p for RU %d\n", i, ru->common.txdataF_BF[i], ru->idx);
     }
     // allocate FFT output buffers (RX)
-    ru->common.rxdataF     = (int32_t**)malloc16(ru->nb_rx*sizeof(int32_t*) );
+    ru->common.rxdataF = (int32_t**)malloc16(ru->nb_rx * sizeof(int32_t*));
     for (int i = 0; i < ru->nb_rx; i++) {
       // allocate 4 slots of I/Q signal data (frequency)
       int size = RU_RX_SLOT_DEPTH * fp->symbols_per_slot * fp->ofdm_symbol_size;
@@ -117,21 +116,17 @@ int nr_phy_init_RU(RU_t *ru)
       
       for (int i = 0; i < ru->nb_rx; i++) {
 	// largest size for PRACH FFT is 4x98304 (16*24576)
-	ru->prach_rxsigF[j][i] = (int16_t*)malloc16_clear( 4*98304*2*sizeof(int16_t) );
-	LOG_D(PHY,"[INIT] prach_vars->rxsigF[%d] = %p\n",i,ru->prach_rxsigF[j][i]);
+	ru->prach_rxsigF[j][i] = (int16_t*)malloc16_clear(4 * 98304 * 2 * sizeof(int16_t));
+	LOG_D(PHY,"[INIT] prach_vars->rxsigF[%d] = %p\n", i, ru->prach_rxsigF[j][i]);
       }
     }
-    
-    AssertFatal(ru->num_gNB <= NUMBER_OF_gNB_MAX,"gNB instances %d > %d\n",
-		ru->num_gNB,NUMBER_OF_gNB_MAX);
+
+    AssertFatal(ru->num_gNB <= NUMBER_OF_gNB_MAX, "gNB instances %d > %d\n", ru->num_gNB,NUMBER_OF_gNB_MAX);
 
     LOG_D(PHY, "[INIT] %s() ru->num_gNB:%d \n", __FUNCTION__, ru->num_gNB);
-
   } // !=IF5
 
   init_prach_ru_list(ru);
-
-  return(0);
 }
 
 void nr_phy_free_RU(RU_t *ru)

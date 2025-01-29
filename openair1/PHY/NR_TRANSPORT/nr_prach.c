@@ -155,7 +155,6 @@ void rx_nr_prach_ru(RU_t *ru, int prachFormat, int numRA, int prachStartSymbol, 
 {
   AssertFatal(ru != NULL,"ru is null\n");
 
-  int16_t **rxsigF = NULL;
   NR_DL_FRAME_PARMS *fp = ru->nr_frame_parms;
   int slot2 = slot;
   int16_t *prach[ru->nb_rx];
@@ -186,12 +185,12 @@ void rx_nr_prach_ru(RU_t *ru, int prachFormat, int numRA, int prachStartSymbol, 
         prachStartSymbol,
         prachOccasion);
 
-  rxsigF = ru->prach_rxsigF[prachOccasion];
+  int16_t **rxsigF = ru->prach_rxsigF[prachOccasion];
 
   AssertFatal(ru->if_south == LOCAL_RF || ru->if_south == REMOTE_IF5,
               "we shouldn't call this if if_south != LOCAL_RF or REMOTE_IF5\n");
 
-  for (int aa=0; aa<ru->nb_rx; aa++){ 
+  for (int aa = 0; aa < ru->nb_rx; aa++) { 
     if (prach_sequence_length == 0)
       slot2 = (slot / fp->slots_per_subframe) * fp->slots_per_subframe;
     prach[aa] = (int16_t*)&ru->common.rxdata[aa][fp->get_samples_slot_timestamp(slot2, fp, 0) + sample_offset_slot - ru->N_TA_offset];
