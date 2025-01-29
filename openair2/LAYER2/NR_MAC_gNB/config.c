@@ -599,36 +599,32 @@ static void config_common(gNB_MAC_INST *nrmac,
     AssertFatal(periods_per_frame > 0, "TDD configuration cannot be configured\n");
   }
 
-  int nb_tx = config->nb_bfw[0]; // number of tx antennas
-  int nb_beams = config->nb_bfw[1]; // number of beams
   // precoding matrix configuration (to be improved)
   cfg->pmi_list = init_DL_MIMO_codebook(nrmac, pdsch_AntennaPorts);
-  // beamforming matrix configuration
-  cfg->dbt_config.num_dig_beams = nb_beams;
-  if (nb_beams > 0) {
-    cfg->dbt_config.num_txrus = nb_tx;
-    cfg->dbt_config.dig_beam_list = malloc16(nb_beams * sizeof(*cfg->dbt_config.dig_beam_list));
-    AssertFatal(cfg->dbt_config.dig_beam_list, "out of memory\n");
-    for (int i = 0; i < nb_beams; i++) {
-      nfapi_nr_dig_beam_t *beam = &cfg->dbt_config.dig_beam_list[i];
-      beam->beam_idx = i;
-      beam->txru_list = malloc16(nb_tx * sizeof(*beam->txru_list));
-      for (int j = 0; j < nb_tx; j++) {
-        nfapi_nr_txru_t *txru = &beam->txru_list[j];
-        txru->dig_beam_weight_Re = config->bw_list[j + i * nb_tx] & 0xffff;
-        txru->dig_beam_weight_Im = (config->bw_list[j + i * nb_tx] >> 16) & 0xffff;
-        LOG_D(NR_MAC, "Beam %d Tx %d Weight (%d, %d)\n", i, j, txru->dig_beam_weight_Re, txru->dig_beam_weight_Im);
-      }
-    }
-  }
 
+  int nb_beams = config->nb_bfw[1]; // number of beams
   if (nrmac->beam_info.beam_allocation) {
+    LOG_I(NR_MAC, "Configuring analog beamforming in config_request message\n");
     cfg->analog_beamforming_ve.num_beams_period_vendor_ext.tl.tag = NFAPI_NR_FAPI_NUM_BEAMS_PERIOD_VENDOR_EXTENSION_TAG;
     cfg->analog_beamforming_ve.num_beams_period_vendor_ext.value = nrmac->beam_info.beams_per_period;
     cfg->num_tlv++;
     cfg->analog_beamforming_ve.analog_bf_vendor_ext.tl.tag = NFAPI_NR_FAPI_ANALOG_BF_VENDOR_EXTENSION_TAG;
     cfg->analog_beamforming_ve.analog_bf_vendor_ext.value = 1;  // analog BF enabled
     cfg->num_tlv++;
+    cfg->analog_beamforming_ve.total_num_beams_vendor_ext.tl.tag = NFAPI_NR_FAPI_TOTAL_NUM_BEAMS_VENDOR_EXTENSION_TAG;
+    cfg->analog_beamforming_ve.total_num_beams_vendor_ext.value = nb_beams;
+    cfg->num_tlv++;
+    cfg->analog_beamforming_ve.analog_beam_list = malloc16(nb_beams * sizeof(*cfg->analog_beamforming_ve.analog_beam_list));
+    for (int i = 0; i < nb_beams; i++) {
+      cfg->analog_beamforming_ve.analog_beam_list[i].tl.tag = NFAPI_NR_FAPI_ANALOG_BEAM_VENDOR_EXTENSION_TAG;
+      cfg->analog_beamforming_ve.analog_beam_list[i].value = config->bw_list[i];
+    }
+  } else {
+    cfg->analog_beamforming_ve.analog_bf_vendor_ext.value = 0;  // analog BF disabled
+    if (NFAPI_MODE == NFAPI_MONOLITHIC) {
+      cfg->analog_beamforming_ve.analog_bf_vendor_ext.tl.tag = NFAPI_NR_FAPI_ANALOG_BF_VENDOR_EXTENSION_TAG;
+      cfg->num_tlv++;
+    }
   }
 }
 

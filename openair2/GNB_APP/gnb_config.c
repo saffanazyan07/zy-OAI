@@ -1398,7 +1398,7 @@ void RCconfig_nr_macrlc(configmodule_interface_t *cfg)
     // each beam is described by a set of weights (one for each antenna)
     // on the other hand in case of analog beamforming an index to the RU beam identifier is provided
     config.nb_bfw[0] = num_tx;  // number of tx antennas
-    config.nb_bfw[1] = n / num_tx; // number of beams
+    config.nb_bfw[1] = n; // number of beams weights/indices
     config.bw_list = malloc16_clear(n * sizeof(*config.bw_list));
     for (int b = 0; b < n; b++) {
       config.bw_list[b] = GNBParamList.paramarray[0][GNB_BEAMWEIGHTS_IDX].iptr[b];

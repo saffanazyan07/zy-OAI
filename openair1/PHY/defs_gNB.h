@@ -287,7 +287,6 @@ typedef struct {
   /// - first index: beam index (for concurrent beams)
   /// - second index: beam_id [0.. symbols_per_frame[
   int **beam_id;
-  int num_beams;
   int num_beams_period;
   bool analog_bf;
   int32_t *debugBuff;

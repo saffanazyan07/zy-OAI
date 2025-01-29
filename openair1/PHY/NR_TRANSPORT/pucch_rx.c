@@ -73,7 +73,12 @@ void nr_fill_pucch(PHY_VARS_gNB *gNB,
       if (gNB->common_vars.beam_id) {
         int fapi_beam_idx = pucch_pdu->beamforming.prgs_list[0].dig_bf_interface_list[0].beam_idx;
         int bitmap = SL_to_bitmap(pucch_pdu->start_symbol_index, pucch_pdu->nr_of_symbols);
-        pucch->beam_nb = beam_index_allocation(fapi_beam_idx, &gNB->common_vars, slot, NR_NUMBER_OF_SYMBOLS_PER_SLOT, bitmap);
+        pucch->beam_nb = beam_index_allocation(fapi_beam_idx,
+                                               &gNB->gNB_config,
+                                               &gNB->common_vars,
+                                               slot,
+                                               NR_NUMBER_OF_SYMBOLS_PER_SLOT,
+                                               bitmap);
       }
       memcpy((void *)&pucch->pucch_pdu, (void *)pucch_pdu, sizeof(nfapi_nr_pucch_pdu_t));
       LOG_D(PHY,

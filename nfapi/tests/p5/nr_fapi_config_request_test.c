@@ -229,6 +229,33 @@ static void fill_config_request_tlv_tdd_rand(nfapi_nr_config_request_scf_t *nfap
 
   FILL_TLV(nfapi_resp->nfapi_config.timing_info_period, NFAPI_NR_NFAPI_TIMING_INFO_PERIOD_TAG, rand8());
   nfapi_resp->num_tlv++;
+/*
+ // TODO: Uncomment this block when ready to enable the pack of the following VE TLVs in nr_fapi_p5.c
+ // NFAPI_NR_FAPI_NUM_BEAMS_PERIOD_VENDOR_EXTENSION_TAG
+ // NFAPI_NR_FAPI_ANALOG_BF_VENDOR_EXTENSION_TAG
+ // NFAPI_NR_FAPI_TOTAL_NUM_BEAMS_VENDOR_EXTENSION_TAG
+ // NFAPI_NR_FAPI_ANALOG_BEAM_VENDOR_EXTENSION_TAG
+  FILL_TLV(nfapi_resp->analog_beamforming_ve.num_beams_period_vendor_ext,
+           NFAPI_NR_FAPI_NUM_BEAMS_PERIOD_VENDOR_EXTENSION_TAG,
+           rand8());
+  nfapi_resp->num_tlv++;
+
+  FILL_TLV(nfapi_resp->analog_beamforming_ve.analog_bf_vendor_ext, NFAPI_NR_FAPI_ANALOG_BF_VENDOR_EXTENSION_TAG, rand8());
+  nfapi_resp->num_tlv++;
+
+  FILL_TLV(nfapi_resp->analog_beamforming_ve.total_num_beams_vendor_ext,
+           NFAPI_NR_FAPI_TOTAL_NUM_BEAMS_VENDOR_EXTENSION_TAG,
+           rand8());
+  nfapi_resp->num_tlv++;
+
+  if (nfapi_resp->analog_beamforming_ve.total_num_beams_vendor_ext.value > 0) {
+    nfapi_resp->analog_beamforming_ve.analog_beam_list =
+        (nfapi_uint8_tlv_t *)malloc(nfapi_resp->analog_beamforming_ve.total_num_beams_vendor_ext.value * sizeof(nfapi_uint8_tlv_t));
+    for (int i = 0; i < nfapi_resp->analog_beamforming_ve.total_num_beams_vendor_ext.value; ++i) {
+      FILL_TLV(nfapi_resp->analog_beamforming_ve.analog_beam_list[i], NFAPI_NR_FAPI_ANALOG_BEAM_VENDOR_EXTENSION_TAG, rand8());
+      nfapi_resp->num_tlv++;
+    }
+  }*/
 }
 
 static void test_pack_unpack(nfapi_nr_config_request_scf_t *req)
