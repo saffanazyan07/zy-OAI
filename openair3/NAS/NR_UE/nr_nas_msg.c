@@ -50,6 +50,7 @@
 #include "openair2/SDAP/nr_sdap/nr_sdap.h"
 #include "openair3/SECU/nas_stream_eia2.h"
 #include "openair3/UTILS/conversions.h"
+#include "fgmm_authentication_reject.h"
 
 #define MAX_NAS_UE 4
 
@@ -709,6 +710,21 @@ static void generateAuthenticationResp(nr_ue_nas_t *nas, as_nas_info_t *initialN
   initialNasMsg->length = mm_msg_encode(mm_msg, initialNasMsg->nas_data, size);
   // Free res value after encode
   free(res.value);
+}
+
+static void handle_authentication_reject(nr_ue_nas_t *nas, as_nas_info_t *initialNasMsg, uint8_t *pdu, int pdu_length)
+{
+  LOG_E(NAS, "Received Authentication Reject message from the network\n");
+  fgmm_auth_reject_msg_t msg = {0};
+  AssertFatal(decode_fgmm_auth_reject(&msg, pdu + 3 /* skip header */, pdu_length) > 0, "could not decode NAS Authentication Reject\n");
+  if (msg.eap_msg.len) {
+    LOG_I(NAS, "NAS Authentication Reject contains an EAP message:\n");
+    for (int i = 0; i < msg.eap_msg.len; i++) {
+      printf("eap_msg[%d] = %d", i, msg.eap_msg.msg[i]);
+    }
+    printf("\n");
+    fflush(stdout);
+  }
 }
 
 int nas_itti_kgnb_refresh_req(instance_t instance, const uint8_t kgnb[32])
@@ -1497,6 +1513,9 @@ void *nas_nrue(void *args_p)
             break;
           case FGS_AUTHENTICATION_REQUEST:
             generateAuthenticationResp(nas, &initialNasMsg, pdu_buffer);
+            break;
+          case FGS_AUTHENTICATION_REJECT:
+            handle_authentication_reject(nas, &initialNasMsg, pdu_buffer, pdu_length);
             break;
           case FGS_SECURITY_MODE_COMMAND:
             handle_security_mode_command(nas, &initialNasMsg, pdu_buffer, pdu_length);

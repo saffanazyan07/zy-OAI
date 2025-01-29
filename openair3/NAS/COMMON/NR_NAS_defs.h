@@ -104,7 +104,7 @@ typedef enum {
   TYPE_DEF(Configurationupdatecomplete, 0x55)                \
   TYPE_DEF(FGS_AUTHENTICATION_REQUEST, 0x56)                 \
   TYPE_DEF(FGS_AUTHENTICATION_RESPONSE, 0x57)                \
-  TYPE_DEF(Authenticationreject, 0x58)                       \
+  TYPE_DEF(FGS_AUTHENTICATION_REJECT, 0x58)                  \
   TYPE_DEF(Authenticationfailure, 0x59)                      \
   TYPE_DEF(Authenticationresult, 0x5a)                       \
   TYPE_DEF(FGS_IDENTITY_REQUEST, 0x5b)                       \
