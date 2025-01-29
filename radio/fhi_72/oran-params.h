@@ -54,7 +54,7 @@
   {ORAN_CONFIG_WORKER_CORES,    "CPU Cores to use for workers\n",           PARAMFLAG_MANDATORY, .uptr=NULL,       .defintarrayval=NULL,TYPE_UINTARRAY,  0}, \
   {ORAN_CONFIG_DU_KEYPAIR,      "DU keypair for RU authentication\n",       PARAMFLAG_MANDATORY, .strlistptr=NULL, .defstrlistval=NULL, TYPE_STRINGLIST, 0}, \
   {ORAN_CONFIG_DU_ADDR,         "Ether addr of DU\n",                       PARAMFLAG_MANDATORY, .strlistptr=NULL, .defstrlistval=NULL, TYPE_STRINGLIST, 0}, \
-  {ORAN_FH_CONFIG_VLAN_TAG,     "VLAN tag\n",                               PARAMFLAG_MANDATORY, .uptr=NULL,       .defintarrayval=0,   TYPE_UINTARRAY,  0}, \
+  {ORAN_FH_CONFIG_VLAN_TAG,     "VLAN tag\n",                               PARAMFLAG_MANDATORY, .strlistptr=NULL, .defstrlistval=0,    TYPE_STRINGLIST, 0}, \
   {ORAN_CONFIG_RU_ADDR,         "Ether addr of RU\n",                       PARAMFLAG_MANDATORY, .strlistptr=NULL, .defstrlistval=NULL, TYPE_STRINGLIST, 0}, \
   {ORAN_CONFIG_RU_IP_ADDR,      "IP addr of RU\n",                          PARAMFLAG_MANDATORY, .strlistptr=NULL, .defstrlistval=NULL, TYPE_STRINGLIST, 0}, \
   {ORAN_CONFIG_MTU,             "MTU of Eth interface\n",                   0,                   .uptr=NULL,       .defuintval=1500,    TYPE_UINT,       0}, \

@@ -45,6 +45,24 @@ int get_config_for_xran(const char *buffer, const int max_num_ant, xran_mplane_t
   // PRACH offset
   // xran_mplane->prach_offset
 
+  // DU port ID bitmask
+  xran_mplane->du_port_bitmask = 49152;
+  // Band sector bitmask
+  xran_mplane->band_sector_bitmask = 16128;
+  // CC ID bitmask
+  xran_mplane->ccid_bitmask = 240;
+  // RU port ID bitmask
+  xran_mplane->ru_port_bitmask = 15;
+
+  // DU port ID
+  xran_mplane->du_port = 0;
+  // Band sector
+  xran_mplane->band_sector = 0;
+  // CC ID
+  xran_mplane->ccid = 0;
+  // RU port ID
+  xran_mplane->ru_port = 0;
+
   if (strcmp(ru_vendor, "BENETEL") == 0 /* || strcmp(ru_vendor, "VVDN-LPRU") == 0 || strcmp(ru_vendor, "Metanoia") == 0 */) {
     if (interface_mtu == 1500) {
       LOG_I(HW, "[MPLANE] Interface MTU %d not reliable, hardcoding to 9600.\n", interface_mtu);
@@ -65,17 +83,33 @@ int get_config_for_xran(const char *buffer, const int max_num_ant, xran_mplane_t
     AssertError(false, return EXIT_FAILURE, "[MPLANE] %s RU currently not supported.\n", ru_vendor);
   }
 
-  LOG_I(HW, "[MPLANE] Storing the following information to forward to xran\n\
+  LOG_I(HW, "[MPLANE] Storing the following information to forward to xran:\n\
     RU vendor name %s\n\
     RU MAC address %s\n\
     MTU %d\n\
     IQ bitwidth %d\n\
-    PRACH offset %d\n",
-    ru_vendor,
-    xran_mplane->ru_mac_addr,
-    xran_mplane->mtu,
-    xran_mplane->iq_width,
-    xran_mplane->prach_offset);
+    PRACH offset %d\n\
+    DU port bitmask %d\n\
+    Band sector bitmask %d\n\
+    CC ID bitmask %d\n\
+    RU port ID bitmask %d\n\
+    DU port ID %d\n\
+    Band sector ID %d\n\
+    CC ID %d\n\
+    RU port ID %d\n",
+      ru_vendor,
+      xran_mplane->ru_mac_addr,
+      xran_mplane->mtu,
+      xran_mplane->iq_width,
+      xran_mplane->prach_offset,
+      xran_mplane->du_port_bitmask,
+      xran_mplane->band_sector_bitmask,
+      xran_mplane->ccid_bitmask,
+      xran_mplane->ru_port_bitmask,
+      xran_mplane->du_port,
+      xran_mplane->band_sector,
+      xran_mplane->ccid,
+      xran_mplane->ru_port);
 
   return EXIT_SUCCESS;
 }
@@ -101,7 +135,7 @@ int get_uplane_info(const char *buffer, ru_mplane_config_t *ru_mplane_config)
   get_ru_xml_list(buffer, "rx-arrays", &ru_mplane_config->rx_carriers.name, &ru_mplane_config->rx_carriers.num);
   AssertError(ru_mplane_config->rx_carriers.name != NULL, return EXIT_FAILURE, "[MPLANE] Cannot get RX carrier names.\n");
 
-  LOG_I(HW, "[MPLANE] Successfully retreived all the U-plane info");
+  LOG_I(HW, "[MPLANE] Successfully retreived all the U-plane info.\n");
 
   return EXIT_SUCCESS;
 }

@@ -21,12 +21,13 @@
 
 #include "config-mplane.h"
 #include "rpc-send-recv.h"
+#include "yang/get-yang.h"
 #include "common/utils/assertions.h"
 
 #include <libyang/libyang.h>
 #include <nc_client.h>
 
-int edit_config_mplane(ru_session_t *ru_session)
+int edit_config_mplane(ru_session_t *ru_session, const openair0_config_t *oai, const size_t num_rus)
 {
   int timeout = CLI_RPC_REPLY_TIMEOUT;
   struct nc_rpc *rpc;
@@ -37,26 +38,23 @@ int edit_config_mplane(ru_session_t *ru_session)
   NC_RPC_EDIT_TESTOPT test = NC_RPC_EDIT_TESTOPT_UNKNOWN;
   NC_RPC_EDIT_ERROPT err = NC_RPC_EDIT_ERROPT_UNKNOWN;
 
-  // the following block is just temporary; the buffer should be passed, not reading from a file
-  const char *input = "/home/eurecom/teodora/xml-mplane/550-1e-config-backup.xml";
-  FILE *f = fopen(input, "r");
-  fseek(f, 0, SEEK_END);
-  long len = ftell(f);
-  fseek(f, 0, SEEK_SET);
-  char *content = calloc(len + 1, sizeof(char));
-  int ret2 = fread(content, 1, len, f);
-  AssertError(ret2 == 0, return EXIT_FAILURE, "[MPLANE] Just temp");
-  content[len] = '\0';
-  fclose(f);
+  struct ly_ctx *ctx = NULL;
+  int ret = load_yang_models(&ctx);
+  AssertError(ret == 0, return EXIT_FAILURE, "[MPLANE] Unable to continue.\n");
+
+  char *content = NULL;
+  ret = configure_ru_from_yang(&ctx, ru_session, oai, num_rus, &content);
+  AssertError(ret == 0, return EXIT_FAILURE, "[MPLANE] Unable to create content for <edit-config> RPC.\n");
 
   rpc = nc_rpc_edit(target, op, test, err, content, param);
   AssertError(rpc != NULL, return EXIT_FAILURE, "[MPLANE] <edit-config> RPC creation failed.\n");
 
-  int ret = rpc_send_recv((struct nc_session *)ru_session->session, rpc, wd, timeout, NULL);
+  ret = rpc_send_recv((struct nc_session *)ru_session->session, rpc, wd, timeout, NULL);
   AssertError(ret == 0, return EXIT_FAILURE, "[MPLANE] Failed to edit configuration for the candidate datastore.\n");
 
   nc_rpc_free(rpc);
   free(content);
+  ly_ctx_destroy(ctx);
 
   LOG_I(HW, "[MPLANE] Successfully edited the RU configuration\n");
 

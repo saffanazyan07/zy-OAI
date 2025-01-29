@@ -7,6 +7,7 @@ add_library(oran_fhlib_5g_mplane MODULE
             config-mplane.c
             ru-mplane-api.c
             xml/get-xml.c
+            yang/get-yang.c
 )
 
 set(MPLANE_PATH  "/usr/local" CACHE STRING "M-plane: libyang and libnetconf2 path") # can be in /opt/ directory, if multiple versions exist
@@ -31,6 +32,9 @@ message(STATUS "Temporary added -DOAI_MPLANE")
 target_compile_definitions(oran_fhlib_5g PUBLIC OAI_MPLANE)
 
 target_link_libraries(oran_fhlib_5g_mplane PRIVATE oran_fhlib_5g)
+
+set(YANG_MODELS "${CMAKE_SOURCE_DIR}/radio/fhi_72/mplane/yang/models")
+target_compile_definitions(oran_fhlib_5g_mplane PRIVATE YANG_MODELS="${YANG_MODELS}")
 
 set_target_properties(oran_fhlib_5g_mplane PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 add_custom_command(TARGET oran_fhlib_5g_mplane POST_BUILD

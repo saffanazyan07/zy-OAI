@@ -522,8 +522,12 @@ static bool set_fh_io_cfg(struct xran_io_cfg *io_cfg, const paramdef_t *fhip, in
   return true;
 }
 
-static bool set_fh_eaxcid_conf(struct xran_eaxcid_config *eaxcid_conf, enum xran_category cat)
+static bool set_fh_eaxcid_conf(struct xran_eaxcid_config *eaxcid_conf, enum xran_category cat, const ru_session_list_t *ru_session_list)
 {
+  xran_mplane_t *xran_mplane = NULL;
+#ifdef OAI_MPLANE
+  xran_mplane = &ru_session_list->ru_session[0].xran_mplane;
+#endif
   /* CUS specification, section 3.1.3.1.6
     DU_port_ID - used to differentiate processing units at O-DU (e.g., different baseband cards).
     BandSector_ID - aggregated cell identifier (distinguishes bands and sectors supported by the O-RU).
@@ -535,14 +539,14 @@ static bool set_fh_eaxcid_conf(struct xran_eaxcid_config *eaxcid_conf, enum xran
     Each ID field has a flexible bit allocation, but the total eAxC ID field length is fixed, 16 bits. */
   switch (cat) {
     case XRAN_CATEGORY_A:
-      eaxcid_conf->mask_cuPortId = 0xf000;
-      eaxcid_conf->mask_bandSectorId = 0x0f00;
-      eaxcid_conf->mask_ccId = 0x00f0;
-      eaxcid_conf->mask_ruPortId = 0x000f;
-      eaxcid_conf->bit_cuPortId = 0;
-      eaxcid_conf->bit_bandSectorId = 0; // total number of band sectors supported by O-RU should be retreived by M-plane - <max-num-bands> && <max-num-sectors>
-      eaxcid_conf->bit_ccId = 0; // total number of CC supported by O-RU should be retreived by M-plane - <max-num-component-carriers>
-      eaxcid_conf->bit_ruPortId = 0;
+      eaxcid_conf->mask_cuPortId = (xran_mplane != NULL) ? xran_mplane->du_port_bitmask : 0xf000;
+      eaxcid_conf->mask_bandSectorId = (xran_mplane != NULL) ? xran_mplane->band_sector_bitmask : 0x0f00;
+      eaxcid_conf->mask_ccId = (xran_mplane != NULL) ? xran_mplane->ccid_bitmask : 0x00f0;
+      eaxcid_conf->mask_ruPortId = (xran_mplane != NULL) ? xran_mplane->ru_port_bitmask : 0x000f;
+      eaxcid_conf->bit_cuPortId = (xran_mplane != NULL) ? xran_mplane->du_port : 0;
+      eaxcid_conf->bit_bandSectorId = (xran_mplane != NULL) ? xran_mplane->band_sector : 0; // total number of band sectors supported by O-RU should be retreived by M-plane - <max-num-bands> && <max-num-sectors>
+      eaxcid_conf->bit_ccId = (xran_mplane != NULL) ? xran_mplane->ccid : 0; // total number of CC supported by O-RU should be retreived by M-plane - <max-num-component-carriers>
+      eaxcid_conf->bit_ruPortId = (xran_mplane != NULL) ? xran_mplane->ru_port : 0;
       break;
     case XRAN_CATEGORY_B:
       eaxcid_conf->mask_cuPortId = 0xf000;
@@ -615,7 +619,7 @@ static bool set_fh_init(const ru_session_list_t *ru_session_list, struct xran_fh
 
   if (!set_fh_io_cfg(&fh_init->io_cfg, fhip, nump, num_rus))
     return false;
-  if (!set_fh_eaxcid_conf(&fh_init->eAxCId_conf, xran_cat))
+  if (!set_fh_eaxcid_conf(&fh_init->eAxCId_conf, xran_cat, ru_session_list))
     return false;
 
   fh_init->xran_ports = num_rus; // since we use xran as O-DU, xran_ports is set to the number of RUs
@@ -639,7 +643,7 @@ static bool set_fh_init(const ru_session_list_t *ru_session_list, struct xran_fh
   int num_ru_addr = (fh_init->io_cfg.one_vf_cu_plane) ? num_rus : 2*num_rus;
   fh_init->p_o_ru_addr = calloc(num_ru_addr, sizeof(struct rte_ether_addr));
   AssertFatal(fh_init->p_o_ru_addr != NULL, "out of memory\n");
-  for (int i = 0; i < num_ru_addr; ++i) {
+  for (int i = 0; i < num_rus; i++) {
     struct rte_ether_addr *ea = (struct rte_ether_addr *)fh_init->p_o_ru_addr;
     for (int j = 0; j < num_ru_addr/num_rus; j++) {
       if (get_ether_addr(ru_session_list->ru_session[i].xran_mplane.ru_mac_addr, &ea[i+j]) == NULL) {

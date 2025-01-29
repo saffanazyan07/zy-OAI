@@ -43,6 +43,18 @@ typedef struct {
   int16_t iq_width;
   uint8_t prach_offset;
 
+  // DU sends to RU and xran
+  uint16_t du_port_bitmask;
+  uint16_t band_sector_bitmask;
+  uint16_t ccid_bitmask;
+  uint16_t ru_port_bitmask;
+
+  // DU retreives from RU, and sends to xran
+  uint8_t du_port;
+  uint8_t band_sector;
+  uint8_t ccid;
+  uint8_t ru_port;
+
 } xran_mplane_t;
 
 typedef struct {
@@ -52,7 +64,7 @@ typedef struct {
 
 typedef struct {
   char *du_mac_addr[2]; // [0] -> U-plane; [1] -> C-plane
-  uint32_t vlan_tag[2]; // [0] -> U-plane; [1] -> C-plane
+  char *vlan_tag[2];    // [0] -> U-plane; [1] -> C-plane
   char *interface_name;
   uplane_info_t tx_endpoints;
   uplane_info_t rx_endpoints;

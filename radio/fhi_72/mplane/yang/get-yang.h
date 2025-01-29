@@ -19,16 +19,16 @@
  *      contact@openairinterface.org
  */
 
-#ifndef CONFIGURE_MPLANE_H
-#define CONFIGURE_MPLANE_H
+#ifndef GET_MPLANE_YANG_MODELS_H
+#define GET_MPLANE_YANG_MODELS_H
 
-#include "ru-mplane-api.h"
+#include "../ru-mplane-api.h"
 #include "radio/COMMON/common_lib.h"
 
-int edit_config_mplane(ru_session_t *ru_session, const openair0_config_t *oai, const size_t num_rus);
+#include <libyang/libyang.h>
 
-int validate_config_mplane(ru_session_t *ru_session);
+int load_yang_models(struct ly_ctx **ctx);
 
-int commit_config_mplane(ru_session_t *ru_session);
+int configure_ru_from_yang(struct ly_ctx **ctx, const ru_session_t *ru_session, const openair0_config_t *oai, const size_t num_rus, char **result);
 
-#endif /* CONFIGURE_MPLANE_H */
+#endif /* GET_MPLANE_YANG_MODELS_H */

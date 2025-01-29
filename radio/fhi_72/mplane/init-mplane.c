@@ -94,7 +94,7 @@ int init_mplane(ru_session_list_t *ru_session_list)
   int num_rus = gpd(fhip, nump, ORAN_CONFIG_RU_IP_ADDR)->numelt;
   char **du_mac_addr = gpd(fhip, nump, ORAN_CONFIG_DU_ADDR)->strlistptr;
   int num_dus = gpd(fhip, nump, ORAN_CONFIG_DU_ADDR)->numelt;
-  uint32_t *vlan_tag = gpd(fhip, nump, ORAN_FH_CONFIG_VLAN_TAG)->uptr;
+  char **vlan_tag = gpd(fhip, nump, ORAN_FH_CONFIG_VLAN_TAG)->strlistptr;
   int num_vlan_tags = gpd(fhip, nump, ORAN_FH_CONFIG_VLAN_TAG)->numelt;
 
   AssertError(num_dus == num_vlan_tags, return EXIT_FAILURE, "[MPLANE] Number of DU MAC addresses should be equal to the number of VLAN tags.");
@@ -113,7 +113,8 @@ int init_mplane(ru_session_list_t *ru_session_list)
     for (int j = 0; j < num_cu_planes; j++) {
       ru_session->ru_mplane_config.du_mac_addr[j] = calloc(1, strlen(du_mac_addr[i+j]) + 1);
       memcpy(ru_session->ru_mplane_config.du_mac_addr[j], du_mac_addr[i+j], strlen(du_mac_addr[i+j]) + 1);
-      ru_session->ru_mplane_config.vlan_tag[j] = vlan_tag[i+j];
+      ru_session->ru_mplane_config.vlan_tag[j] = calloc(1, strlen(vlan_tag[i+j]) + 1);
+      memcpy(ru_session->ru_mplane_config.vlan_tag[j], vlan_tag[i+j], strlen(vlan_tag[i+j]) + 1);
     }
   }
 
@@ -168,7 +169,7 @@ bool manage_ru(ru_session_t *ru_session, const openair0_config_t *oai, const siz
   AssertError(ret == 0, return false, "[MPLANE] Unable to get U-plane info from RU operational datastore.\n");
 
   if (ru_session->ru_notif.ptp_state) {
-    ret = edit_config_mplane(ru_session);
+    ret = edit_config_mplane(ru_session, oai, num_rus);
     AssertError(ret == 0, return false, "[MPLANE] Unable to edit the RU configuration.\n");
 
     ret = validate_config_mplane(ru_session);

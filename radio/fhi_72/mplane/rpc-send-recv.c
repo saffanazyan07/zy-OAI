@@ -38,7 +38,7 @@ static int recv_v1(struct nc_session *session, struct nc_rpc *rpc, NC_MSG_TYPE m
   uint32_t output_flag = 0;    // other option is LYD_PRINT_SHRINK: Flag for output without indentation and formatting new lines.
 
   while(1){
-    msgtype = nc_recv_reply(session, rpc, msgid, timeout_s * 1000,
+    msgtype = nc_recv_reply(session, rpc, msgid, timeout_s * 10000,
                             LYD_OPT_DESTRUCT | LYD_OPT_NOSIBLINGS, &reply);
     if (msgtype == NC_MSG_ERROR) {
       AssertError(false, return EXIT_FAILURE, "[MPLANE] Failed to receive a reply.");
@@ -160,7 +160,7 @@ static int recv_v2(struct nc_session *session, struct nc_rpc *rpc, NC_MSG_TYPE m
   uint32_t output_flag = 0;    // other option is LYD_PRINT_SHRINK: Flag for output without indentation and formatting new lines.
 
   while(1){
-    msgtype = nc_recv_reply(session, rpc, msgid, timeout_s * 1000, &envp, &op);
+    msgtype = nc_recv_reply(session, rpc, msgid, timeout_s * 10000, &envp, &op);
     if (msgtype == NC_MSG_ERROR) {
       AssertError(false, return EXIT_FAILURE, "[MPLANE] Failed to receive a reply.");
     } else if (msgtype == NC_MSG_WOULDBLOCK) {
