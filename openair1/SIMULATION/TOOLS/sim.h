@@ -278,10 +278,15 @@ typedef enum {
 #define CHANNELMOD_MODELLIST_PARANAME "modellist"
 
 #define CHANNELMOD_HELP_MODELLIST "<list name> channel list name in config file describing the model type and its parameters\n"
+#define CHANNELMOD_GELP_NOISE_POWER \
+  "Noise power in dBFS. If set, noise per channel is not applied. To achieve positive SNR use values below -36dBFS\n"
+
+#define INVALID_DBFS_VALUE 100
 // clang-format off
 #define CHANNELMOD_PARAMS_DESC {  \
   {"max_chan",                    "Max number of runtime models",     0,                                  .uptr=&max_chan,              .defintval=10,                    TYPE_UINT,   0}, \
   {CHANNELMOD_MODELLIST_PARANAME, CHANNELMOD_HELP_MODELLIST,          0,                                  .strptr=&modellist_name,      .defstrval="DefaultChannelList",  TYPE_STRING, 0}, \
+  {"noise_power_dBFS",            CHANNELMOD_GELP_NOISE_POWER,        0,                                  .iptr=&noise_power_dBFS,      .defintval=INVALID_DBFS_VALUE,    TYPE_INT,    0 },\
 }
 // clang-format on
 
@@ -585,5 +590,6 @@ void do_DL_sig(sim_t *sim,
                int CC_id);
 
 void do_UL_sig(sim_t *sim, uint16_t subframe, uint8_t abstraction_flag, LTE_DL_FRAME_PARMS *frame_parms, uint32_t frame, int ru_id, uint8_t CC_id, int NB_UEs);
+int get_noise_power_dBFS(void);
 
 #endif
