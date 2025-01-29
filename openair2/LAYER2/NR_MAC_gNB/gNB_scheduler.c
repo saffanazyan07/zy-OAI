@@ -224,8 +224,7 @@ void gNB_dlsch_ulsch_scheduler(module_id_t module_idP, frame_t frame, sub_frame_
   // SIB19 will be scheduled if ntn_Config_r17 is initialized
   if (IS_SA_MODE(get_softmodem_params())) {
     schedule_nr_sib1(module_idP, frame, slot, &sched_info->DL_req, &sched_info->TX_req);
-    if (cc->sib19)
-      schedule_nr_sib19(module_idP, frame, slot, &sched_info->DL_req, &sched_info->TX_req, cc->sib19_bcch_length, cc->sib19_bcch_pdu);
+    schedule_nr_other_sib(module_idP, frame, slot, &sched_info->DL_req, &sched_info->TX_req);
   }
 
   // This schedule PRACH if we are not in phy_test mode

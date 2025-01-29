@@ -26,7 +26,6 @@
 #include "F1AP_CauseMisc.h"
 #include "F1AP_CauseProtocol.h"
 #include "F1AP_CauseRadioNetwork.h"
-#include "PHY/defs_common.h"
 #include "T.h"
 #include "asn_codecs.h"
 #include "assertions.h"
@@ -60,6 +59,15 @@ int get_dl_band(const struct f1ap_served_cell_info_t *cell_info)
 int get_ssb_scs(const struct f1ap_served_cell_info_t *cell_info)
 {
   return cell_info->mode == F1AP_MODE_TDD ? cell_info->tdd.tbw.scs : cell_info->fdd.dl_tbw.scs;
+}
+
+static NR_SSB_MTC_t *get_ssb_mtc(const NR_MeasurementTimingConfiguration_t *mtc)
+{
+  // TODO verify which element of the list to pick
+  NR_MeasTimingList_t *mtlist = mtc->criticalExtensions.choice.c1->choice.measTimingConf->measTiming;
+  NR_SSB_MTC_t *ssb_mtc = calloc(1, sizeof(*ssb_mtc));
+  *ssb_mtc = mtlist->list.array[0]->frequencyAndTiming->ssb_MeasurementTimingConfiguration;
+  return ssb_mtc;
 }
 
 static int ssb_arfcn_mtc(const NR_MeasurementTimingConfiguration_t *mtc)
@@ -397,6 +405,27 @@ void rrc_gNB_process_f1_setup_req(f1ap_setup_req_t *req, sctp_assoc_t assoc_id)
       .nrpci = cell_info->nr_pci,
       .num_SI = 0,
   };
+
+  cell.num_SI = 0;
+  NR_SI_SchedulingInfo_t *info = sib1->si_SchedulingInfo;
+  int n = info ? info->schedulingInfoList.list.count : 0;
+  for (int i = 0; i < n; i++) {
+    NR_SchedulingInfo_t *info2 = info->schedulingInfoList.list.array[i];
+    for (int j = 0; j < info2->sib_MappingInfo.list.count; j++) {
+      NR_SIB_TypeInfo_t *type = info2->sib_MappingInfo.list.array[j];
+      switch (type->type) {
+        case NR_SIB_TypeInfo__type_sibType2 :
+          cell.SI_msg[cell.num_SI].SI_type = 2;
+          NR_SSB_MTC_t *ssbmtc = get_ssb_mtc(mtc);
+          cell.SI_msg[cell.num_SI].SI_container = calloc(16, sizeof(*cell.SI_msg[cell.num_SI].SI_container));
+          cell.SI_msg[cell.num_SI].SI_container_length = do_SIB2_NR(cell.SI_msg[cell.num_SI].SI_container, ssbmtc);
+          cell.num_SI++;
+          break;
+        default :
+          AssertFatal(false, "Only SIB2 currently implemented\n");
+      }
+    }
+  }
 
   if (du->mib != NULL && du->sib1 != NULL)
     label_intra_frequency_neighbours(rrc, du, cell_info);

@@ -640,6 +640,9 @@ void nr_dci_decoding_procedure(PHY_VARS_NR_UE *ue,
 {
   int e_rx_cand_idx = 0;
   *dci_ind = (fapi_nr_dci_indication_t){.SFN = proc->frame_rx, .slot = proc->nr_slot_rx};
+  // if DCI for SIB we don't break after finding 1st DCI with that RNTI
+  // there might be SIB1 and otherSIB in the same slot with the same length
+  bool is_SI = rel15->rnti == SI_RNTI;
 
   for (int j = 0; j < rel15->number_of_candidates; j++) {
     int CCEind = rel15->CCE[j];
@@ -653,7 +656,7 @@ void nr_dci_decoding_procedure(PHY_VARS_NR_UE *ue,
       int dci_length = rel15->dci_length_options[k];
       int ind;
       for (ind = 0; ind < dci_ind->number_of_dcis; ind++) {
-        if (rel15->rnti == dci_ind->dci_list[ind].rnti && dci_length == dci_ind->dci_list[ind].payloadSize) {
+        if (!is_SI && rel15->rnti == dci_ind->dci_list[ind].rnti && dci_length == dci_ind->dci_list[ind].payloadSize) {
           break;
         }
       }

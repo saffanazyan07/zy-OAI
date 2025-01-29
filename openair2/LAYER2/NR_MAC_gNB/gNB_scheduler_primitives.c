@@ -283,8 +283,8 @@ uint8_t get_mcs_from_cqi(int mcs_table, int cqi_table, int cqi_idx)
 NR_pdsch_dmrs_t get_dl_dmrs_params(const NR_ServingCellConfigCommon_t *scc,
                                    const NR_UE_DL_BWP_t *dl_bwp,
                                    const NR_tda_info_t *tda_info,
-                                   const int Layers) {
-
+                                   const int Layers)
+{
   NR_pdsch_dmrs_t dmrs = {0};
   int frontloaded_symb = 1; // default value
   nr_dci_format_t dci_format = dl_bwp ? dl_bwp->dci_format : NR_DL_DCI_FORMAT_1_0;
@@ -864,12 +864,8 @@ int nr_get_default_pucch_res(int pucch_ResourceCommon) {
   return(default_pucch_csset[pucch_ResourceCommon]);
 }
 
-void nr_configure_pdcch(nfapi_nr_dl_tti_pdcch_pdu_rel15_t *pdcch_pdu,
-                        NR_ControlResourceSet_t *coreset,
-                        NR_sched_pdcch_t *pdcch, 
-                        bool otherSI) {
-
-
+void nr_configure_pdcch(nfapi_nr_dl_tti_pdcch_pdu_rel15_t *pdcch_pdu, NR_ControlResourceSet_t *coreset, NR_sched_pdcch_t *pdcch)
+{
   pdcch_pdu->BWPSize = pdcch->BWPSize;
   pdcch_pdu->BWPStart = pdcch->BWPStart;
   pdcch_pdu->SubcarrierSpacing = pdcch->SubcarrierSpacing;
@@ -878,19 +874,23 @@ void nr_configure_pdcch(nfapi_nr_dl_tti_pdcch_pdu_rel15_t *pdcch_pdu,
 
   pdcch_pdu->DurationSymbols  = coreset->duration;
 
-  for (int i=0;i<6;i++)
+  for (int i = 0; i < 6; i++)
     pdcch_pdu->FreqDomainResource[i] = coreset->frequencyDomainResources.buf[i];
 
-  LOG_D(MAC,"Coreset : BWPstart %d, BWPsize %d, SCS %d, freq %x, , duration %d\n",
-        pdcch_pdu->BWPStart,pdcch_pdu->BWPSize,(int)pdcch_pdu->SubcarrierSpacing,(int)coreset->frequencyDomainResources.buf[0],(int)coreset->duration);
+  LOG_D(NR_MAC,
+        "Coreset : BWPstart %d, BWPsize %d, SCS %d, freq %x, , duration %ld\n",
+        pdcch_pdu->BWPStart,
+        pdcch_pdu->BWPSize,
+        pdcch_pdu->SubcarrierSpacing,
+        coreset->frequencyDomainResources.buf[0],
+        coreset->duration);
 
   pdcch_pdu->CceRegMappingType = pdcch->CceRegMappingType;
   pdcch_pdu->RegBundleSize = pdcch->RegBundleSize;
   pdcch_pdu->InterleaverSize = pdcch->InterleaverSize;
   pdcch_pdu->ShiftIndex = pdcch->ShiftIndex;
 
-  pdcch_pdu->CoreSetType =
-      (otherSI || coreset->controlResourceSetId != 0) ? NFAPI_NR_CSET_CONFIG_PDCCH_CONFIG : NFAPI_NR_CSET_CONFIG_MIB_SIB1;
+  pdcch_pdu->CoreSetType = coreset->controlResourceSetId != 0 ? NFAPI_NR_CSET_CONFIG_PDCCH_CONFIG : NFAPI_NR_CSET_CONFIG_MIB_SIB1;
 
   //precoderGranularity
   pdcch_pdu->precoderGranularity = coreset->precoderGranularity;

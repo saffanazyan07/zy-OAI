@@ -59,15 +59,19 @@ void nr_mac_rrc_data_ind_ue(const module_id_t module_id,
                             const sdu_size_t pdu_len)
 {
   sdu_size_t sdu_size = 0;
-
+  MessageDef *message_p;
   switch(channel) {
     case NR_BCCH_BCH:
     case NR_BCCH_DL_SCH:
-      if (pdu_len>0) {
-        LOG_T(NR_RRC, "[UE %d] Received SDU for NR-BCCH-DL-SCH on SRB %u from gNB %d\n", module_id, channel & RAB_OFFSET,
+      message_p = itti_alloc_new_message(TASK_MAC_UE, 0, NR_RRC_MAC_BCCH_DATA_IND);
+      memset(NR_RRC_MAC_BCCH_DATA_IND (message_p).sdu, 0, BCCH_SDU_SIZE);
+      if (pdu_len > 0) {
+        LOG_T(NR_RRC,
+              "[UE %d] Received SDU for NR-BCCH-DL-SCH on SRB %u from gNB %d\n",
+              module_id,
+              channel & RAB_OFFSET,
               gNB_index);
 
-        MessageDef *message_p;
         int msg_sdu_size = BCCH_SDU_SIZE;
 
         if (pdu_len > msg_sdu_size) {
@@ -77,25 +81,23 @@ void nr_mac_rrc_data_ind_ue(const module_id_t module_id,
           sdu_size = pdu_len;
         }
 
-        message_p = itti_alloc_new_message(TASK_MAC_UE, 0, NR_RRC_MAC_BCCH_DATA_IND);
-        memset(NR_RRC_MAC_BCCH_DATA_IND (message_p).sdu, 0, BCCH_SDU_SIZE);
         memcpy(NR_RRC_MAC_BCCH_DATA_IND (message_p).sdu, pduP, sdu_size);
-        NR_RRC_MAC_BCCH_DATA_IND (message_p).frame = frame; //frameP
-        NR_RRC_MAC_BCCH_DATA_IND (message_p).slot = slot;
         NR_RRC_MAC_BCCH_DATA_IND (message_p).sdu_size = sdu_size;
-        NR_RRC_MAC_BCCH_DATA_IND (message_p).gnb_index = gNB_index;
-        NR_RRC_MAC_BCCH_DATA_IND (message_p).phycellid = cellid;
-        NR_RRC_MAC_BCCH_DATA_IND (message_p).ssb_arfcn = arfcn;
-        NR_RRC_MAC_BCCH_DATA_IND (message_p).is_bch = (channel == NR_BCCH_BCH);
-        itti_send_msg_to_task(TASK_RRC_NRUE, GNB_MODULE_ID_TO_INSTANCE(module_id), message_p);
       }
+      else {
+        NR_RRC_MAC_BCCH_DATA_IND (message_p).sdu_size = 0;
+      }
+      NR_RRC_MAC_BCCH_DATA_IND (message_p).frame = frame; //frameP
+      NR_RRC_MAC_BCCH_DATA_IND (message_p).slot = slot;
+      NR_RRC_MAC_BCCH_DATA_IND (message_p).gnb_index = gNB_index;
+      NR_RRC_MAC_BCCH_DATA_IND (message_p).phycellid = cellid;
+      NR_RRC_MAC_BCCH_DATA_IND (message_p).ssb_arfcn = arfcn;
+      NR_RRC_MAC_BCCH_DATA_IND (message_p).is_bch = (channel == NR_BCCH_BCH);
+      itti_send_msg_to_task(TASK_RRC_NRUE, GNB_MODULE_ID_TO_INSTANCE(module_id), message_p);
       break;
-      
     case NR_SBCCH_SL_BCH:
       if (pdu_len > 0) {
         LOG_T(NR_RRC, "[UE %d] Received SL-MIB for NR_SBCCH_SL_BCH.\n", module_id);
-
-        MessageDef *message_p;
         int msg_sdu_size = BCCH_SDU_SIZE;
 
         if (pdu_len > msg_sdu_size) {
@@ -115,9 +117,8 @@ void nr_mac_rrc_data_ind_ue(const module_id_t module_id,
         itti_send_msg_to_task(TASK_RRC_NRUE, GNB_MODULE_ID_TO_INSTANCE(module_id), message_p);
       }
       break;
-
     default:
-      break;
+      AssertFatal(false, "Invalid channel in data indication\n");
   }
 }
 

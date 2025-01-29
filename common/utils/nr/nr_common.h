@@ -38,6 +38,7 @@
 #include "assertions.h"
 #include "PHY/defs_common.h"
 
+#define MAX_SI_GROUPS 3
 #define NR_MAX_PDSCH_TBS 3824
 #define MAX_NUM_BEAM_PERIODS 4
 #define MAX_BWP_SIZE 275

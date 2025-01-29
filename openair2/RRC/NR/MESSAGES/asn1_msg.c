@@ -200,51 +200,44 @@ int xer_nr_sprint(char *string, size_t string_size, asn_TYPE_descriptor_t *td, v
 
 //------------------------------------------------------------------------------
 
-int do_SIB23_NR(rrc_gNB_carrier_data_t *carrier)
+int do_SIB2_NR(uint8_t *msg_SIB2, NR_SSB_MTC_t *ssbmtc)
 {
-  asn_enc_rval_t enc_rval;
-  SystemInformation_IEs__sib_TypeAndInfo__Member *sib2 = NULL;
-  SystemInformation_IEs__sib_TypeAndInfo__Member *sib3 = NULL;
+  NR_SIB2_t *sib2 = calloc(1, sizeof(*sib2));
+  sib2->cellReselectionInfoCommon.q_Hyst = NR_SIB2__cellReselectionInfoCommon__q_Hyst_dB0;
+  struct NR_SIB2__cellReselectionInfoCommon__speedStateReselectionPars *speed = calloc(1, sizeof(*speed));
+  NR_MobilityStateParameters_t mobilityStateParameters = {0};
+  mobilityStateParameters.t_Evaluation = NR_MobilityStateParameters__t_Evaluation_s30;
+  mobilityStateParameters.t_HystNormal = NR_MobilityStateParameters__t_HystNormal_s30;
+  mobilityStateParameters.n_CellChangeMedium = 1;
+  mobilityStateParameters.n_CellChangeHigh = 2;
+  speed->mobilityStateParameters = mobilityStateParameters;
+  struct NR_SIB2__cellReselectionInfoCommon__speedStateReselectionPars__q_HystSF qhyst = {0};
+  qhyst.sf_Medium = NR_SIB2__cellReselectionInfoCommon__speedStateReselectionPars__q_HystSF__sf_Medium_dB_4;
+  qhyst.sf_High = NR_SIB2__cellReselectionInfoCommon__speedStateReselectionPars__q_HystSF__sf_High_dB_6;
+  speed->q_HystSF = qhyst;
+  sib2->cellReselectionInfoCommon.speedStateReselectionPars = speed;
+  sib2->cellReselectionServingFreqInfo.cellReselectionPriority = 0; // INTEGER (0..7)
+  sib2->cellReselectionServingFreqInfo.threshServingLowP = 0;
+  NR_ReselectionThresholdQ_t *threshServingLowQ = calloc(1, sizeof(*threshServingLowQ));
+  *threshServingLowQ = 0;
+  sib2->cellReselectionServingFreqInfo.threshServingLowQ = threshServingLowQ;
+  sib2->intraFreqCellReselectionInfo.q_RxLevMin = -56; // INTEGER (-70..-22)
+  sib2->intraFreqCellReselectionInfo.s_IntraSearchP = 22; // INTEGER (0..31)
+  sib2->intraFreqCellReselectionInfo.t_ReselectionNR = 1; // INTEGER (0..7)
+  sib2->intraFreqCellReselectionInfo.deriveSSB_IndexFromCell = true;
+  sib2->intraFreqCellReselectionInfo.smtc = ssbmtc;
 
-  NR_BCCH_DL_SCH_Message_t *sib_message = CALLOC(1,sizeof(NR_BCCH_DL_SCH_Message_t));
-  sib_message->message.present = NR_BCCH_DL_SCH_MessageType_PR_c1;
-  sib_message->message.choice.c1 = CALLOC(1,sizeof(struct NR_BCCH_DL_SCH_MessageType__c1));
-  sib_message->message.choice.c1->present = NR_BCCH_DL_SCH_MessageType__c1_PR_systemInformation;
-  sib_message->message.choice.c1->choice.systemInformation = CALLOC(1,sizeof(struct NR_SystemInformation));
-  
-  struct NR_SystemInformation *sib = sib_message->message.choice.c1->choice.systemInformation;
-  sib->criticalExtensions.present = NR_SystemInformation__criticalExtensions_PR_systemInformation;
-  sib->criticalExtensions.choice.systemInformation = CALLOC(1, sizeof(struct NR_SystemInformation_IEs));
-
-  struct NR_SystemInformation_IEs *ies = sib->criticalExtensions.choice.systemInformation;
-  sib2 = CALLOC(1, sizeof(SystemInformation_IEs__sib_TypeAndInfo__Member));
-  sib2->present = NR_SystemInformation_IEs__sib_TypeAndInfo__Member_PR_sib2;
-  sib2->choice.sib2 = CALLOC(1, sizeof(struct NR_SIB2));
-  sib2->choice.sib2->cellReselectionInfoCommon.q_Hyst = NR_SIB2__cellReselectionInfoCommon__q_Hyst_dB1;
-  sib2->choice.sib2->cellReselectionServingFreqInfo.threshServingLowP = 2; // INTEGER (0..31)
-  sib2->choice.sib2->cellReselectionServingFreqInfo.cellReselectionPriority =  2; // INTEGER (0..7)
-  sib2->choice.sib2->intraFreqCellReselectionInfo.q_RxLevMin = -50; // INTEGER (-70..-22)
-  sib2->choice.sib2->intraFreqCellReselectionInfo.s_IntraSearchP = 2; // INTEGER (0..31)
-  sib2->choice.sib2->intraFreqCellReselectionInfo.t_ReselectionNR = 2; // INTEGER (0..7)
-  sib2->choice.sib2->intraFreqCellReselectionInfo.deriveSSB_IndexFromCell = true;
-  asn1cSeqAdd(&ies->sib_TypeAndInfo.list, sib2);
-
-  sib3 = CALLOC(1, sizeof(SystemInformation_IEs__sib_TypeAndInfo__Member));
-  sib3->present = NR_SystemInformation_IEs__sib_TypeAndInfo__Member_PR_sib3;
-  sib3->choice.sib3 = CALLOC(1, sizeof(struct NR_SIB3));
-  asn1cSeqAdd(&ies->sib_TypeAndInfo.list, sib3);
-
-  //encode SIB to data
-  // carrier->SIB23 = (uint8_t *) malloc16(128);
-  enc_rval = uper_encode_to_buffer(&asn_DEF_NR_BCCH_DL_SCH_Message,
-                                   NULL,
-                                   (void *)sib_message,
-                                   carrier->SIB23,
-                                   100);
-  AssertFatal (enc_rval.encoded > 0, "ASN1 message encoding failed (%s, %lu)!\n",
-               enc_rval.failed_type->name, enc_rval.encoded);
-  ASN_STRUCT_FREE(asn_DEF_NR_BCCH_DL_SCH_Message, sib_message);
-  return((enc_rval.encoded+7)/8);
+  asn_enc_rval_t enc_rval = uper_encode_to_buffer(&asn_DEF_NR_SIB2,
+                                                  NULL,
+                                                  (void *)sib2,
+                                                  msg_SIB2,
+                                                  100);
+  AssertFatal (enc_rval.encoded > 0,
+               "ASN1 message encoding failed (%s, %lu)!\n",
+               enc_rval.failed_type->name,
+               enc_rval.encoded);
+  ASN_STRUCT_FREE(asn_DEF_NR_SIB2, sib2);
+  return((enc_rval.encoded + 7) / 8);
 }
 
 int do_RRCReject(uint8_t *const buffer)

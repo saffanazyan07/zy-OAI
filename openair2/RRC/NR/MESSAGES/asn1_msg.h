@@ -66,7 +66,7 @@ struct asn_TYPE_descriptor_s;
  */
 int xer_sprint_NR(char *string, size_t string_size, struct asn_TYPE_descriptor_s *td, void *sptr);
 
-int do_SIB23_NR(rrc_gNB_carrier_data_t *carrier);
+int do_SIB2_NR(uint8_t *msg_SIB2, NR_SSB_MTC_t *ssbmtc);
 
 int do_RRCReject(uint8_t *const buffer);
 

@@ -46,10 +46,8 @@ void mac_top_init_gNB(ngran_node_t node_type,
 void nr_mac_send_f1_setup_req(void);
 
 void nr_mac_config_scc(gNB_MAC_INST *nrmac, NR_ServingCellConfigCommon_t *scc, const nr_mac_config_t *mac_config);
-void nr_fill_sched_osi(gNB_MAC_INST *nrmac, const struct NR_SetupRelease_PDCCH_ConfigCommon *pdcch_ConfigCommon);
 void nr_mac_configure_sib1(gNB_MAC_INST *nrmac, const f1ap_plmn_t *plmn, uint64_t cellID, int tac);
-void nr_mac_configure_sib19(gNB_MAC_INST *nrmac);
-
+void nr_mac_configure_other_sib(gNB_MAC_INST *nrmac, int num_cu_sib, const f1ap_sib_msg_t cu_sib[num_cu_sib]);
 bool nr_mac_add_test_ue(gNB_MAC_INST *nrmac, uint32_t rnti, NR_CellGroupConfig_t *CellGroup);
 bool nr_mac_prepare_ra_ue(gNB_MAC_INST *nrmac, uint32_t rnti, NR_CellGroupConfig_t *CellGroup);
 
@@ -91,13 +89,11 @@ void schedule_nr_sib1(module_id_t module_idP,
                       nfapi_nr_dl_tti_request_t *DL_req,
                       nfapi_nr_tx_data_request_t *TX_req);
 
-void schedule_nr_sib19(module_id_t module_idP,
-                      frame_t frameP,
-                      sub_frame_t slotP,
-                      nfapi_nr_dl_tti_request_t *DL_req,
-                      nfapi_nr_tx_data_request_t *TX_req, 
-                      int sib19_bcch_length,
-                      uint8_t *sib19_bcch_pdu);
+void schedule_nr_other_sib(module_id_t module_idP,
+                           frame_t frame,
+                           int slot,
+                           nfapi_nr_dl_tti_request_t *DL_req,
+                           nfapi_nr_tx_data_request_t *TX_req);
                     
 struct NR_SchedulingInfo2_r17* find_sib19_sched_info(const struct NR_SI_SchedulingInfo_v1700*);
 
@@ -215,10 +211,7 @@ void find_search_space(int ss_type,
                        NR_BWP_Downlink_t *bwp,
                        NR_SearchSpace_t *ss);
 
-void nr_configure_pdcch(nfapi_nr_dl_tti_pdcch_pdu_rel15_t *pdcch_pdu,
-                        NR_ControlResourceSet_t *coreset,
-                        NR_sched_pdcch_t *pdcch,
-                        bool otherSI);
+void nr_configure_pdcch(nfapi_nr_dl_tti_pdcch_pdu_rel15_t *pdcch_pdu, NR_ControlResourceSet_t *coreset, NR_sched_pdcch_t *pdcch);
 
 NR_sched_pdcch_t set_pdcch_structure(gNB_MAC_INST *gNB_mac,
                                      NR_SearchSpace_t *ss,
