@@ -21,7 +21,7 @@
 
 #include <stdio.h>
 #include <stdint.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #define NB_R  3
 void nrLDPC_bnProc_BG1_generator_AVX512(const char *, int);
 void nrLDPC_bnProc_BG2_generator_AVX512(const char *, int);

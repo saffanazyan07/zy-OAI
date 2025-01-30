@@ -22,24 +22,20 @@
 #ifndef __TIME_MEAS_DEFS__H__
 #define __TIME_MEAS_DEFS__H__
 
-#include <unistd.h>
+#include <common/utils/oai_allocator.h>
 #include <math.h>
-#include <stdint.h>
+
 #include <time.h>
 #include <errno.h>
 #include <stdio.h>
 #include <pthread.h>
 #include <linux/kernel.h>
 #include <linux/types.h>
+#include "common/utils/time_cpu.h"
 // global var to enable openair performance profiler
 extern int cpu_meas_enabled;
-extern double cpu_freq_GHz  __attribute__ ((aligned(32)));;
-// structure to store data to compute cpu measurment
-#if defined(__x86_64__) || defined(__i386__) || defined(__arm__) || defined(__aarch64__)
-  typedef long long oai_cputime_t;
-#else
-  #error "building on unsupported CPU architecture"
-#endif
+extern double cpu_freq_GHz __attribute__((aligned(32)));
+;
 
 #define TIMESTAT_MSGID_START       0     /*!< \brief send time at measure starting point */
 #define TIMESTAT_MSGID_STOP        1     /*!< \brief send time at measure end  point */
@@ -85,38 +81,6 @@ size_t print_meas_log(time_stats_t *ts,
                       size_t outputlen);
 double get_time_meas_us(time_stats_t *ts);
 double get_cpu_freq_GHz(void);
-
-#if defined(__i386__)
-static inline unsigned long long rdtsc_oai(void) __attribute__((always_inline));
-static inline unsigned long long rdtsc_oai(void) {
-  unsigned long long int x;
-  __asm__ volatile (".byte 0x0f, 0x31" : "=A" (x));
-  return x;
-}
-#elif defined(__x86_64__)
-static inline unsigned long long rdtsc_oai(void) __attribute__((always_inline));
-static inline unsigned long long rdtsc_oai(void) {
-  unsigned long long a, d;
-  __asm__ volatile ("rdtsc" : "=a" (a), "=d" (d));
-  return (d<<32) | a;
-}
-#elif defined(__aarch64__)
-static inline uint64_t rdtsc_oai(void) __attribute__((always_inline));
-static inline uint64_t rdtsc_oai(void)
-{
-	  uint64_t r = 0;
-	    asm volatile("mrs %0, cntvct_el0" : "=r"(r));
-	      return r;
-}
-
-#elif defined(__arm__) 
-static inline uint32_t rdtsc_oai(void) __attribute__((always_inline));
-static inline uint32_t rdtsc_oai(void) {
-  uint32_t r = 0;
-  asm volatile("mrc p15, 0, %0, c9, c13, 0" : "=r"(r) );
-  return r;
-}
-#endif
 
 #define CPUMEAS_DISABLE  0
 #define CPUMEAS_ENABLE   1

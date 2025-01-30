@@ -21,8 +21,7 @@
 
 #include "nr_pdcp_integrity_nia1.h"
 
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include <stdint.h>
 
 #include "openair3/SECU/secu_defs.h"

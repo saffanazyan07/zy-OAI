@@ -30,8 +30,7 @@
  * \warning
  */
 #define _GNU_SOURCE
-#include <string.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <stdio.h>
 #include <ctype.h>
 #include <errno.h>

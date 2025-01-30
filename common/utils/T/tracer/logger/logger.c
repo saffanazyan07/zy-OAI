@@ -1,7 +1,7 @@
 #include "logger.h"
 #include "logger_defs.h"
 #include "filter/filter.h"
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 
 void logger_add_view(logger *_l, view *v)
 {

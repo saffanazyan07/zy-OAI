@@ -25,7 +25,7 @@
    date: 22.10.2009
 */
 
-//#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include <math.h>
 #include "PHY/defs_UE.h"
 #include "PHY/phy_extern.h"

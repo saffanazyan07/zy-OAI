@@ -1,7 +1,6 @@
 #include "../T.h"
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 
 int main(void)
 {

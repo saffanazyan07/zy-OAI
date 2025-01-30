@@ -28,7 +28,7 @@
  */
 
 #define _GNU_SOURCE
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <dlfcn.h>
 
 #include "assertions.h"

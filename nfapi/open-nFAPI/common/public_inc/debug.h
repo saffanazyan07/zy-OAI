@@ -16,7 +16,7 @@
 
 #pragma once
 
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include <errno.h>
 
 #define ERR strerror(errno)

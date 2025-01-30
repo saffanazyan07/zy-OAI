@@ -22,7 +22,7 @@
  */
 
 #include <time.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include "e1ap_common.h"
 #include "e1ap_default_values.h"
 #include "e1ap_asnc.h"

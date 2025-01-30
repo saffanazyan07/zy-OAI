@@ -36,9 +36,7 @@
 #define _GNU_SOURCE
 #endif
 #include <stdio.h>
-#include <stdlib.h>
-#include <malloc.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include <math.h>
 #include "common_lib.h"
 #include "openair2/PHY_INTERFACE/IF_Module_NB_IoT.h"
@@ -52,71 +50,19 @@
 #endif
 #include "common/utils/LOG/log.h"
 #define msg(aRGS...) LOG_D(PHY, ##aRGS)
-//use msg in the real-time thread context
-#define msg_nrt printf
-//use msg_nrt in the non real-time context (for initialization, ...)
-#ifndef malloc16
-    #define malloc16(x) memalign(32,x)
-#endif
-#define free16(y,x) free(y)
-#define bigmalloc malloc
-#define bigmalloc16 malloc16
-#define openair_free(y,x) free((y))
+// use msg in the real-time thread context
 #define PAGE_SIZE 4096
-
-//#ifdef SHRLIBDEV
-//extern int rxrescale;
-//#define RX_IQRESCALELEN rxrescale
-//#else
-//#define RX_IQRESCALELEN 15
-//#endif
-
-//! \brief Allocate \c size bytes of memory on the heap with alignment 16 and zero it afterwards.
-//! If no more memory is available, this function will terminate the program with an assertion error.
-//******************************************************************************************************
-/*
-static inline void* malloc16_clear( size_t size )
-{
-  void* ptr = memalign(32, size);
-  DevAssert(ptr);
-  memset( ptr, 0, size );
-  return ptr;
-}
-
-*/
-
-
-// #define PAGE_MASK 0xfffff000
-// #define virt_to_phys(x) (x)
-
-// #define openair_sched_exit() exit(-1)
-
-
-// #define max(a,b)  ((a)>(b) ? (a) : (b))
-// #define min(a,b)  ((a)<(b) ? (a) : (b))
-
-
-// #define bzero(s,n) (memset((s),0,(n)))
-
-// #define cmax(a,b)  ((a>b) ? (a) : (b))
-// #define cmin(a,b)  ((a<b) ? (a) : (b))
-
-// #define cmax3(a,b,c) ((cmax(a,b)>c) ? (cmax(a,b)) : (c))
-
-// /// suppress compiler warning for unused arguments
-// #define UNUSED(x) (void)x;
-
 
 #include "PHY/impl_defs_top_NB_IoT.h"
 #include "PHY/impl_defs_lte_NB_IoT.h"
 
 #include "time_meas.h"
-//#include "PHY/CODING/defs.h"
+// #include "PHY/CODING/defs.h"
 #include "PHY/CODING/defs_NB_IoT.h"
 #include "openair2/PHY_INTERFACE/IF_Module_NB_IoT.h"
-//#include "PHY/TOOLS/defs.h"
+// #include "PHY/TOOLS/defs.h"
 #include "common/platform_types.h"
-///#include "openair1/PHY/LTE_TRANSPORT/defs_nb_iot.h"
+/// #include "openair1/PHY/LTE_TRANSPORT/defs_nb_iot.h"
 
 ////////////////////////////////////////////////////////////////////#ifdef OPENAIR_LTE    (check if this is required)
 

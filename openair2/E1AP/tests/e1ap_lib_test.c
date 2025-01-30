@@ -26,7 +26,7 @@
  * \version 0.1
  */
 
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <stdint.h>
 #include <stdio.h>
 

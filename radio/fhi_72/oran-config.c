@@ -30,7 +30,7 @@
 #include <rte_ethdev.h>
 
 #include "stdio.h"
-#include "string.h"
+#include <common/utils/oai_allocator.h>
 
 static void print_fh_eowd_cmn(unsigned index, const struct xran_ecpri_del_meas_cmn *eowd_cmn)
 {

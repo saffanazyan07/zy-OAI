@@ -22,8 +22,7 @@
 #include "cucp_cuup_handler.h"
 #include <netinet/in.h>
 #include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include "NR_DRB-ToAddMod.h"
 #include "NR_DRB-ToAddModList.h"
 #include "NR_PDCP-Config.h"

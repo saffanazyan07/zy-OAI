@@ -22,8 +22,7 @@
 #include "low.h"
 
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 
 void store_ul(benetel_t *bs, ul_packet_t *ul)
 {

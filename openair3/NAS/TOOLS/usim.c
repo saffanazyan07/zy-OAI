@@ -37,8 +37,7 @@ Description Implements the utility used to generate data stored in the
 
  *****************************************************************************/
 
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include <stdbool.h>
 #include <getopt.h>
 

@@ -29,10 +29,8 @@
 
 #include <sys/types.h>
 #include <stdio.h>
-#include <unistd.h>
+#include <common/utils/oai_allocator.h>
 #include <errno.h>
-#include <stdlib.h>
-#include <string.h>
 #include <stdarg.h>
 #include "openair2/LAYER2/NR_MAC_UE/mac_defs.h"
 #include "openair2/LAYER2/NR_MAC_UE/mac_proto.h"

@@ -55,10 +55,8 @@ Description Implements the network simulator running at the network
 #include <stdio.h>  // printf, perror
 #include <errno.h>  // errno
 #include <netdb.h>  // gai_strerror
-#include <stdlib.h> // exit, malloc, rand
+#include <common/utils/oai_allocator.h>
 #include <signal.h> // sigaction
-#include <string.h> // memset, memcpy
-#include <unistd.h> // sleep
 
 /****************************************************************************/
 /****************  E X T E R N A L    D E F I N I T I O N S  ****************/

@@ -50,7 +50,7 @@ Description Defines EMM procedures executed by the Non-Access Stratum
 #include "esm_sap.h"
 #include "nas_log.h"
 
-#include <string.h> // memset
+#include <common/utils/oai_allocator.h>
 
 /****************************************************************************/
 /****************  E X T E R N A L    D E F I N I T I O N S  ****************/

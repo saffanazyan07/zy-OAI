@@ -33,9 +33,7 @@
 
 #include "omg_hashtable.h"
 
-#include <stdlib.h>
-#include <string.h>
-
+#include <common/utils/oai_allocator.h>
 
 // element operations
 /**

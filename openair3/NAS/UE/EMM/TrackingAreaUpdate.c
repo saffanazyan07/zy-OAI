@@ -52,7 +52,7 @@ Description Defines the tracking area update EMM procedure executed by the
 #include "emm_sap.h"
 #include "emm_cause.h"
 
-#include <string.h> // memcmp, memcpy
+#include <common/utils/oai_allocator.h>
 
 /****************************************************************************/
 /****************  E X T E R N A L    D E F I N I T I O N S  ****************/

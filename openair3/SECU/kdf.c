@@ -21,10 +21,8 @@
 
 #include "common/utils/assertions.h"
 #include "openair3/SECU/sha_256_hmac.h"
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <stdint.h>
-#include <string.h>
-
 
 #include "kdf.h"
 

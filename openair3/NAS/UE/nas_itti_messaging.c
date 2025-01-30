@@ -19,7 +19,7 @@
  *      contact@openairinterface.org
  */
 
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 
 #include "intertask_interface.h"
 #include "nas_itti_messaging.h"

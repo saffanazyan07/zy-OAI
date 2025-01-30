@@ -1,8 +1,6 @@
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include <pthread.h>
-#include <unistd.h>
 #include "database.h"
 #include "event.h"
 #include "handler.h"

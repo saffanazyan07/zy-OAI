@@ -34,7 +34,7 @@
 #define __COMMON_UTILS_NR_NR_COMMON__H__
 
 #include <stdint.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include "assertions.h"
 #include "PHY/defs_common.h"
 

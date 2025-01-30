@@ -25,9 +25,8 @@ SOFTWARE.
 #include "seq_arr.h"
 
 #include <assert.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <stdio.h>
-#include <string.h>
 
 static const size_t MIN_SIZE = 8;
 

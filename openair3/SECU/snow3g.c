@@ -799,7 +799,7 @@ void snow3g_integrity(uint32_t count, int bearer, int direction, const uint8_t *
 #ifndef NO_MAIN
 
 #include <stdio.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <time.h>
 
 int main(void)

@@ -33,8 +33,7 @@
 #include "PHY/phy_extern.h"
 #else
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #define msg printf
 #endif
 

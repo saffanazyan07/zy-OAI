@@ -23,7 +23,7 @@
 #define __openair_DEFS_H__
 
 #include <stdio.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <common/utils/utils.h>
 #endif // /*__openair_DEFS_H__ */
 

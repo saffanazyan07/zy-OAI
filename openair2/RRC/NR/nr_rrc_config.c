@@ -31,8 +31,7 @@
 #include "nr_rrc_config.h"
 #include <endian.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include "BIT_STRING.h"
 #include "NULL.h"
 #include "RRC/NR/MESSAGES/asn1_msg.h"

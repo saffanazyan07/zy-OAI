@@ -31,8 +31,7 @@
 */
 
 #include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include "mobility_parser.h"
 #include "omg.h"
 #include <math.h>

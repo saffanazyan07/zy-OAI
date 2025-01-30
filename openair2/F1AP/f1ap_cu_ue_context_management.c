@@ -34,7 +34,7 @@
 #include "f1ap_encoder.h"
 #include "f1ap_itti_messaging.h"
 #include "f1ap_cu_ue_context_management.h"
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 
 #include "rrc_extern.h"
 #include "openair2/RRC/NR/rrc_gNB_NGAP.h"

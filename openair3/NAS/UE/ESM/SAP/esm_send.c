@@ -47,7 +47,7 @@ Description Defines functions executed at the ESM Service Access
 #include "esm_msgDef.h"
 #include "esm_cause.h"
 
-#include <string.h> // strlen
+#include <common/utils/oai_allocator.h>
 
 /****************************************************************************/
 /****************  E X T E R N A L    D E F I N I T I O N S  ****************/

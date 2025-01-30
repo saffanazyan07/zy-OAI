@@ -3,11 +3,9 @@
 #include "../rlc_entity_um.h"
 
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include <inttypes.h>
 #include <sys/wait.h>
-#include <unistd.h>
 
 /*
  * ENB_AM <rx_maxsize> <tx_maxsize> <t_reordering> <t_status_prohibit>

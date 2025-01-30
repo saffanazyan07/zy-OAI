@@ -2,9 +2,8 @@
 #include "gui_defs.h"
 #include "x.h"
 #include <stdio.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <stdarg.h>
-#include <string.h>
 
 static void default_clear(gui *gui, widget *_this);
 static void default_repack(gui *gui, widget *_this);

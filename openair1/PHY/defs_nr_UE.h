@@ -45,9 +45,7 @@
 #include "openair1/PHY/nr_phy_common/inc/nr_ue_phy_meas.h"
 
 #include <stdio.h>
-#include <stdlib.h>
-#include <malloc.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include <math.h>
 #include "common_lib.h"
 #include "fapi_nr_ue_interface.h"
@@ -63,22 +61,11 @@
 #endif
 #define msg(aRGS...) LOG_D(PHY, ##aRGS)
 // use msg in the real-time thread context
-#define msg_nrt printf
-// use msg_nrt in the non real-time context (for initialization, ...)
-#ifndef malloc16
-    #define malloc16(x) memalign(32,x)
-#endif
-#define free16(y,x) free(y)
-#define bigmalloc malloc
-#define bigmalloc16 malloc16
-#define openair_free(y,x) free((y))
+
 #define PAGE_SIZE 4096
 
 #define PAGE_MASK 0xfffff000
-#define virt_to_phys(x) (x)
-#define openair_sched_exit() exit(-1)
 
-#define bzero(s,n) (memset((s),0,(n)))
 /// suppress compiler warning for unused arguments
 #define UNUSED(x) (void)x;
 #define NUM_DL_ACTORS 4

@@ -34,10 +34,8 @@
 #ifndef __OTG_RX_H__
 # define __OTG_RX_H__
 
-#include <unistd.h>
+#include <common/utils/oai_allocator.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 #include "otg.h"
 

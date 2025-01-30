@@ -51,7 +51,7 @@
 #include "executables/nr-softmodem.h"
 
 #include <errno.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 
 const uint8_t nr_rv_round_map[4] = {0, 2, 3, 1};
 

@@ -36,9 +36,7 @@
 #define _GNU_SOURCE
 #include <sched.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
 #include <sys/mman.h>
@@ -48,11 +46,7 @@
 #include <getopt.h>
 #include <sys/sysinfo.h>
 
-
 #include <stdio.h>
-#include <stdlib.h>
-#include <malloc.h>
-#include <string.h>
 #include <math.h>
 #include "common_lib.h"
 

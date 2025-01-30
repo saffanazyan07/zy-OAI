@@ -20,9 +20,8 @@
  */
 
 #include <stdio.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <stdint.h>
-#include <unistd.h>
 
 #include "test_util.h"
 #include "secu_defs.h"

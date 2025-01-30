@@ -29,8 +29,7 @@
 
 */
 
-
-#include <unistd.h>
+#include <common/utils/oai_allocator.h>
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/socket.h>

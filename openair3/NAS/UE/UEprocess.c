@@ -48,9 +48,8 @@
 #include "nas_parser.h"
 #include "user_defs.h"
 
-#include <stdlib.h> // exit
-#include <poll.h>   // poll
-#include <string.h> // memset
+#include <common/utils/oai_allocator.h>
+#include <poll.h> // poll
 #include <signal.h> // sigaction
 #include <pthread.h>
 

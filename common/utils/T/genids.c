@@ -1,8 +1,6 @@
 #include <stdio.h>
 #include <ctype.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
+#include <common/utils/oai_allocator.h>
 
 char **unique_ids;
 int unique_ids_size;

@@ -30,9 +30,8 @@
  * \warning
  */
 #include<stdio.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include <math.h>
-#include <unistd.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>

@@ -30,8 +30,7 @@
 ************************************************************************/
 
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 
 #include "executables/nr-softmodem-common.h"
 #include "nr_transport_proto_ue.h"

@@ -19,7 +19,7 @@
  *      contact@openairinterface.org
  */
 
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 
 #include "nr_ul_estimation.h"
 #include "PHY/sse_intrin.h"

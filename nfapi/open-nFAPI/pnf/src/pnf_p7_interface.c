@@ -16,8 +16,7 @@
 
 
 #include "pnf_p7.h"
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 
 nfapi_pnf_p7_config_t* nfapi_pnf_p7_config_create()
 {

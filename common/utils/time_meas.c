@@ -22,8 +22,7 @@
 #include <stdio.h>
 #include "time_meas.h"
 #include <math.h>
-#include <unistd.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include "assertions.h"
 #include <pthread.h>
 #include "common/config/config_userapi.h"

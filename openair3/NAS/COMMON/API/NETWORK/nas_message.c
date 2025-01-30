@@ -44,8 +44,7 @@ Description Defines the layer 3 messages supported by the NAS sublayer
 #include "TLVDecoder.h"
 #include "TLVEncoder.h"
 
-#include <stdlib.h> // malloc, free
-#include <string.h> // memcpy
+#include <common/utils/oai_allocator.h>
 
 #if defined(NAS_BUILT_IN_UE)
 # include "nas_itti_messaging.h"

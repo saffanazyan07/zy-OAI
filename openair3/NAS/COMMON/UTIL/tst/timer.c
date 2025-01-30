@@ -41,7 +41,7 @@ Description Tests the timer utility functions
 
 #include <pthread.h>
 #include <stdio.h>  // printf
-#include <stdlib.h> // exit
+#include <common/utils/oai_allocator.h>
 #include <time.h> // clock_gettime
 #include <poll.h> // poll
 

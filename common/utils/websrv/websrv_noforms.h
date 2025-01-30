@@ -40,7 +40,7 @@
 
 #include <stdio.h>
 #include <stdarg.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include <limits.h>
 
 #if defined __cplusplus

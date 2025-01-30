@@ -3,8 +3,7 @@
 #include "utils.h"
 #include "configuration.h"
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 
 event get_event(int socket, OBUF *event_buffer, void *database)
 {

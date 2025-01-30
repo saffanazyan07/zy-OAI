@@ -23,8 +23,7 @@
 #include <netinet/sctp.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include "assertions.h"
 #include "f1ap_messages_types.h"
 #include "intertask_interface.h"

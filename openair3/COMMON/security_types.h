@@ -25,7 +25,7 @@
 # include <gmp.h>
 #endif
 
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <stdint.h>
 #include <inttypes.h>
 

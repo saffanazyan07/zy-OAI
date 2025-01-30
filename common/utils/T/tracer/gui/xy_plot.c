@@ -3,8 +3,7 @@
 #include "x.h"
 #include "../utils.h"
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include <math.h>
 
 static void paint(gui *_gui, widget *_this)

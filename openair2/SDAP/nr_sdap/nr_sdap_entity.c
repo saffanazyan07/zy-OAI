@@ -22,9 +22,7 @@
 #include "nr_sdap_entity.h"
 #include <openair2/LAYER2/nr_pdcp/nr_pdcp_oai_api.h>
 #include <openair3/ocp-gtpu/gtp_itf.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
+#include <common/utils/oai_allocator.h>
 #include "PHY/defs_common.h"
 #include "T.h"
 #include "assertions.h"

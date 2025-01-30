@@ -35,10 +35,9 @@
 
 #define _GNU_SOURCE
 #include <stdio.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include <stdarg.h>
 #include <pthread.h>
-#include <stdlib.h>
 #include <stdint.h>
 #include <sys/socket.h>
 #include <netinet/in.h>

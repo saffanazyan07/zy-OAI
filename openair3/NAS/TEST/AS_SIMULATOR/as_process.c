@@ -48,7 +48,7 @@ Description Defines functions executed by the Access-Stratum sublayer
 
 #include <sys/types.h>
 #include <stdio.h>  // snprintf
-#include <string.h> // memcpy
+#include <common/utils/oai_allocator.h>
 
 /****************************************************************************/
 /****************  E X T E R N A L    D E F I N I T I O N S  ****************/

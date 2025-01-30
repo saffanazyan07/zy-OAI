@@ -318,8 +318,7 @@ void phy_viterbi_dot11_sse2(char *y,unsigned char *decoded_bytes,unsigned short 
 
 #ifdef TEST_DEBUG
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 int test_viterbi()
 {
   unsigned char test[8];

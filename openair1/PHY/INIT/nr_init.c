@@ -41,7 +41,7 @@
 #include "PHY/NR_REFSIG/nr_refsig.h"
 #include "SCHED_NR/fapi_nr_l1.h"
 #include "PHY/NR_REFSIG/ul_ref_seq_nr.h"
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 
 int l1_north_init_gNB()
 {

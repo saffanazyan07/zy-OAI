@@ -51,11 +51,10 @@ Description     Implements the API used by the NAS layer running in the UE
 
 #include "user_indication.h"
 
-#include <string.h> // strerror, memset
+#include <common/utils/oai_allocator.h>
 #include <netdb.h>  // gai_strerror
 #include <errno.h>  // errno
-#include <stdio.h>  // sprintf
-#include <unistd.h> // gethostname
+#include <stdio.h> // sprintf
 
 /****************************************************************************/
 /****************  E X T E R N A L    D E F I N I T I O N S  ****************/

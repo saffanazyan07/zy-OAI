@@ -46,7 +46,7 @@ Description Defines functions executed by the Access-Stratum sublayer
 #include "nas_message.h"
 
 #include <stdio.h>  // snprintf
-#include <string.h> // memset
+#include <common/utils/oai_allocator.h>
 
 /****************************************************************************/
 /****************  E X T E R N A L    D E F I N I T I O N S  ****************/

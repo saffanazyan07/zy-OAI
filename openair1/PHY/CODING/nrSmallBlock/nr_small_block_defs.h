@@ -36,8 +36,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 
 #define NR_SMALL_BLOCK_CODED_BITS 32
 

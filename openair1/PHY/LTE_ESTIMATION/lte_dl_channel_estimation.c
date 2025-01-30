@@ -19,7 +19,7 @@
  *      contact@openairinterface.org
  */
 
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include "PHY/defs_UE.h"
 #include "filt96_32.h"
 #include "T.h"

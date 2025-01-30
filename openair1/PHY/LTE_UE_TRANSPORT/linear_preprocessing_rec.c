@@ -10,14 +10,13 @@ data storage. */
 #include<stdio.h>
 #include<math.h>
 #include<complex.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <linux/version.h>
 #if defined RHEL_RELEASE_CODE
 #include <cblas/cblas.h>
 #else
 #include <cblas.h>
 #endif
-#include <string.h>
 #include <linux/version.h>
 #include <lapacke_utils.h>
 #include <lapacke.h>

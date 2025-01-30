@@ -30,7 +30,7 @@
 
 #include "rrc_gNB_UE_context.h"
 #include <stdio.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <time.h>
 #include "RRC/NR/nr_rrc_defs.h"
 #include "T.h"

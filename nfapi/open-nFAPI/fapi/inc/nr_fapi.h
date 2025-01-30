@@ -23,7 +23,7 @@
 #define OPENAIRINTERFACE_NR_FAPI_H
 
 #include "stdint.h"
-#include "string.h"
+#include <common/utils/oai_allocator.h>
 #include "nfapi_interface.h"
 #include "nfapi_nr_interface.h"
 #include "nfapi_nr_interface_scf.h"

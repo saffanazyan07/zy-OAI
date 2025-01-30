@@ -20,7 +20,7 @@
  */
 
 #include<stdio.h>
-#include<string.h>
+#include <common/utils/oai_allocator.h>
 #include<gpib/ib.h>
 
 #include "ulsignalgenerator.h"

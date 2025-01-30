@@ -31,8 +31,7 @@
   #include <stdint.h>
 #endif
 #include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include "common/oai_version.h"
 
 #include "PHY/sse_intrin.h"

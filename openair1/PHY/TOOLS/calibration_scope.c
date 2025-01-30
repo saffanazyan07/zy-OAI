@@ -1,4 +1,4 @@
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <openair1/PHY/impl_defs_top.h>
 #include "executables/softmodem-common.h"
 #include "executables/nr-softmodem-common.h"

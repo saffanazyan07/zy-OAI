@@ -29,7 +29,7 @@
 #ifndef VAR_ARRAY_H_
 #define VAR_ARRAY_H_
 
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include "common/utils/assertions.h"
 
 typedef struct {

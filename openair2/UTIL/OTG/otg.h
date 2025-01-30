@@ -36,9 +36,7 @@
 
 
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
+#include <common/utils/oai_allocator.h>
 
 #include "otg_defs.h"
 #include "otg_models.h"

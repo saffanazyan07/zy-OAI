@@ -35,8 +35,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include <time.h>
 #include "openair2/RRC/NR/nr_rrc_proto.h"
 #include "openair2/RRC/NR/rrc_gNB_UE_context.h"

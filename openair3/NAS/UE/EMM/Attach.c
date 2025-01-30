@@ -67,8 +67,7 @@ Description Defines the attach related EMM procedure executed by the
 
 #include "NasSecurityAlgorithms.h"
 
-#include <string.h> // memcmp, memcpy
-#include <stdlib.h> // malloc, free
+#include <common/utils/oai_allocator.h>
 
 /****************************************************************************/
 /****************  E X T E R N A L    D E F I N I T I O N S  ****************/

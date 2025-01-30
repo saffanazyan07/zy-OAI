@@ -31,7 +31,7 @@
 #include "ngap_gNB_context_management_procedures.h"
 #include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include "INTEGER.h"
 #include "T.h"
 #include "assertions.h"

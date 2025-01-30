@@ -30,8 +30,7 @@
 * \warning
 */
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include "PHY/defs_UE.h"
 #include "PHY/phy_extern.h"
 #include "PHY/LTE_UE_TRANSPORT/transport_proto_ue.h"

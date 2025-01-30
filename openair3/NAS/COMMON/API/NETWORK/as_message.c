@@ -43,8 +43,7 @@ Description Defines the messages supported by the Access Stratum sublayer
 #include "commonDef.h"
 #include "nas_log.h"
 
-#include <string.h> // memcpy
-#include <stdlib.h> // free
+#include <common/utils/oai_allocator.h>
 
 /****************************************************************************/
 /****************  E X T E R N A L    D E F I N I T I O N S  ****************/

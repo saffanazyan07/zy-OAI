@@ -31,7 +31,7 @@ SOFTWARE.
 
 #include <stdbool.h>
 #include <stddef.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <stdint.h>
 
 typedef struct seq_arr_s {

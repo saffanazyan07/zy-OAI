@@ -24,7 +24,7 @@
 #include "nfapi_pnf_interface.h"
 #include "nfapi.h"
 #include <stdio.h>  // for printf
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <pthread.h>
 #include <sys/time.h>
 #include <sys/socket.h>
@@ -33,7 +33,6 @@
 #include <netinet/sctp.h>
 #include <arpa/inet.h>
 #include <netdb.h>
-#include <unistd.h>
 #include "debug.h"
 
 /* Test Suite setup and cleanup functions: */

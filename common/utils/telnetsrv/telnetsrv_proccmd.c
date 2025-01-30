@@ -37,14 +37,11 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <stdio.h>
-#include <unistd.h>
+#include <common/utils/oai_allocator.h>
 #include <fcntl.h>
 #include <errno.h>
-#include <stdlib.h>
-#include <string.h>
 #include <signal.h>
 #include <pthread.h>
-#include <string.h>
 #include <stdarg.h>
 #include <dirent.h>
 

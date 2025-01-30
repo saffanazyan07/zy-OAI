@@ -19,10 +19,9 @@
  *      contact@openairinterface.org
  */
 
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <stdio.h>
 #include <stdint.h>
-#include <unistd.h>
 
 #include "test_util.h"
 

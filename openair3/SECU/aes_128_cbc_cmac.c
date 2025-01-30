@@ -20,8 +20,7 @@
  */
 
 #include <assert.h>
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include "aes_128_cbc_cmac.h"
 
 #include "common/utils/assertions.h"

@@ -47,8 +47,7 @@ Description Defines the PDN connectivity ESM procedure executed by the
 
 *****************************************************************************/
 
-#include <stdlib.h> // malloc, free
-#include <string.h> // memset, memcpy, memcmp
+#include <common/utils/oai_allocator.h>
 #include <ctype.h>  // isprint
 
 #include "esm_proc.h"

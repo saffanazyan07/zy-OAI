@@ -1,10 +1,8 @@
 #include "gui.h"
 #include "gui_defs.h"
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include <errno.h>
-#include <unistd.h>
 #include <stdarg.h>
 
 /*****************************************************************/

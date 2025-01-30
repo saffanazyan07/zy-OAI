@@ -20,8 +20,7 @@
  */
 
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include "common/utils/mem/oai_memory.h"
 #include "common/utils/LOG/log.h"
 

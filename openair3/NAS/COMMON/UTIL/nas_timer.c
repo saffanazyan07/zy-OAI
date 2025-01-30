@@ -40,8 +40,7 @@ Description Timer utilities
 #include <assert.h>
 #include <stdint.h>
 
-#include <string.h> // memset
-#include <stdlib.h> // malloc, free
+#include <common/utils/oai_allocator.h>
 #include <sys/time.h>   // setitimer
 #include "intertask_interface.h"
 #include "nas_timer.h"

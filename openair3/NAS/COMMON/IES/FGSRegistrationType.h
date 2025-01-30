@@ -27,7 +27,7 @@
  * \version 0.1
  */
 #include <stdio.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <stdint.h>
 
 #include "OctetString.h"

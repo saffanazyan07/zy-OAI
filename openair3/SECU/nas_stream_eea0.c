@@ -24,7 +24,7 @@
 #include "common/utils/assertions.h"
 #include "common/utils/LOG/log.h"
 
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 
 void nas_stream_encrypt_eea0(nas_stream_cipher_t const *stream_cipher, uint8_t *out)
 {

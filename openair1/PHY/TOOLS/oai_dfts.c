@@ -21,8 +21,7 @@
 
 #if defined(__x86_64__) || defined(__i386__)
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 
 #include <stdint.h>
 #include <math.h>
@@ -7737,7 +7736,6 @@ void idft_implementation(uint8_t sizeidx, int16_t *input, int16_t *output, unsig
 /*---------------------------------------------------------------------------------------*/
 
 #ifdef MR_MAIN
-#include <string.h>
 #include <stdio.h>
 
 #define LOG_M write_output

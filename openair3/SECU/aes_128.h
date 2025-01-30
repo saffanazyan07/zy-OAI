@@ -24,7 +24,7 @@
 
 #include <endian.h>
 #include <stdint.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 
 // see 33.401 B.2.3 for the input to 128-EIA2
 // (which is identical to 128-NIA2, see 33.501 D.3.1.3) 

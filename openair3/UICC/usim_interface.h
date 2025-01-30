@@ -23,10 +23,8 @@
 #ifndef USIM_INTERFACE_H
 #define USIM_INTERFACE_H
 
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <stdio.h>
-#include <string.h>
-#include <unistd.h>
 #include <stdbool.h>
 #include <errno.h>
 #include <common/utils/assertions.h>

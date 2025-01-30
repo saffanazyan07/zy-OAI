@@ -1,5 +1,4 @@
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 
 #include "userDef.h"
 #include "usim_api.h"

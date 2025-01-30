@@ -1,11 +1,9 @@
 #include "defs.h"
 #include <X11/Xlib.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include <pthread.h>
 #include <math.h>
-#include <unistd.h>
 #include <sys/select.h>
 #include <stdarg.h>
 

@@ -21,8 +21,7 @@
 
 #include "nr_pdcp_security_nea1.h"
 
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 
 #include "assertions.h"
 

@@ -21,8 +21,7 @@
 
 #include "nr_pdcp_sdu.h"
 
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 
 nr_pdcp_sdu_t *nr_pdcp_new_sdu(uint32_t count, char *buffer, int size,
                                const nr_pdcp_integrity_data_t *msg_integrity)

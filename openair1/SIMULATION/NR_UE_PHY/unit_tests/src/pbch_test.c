@@ -29,10 +29,9 @@
 *
 ************************************************************************/
 
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <math.h>
 #include <stdio.h>
-#include <string.h>
 #include <limits.h>
 
 typedef int nfapi_nr_pfcch_commonSearchSpaces_t;

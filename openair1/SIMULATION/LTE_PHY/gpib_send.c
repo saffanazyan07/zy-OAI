@@ -20,7 +20,7 @@
  */
 
 #include <stdio.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include <gpib/ib.h>
 #include "gpib_send.h"
 void gpib_send(unsigned int gpib_board, unsigned int gpib_device, char *command_string )

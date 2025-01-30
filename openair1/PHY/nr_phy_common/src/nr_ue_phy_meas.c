@@ -19,7 +19,7 @@
  *      contact@openairinterface.org
  */
 
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include "nr_ue_phy_meas.h"
 #include <stdbool.h>
 

@@ -33,7 +33,7 @@
 #include "common/utils/nr/nr_common.h"
 #include "PHY/CODING/nrPolar_tools/nr_polar_defs.h"
 #include <assert.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <stdint.h>
 
 // TS 38.212 - Section 5.3.1.2 Polar encoding

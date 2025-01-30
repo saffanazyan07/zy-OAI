@@ -29,10 +29,9 @@
  * \warning
  */
 
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <math.h>
 #include <stdio.h>
-#include <string.h>
 #include "assertions.h"
 #include "common/utils/LOG/log.h"
 

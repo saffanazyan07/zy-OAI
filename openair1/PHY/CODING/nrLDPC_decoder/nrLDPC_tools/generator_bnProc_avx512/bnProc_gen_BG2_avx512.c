@@ -20,7 +20,7 @@
  */
 
 #include <stdio.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <stdint.h>
 #include "PHY/sse_intrin.h"
 #include "../../nrLDPCdecoder_defs.h"

@@ -20,8 +20,7 @@
  */
 
 #include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include "xran_fh_o_du.h"
 #include "xran_compression.h"
 

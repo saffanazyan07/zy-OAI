@@ -39,9 +39,7 @@
 #include "socket.h"
 #include "commonDef.h"
 
-#include <stdlib.h> // malloc, free, atoi
-#include <string.h> // memset
-#include <unistd.h> // close
+#include <common/utils/oai_allocator.h>
 #include <errno.h>  // EINTR
 #include <sys/types.h>
 #include <sys/socket.h> // socket, setsockopt, connect, bind, recv, send

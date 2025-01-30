@@ -19,7 +19,7 @@
  *      contact@openairinterface.org
  */
 
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include "PHY/defs_UE.h"
 #include "lte_estimation.h"
 #include "PHY/LTE_REFSIG/lte_refsig.h"

@@ -2,9 +2,8 @@
 #include "../utils.h"
 #include "logger.h"
 #include <stdio.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <pthread.h>
-#include <string.h>
 
 /* TODO: some code is identical/almost identical to time.c, merge/factorize */
 

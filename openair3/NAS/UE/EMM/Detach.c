@@ -54,7 +54,7 @@ Description Defines the detach related EMM procedure executed by the
 #include "emm_sap.h"
 #include "esm_sap.h"
 
-#include <stdlib.h> // free
+#include <common/utils/oai_allocator.h>
 
 /****************************************************************************/
 /****************  E X T E R N A L    D E F I N I T I O N S  ****************/

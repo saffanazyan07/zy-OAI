@@ -30,7 +30,7 @@
  */
 
 #define _GNU_SOURCE
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 
 #include "assertions.h"
 #include "LAYER2/MAC/mac.h"

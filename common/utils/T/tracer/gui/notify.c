@@ -1,8 +1,7 @@
 #include "gui.h"
 #include "gui_defs.h"
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 
 unsigned long register_notifier(gui *_g, char *notification, widget *w,
                                 notifier handler, void *private) {

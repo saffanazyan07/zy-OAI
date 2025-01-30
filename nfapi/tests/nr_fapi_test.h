@@ -32,11 +32,9 @@
 #ifndef OPENAIRINTERFACE_NR_FAPI_TEST_H
 #define OPENAIRINTERFACE_NR_FAPI_TEST_H
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include <inttypes.h>
 #include <sys/wait.h>
-#include <unistd.h>
 
 #ifndef _STANDALONE_TESTING_
 #include "common/utils/LOG/log.h"

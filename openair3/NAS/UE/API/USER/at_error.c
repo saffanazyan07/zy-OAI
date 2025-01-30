@@ -42,7 +42,7 @@ Description Defines error codes returned when execution of AT command
 #include "commonDef.h"
 #include "nas_log.h"
 
-#include <string.h> // strcpy
+#include <common/utils/oai_allocator.h>
 #include <stdio.h>  // sprintf
 
 /****************************************************************************/

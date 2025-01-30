@@ -21,8 +21,7 @@
 
 #include <math.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include <complex.h>
 
 #include "PHY/TOOLS/tools_defs.h"

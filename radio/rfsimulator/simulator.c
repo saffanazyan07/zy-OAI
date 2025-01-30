@@ -32,10 +32,8 @@
 #include <sys/types.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <stdio.h>
-#include <string.h>
-#include <unistd.h>
 #include <stdbool.h>
 #include <errno.h>
 #include <sys/epoll.h>

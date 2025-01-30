@@ -21,7 +21,7 @@
 
 #include "m3ap_ids.h"
 
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 
 void m3ap_id_manager_init(m3ap_id_manager *m)
 {

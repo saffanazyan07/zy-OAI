@@ -50,9 +50,8 @@ Description Implements the user simulator running at the user application
 #include <errno.h>  // errno
 #include <netdb.h>  // gai_strerror
 #include <ctype.h>  // isspace
-#include <stdlib.h> // exit
+#include <common/utils/oai_allocator.h>
 #include <signal.h> // sigaction
-#include <string.h> // memset
 #include <pthread.h>
 #include <poll.h>
 

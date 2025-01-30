@@ -19,7 +19,7 @@
  *      contact@openairinterface.org
  */
 
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include <math.h>
 #include "SIMULATION/TOOLS/defs.h"
 #include "SIMULATION/RF/defs.h"

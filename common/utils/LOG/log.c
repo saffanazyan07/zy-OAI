@@ -40,7 +40,7 @@
 #include "assertions.h"
 
 #include <pthread.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include <linux/prctl.h>
 #include "common/config/config_userapi.h"
 #include <time.h>

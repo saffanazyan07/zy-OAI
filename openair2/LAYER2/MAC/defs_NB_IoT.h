@@ -10,8 +10,7 @@
 #ifndef __LAYER2_MAC_DEFS_NB_IOT_H__
 #define __LAYER2_MAC_DEFS_NB_IOT_H__
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include "common/platform_constants.h"
 #include "COMMON/mac_rrc_primitives.h"
 #include "PHY/LTE_TRANSPORT/defs_NB_IoT.h"

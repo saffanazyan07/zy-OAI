@@ -18,9 +18,7 @@
 #include <arpa/inet.h> // need for uintptr_t?
 
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
+#include <common/utils/oai_allocator.h>
 #include <stdint.h>
 
 #include <nfapi_interface.h>

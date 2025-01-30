@@ -1,6 +1,6 @@
 #include "queue_t.h"
 #include <stdio.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 
 #define FAIL do {                                                       \
     printf("\n*** FAILED at %s line %d\n", __FILE__, __LINE__);         \

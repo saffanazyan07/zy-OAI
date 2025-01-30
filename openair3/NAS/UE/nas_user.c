@@ -50,8 +50,7 @@ Description NAS procedure functions triggered by the user
 #include "utils.h"
 #include "user_api.h"
 
-#include <string.h> // memset, strncpy, strncmp
-#include <stdlib.h> // free
+#include <common/utils/oai_allocator.h>
 
 /****************************************************************************/
 /****************  E X T E R N A L    D E F I N I T I O N S  ****************/

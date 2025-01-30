@@ -28,7 +28,7 @@
 #include "../../flexric/src/agent/e2_agent_api.h"
 
 #include <stdio.h>
-#include <unistd.h>
+#include <common/utils/oai_allocator.h>
 #include "common/ran_context.h"
 
 static pthread_once_t once_rc_mutex = PTHREAD_ONCE_INIT;

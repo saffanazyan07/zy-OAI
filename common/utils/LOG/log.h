@@ -31,10 +31,8 @@
 #define __LOG_H__
 
 /*--- INCLUDES ---------------------------------------------------------------*/
-#include <unistd.h>
+#include <common/utils/oai_allocator.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <syslog.h>
 #include <assert.h>
 #include <sys/types.h>

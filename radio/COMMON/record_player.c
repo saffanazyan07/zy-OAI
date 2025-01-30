@@ -25,8 +25,7 @@
  *
  */
 
-#include <string.h>
-#include <unistd.h>
+#include <common/utils/oai_allocator.h>
 #include <stdio.h>
 #include <sys/sysinfo.h>
 #include <sys/resource.h>

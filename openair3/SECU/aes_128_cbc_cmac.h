@@ -28,7 +28,7 @@
 
 
 #include <stdint.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 
 typedef struct {
   void *mac_implementation;

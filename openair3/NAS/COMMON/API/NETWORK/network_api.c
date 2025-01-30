@@ -45,10 +45,9 @@ Description Implements the API used by the NAS layer to send/receive
 
 #include "as_message.h"
 
-#include <string.h> // strerror, memset
+#include <common/utils/oai_allocator.h>
 #include <netdb.h>  // gai_strerror
-#include <errno.h>  // errno
-#include <unistd.h> // gethostname
+#include <errno.h> // errno
 
 /****************************************************************************/
 /****************  E X T E R N A L    D E F I N I T I O N S  ****************/

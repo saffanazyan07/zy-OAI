@@ -21,8 +21,8 @@
 
 #ifdef MAIN
   #include <stdio.h>
-  #include <stdlib.h>
-  #include <math.h>
+#include <common/utils/oai_allocator.h>
+#include <math.h>
 #endif
 #include "lte_refsig.h"
 #include "PHY/defs_eNB.h"

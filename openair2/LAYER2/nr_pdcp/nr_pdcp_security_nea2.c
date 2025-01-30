@@ -26,8 +26,7 @@
 
 #include <arpa/inet.h>
 #include <assert.h>
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 
 stream_security_context_t *nr_pdcp_security_nea2_init(unsigned char *ciphering_key)
 {

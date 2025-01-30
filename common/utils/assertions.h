@@ -23,10 +23,9 @@
 #define __COMMON_UTILS_ASSERTIONS__H__
 
 #include <stdio.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <inttypes.h>
 #include <sys/types.h>
-#include <unistd.h>
 #include "common/platform_types.h"
 
 #define OAI_EXIT_NORMAL 0

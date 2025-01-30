@@ -17,7 +17,7 @@
 #include "debug.h"
 #include <stdio.h>
 #include <stdarg.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <time.h>
 #include <pthread.h>
 #include <stdbool.h>

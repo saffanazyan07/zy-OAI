@@ -24,11 +24,10 @@
 #include <limits.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <time.h>
 #include "pthread_utils.h"
 #include "errno.h"
-#include <string.h>
 
 #define seminit(sem)                                                                           \
   {                                                                                            \

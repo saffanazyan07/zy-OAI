@@ -26,7 +26,7 @@
 #include <arpa/inet.h>
 
 #include <stdio.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 
 void test_1(void)
 {

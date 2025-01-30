@@ -22,7 +22,7 @@
 #define _GNU_SOURCE
 #include "nr_pdcp_timer_thread.h"
 
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <pthread.h>
 #include <stdint.h>
 

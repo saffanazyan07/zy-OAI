@@ -26,7 +26,7 @@
 #ifndef __PHY_TOOLS_SMBV__H__
 #define __PHY_TOOLS_SMBV__H__
 
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/socket.h>

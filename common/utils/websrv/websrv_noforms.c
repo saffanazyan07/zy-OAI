@@ -29,7 +29,7 @@
  * \note
  * \warning
  */
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <jansson.h>
 #include <ulfius.h>
 #include "common/utils/LOG/log.h"

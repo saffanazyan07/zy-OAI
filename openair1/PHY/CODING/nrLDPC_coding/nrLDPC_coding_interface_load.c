@@ -25,8 +25,7 @@
 
 #define _GNU_SOURCE 
 #include <sys/types.h>
-#include <stdlib.h>
-#include <malloc.h>
+#include <common/utils/oai_allocator.h>
 #include "assertions.h"
 #include "common/utils/LOG/log.h"
 #include "PHY/CODING/nrLDPC_coding/nrLDPC_coding_interface.h"

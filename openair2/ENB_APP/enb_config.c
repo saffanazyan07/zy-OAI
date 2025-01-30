@@ -27,7 +27,7 @@
   EMAIL   : Lionel.Gauthier@eurecom.fr, navid.nikaein@eurecom.fr
 */
 
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include <inttypes.h>
 #include <dlfcn.h>
 

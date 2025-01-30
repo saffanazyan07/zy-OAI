@@ -32,9 +32,7 @@
 #include <pthread.h>
 #include <libconfig.h>
 
-#include <string.h>
-#include <stdlib.h>
-#include <unistd.h>
+#include <common/utils/oai_allocator.h>
 #include <time.h>
 #include <libgen.h>
 #include <sys/types.h>

@@ -30,7 +30,7 @@
 
 #ifndef __NR_LDPC_INIT__H__
 #define __NR_LDPC_INIT__H__
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include "nrLDPC_lut.h"
 #include "nrLDPCdecoder_defs.h"
 

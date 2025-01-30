@@ -45,8 +45,7 @@ Description Defines the ATtention (AT) command set supported by the NAS
 #include "at_error.h"
 
 #include <ctype.h>  // isspace, isdigit
-#include <stdlib.h> // strtol, malloc, free
-#include <string.h> // strncpy, strstr, strchr, strcmp, strncasecmp
+#include <common/utils/oai_allocator.h>
 // strlen, memmove, strdup, strtok
 #include <stdarg.h> // va_start, va_arg, va_end
 

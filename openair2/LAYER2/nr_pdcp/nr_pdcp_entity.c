@@ -22,8 +22,7 @@
 #include "nr_pdcp_entity.h"
 
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 
 #include "nr_pdcp_security_nea2.h"
 #include "nr_pdcp_security_nea1.h"

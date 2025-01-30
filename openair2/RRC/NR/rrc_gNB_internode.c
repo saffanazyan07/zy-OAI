@@ -32,7 +32,7 @@
 
 #include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include "OCTET_STRING.h"
 #include "PHY/defs_common.h"
 #include "RRC/NR/nr_rrc_proto.h"

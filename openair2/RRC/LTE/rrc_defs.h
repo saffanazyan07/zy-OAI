@@ -32,8 +32,7 @@
 #define __OPENAIR_RRC_DEFS_H__
 
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 
 #include "collection/tree.h"
 #include "collection/linear_alloc.h"

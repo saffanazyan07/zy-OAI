@@ -1,9 +1,8 @@
 #include "view.h"
 #include "../utils.h"
 #include "gui/gui.h"
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <pthread.h>
-#include <string.h>
 
 struct textlist {
   view common;

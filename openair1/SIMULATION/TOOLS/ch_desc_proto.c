@@ -21,7 +21,7 @@
 
 #include <stdio.h>
 #include <math.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include "defs.h"
 #define PI 3.1416
 #define Am 20

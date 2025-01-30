@@ -21,7 +21,7 @@
 
 #include "m2ap_ids.h"
 
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 
 void m2ap_id_manager_init(m2ap_id_manager *m)
 {

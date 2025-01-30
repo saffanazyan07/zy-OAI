@@ -46,8 +46,7 @@ Description Defines the security mode control EMM procedure executed by the
 
 *****************************************************************************/
 
-#include <stdlib.h> // malloc, free
-#include <string.h> // memcpy
+#include <common/utils/oai_allocator.h>
 #include <inttypes.h>
 
 #include "emm_proc.h"

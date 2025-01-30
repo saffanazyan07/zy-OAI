@@ -34,11 +34,9 @@
 #include "snow3g.h"
 #include <arpa/inet.h>
 #include <math.h>
-#include <string.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <stdio.h>
 #include <stdint.h>
-#include <string.h>
 
 #define FC_KENB (0x11)
 #define FC_NH (0x12)

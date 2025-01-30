@@ -22,10 +22,8 @@
 #define _GNU_SOURCE
 
 #include <stdio.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <stdarg.h>
-#include <string.h>
-#include <unistd.h>
 
 #include "debug.h"
 #include "nfapi/oai_integration/vendor_ext.h"

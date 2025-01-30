@@ -34,8 +34,7 @@
 #define __LAYER2_NR_MAC_H__
 
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include <stdbool.h>
 #include "common/utils/nr/nr_common.h"
 #include "NR_CellGroupConfig.h"

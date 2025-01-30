@@ -26,8 +26,7 @@
  */
 
 #include <stdio.h>
-#include <string.h>
-#include <unistd.h>
+#include <common/utils/oai_allocator.h>
 #include <fcntl.h>
 
 #include "PHY/INIT/nr_phy_init.h"

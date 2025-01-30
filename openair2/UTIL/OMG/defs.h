@@ -27,7 +27,7 @@
 #ifndef __DEFS_H__
 #define  __DEFS_H__
 
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 
 #include <stdbool.h>
 #include "omg_constants.h"

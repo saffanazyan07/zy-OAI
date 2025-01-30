@@ -1,5 +1,5 @@
 #include "view.h"
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <stdio.h>
 #include <pthread.h>
 

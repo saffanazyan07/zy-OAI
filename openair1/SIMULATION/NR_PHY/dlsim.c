@@ -25,8 +25,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include "common/utils/assertions.h"
 #include "common/utils/nr/nr_common.h"
 #include "common/utils/var_array.h"

@@ -21,7 +21,7 @@
 
 #ifndef _UTILS_COLLECTION_HASH_TABLE_H_
 #define _UTILS_COLLECTION_HASH_TABLE_H_
-#include<stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
