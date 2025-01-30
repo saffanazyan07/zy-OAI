@@ -187,296 +187,6 @@ int wls_pnf_nr_pack_and_send_p5_message(pnf_t *pnf, nfapi_nr_p4_p5_message_heade
   return wls_send_fapi_msg(pWls, msg->message_id, packed_len, pnf->tx_message_buffer);
 }
 
-static void wls_pnf_nr_handle_pnf_param_request(uint32_t msgSize, void *msg_buf)
-{
-  nfapi_nr_pnf_param_request_t req;
-  nfapi_pnf_config_t *config = &(_this->_public);
-  int unpack_result = config->unpack_func(msg_buf, msgSize, &req, sizeof(req), NULL);
-  DevAssert(unpack_result >= 0);
-  if (config->state == NFAPI_PNF_IDLE) {
-    if (config->pnf_nr_param_req) {
-      (config->pnf_nr_param_req)(config, &req);
-    }
-  } else {
-    NFAPI_TRACE(NFAPI_TRACE_ERROR, "%s: PNF not in IDLE state\n", __FUNCTION__);
-
-    nfapi_nr_pnf_param_response_t resp;
-    memset(&resp, 0, sizeof(resp));
-    resp.header.message_id = NFAPI_NR_PHY_MSG_TYPE_PNF_PARAM_RESPONSE;
-    resp.error_code = NFAPI_MSG_INVALID_STATE;
-    nfapi_nr_pnf_pnf_param_resp(config, &resp);
-  }
-}
-
-static void wls_pnf_nr_handle_pnf_config_request(uint32_t msgSize, void *msg_buf)
-{
-  nfapi_pnf_config_t *config = &(_this->_public);
-  nfapi_nr_pnf_config_request_t req;
-  int unpack_result = config->unpack_func(msg_buf, msgSize, &req, sizeof(req), NULL);
-  DevAssert(unpack_result >= 0);
-  // ensure correct state
-  if (config->state != NFAPI_PNF_RUNNING) {
-    // delete the phy records
-    nfapi_pnf_phy_config_t *curr = config->phys;
-    while (curr != 0) {
-      nfapi_pnf_phy_config_t *to_delete = curr;
-      curr = curr->next;
-      free(to_delete);
-    }
-    config->phys = 0;
-
-    // create the phy records
-    if (req.pnf_phy_rf_config.tl.tag == NFAPI_PNF_PHY_RF_TAG) {
-      int i = 0;
-      for (i = 0; i < req.pnf_phy_rf_config.number_phy_rf_config_info; ++i) {
-        nfapi_pnf_phy_config_t *phy = (nfapi_pnf_phy_config_t *)malloc(sizeof(nfapi_pnf_phy_config_t));
-        memset(phy, 0, sizeof(nfapi_pnf_phy_config_t));
-
-        phy->state = NFAPI_PNF_PHY_IDLE;
-        phy->phy_id = req.pnf_phy_rf_config.phy_rf_config[i].phy_id;
-
-        phy->next = config->phys;
-        config->phys = phy;
-      }
-    }
-
-    if (config->pnf_nr_config_req) {
-      (config->pnf_nr_config_req)(config, &req);
-    }
-  } else {
-    NFAPI_TRACE(NFAPI_TRACE_ERROR, "%s: PNF not in correct state: %d\n", __FUNCTION__, config->state);
-
-    nfapi_nr_pnf_config_response_t resp;
-    memset(&resp, 0, sizeof(resp));
-    resp.header.message_id = NFAPI_PNF_CONFIG_RESPONSE;
-    resp.error_code = NFAPI_MSG_INVALID_STATE;
-    nfapi_nr_pnf_pnf_config_resp(config, &resp);
-  }
-}
-
-static void wls_pnf_nr_handle_pnf_start_request(uint32_t msg_size, void *msg_buf)
-{
-  nfapi_pnf_config_t *config = &(_this->_public);
-  nfapi_nr_pnf_start_request_t req;
-  int unpack_result = config->unpack_func(msg_buf, msg_size, &req, sizeof(req), NULL);
-  DevAssert(unpack_result >= 0);
-  if (config->state == NFAPI_PNF_CONFIGURED) {
-    if (config->pnf_nr_start_req) {
-      (config->pnf_nr_start_req)(config, &req);
-    }
-  } else {
-    nfapi_nr_pnf_start_response_t resp;
-    memset(&resp, 0, sizeof(resp));
-    resp.header.message_id = NFAPI_PNF_START_RESPONSE;
-    resp.error_code = NFAPI_MSG_INVALID_STATE;
-    nfapi_nr_pnf_pnf_start_resp(config, &resp);
-  }
-}
-
-static void wls_pnf_handle_pnf_stop_request(uint32_t msg_size, void *msg_buf)
-{
-  nfapi_pnf_config_t *config = &(_this->_public);
-  nfapi_pnf_stop_request_t req;
-  int unpack_result = config->unpack_func(msg_buf, msg_size, &req, sizeof(req), NULL);
-  DevAssert(unpack_result >= 0);
-  if (config->state == NFAPI_PNF_RUNNING) {
-    if (config->pnf_stop_req) {
-      (config->pnf_stop_req)(config, &req);
-    }
-  } else {
-    nfapi_pnf_stop_response_t resp;
-    memset(&resp, 0, sizeof(resp));
-    resp.header.message_id = NFAPI_PNF_STOP_RESPONSE;
-    resp.error_code = NFAPI_MSG_INVALID_STATE;
-    nfapi_pnf_pnf_stop_resp(config, &resp);
-  }
-}
-
-static void wls_pnf_nr_handle_param_request(uint32_t msg_size, void *msg_buf)
-{
-  nfapi_pnf_config_t *config = &(_this->_public);
-  nfapi_nr_param_request_scf_t req;
-  int unpack_result = cfg->unpack_func(msg_buf, msg_size, &req, sizeof(req), NULL);
-  DevAssert(unpack_result >= 0);
-  if (config->state == NFAPI_PNF_RUNNING) {
-    nfapi_pnf_phy_config_t *phy = nfapi_pnf_phy_config_find(config, req.header.phy_id);
-    if (phy) {
-      if (phy->state == NFAPI_PNF_PHY_IDLE) {
-        if (config->nr_param_req) {
-          (config->nr_param_req)(config, phy, &req);
-        }
-      } else {
-        nfapi_nr_param_response_scf_t resp;
-        memset(&resp, 0, sizeof(resp));
-        resp.header.message_id = NFAPI_NR_PHY_MSG_TYPE_PARAM_RESPONSE;
-        resp.header.phy_id = req.header.phy_id;
-        resp.error_code = NFAPI_MSG_INVALID_STATE;
-        nfapi_nr_pnf_param_resp(config, &resp);
-      }
-    } else {
-      nfapi_nr_param_response_scf_t resp;
-      memset(&resp, 0, sizeof(resp));
-      resp.header.message_id = NFAPI_NR_PHY_MSG_TYPE_PARAM_RESPONSE;
-      resp.header.phy_id = req.header.phy_id;
-      resp.error_code = NFAPI_MSG_INVALID_CONFIG;
-      nfapi_nr_pnf_param_resp(config, &resp);
-    }
-  } else {
-    nfapi_nr_param_response_scf_t resp;
-    memset(&resp, 0, sizeof(resp));
-    resp.header.message_id = NFAPI_NR_PHY_MSG_TYPE_PARAM_RESPONSE;
-    resp.header.phy_id = req.header.phy_id;
-    resp.error_code = NFAPI_MSG_INVALID_STATE;
-    nfapi_nr_pnf_param_resp(config, &resp);
-  }
-}
-
-static void wls_pnf_nr_handle_config_request(uint32_t msg_size, void *msg_buf)
-{
-  nfapi_nr_config_request_scf_t req = {0};
-  nfapi_pnf_config_t *config = &(_this->_public);
-  int unpack_result = cfg->unpack_func(msg_buf, msg_size, &req, sizeof(req), NULL);
-  DevAssert(unpack_result >= 0);
-
-  if (!isNFAPI) {
-    // HACK for Radisys ODU, request them to pack this TLV
-    req.carrier_config.dl_grid_size[1].value = 273;
-    req.carrier_config.ul_grid_size[1].value = 273;
-
-    req.nfapi_config.timing_window.tl.tag = NFAPI_NFAPI_TIMING_WINDOW_TAG;
-    req.nfapi_config.timing_window.value = 30;
-  }
-
-  // TODO: Process and use the message
-  if (config->state == NFAPI_PNF_RUNNING) {
-    nfapi_pnf_phy_config_t *phy = nfapi_pnf_phy_config_find(config, req.header.phy_id);
-    if (phy) {
-      if (phy->state != NFAPI_PNF_PHY_RUNNING) {
-        if (config->nr_config_req) {
-          (config->nr_config_req)(config, phy, &req);
-        }
-      } else {
-        nfapi_nr_config_response_scf_t resp;
-        memset(&resp, 0, sizeof(resp));
-        resp.header.message_id = NFAPI_CONFIG_RESPONSE;
-        resp.header.phy_id = req.header.phy_id;
-        resp.error_code = NFAPI_MSG_INVALID_STATE;
-        printf("Try sending response back NFAPI_MSG_INVALID_STATE\n");
-        nfapi_nr_pnf_config_resp(config, &resp);
-      }
-    } else {
-      nfapi_nr_config_response_scf_t resp;
-      memset(&resp, 0, sizeof(resp));
-      resp.header.message_id = NFAPI_CONFIG_RESPONSE;
-      resp.header.phy_id = req.header.phy_id;
-      resp.error_code = NFAPI_MSG_INVALID_CONFIG;
-      printf("Try sending response back NFAPI_MSG_INVALID_CONFIG\n");
-      nfapi_nr_pnf_config_resp(config, &resp);
-    }
-  } else {
-    nfapi_nr_config_response_scf_t resp;
-    memset(&resp, 0, sizeof(resp));
-    resp.header.message_id = NFAPI_CONFIG_RESPONSE;
-    resp.header.phy_id = req.header.phy_id;
-    resp.error_code = NFAPI_MSG_INVALID_STATE;
-    printf("Try sending response back NFAPI_MSG_INVALID_STATE\n");
-    nfapi_nr_pnf_config_resp(config, &resp);
-  }
-  // Free at the end
-  free_config_request(&req);
-}
-
-static void wls_pnf_nr_handle_start_request(uint32_t msg_size, void *msg_buf)
-{
-  nfapi_nr_start_request_scf_t req = {0};
-  nfapi_pnf_config_t *config = &(_this->_public);
-  int unpack_result = cfg->unpack_func(msg_buf, msg_size, &req, sizeof(req), NULL);
-  DevAssert(unpack_result >= 0);
-
-  if (config->state == NFAPI_PNF_RUNNING) {
-    nfapi_pnf_phy_config_t *phy = nfapi_pnf_phy_config_find(config, req.header.phy_id);
-    if (phy) {
-      if (phy->state != NFAPI_PNF_PHY_RUNNING) {
-        if (config->nr_start_req) {
-          (config->nr_start_req)(config, phy, &req);
-        }
-      } else {
-        nfapi_nr_start_response_scf_t resp;
-        memset(&resp, 0, sizeof(resp));
-        resp.header.message_id = NFAPI_NR_PHY_MSG_TYPE_START_RESPONSE;
-        resp.header.phy_id = req.header.phy_id;
-        resp.error_code = NFAPI_NR_START_MSG_INVALID_STATE;
-        nfapi_nr_pnf_start_resp(config, &resp);
-      }
-    } else {
-      nfapi_nr_start_response_scf_t resp;
-      memset(&resp, 0, sizeof(resp));
-      resp.header.message_id = NFAPI_NR_PHY_MSG_TYPE_START_RESPONSE;
-      resp.header.phy_id = req.header.phy_id;
-      resp.error_code = NFAPI_NR_START_MSG_INVALID_STATE;
-      nfapi_nr_pnf_start_resp(config, &resp);
-    }
-  } else {
-    nfapi_nr_start_response_scf_t resp;
-    memset(&resp, 0, sizeof(resp));
-    resp.header.message_id = NFAPI_NR_PHY_MSG_TYPE_START_RESPONSE;
-    resp.header.phy_id = req.header.phy_id;
-    resp.error_code = NFAPI_NR_START_MSG_INVALID_STATE;
-    nfapi_nr_pnf_start_resp(config, &resp);
-  }
-}
-
-static void wls_pnf_nr_handle_stop_request(uint32_t msg_size, void *msg_buf)
-{
-  // ensure it's valid
-  nfapi_nr_stop_request_scf_t req;
-  nfapi_pnf_config_t *config = &(_this->_public);
-  int unpack_result = cfg->unpack_func(msg_buf, msg_size, &req, sizeof(req), NULL);
-  DevAssert(unpack_result >= 0);
-  NFAPI_TRACE(NFAPI_TRACE_INFO, "STOP.request received\n");
-
-  // unpack the message
-  if (config->unpack_func(msg_buf, msg_size, &req, sizeof(req), &config->codec_config) >= 0) {
-    if (config->state == NFAPI_PNF_RUNNING) {
-      nfapi_pnf_phy_config_t *phy = nfapi_pnf_phy_config_find(config, req.header.phy_id);
-      if (phy) {
-        if (phy->state != NFAPI_PNF_PHY_RUNNING) {
-          if (config->nr_stop_req) {
-            (config->nr_stop_req)(config, phy, &req);
-          }
-        } else {
-          nfapi_stop_response_t resp;
-          memset(&resp, 0, sizeof(resp));
-          resp.header.message_id = NFAPI_NR_PHY_MSG_TYPE_STOP_RESPONSE;
-          resp.header.phy_id = req.header.phy_id;
-          resp.error_code = NFAPI_MSG_INVALID_STATE;
-          nfapi_pnf_stop_resp(config, &resp);
-        }
-      } else {
-        nfapi_stop_response_t resp;
-        memset(&resp, 0, sizeof(resp));
-        resp.header.message_id = NFAPI_NR_PHY_MSG_TYPE_STOP_RESPONSE;
-        resp.header.phy_id = req.header.phy_id;
-        resp.error_code = NFAPI_MSG_INVALID_CONFIG;
-        nfapi_pnf_stop_resp(config, &resp);
-      }
-    } else {
-      nfapi_stop_response_t resp;
-      memset(&resp, 0, sizeof(resp));
-      resp.header.message_id = NFAPI_NR_PHY_MSG_TYPE_STOP_RESPONSE;
-      resp.header.phy_id = req.header.phy_id;
-      resp.error_code = NFAPI_MSG_INVALID_STATE;
-      nfapi_pnf_stop_resp(config, &resp);
-    }
-  } else {
-    NFAPI_TRACE(NFAPI_TRACE_ERROR, "%s: Unpack message failed, ignoring\n", __FUNCTION__);
-  }
-
-  if (req.vendor_extension)
-    _this->_public.codec_config.deallocate(req.vendor_extension);
-}
-
-
 int wls_pnf_nr_pack_and_send_p7_message(nfapi_nr_p7_message_header_t *msg)
 {
   pnf_t *pnf = _this;
@@ -584,35 +294,35 @@ static void procPhyMessages(uint32_t msg_size, void *msg_buf, uint16_t msg_id)
       cfg->hdr_unpack_func = &nfapi_nr_p5_message_header_unpack;
       cfg->pack_func = &nfapi_nr_p5_message_pack;
       printf("\n NFAPI_NR_PHY_MSG_TYPE_PNF_PARAM_REQUEST");
-      wls_pnf_nr_handle_pnf_param_request(msg_size + NFAPI_NR_P5_HEADER_LENGTH, msg_buf);
+      pnf_nr_handle_pnf_param_request(_this,msg_buf, msg_size + NFAPI_NR_P5_HEADER_LENGTH);
       break;
 
     case NFAPI_NR_PHY_MSG_TYPE_PNF_CONFIG_REQUEST:
-      wls_pnf_nr_handle_pnf_config_request(msg_size + NFAPI_NR_P5_HEADER_LENGTH, msg_buf);
+      pnf_nr_handle_pnf_config_request(_this,msg_buf, msg_size + NFAPI_NR_P5_HEADER_LENGTH);
       break;
 
     case NFAPI_NR_PHY_MSG_TYPE_PNF_START_REQUEST:
-      wls_pnf_nr_handle_pnf_start_request(msg_size + NFAPI_NR_P5_HEADER_LENGTH, msg_buf);
+      pnf_nr_handle_pnf_start_request(_this,msg_buf, msg_size + NFAPI_NR_P5_HEADER_LENGTH);
       break;
 
     case NFAPI_PNF_STOP_REQUEST:
-      wls_pnf_handle_pnf_stop_request(msg_size + NFAPI_NR_P5_HEADER_LENGTH, msg_buf);
+      pnf_handle_pnf_stop_request(_this,msg_buf, msg_size + NFAPI_NR_P5_HEADER_LENGTH);
       break;
 
     case NFAPI_NR_PHY_MSG_TYPE_PARAM_REQUEST:
-      wls_pnf_nr_handle_param_request(msg_size + NFAPI_NR_P5_HEADER_LENGTH, msg_buf);
+      pnf_nr_handle_param_request(_this,msg_buf, msg_size + NFAPI_NR_P5_HEADER_LENGTH);
       break;
 
     case NFAPI_NR_PHY_MSG_TYPE_CONFIG_REQUEST:
-      wls_pnf_nr_handle_config_request(msg_size + (isNFAPI ? NFAPI_NR_P5_HEADER_LENGTH : 0), msg_buf);
+      pnf_nr_handle_config_request(_this,msg_buf, msg_size + (isNFAPI ? NFAPI_NR_P5_HEADER_LENGTH : 0));
       break;
 
     case NFAPI_NR_PHY_MSG_TYPE_START_REQUEST:
       printf("\n NFAPI_NR_PHY_MSG_TYPE_START_REQUEST");
-      wls_pnf_nr_handle_start_request(msg_size + (isNFAPI ? NFAPI_NR_P5_HEADER_LENGTH : 0), msg_buf);
+      pnf_nr_handle_start_request(_this,msg_buf, msg_size + (isNFAPI ? NFAPI_NR_P5_HEADER_LENGTH : 0));
       break;
     case NFAPI_NR_PHY_MSG_TYPE_STOP_REQUEST:
-      wls_pnf_nr_handle_stop_request(msg_size, msg_buf);
+      pnf_nr_handle_stop_request(_this,msg_buf, msg_size + NFAPI_NR_P5_HEADER_LENGTH);
       break;
     case NFAPI_NR_PHY_MSG_TYPE_DL_TTI_REQUEST
     ...
