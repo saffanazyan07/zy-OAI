@@ -433,38 +433,36 @@ void vnf_nr_handle_param_response(void *pRecvMsg, int recvMsgLen, nfapi_vnf_conf
 		// unpack the message
 		if (config->unpack_func(pRecvMsg, recvMsgLen, &msg, sizeof(msg), &config->codec_config) >= 0)
 		{
-			
-			if (msg.error_code == NFAPI_NR_PARAM_MSG_OK)
-			{
-				nfapi_vnf_phy_info_t* phy_info = nfapi_vnf_phy_info_list_find(config, msg.header.phy_id);
-		
-				if(msg.nfapi_config.p7_pnf_address_ipv4.tl.tag)
-				{
-					struct sockaddr_in sockAddr;
-		
-					(void)memcpy(&sockAddr.sin_addr.s_addr, msg.nfapi_config.p7_pnf_address_ipv4.address, NFAPI_IPV4_ADDRESS_LENGTH);
-					NFAPI_TRACE(NFAPI_TRACE_INFO, "PNF P7 IPv4 address: %s\n", inet_ntoa(sockAddr.sin_addr));
-		
-					// store address
-					phy_info->p7_pnf_address.sin_addr = sockAddr.sin_addr;
-				}
-		
-				if(msg.nfapi_config.p7_pnf_address_ipv6.tl.tag)
-				{
-					struct sockaddr_in6 sockAddr6;
-					char addr6[64];
-					(void)memcpy(&sockAddr6.sin6_addr, msg.nfapi_config.p7_pnf_address_ipv6.address, NFAPI_IPV6_ADDRESS_LENGTH);
-					NFAPI_TRACE(NFAPI_TRACE_INFO, "PNF P7 IPv6 address: %s\n", inet_ntop(AF_INET6, &sockAddr6.sin6_addr, addr6, sizeof(addr6)));
-				}
-				
-				if (msg.nfapi_config.p7_pnf_port.tl.tag)
-				{
-					NFAPI_TRACE(NFAPI_TRACE_INFO, "PNF P7 Port: %d\n", msg.nfapi_config.p7_pnf_port.value);
-		
-					// store port
-					phy_info->p7_pnf_address.sin_port = htons(msg.nfapi_config.p7_pnf_port.value);
-				}
-			}
+      if (msg.error_code == NFAPI_NR_PARAM_MSG_OK) {
+        nfapi_vnf_phy_info_t *phy_info = nfapi_vnf_phy_info_list_find(config, msg.header.phy_id);
+        if (phy_info) {
+          if (msg.nfapi_config.p7_pnf_address_ipv4.tl.tag) {
+            struct sockaddr_in sockAddr;
+
+            (void)memcpy(&sockAddr.sin_addr.s_addr, msg.nfapi_config.p7_pnf_address_ipv4.address, NFAPI_IPV4_ADDRESS_LENGTH);
+            NFAPI_TRACE(NFAPI_TRACE_INFO, "PNF P7 IPv4 address: %s\n", inet_ntoa(sockAddr.sin_addr));
+
+            // store address
+            phy_info->p7_pnf_address.sin_addr = sockAddr.sin_addr;
+          }
+
+          if (msg.nfapi_config.p7_pnf_address_ipv6.tl.tag) {
+            struct sockaddr_in6 sockAddr6;
+            char addr6[64];
+            (void)memcpy(&sockAddr6.sin6_addr, msg.nfapi_config.p7_pnf_address_ipv6.address, NFAPI_IPV6_ADDRESS_LENGTH);
+            NFAPI_TRACE(NFAPI_TRACE_INFO,
+                        "PNF P7 IPv6 address: %s\n",
+                        inet_ntop(AF_INET6, &sockAddr6.sin6_addr, addr6, sizeof(addr6)));
+          }
+
+          if (msg.nfapi_config.p7_pnf_port.tl.tag) {
+            NFAPI_TRACE(NFAPI_TRACE_INFO, "PNF P7 Port: %d\n", msg.nfapi_config.p7_pnf_port.value);
+
+            // store port
+            phy_info->p7_pnf_address.sin_port = htons(msg.nfapi_config.p7_pnf_port.value);
+          }
+        }
+      }
 			
 			if(config->nr_param_resp)
 			{

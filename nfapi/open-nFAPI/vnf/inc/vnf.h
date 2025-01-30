@@ -47,4 +47,14 @@ void nfapi_vnf_phy_info_list_add(nfapi_vnf_config_t* config, nfapi_vnf_phy_info_
 nfapi_vnf_phy_info_t* nfapi_vnf_phy_info_list_find(nfapi_vnf_config_t* config, uint16_t phy_id);
 void nfapi_vnf_pnf_list_add(nfapi_vnf_config_t* config, nfapi_vnf_pnf_info_t* node);
 nfapi_vnf_pnf_info_t* nfapi_vnf_pnf_list_find(nfapi_vnf_config_t* config, int p5_idx);
+
+void vnf_nr_handle_pnf_param_response(void *pRecvMsg, int recvMsgLen, nfapi_vnf_config_t* config, int p5_idx);
+void vnf_nr_handle_pnf_config_response(void *pRecvMsg, int recvMsgLen, nfapi_vnf_config_t* config, int p5_idx);
+void vnf_nr_handle_pnf_start_response(void *pRecvMsg, int recvMsgLen, nfapi_vnf_config_t* config, int p5_idx);
+void vnf_handle_pnf_stop_response(void *pRecvMsg, int recvMsgLen, nfapi_vnf_config_t* config, int p5_idx);
+void vnf_nr_handle_param_response(void *pRecvMsg, int recvMsgLen, nfapi_vnf_config_t* config, int p5_idx);
+void vnf_nr_handle_config_response(void *pRecvMsg, int recvMsgLen, nfapi_vnf_config_t* config, int p5_idx);
+void vnf_nr_handle_start_response(void *pRecvMsg, int recvMsgLen, nfapi_vnf_config_t* config, int p5_idx);
+void vnf_handle_stop_response(void *pRecvMsg, int recvMsgLen, nfapi_vnf_config_t* config, int p5_idx);
+
 #endif // _VNF_H_

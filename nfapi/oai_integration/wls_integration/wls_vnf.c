@@ -267,129 +267,6 @@ void *wls_fapi_vnf_nr_start_thread(void *ptr)
   return (void *)0;
 }
 
-static void wls_vnf_nr_handle_pnf_param_response(uint32_t msgSize, void *msg_buf)
-{
-  nfapi_nr_pnf_param_response_t msg;
-  // unpack the message
-  if (config->unpack_func(msg_buf, msgSize, &msg, sizeof(msg), &config->codec_config) >= 0) {
-    // Invoke the call back
-    if (config->pnf_nr_param_resp) {
-      (config->pnf_nr_param_resp)(config, 0, &msg);
-    } else {
-      NFAPI_TRACE(NFAPI_TRACE_ERROR, "%s(): no pnf_nr_param_resp cb installed\n", __func__);
-    }
-  } else {
-    NFAPI_TRACE(NFAPI_TRACE_ERROR, "%s: Unpack message failed, ignoring\n", __FUNCTION__);
-  }
-}
-
-static void wls_vnf_nr_handle_pnf_config_response(uint32_t msgSize, void *msg_buf)
-{
-  nfapi_nr_pnf_config_response_t msg;
-
-  // unpack the message
-  if (config->unpack_func(msg_buf, msgSize, &msg, sizeof(msg), &config->codec_config) >= 0) {
-    // Invoke the call back
-    if (config->pnf_nr_config_resp) {
-      (config->pnf_nr_config_resp)(config, 0, &msg);
-    } else {
-      NFAPI_TRACE(NFAPI_TRACE_ERROR, "%s(): no pnf_nr_config_resp cb installed\n", __func__);
-    }
-  } else {
-    NFAPI_TRACE(NFAPI_TRACE_ERROR, "%s: Unpack message failed, ignoring\n", __FUNCTION__);
-  }
-}
-
-static void wls_vnf_nr_handle_pnf_start_response(uint32_t msgSize, void *msg_buf)
-{
-  NFAPI_TRACE(NFAPI_TRACE_INFO, "Received PNF_START_RESPONSE\n");
-
-  nfapi_nr_pnf_start_response_t msg;
-
-  // unpack the message
-  if (config->unpack_func(msg_buf, msgSize, &msg, sizeof(msg), &config->codec_config) >= 0) {
-    if (config->pnf_nr_start_resp) {
-      (config->pnf_nr_start_resp)(config, 0, &msg);
-    } else {
-      NFAPI_TRACE(NFAPI_TRACE_ERROR, "%s(): no pnf_nr_start_resp cb installed\n", __func__);
-    }
-  } else {
-    NFAPI_TRACE(NFAPI_TRACE_ERROR, "%s: Unpack message failed, ignoring\n", __FUNCTION__);
-  }
-}
-
-static void wls_vnf_nr_handle_pnf_stop_response(uint32_t msgSize, void *msg_buf)
-{
-  nfapi_pnf_stop_response_t msg;
-
-  // unpack the message
-  if (nfapi_p5_message_unpack(msg_buf, msgSize, &msg, sizeof(msg), &config->codec_config) >= 0) {
-    if (config->pnf_stop_resp) {
-      (config->pnf_stop_resp)(config, 0, &msg);
-    } else {
-      NFAPI_TRACE(NFAPI_TRACE_ERROR, "%s(): no pnf_stop_resp cb installed\n", __func__);
-    }
-  } else {
-    NFAPI_TRACE(NFAPI_TRACE_ERROR, "%s: Unpack message failed, ignoring\n", __FUNCTION__);
-  }
-}
-
-static void wls_vnf_nr_handle_param_response(uint32_t msgSize, void *msg_buf)
-{
-  nfapi_nr_param_response_scf_t msg;
-
-  // unpack the message
-  if (config->unpack_func(msg_buf, msgSize, &msg, sizeof(msg), &config->codec_config) >= 0) {
-    if (config->nr_param_resp) {
-      (config->nr_param_resp)(config, 0, &msg);
-    }
-  }
-}
-
-static void wls_vnf_nr_handle_config_response(uint32_t msgSize, void *msg_buf)
-{
-  printf("msg_size = %u\n ", msgSize);
-  uint8_t *msgt = (uint8_t *)(msg_buf);
-  for (int x = 0; x < msgSize; ++x) {
-    printf("0x%02x ", msgt[x]);
-  }
-  printf("\n");
-  nfapi_nr_config_response_scf_t req = {0};
-  nfapi_vnf_config_t *config = &(_vnf->_public);
-  int unpack_result = config->unpack_func(msg_buf, msgSize, &req, sizeof(req), &config->codec_config);
-  DevAssert(unpack_result >= 0);
-  if (req.error_code == NFAPI_NR_CONFIG_MSG_OK) {
-    if (config->nr_config_resp) {
-      (config->nr_config_resp)(config, 0, &req);
-    }
-  }
-}
-
-static void wls_vnf_nr_handle_start_response(uint32_t msgSize, void *msg_buf)
-{
-  NFAPI_TRACE(NFAPI_TRACE_INFO, "Received START_RESPONSE\n");
-
-  nfapi_nr_start_response_scf_t msg;
-
-  // unpack the message
-  if (nfapi_nr_p5_message_unpack(msg_buf, msgSize, &msg, sizeof(msg), &config->codec_config) >= 0) {
-    // check the error code
-    if (msg.error_code == NFAPI_NR_START_MSG_OK) {
-      if (config->nr_start_resp) {
-        (config->nr_start_resp)(config, 0, &msg);
-      } else {
-        NFAPI_TRACE(NFAPI_TRACE_ERROR, "%s(): no nr_start_resp cb installed\n", __func__);
-      }
-    }
-  } else {
-    NFAPI_TRACE(NFAPI_TRACE_ERROR, "%s: Unpack message failed, ignoring\n", __FUNCTION__);
-  }
-}
-
-static void wls_vnf_nr_handle_stop_response(uint32_t msgSize, void *msg_buf)
-{
-}
-
 static void wls_vnf_nr_handle_p7_messages(uint32_t msgSize, void *msg_buf, int msgId)
 {
   uint8_t *msg = msg_buf;
@@ -510,35 +387,35 @@ static void procPhyMessages(uint32_t msg_size, void *msg_buf, uint16_t msg_id)
   }
   switch (msg_id) {
     case NFAPI_NR_PHY_MSG_TYPE_PNF_PARAM_RESPONSE:
-      wls_vnf_nr_handle_pnf_param_response(msg_size + NFAPI_NR_P5_HEADER_LENGTH, msg_buf);
+      vnf_nr_handle_pnf_param_response(msg_buf, msg_size + NFAPI_NR_P5_HEADER_LENGTH, config,0);
       break;
 
     case NFAPI_NR_PHY_MSG_TYPE_PNF_CONFIG_RESPONSE:
-      wls_vnf_nr_handle_pnf_config_response(msg_size + NFAPI_NR_P5_HEADER_LENGTH, msg_buf);
+      vnf_nr_handle_pnf_config_response(msg_buf, msg_size + NFAPI_NR_P5_HEADER_LENGTH, config,0);
       break;
 
     case NFAPI_NR_PHY_MSG_TYPE_PNF_START_RESPONSE:
-      wls_vnf_nr_handle_pnf_start_response(msg_size + NFAPI_NR_P5_HEADER_LENGTH, msg_buf);
+      vnf_nr_handle_pnf_start_response(msg_buf, msg_size + NFAPI_NR_P5_HEADER_LENGTH, config,0);
       break;
 
     case NFAPI_PNF_STOP_RESPONSE:
-      wls_vnf_nr_handle_pnf_stop_response(msg_size + NFAPI_NR_P5_HEADER_LENGTH, msg_buf);
+      vnf_handle_pnf_stop_response(msg_buf, msg_size + NFAPI_NR_P5_HEADER_LENGTH, config,0);
       break;
 
     case NFAPI_NR_PHY_MSG_TYPE_PARAM_RESPONSE:
-      wls_vnf_nr_handle_param_response(msg_size + NFAPI_NR_P5_HEADER_LENGTH, msg_buf);
+      vnf_nr_handle_param_response(msg_buf, msg_size + NFAPI_NR_P5_HEADER_LENGTH, config,0);
       break;
 
     case NFAPI_NR_PHY_MSG_TYPE_CONFIG_RESPONSE:
-      wls_vnf_nr_handle_config_response(msg_size + NFAPI_NR_P5_HEADER_LENGTH, msg_buf);
+      vnf_nr_handle_config_response(msg_buf, msg_size + NFAPI_NR_P5_HEADER_LENGTH, config,0);
       break;
 
     case NFAPI_NR_PHY_MSG_TYPE_START_RESPONSE:
-      wls_vnf_nr_handle_start_response(msg_size + NFAPI_NR_P5_HEADER_LENGTH, msg_buf);
+      vnf_nr_handle_start_response(msg_buf, msg_size + NFAPI_NR_P5_HEADER_LENGTH, config,0);
       break;
 
     case NFAPI_NR_PHY_MSG_TYPE_STOP_RESPONSE:
-      wls_vnf_nr_handle_stop_response(msg_size + NFAPI_NR_P5_HEADER_LENGTH, msg_buf);
+      vnf_handle_stop_response(msg_buf, msg_size + NFAPI_NR_P5_HEADER_LENGTH, config,0);
       break;
     case NFAPI_NR_PHY_MSG_TYPE_DL_TTI_REQUEST
 
