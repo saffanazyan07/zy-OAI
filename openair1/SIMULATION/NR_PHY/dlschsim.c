@@ -620,39 +620,6 @@ int main(int argc, char **argv)
 		}
 	}
 
-	/*LOG_M("txsigF0.m","txsF0", gNB->common_vars.txdataF[0],frame_length_complex_samples_no_prefix,1,1);
-	 if (gNB->frame_parms.nb_antennas_tx>1)
-	 LOG_M("txsigF1.m","txsF1", gNB->common_vars.txdataF[1],frame_length_complex_samples_no_prefix,1,1);*/
-
-	//TODO: loop over slots
-	/*for (aa=0; aa<gNB->frame_parms.nb_antennas_tx; aa++) {
-	 if (gNB_config->subframe_config.dl_cyclic_prefix_type.value == 1) {
-	 PHY_ofdm_mod(gNB->common_vars.txdataF[aa],
-	 txdata[aa],
-	 frame_parms->ofdm_symbol_size,
-	 12,
-	 frame_parms->nb_prefix_samples,
-	 CYCLIC_PREFIX);
-	 } else {
-	 nr_normal_prefix_mod(gNB->common_vars.txdataF[aa],
-	 txdata[aa],
-	 14,
-	 frame_parms);
-	 }
-	 }
-
-	 LOG_M("txsig0.m","txs0", txdata[0],frame_length_complex_samples,1,1);
-	 if (gNB->frame_parms.nb_antennas_tx>1)
-	 LOG_M("txsig1.m","txs1", txdata[1],frame_length_complex_samples,1,1);
-
-
-	 for (i=0; i<frame_length_complex_samples; i++) {
-	 for (aa=0; aa<frame_parms->nb_antennas_tx; aa++) {
-	 r_re[aa][i] = ((double)(((short *)txdata[aa]))[(i<<1)]);
-	 r_im[aa][i] = ((double)(((short *)txdata[aa]))[(i<<1)+1]);
-	 }
-	 }*/
-
   free_channel_desc_scm(gNB2UE);
 
   reset_DLSCH_struct(gNB, &msgDataTx);

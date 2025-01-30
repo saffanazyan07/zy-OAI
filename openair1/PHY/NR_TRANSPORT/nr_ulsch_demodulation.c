@@ -1026,7 +1026,7 @@ static void inner_rx(PHY_VARS_gNB *gNB,
   int nb_layer = rel15_ul->nrOfLayers;
   int nb_rx_ant = frame_parms->nb_antennas_rx;
   int dmrs_symbol_flag = (rel15_ul->ul_dmrs_symb_pos >> symbol) & 0x01;
-  int buffer_length = ALIGN_UP_16(rel15_ul->rb_size * NR_NB_SC_PER_RB);
+  int buffer_length = ceil_mod(rel15_ul->rb_size * NR_NB_SC_PER_RB, 16);
   c16_t rxFext[nb_rx_ant][buffer_length] __attribute__((aligned(32)));
   c16_t chFext[nb_layer][nb_rx_ant][buffer_length] __attribute__((aligned(32)));
 
@@ -1400,7 +1400,7 @@ int nr_rx_pusch_tp(PHY_VARS_gNB *gNB,
   // extract the data in the OFDM frame, to the start of the array
   int soffset = (slot % RU_RX_SLOT_DEPTH) * frame_parms->symbols_per_slot * frame_parms->ofdm_symbol_size;
 
-  nb_re_pusch = ALIGN_UP_16(nb_re_pusch);
+  nb_re_pusch = ceil_mod(nb_re_pusch, 16);
   int dmrs_symbol;
   if (gNB->chest_time == 0)
     dmrs_symbol = get_valid_dmrs_idx_for_channel_est(rel15_ul->ul_dmrs_symb_pos, meas_symbol);
@@ -1524,7 +1524,7 @@ int nr_rx_pusch_tp(PHY_VARS_gNB *gNB,
   // buffer due to reference symbol extraction and padding. The gNBscopeCopy call is broken up into steps: trylock, copy, unlock.
   metadata mt = {.slot = slot, .frame = frame};
   if (gNBTryLockScopeData(gNB, gNBPuschRxIq, sizeof(c16_t), 1, total_res, &mt)) {
-    int buffer_length = ALIGN_UP_16(rel15_ul->rb_size * NR_NB_SC_PER_RB);
+    int buffer_length = ceil_mod(rel15_ul->rb_size * NR_NB_SC_PER_RB, 16);
     size_t offset = 0;
     for (uint8_t symbol = rel15_ul->start_symbol_index; symbol < (rel15_ul->start_symbol_index + rel15_ul->nr_of_symbols);
          symbol++) {

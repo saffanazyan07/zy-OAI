@@ -39,14 +39,7 @@
 #include "PHY/NR_TRANSPORT/nr_dci.h"
 #include "nfapi/oai_integration/vendor_ext.h"
 #include "openair2/NR_PHY_INTERFACE/nr_sched_response.h"
-
-extern int oai_nfapi_dl_tti_req(nfapi_nr_dl_tti_request_t *dl_config_req);
-extern int oai_nfapi_tx_data_req(nfapi_nr_tx_data_request_t *tx_data_req);
-extern int oai_nfapi_ul_dci_req(nfapi_nr_ul_dci_request_t *ul_dci_req);
-extern int oai_nfapi_ul_tti_req(nfapi_nr_ul_tti_request_t *ul_tti_req);
-
-
-extern uint8_t nfapi_mode;
+#include "nfapi/oai_integration/nfapi_vnf.h"
 
 void handle_nr_nfapi_ssb_pdu(processingData_L1tx_t *msgTx,int frame,int slot,
                              nfapi_nr_dl_tti_request_pdu_t *dl_tti_pdu)

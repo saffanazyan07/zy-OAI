@@ -44,7 +44,6 @@ void nr_generate_csi_rs(const NR_DL_FRAME_PARMS *frame_parms,
                         const nfapi_nr_dl_tti_csi_rs_pdu_rel15_t *csi_params,
                         const int slot,
                         const csi_mapping_parms_t *phy_csi_parms);
-void  init_byte2m128i(void);
 
 void nr_generate_modulation_table(void);
 

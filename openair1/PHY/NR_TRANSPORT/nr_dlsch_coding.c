@@ -304,7 +304,7 @@ int nr_dlsch_encoding(PHY_VARS_gNB *gNB,
      * => dlsch_offset should remain a multiple of 64 with enough offset to fit each dlsch
      */
     const size_t dlsch_size = rel15->rbSize * NR_SYMBOLS_PER_SLOT * NR_NB_SC_PER_RB * rel15->qamModOrder[0] * rel15->nrOfLayers;
-    dlsch_offset += (dlsch_size + 63 - ((dlsch_size + 63) % 64));
+    dlsch_offset += ceil_mod(dlsch_size, 64);
   }
 
   gNB->nrLDPC_coding_interface.nrLDPC_coding_encoder(&slot_parameters);

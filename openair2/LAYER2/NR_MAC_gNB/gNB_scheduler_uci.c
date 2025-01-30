@@ -33,9 +33,6 @@
 #include "common/ran_context.h"
 #include "common/utils/nr/nr_common.h"
 #include "nfapi/oai_integration/vendor_ext.h"
-
-extern RAN_CONTEXT_t RC;
-
 static void nr_fill_nfapi_pucch(gNB_MAC_INST *nrmac,
                                 frame_t frame,
                                 sub_frame_t slot,

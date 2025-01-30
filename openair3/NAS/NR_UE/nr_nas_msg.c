@@ -53,7 +53,6 @@
 
 #define MAX_NAS_UE 4
 
-extern uint16_t NB_UE_INST;
 static nr_ue_nas_t nr_ue_nas[MAX_NAS_UE] = {0};
 static nr_nas_msg_snssai_t nas_allowed_nssai[8];
 

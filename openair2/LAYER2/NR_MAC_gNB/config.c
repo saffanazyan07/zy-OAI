@@ -62,10 +62,6 @@
 #include "nfapi_nr_interface_scf.h"
 #include "utils.h"
 
-extern RAN_CONTEXT_t RC;
-//extern int l2_init_gNB(void);
-extern uint8_t nfapi_mode;
-
 c16_t convert_precoder_weight(double complex c_in)
 {
   double cr = creal(c_in) * 32768 + 0.5;

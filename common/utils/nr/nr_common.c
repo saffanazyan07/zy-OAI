@@ -109,8 +109,6 @@ static const unsigned short srs_bandwidth_config[C_SRS_NUMBER][B_SRS_NUMBER][2] 
     /* 63 */ {{272, 1}, {16, 17}, {8, 2}, {4, 2}},
 };
 
-const char *duplex_mode[]={"FDD","TDD"};
-
 static const uint8_t bit_reverse_table_256[] = {
     0x00, 0x80, 0x40, 0xC0, 0x20, 0xA0, 0x60, 0xE0, 0x10, 0x90, 0x50, 0xD0, 0x30, 0xB0, 0x70, 0xF0, 0x08, 0x88, 0x48, 0xC8,
     0x28, 0xA8, 0x68, 0xE8, 0x18, 0x98, 0x58, 0xD8, 0x38, 0xB8, 0x78, 0xF8, 0x04, 0x84, 0x44, 0xC4, 0x24, 0xA4, 0x64, 0xE4,
@@ -125,6 +123,36 @@ static const uint8_t bit_reverse_table_256[] = {
     0x13, 0x93, 0x53, 0xD3, 0x33, 0xB3, 0x73, 0xF3, 0x0B, 0x8B, 0x4B, 0xCB, 0x2B, 0xAB, 0x6B, 0xEB, 0x1B, 0x9B, 0x5B, 0xDB,
     0x3B, 0xBB, 0x7B, 0xFB, 0x07, 0x87, 0x47, 0xC7, 0x27, 0xA7, 0x67, 0xE7, 0x17, 0x97, 0x57, 0xD7, 0x37, 0xB7, 0x77, 0xF7,
     0x0F, 0x8F, 0x4F, 0xCF, 0x2F, 0xAF, 0x6F, 0xEF, 0x1F, 0x9F, 0x5F, 0xDF, 0x3F, 0xBF, 0x7F, 0xFF};
+
+simde__m128i byte2bit16_lut[256];
+void init_byte2bit16(void)
+{
+  for (int s = 0; s < 256; s++) {
+    byte2bit16_lut[s] = simde_mm_insert_epi16(byte2bit16_lut[s], s & 1, 0);
+    byte2bit16_lut[s] = simde_mm_insert_epi16(byte2bit16_lut[s], (s >> 1) & 1, 1);
+    byte2bit16_lut[s] = simde_mm_insert_epi16(byte2bit16_lut[s], (s >> 2) & 1, 2);
+    byte2bit16_lut[s] = simde_mm_insert_epi16(byte2bit16_lut[s], (s >> 3) & 1, 3);
+    byte2bit16_lut[s] = simde_mm_insert_epi16(byte2bit16_lut[s], (s >> 4) & 1, 4);
+    byte2bit16_lut[s] = simde_mm_insert_epi16(byte2bit16_lut[s], (s >> 5) & 1, 5);
+    byte2bit16_lut[s] = simde_mm_insert_epi16(byte2bit16_lut[s], (s >> 6) & 1, 6);
+    byte2bit16_lut[s] = simde_mm_insert_epi16(byte2bit16_lut[s], (s >> 7) & 1, 7);
+  }
+}
+
+simde__m128i byte2m128i[256];
+void init_byte2m128i(void) {
+
+  for (int s=0;s<256;s++) {
+    byte2m128i[s] = simde_mm_insert_epi16(byte2m128i[s],(1-2*(s&1)),0);
+    byte2m128i[s] = simde_mm_insert_epi16(byte2m128i[s],(1-2*((s>>1)&1)),1);
+    byte2m128i[s] = simde_mm_insert_epi16(byte2m128i[s],(1-2*((s>>2)&1)),2);
+    byte2m128i[s] = simde_mm_insert_epi16(byte2m128i[s],(1-2*((s>>3)&1)),3);
+    byte2m128i[s] = simde_mm_insert_epi16(byte2m128i[s],(1-2*((s>>4)&1)),4);
+    byte2m128i[s] = simde_mm_insert_epi16(byte2m128i[s],(1-2*((s>>5)&1)),5);
+    byte2m128i[s] = simde_mm_insert_epi16(byte2m128i[s],(1-2*((s>>6)&1)),6);
+    byte2m128i[s] = simde_mm_insert_epi16(byte2m128i[s],(1-2*((s>>7)&1)),7);
+  }
+}
 
 void reverse_bits_u8(uint8_t const* in, size_t sz, uint8_t* out)
 {
@@ -704,7 +732,7 @@ frame_type_t get_frame_type(uint16_t current_band, uint8_t scs_index)
 {
   int32_t delta_duplex = get_delta_duplex(current_band, scs_index);
   frame_type_t current_type = delta_duplex == 0 ? TDD : FDD;
-  LOG_D(NR_MAC, "NR band %d, duplex mode %s, duplex spacing = %d KHz\n", current_band, duplex_mode[current_type], delta_duplex);
+  LOG_D(NR_MAC, "NR band %d, duplex mode %s, duplex spacing = %d KHz\n", current_band, duplex_mode_txt[current_type], delta_duplex);
   return current_type;
 }
 

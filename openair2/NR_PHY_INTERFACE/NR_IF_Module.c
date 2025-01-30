@@ -45,22 +45,11 @@
 #include "openair2/NR_PHY_INTERFACE/nr_sched_response.h"
 #include "openair2/PHY_INTERFACE/queue_t.h"
 #include "utils.h"
+#include "nfapi/oai_integration/nfapi_pnf.h"
 
 #define MAX_IF_MODULES 100
 
 static NR_IF_Module_t *nr_if_inst[MAX_IF_MODULES];
-extern int oai_nfapi_harq_indication(nfapi_harq_indication_t *harq_ind);
-extern int oai_nfapi_crc_indication(nfapi_crc_indication_t *crc_ind);
-extern int oai_nfapi_cqi_indication(nfapi_cqi_indication_t *cqi_ind);
-extern int oai_nfapi_sr_indication(nfapi_sr_indication_t *ind);
-extern int oai_nfapi_rx_ind(nfapi_rx_indication_t *ind);
-extern int oai_nfapi_nr_slot_indication(nfapi_nr_slot_indication_scf_t *ind);
-extern int oai_nfapi_nr_rx_data_indication(nfapi_nr_rx_data_indication_t *ind);
-extern int oai_nfapi_nr_crc_indication(nfapi_nr_crc_indication_t *ind);
-extern int oai_nfapi_nr_srs_indication(nfapi_nr_srs_indication_t *ind);
-extern int oai_nfapi_nr_uci_indication(nfapi_nr_uci_indication_t *ind);
-extern int oai_nfapi_nr_rach_indication(nfapi_nr_rach_indication_t *ind);
-extern uint8_t nfapi_mode;
 
 static void handle_nr_rach(NR_UL_IND_t *UL_info)
 {

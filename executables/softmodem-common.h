@@ -361,6 +361,8 @@ void configure_rru(void *, void *arg);
 struct timespec timespec_add(struct timespec lhs, struct timespec rhs);
 struct timespec timespec_sub(struct timespec lhs, struct timespec rhs);
 extern uint8_t nfapi_mode;
+extern char *parallel_config;
+extern char *worker_config;
 #ifdef __cplusplus
 }
 #endif

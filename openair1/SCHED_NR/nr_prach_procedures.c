@@ -42,9 +42,6 @@
 #include "assertions.h"
 
 #include <time.h>
-
-extern uint8_t nfapi_mode;
-
 uint8_t get_nr_prach_duration(uint8_t prach_format){
 
   switch(prach_format){

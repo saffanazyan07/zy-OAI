@@ -101,10 +101,6 @@
 #include "openair2/E2AP/RAN_FUNCTION/O-RAN/ran_func_rc_extern.h"
 #endif
 
-//#define XER_PRINT
-
-extern RAN_CONTEXT_t RC;
-
 mui_t rrc_gNB_mui = 0;
 
 typedef struct deliver_ue_ctxt_release_data_t {

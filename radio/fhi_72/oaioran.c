@@ -230,16 +230,12 @@ int read_prach_data(ru_info_t *ru, int frame, int slot)
             }
           }
         } else if (ru_conf->compMeth_PRACH == XRAN_COMPMETHOD_BLKFLOAT) {
-          struct xranlib_decompress_request bfp_decom_req;
-          struct xranlib_decompress_response bfp_decom_rsp;
+          struct xranlib_decompress_request bfp_decom_req = {};
+          struct xranlib_decompress_response bfp_decom_rsp = {};
 
           int16_t local_dst[12 * 2 * N_SC_PER_PRB] __attribute__((aligned(64)));
 
           int payload_len = (3 * ru_conf->iqWidth_PRACH + 1) * 12; // 12 = closest number of PRBs to 139 REs
-
-          memset(&bfp_decom_req, 0, sizeof(struct xranlib_decompress_request));
-          memset(&bfp_decom_rsp, 0, sizeof(struct xranlib_decompress_response));
-
           bfp_decom_req.data_in = (int8_t *)src;
           bfp_decom_req.numRBs = 12; // closest number of PRBs to 139 REs
           bfp_decom_req.len = payload_len;
@@ -415,14 +411,10 @@ int xran_fh_rx_read_slot(ru_info_t *ru, int *frame, int *slot)
             memcpy((void *)dst2, (void *)local_dst, neg_len * 4);
             memcpy((void *)dst1, (void *)&local_dst[neg_len], pos_len * 4);
           } else if (pRbElm->compMethod == XRAN_COMPMETHOD_BLKFLOAT) {
-            struct xranlib_decompress_request bfp_decom_req;
-            struct xranlib_decompress_response bfp_decom_rsp;
+            struct xranlib_decompress_request bfp_decom_req = {};
+            struct xranlib_decompress_response bfp_decom_rsp = {};
 
             payload_len = (3 * pRbElm->iqWidth + 1) * pRbElm->nRBSize;
-
-            memset(&bfp_decom_req, 0, sizeof(struct xranlib_decompress_request));
-            memset(&bfp_decom_rsp, 0, sizeof(struct xranlib_decompress_response));
-
             bfp_decom_req.data_in = (int8_t *)src;
             bfp_decom_req.numRBs = pRbElm->nRBSize;
             bfp_decom_req.len = payload_len;
@@ -556,12 +548,9 @@ int xran_fh_tx_send_slot(ru_info_t *ru, int frame, int slot, uint64_t timestamp)
               for (idx = 0; idx < (pos_len + neg_len) * 2; idx++)
                 ((uint16_t *)dst16)[idx] = htons(((uint16_t *)local_src)[idx]);
             } else if (p_prbMapElm->compMethod == XRAN_COMPMETHOD_BLKFLOAT) {
-              struct xranlib_compress_request bfp_com_req;
-              struct xranlib_compress_response bfp_com_rsp;
+              struct xranlib_compress_request bfp_com_req = {};
+              struct xranlib_compress_response bfp_com_rsp = {};
               payload_len = (3 * p_prbMapElm->iqWidth + 1) * p_prbMapElm->nRBSize;
-              memset(&bfp_com_req, 0, sizeof(struct xranlib_compress_request));
-              memset(&bfp_com_rsp, 0, sizeof(struct xranlib_compress_response));
-
               bfp_com_req.data_in = (int16_t *)local_src;
               bfp_com_req.numRBs = p_prbMapElm->nRBSize;
               bfp_com_req.len = payload_len;

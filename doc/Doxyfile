@@ -2085,7 +2085,6 @@ INPUT                  = \
 @CMAKE_CURRENT_SOURCE_DIR@/../openair1/PHY/NR_REFSIG/ul_ref_seq_nr.h \
 @CMAKE_CURRENT_SOURCE_DIR@/../openair1/PHY/NR_REFSIG/ul_ref_seq_nr.c \
 @CMAKE_CURRENT_SOURCE_DIR@/../openair1/PHY/NR_REFSIG/sss_nr.h \
-@CMAKE_CURRENT_SOURCE_DIR@/../openair1/PHY/NR_REFSIG/scrambling_luts.c \
 @CMAKE_CURRENT_SOURCE_DIR@/../openair1/PHY/NR_REFSIG/dmrs_nr.c \
 @CMAKE_CURRENT_SOURCE_DIR@/../openair1/PHY/NR_REFSIG/refsig_defs_ue.h \
 @CMAKE_CURRENT_SOURCE_DIR@/../openair1/PHY/NR_REFSIG/ptrs_nr.h \

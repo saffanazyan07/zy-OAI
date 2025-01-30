@@ -45,8 +45,6 @@
 
 #include "executables/softmodem-common.h"
 
-extern RAN_CONTEXT_t RC;
-
 static void schedule_ssb(frame_t frame,
                          sub_frame_t slot,
                          NR_ServingCellConfigCommon_t *scc,

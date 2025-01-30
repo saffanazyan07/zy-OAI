@@ -41,9 +41,6 @@
 #include "openair2/F1AP/f1ap_du_rrc_message_transfer.h"
 #include "openair2/F1AP/f1ap_ids.h"
 #include "openair3/ocp-gtpu/gtp_itf.h"
-
-extern RAN_CONTEXT_t RC;
-
 #include <stdint.h>
 
 #include <executables/softmodem-common.h>

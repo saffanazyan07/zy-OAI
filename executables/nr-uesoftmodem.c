@@ -91,7 +91,6 @@ unsigned short config_frames[4] = {2,9,11,13};
 #include "pdcp.h"
 #include "actor.h"
 
-extern const char *duplex_mode[];
 THREAD_STRUCT thread_struct;
 nrUE_params_t nrUE_params = {0};
 
@@ -270,12 +269,13 @@ void init_openair0()
     openair0_cfg[card].tx_num_channels = min(4, frame_parms->nb_antennas_tx);
     openair0_cfg[card].rx_num_channels = min(4, frame_parms->nb_antennas_rx);
 
-    LOG_I(PHY, "HW: Configuring card %d, sample_rate %f, tx/rx num_channels %d/%d, duplex_mode %s\n",
-      card,
-      openair0_cfg[card].sample_rate,
-      openair0_cfg[card].tx_num_channels,
-      openair0_cfg[card].rx_num_channels,
-      duplex_mode[openair0_cfg[card].duplex_mode]);
+    LOG_I(PHY,
+          "HW: Configuring card %d, sample_rate %f, tx/rx num_channels %d/%d, duplex_mode %s\n",
+          card,
+          openair0_cfg[card].sample_rate,
+          openair0_cfg[card].tx_num_channels,
+          openair0_cfg[card].rx_num_channels,
+          duplex_mode_txt[openair0_cfg[card].duplex_mode]);
 
     if (is_sidelink) {
       dl_carrier = frame_parms->dl_CarrierFreq;

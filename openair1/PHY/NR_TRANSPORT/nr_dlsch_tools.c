@@ -34,8 +34,6 @@
 #include "nr_dlsch.h"
 #include "../../../nfapi/oai_integration/vendor_ext.h"
 
-extern void set_taus_seed(unsigned int seed_type);
-
 void nr_fill_dlsch_dl_tti_req(processingData_L1tx_t *msgTx, nfapi_nr_dl_tti_pdsch_pdu *pdsch_pdu)
 {
   NR_gNB_DLSCH_t *dlsch = &msgTx->dlsch[msgTx->num_pdsch_slot][0];
