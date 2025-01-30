@@ -30,7 +30,7 @@
 * \warning
 */
 #include <stdio.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <time.h>
 #include <math.h>
 #include "grid.h"

@@ -26,7 +26,7 @@
  * \version 0.1
  */
 
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 
 #include "common/utils/assertions.h"
 #include "openair3/UTILS/conversions.h"

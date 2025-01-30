@@ -28,7 +28,7 @@
  */
 #include "ngap_gNB_decoder.h"
 #include <stdio.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include "ngap_msg_includes.h"
 #include "T.h"
 #include "aper_decoder.h"

@@ -32,8 +32,7 @@
 
 #include <stdio.h>
 #include "trace_hashtable.h"
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include "omg.h"
 
 /*Global variables*/

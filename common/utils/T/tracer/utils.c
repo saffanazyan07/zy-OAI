@@ -1,9 +1,8 @@
 #include "utils.h"
 #include <stdio.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <pthread.h>
 #include <time.h>
-#include <unistd.h>
 #include <ctype.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>

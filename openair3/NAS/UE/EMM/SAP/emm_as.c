@@ -55,8 +55,7 @@ Description Defines the EMMAS Service Access Point that provides
 
 #include "emm_proc.h"
 
-#include <string.h> // memset
-#include <stdlib.h> // malloc, free
+#include <common/utils/oai_allocator.h>
 
 #if  defined(NAS_BUILT_IN_UE)
 # include "nas_itti_messaging.h"

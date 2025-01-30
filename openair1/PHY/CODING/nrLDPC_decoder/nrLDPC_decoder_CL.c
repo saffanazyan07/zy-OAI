@@ -44,7 +44,7 @@ typedef struct{
 #else
 /* uses HW  component id for log messages ( --log_config.hw_log_level <warning| info|debug|trace>) */
 #include <stdio.h>
-#include <unistd.h>
+#include <common/utils/oai_allocator.h>
 #include <sys/stat.h>
 #include <CL/opencl.h>
 #include "openair1/PHY/CODING/nrLDPC_extern.h"

@@ -24,7 +24,7 @@ SOFTWARE.
 
 #include "find.h"
 #include <assert.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <stdio.h>
 
 elm_arr_t find_if_arr_it(seq_arr_t* arr, void* start_it, void* end_it, void* value, bool (*f)(const void*, const void*))

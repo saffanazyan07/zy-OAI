@@ -22,7 +22,7 @@
 #define _GNU_SOURCE
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include <ctype.h>
 #include "thread-pool.h"
 #include "bounded_notified_fifo.h"

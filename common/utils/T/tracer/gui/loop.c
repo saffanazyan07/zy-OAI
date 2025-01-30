@@ -3,10 +3,8 @@
 #include "x.h"
 #include <sys/select.h>
 #include <stdio.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <errno.h>
-#include <string.h>
-#include <unistd.h>
 
 void gui_loop(gui *_gui)
 {

@@ -33,10 +33,8 @@
 #ifndef __OTG_TX_SOCKET_H__
 #define __OTG_TX_SOCKET_H__
 
-
-#include <unistd.h>
+#include <common/utils/oai_allocator.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include "otg.h"
 #include "otg_tx.h"
 

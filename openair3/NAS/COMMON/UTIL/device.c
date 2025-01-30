@@ -40,9 +40,7 @@ Description Implements Linux/UNIX I/O device handlers
 #include "commonDef.h"
 
 #include <stdio.h>  // fflush
-#include <stdlib.h> // malloc, free
-#include <string.h> // strncpy
-#include <unistd.h> // read, write, close
+#include <common/utils/oai_allocator.h>
 
 #include <sys/stat.h>
 #include <fcntl.h>  // open

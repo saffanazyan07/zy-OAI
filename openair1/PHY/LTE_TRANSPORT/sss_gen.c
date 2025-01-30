@@ -1,8 +1,6 @@
 #include <stdio.h>
 #include <stdint.h>
-#include <string.h>
-#include <malloc.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <math.h>
 
 int16_t *d0_sss;

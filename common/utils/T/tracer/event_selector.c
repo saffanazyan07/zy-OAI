@@ -2,8 +2,7 @@
 #include "gui/gui.h"
 #include "database.h"
 #include "utils.h"
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 
 struct event_selector {
   int *is_on;

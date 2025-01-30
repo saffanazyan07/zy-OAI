@@ -19,9 +19,8 @@
  *      contact@openairinterface.org
  */
 
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include "obj_hashtable.h"
 //-------------------------------------------------------------------------------------------------------------------------------
 /*

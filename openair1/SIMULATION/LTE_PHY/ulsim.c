@@ -30,9 +30,8 @@
   \warning
 */
 
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include <math.h>
-#include <unistd.h>
 #include "common/utils/var_array.h"
 #include "PHY/types.h"
 #include "PHY/defs_common.h"

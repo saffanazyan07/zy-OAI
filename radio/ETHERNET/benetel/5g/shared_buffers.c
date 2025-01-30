@@ -22,8 +22,7 @@
 #include "shared_buffers.h"
 
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 
 void init_buffers(shared_buffers *s)
 {

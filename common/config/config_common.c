@@ -21,8 +21,7 @@
 
 #define _GNU_SOURCE
 
-#include <string.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <stdio.h>
 #include <arpa/inet.h>
 #include "config_common.h"

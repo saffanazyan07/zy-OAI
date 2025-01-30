@@ -20,7 +20,7 @@
  */
 
 #include <stdio.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <errno.h>
 #include <sys/ioctl.h>
 #include <net/if.h>

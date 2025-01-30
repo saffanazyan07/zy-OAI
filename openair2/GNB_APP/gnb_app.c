@@ -27,7 +27,7 @@
   EMAIL   : Lionel.Gauthier@eurecom.fr and Navid Nikaein, kroempa@gmail.com
 */
 
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include <stdio.h>
 #include <nr_pdcp/nr_pdcp.h>
 #include <softmodem-common.h>

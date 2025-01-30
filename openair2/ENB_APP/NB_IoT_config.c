@@ -27,7 +27,7 @@
   EMAIL   : francois.taburet@nokia-bell-labs.com
 */
 
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include <inttypes.h>
 
 #include "log.h"

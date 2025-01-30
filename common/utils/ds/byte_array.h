@@ -26,7 +26,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 
 typedef struct {
   size_t len;

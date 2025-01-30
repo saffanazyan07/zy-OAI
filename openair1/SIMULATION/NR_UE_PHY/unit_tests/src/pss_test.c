@@ -29,10 +29,9 @@
 *
 ************************************************************************/
 
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <math.h>
 #include <stdio.h>
-#include <string.h>
 #include <limits.h>
 
 #include "../../unit_tests/src/pss_util_test.h"

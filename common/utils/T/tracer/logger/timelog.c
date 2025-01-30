@@ -4,8 +4,7 @@
 #include "database.h"
 #include "handler.h"
 #include "filter/filter.h"
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 
 struct timelog {
   struct logger common;

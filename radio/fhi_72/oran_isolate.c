@@ -20,7 +20,7 @@
  */
 
 #include <stdio.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include "common_lib.h"
 #include "radio/ETHERNET/ethernet_lib.h"
 #include "oran_isolate.h"

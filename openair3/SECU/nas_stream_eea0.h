@@ -24,7 +24,7 @@
 
 #include "secu_defs.h"
 
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <stdint.h>
 
 void nas_stream_encrypt_eea0(nas_stream_cipher_t const *stream_cipher, uint8_t *out);

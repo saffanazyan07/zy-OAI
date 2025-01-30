@@ -47,7 +47,7 @@ Description Defines functions executed at the EMMAS Service Access
 #include "emm_cause.h"
 #include "emm_proc.h"
 
-#include <string.h> // memcpy
+#include <common/utils/oai_allocator.h>
 
 /****************************************************************************/
 /****************  E X T E R N A L    D E F I N I T I O N S  ****************/

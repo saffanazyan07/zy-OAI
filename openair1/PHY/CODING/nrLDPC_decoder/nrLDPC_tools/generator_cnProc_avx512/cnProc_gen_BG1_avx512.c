@@ -21,7 +21,7 @@
 
 #include <stdio.h>
 #include <stdint.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include "../../nrLDPCdecoder_defs.h"
 
 void nrLDPC_cnProc_BG1_generator_AVX512(const char *dir, int R)

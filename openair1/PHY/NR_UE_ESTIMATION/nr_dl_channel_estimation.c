@@ -19,7 +19,7 @@
  *      contact@openairinterface.org
  */
 
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include "SCHED_NR_UE/defs.h"
 #include "nr_estimation.h"
 #include "PHY/NR_REFSIG/refsig_defs_ue.h"

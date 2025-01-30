@@ -1,8 +1,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include <sys/stat.h>
 #include <time.h>
 

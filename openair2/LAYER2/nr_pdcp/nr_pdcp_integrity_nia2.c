@@ -22,8 +22,7 @@
 #include "nr_pdcp_integrity_nia2.h"
 
 #include <arpa/inet.h>
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include <stdint.h>
 
 #include "common/utils/assertions.h"

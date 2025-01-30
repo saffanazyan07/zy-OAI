@@ -2,11 +2,9 @@
 #include "gui_defs.h"
 #include "x.h"
 #include <stdio.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <pthread.h>
-#include <unistd.h>
 #include <errno.h>
-#include <string.h>
 
 gui *gui_init(void)
 {

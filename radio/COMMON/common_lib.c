@@ -30,11 +30,9 @@
  * \warning
  */
 #include <stdio.h>
-#include <strings.h>
+#include <common/utils/oai_allocator.h>
 #include <dlfcn.h>
 #include <errno.h>
-#include <string.h>
-#include <stdlib.h>
 
 #include "common_lib.h"
 #include "assertions.h"

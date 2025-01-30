@@ -28,9 +28,7 @@
 #include <openair3/ocp-gtpu/gtp_itf.h>
 #include <pthread.h>
 #include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
+#include <common/utils/oai_allocator.h>
 #include "LAYER2/MAC/mac_extern.h"
 #include "LTE_DRB-ToAddModList.h"
 #include "LTE_DRB-ToReleaseList.h"

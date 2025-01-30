@@ -19,7 +19,7 @@
  *      contact@openairinterface.org
  */
 
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include <stdint.h>
 #include <ctype.h>
 

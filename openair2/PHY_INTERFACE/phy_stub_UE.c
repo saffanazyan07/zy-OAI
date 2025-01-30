@@ -31,7 +31,7 @@
 #include "common/config/config_load_configmodule.h"
 #include "common/config/config_userapi.h"
 #include <arpa/inet.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include <errno.h>
 #include "openair2/NR_PHY_INTERFACE/NR_IF_Module.h"
 #include "openair1/PHY/defs_gNB.h"

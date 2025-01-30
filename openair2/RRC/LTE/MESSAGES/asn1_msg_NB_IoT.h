@@ -30,9 +30,7 @@
 
 #include <stdio.h>
 #include <sys/types.h>
-#include <stdlib.h> /* for atoi(3) */
-#include <unistd.h> /* for getopt(3) */
-#include <string.h> /* for strerror(3) */
+#include <common/utils/oai_allocator.h>
 #include <sysexits.h> /* for EX_* exit codes */
 #include <errno.h>  /* for errno */
 

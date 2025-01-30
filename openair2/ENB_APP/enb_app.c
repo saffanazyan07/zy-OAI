@@ -27,7 +27,7 @@
   EMAIL   : Lionel.Gauthier@eurecom.fr and Navid Nikaein
 */
 
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include <stdio.h>
 
 #include "enb_app.h"

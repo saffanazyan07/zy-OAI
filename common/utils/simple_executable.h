@@ -9,11 +9,8 @@
 #include <stdio.h>
 #include <pthread.h>
 #include <sched.h>
-#include <stdlib.h>
-#include <unistd.h>
+#include <common/utils/oai_allocator.h>
 #include <sys/types.h>
-#include <string.h>
-#include <unistd.h>
 #include <sys/syscall.h>
 #include <sys/time.h>
 #include <stdint.h>

@@ -4,11 +4,9 @@
 #include "../nr_rlc_entity_tm.h"
 
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include <inttypes.h>
 #include <sys/wait.h>
-#include <unistd.h>
 
 #ifndef _STANDALONE_TESTING_
 #include "common/utils/LOG/log.h"

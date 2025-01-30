@@ -21,8 +21,7 @@
 
 #include "nr_rlc_entity_tm.h"
 
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 
 #include "nr_rlc_pdu.h"
 #include "common/utils/time_stat.h"

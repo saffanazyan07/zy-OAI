@@ -38,7 +38,7 @@
 #include <QApplication>
 #include <QComboBox>
 #include <sys/types.h>
-#include <unistd.h>
+#include <common/utils/oai_allocator.h>
 #include <stdio.h>
 #include <fcntl.h>
 #include <signal.h>

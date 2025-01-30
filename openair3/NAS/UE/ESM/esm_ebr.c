@@ -37,8 +37,7 @@ Description Defines functions used to handle state of EPS bearer contexts
 
 *****************************************************************************/
 
-#include <stdlib.h> // malloc, free
-#include <string.h> // memcpy
+#include <common/utils/oai_allocator.h>
 
 #include "emmData.h"
 #include "esm_ebr.h"

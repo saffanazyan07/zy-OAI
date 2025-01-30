@@ -19,10 +19,8 @@
  *      contact@openairinterface.org
  */
 
-//#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include <math.h>
-//#include <unistd.h>
-//#include <stdlib.h>
 #include "PHY/TOOLS/defs.h"
 
 //#define TEST_DEBUG

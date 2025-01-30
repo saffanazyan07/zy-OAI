@@ -32,8 +32,7 @@
 
 
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 
 #include "COMMON/s1ap_messages_types.h"
 #include "COMMON/rrc_messages_types.h"

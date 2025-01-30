@@ -21,7 +21,7 @@
 
 #include <stdio.h>
 #include <stdint.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include "../../nrLDPCdecoder_defs.h"
 #include "../../nrLDPC_types.h"                                                                                           
 #include "../../nrLDPC_bnProc.h"

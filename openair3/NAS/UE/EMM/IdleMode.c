@@ -68,7 +68,7 @@ Description Defines EMM procedures executed by the Non-Access Stratum
 
 #include <assert.h>
 #include <stdio.h>  // sprintf
-#include <string.h> // strlen, strncpy
+#include <common/utils/oai_allocator.h>
 
 /****************************************************************************/
 /****************  E X T E R N A L    D E F I N I T I O N S  ****************/

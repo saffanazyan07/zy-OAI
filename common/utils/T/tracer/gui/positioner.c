@@ -1,8 +1,7 @@
 #include "gui.h"
 #include "gui_defs.h"
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 
 static void add_child(gui *g, widget *_this, widget *child, int position)
 {

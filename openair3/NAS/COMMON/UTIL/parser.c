@@ -40,7 +40,7 @@ Description Usefull command line parser
 #include "commonDef.h"
 
 #include <stdio.h>  // fprintf
-#include <string.h> // strcmp, strncpy
+#include <common/utils/oai_allocator.h>
 
 /****************************************************************************/
 /****************  E X T E R N A L    D E F I N I T I O N S  ****************/

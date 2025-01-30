@@ -1,7 +1,7 @@
 #include "handler.h"
 #include "event.h"
 #include "database.h"
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <stdio.h>
 
 typedef void (*handler_function)(void *p, event e);

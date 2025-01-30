@@ -32,8 +32,7 @@
 
 #include "openair2/NR_PHY_INTERFACE/NR_IF_Module.h"
 #include <stdbool.h>
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include "LAYER2/NR_MAC_gNB/mac_proto.h"
 #include "PHY/defs_common.h"
 #include "common/platform_constants.h"

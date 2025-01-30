@@ -29,8 +29,7 @@
  * 2023.01.27 Vladimir Dorovskikh 16 digits IMEISV
  */
 
-#include <string.h> // memset
-#include <stdlib.h> // malloc, free
+#include <common/utils/oai_allocator.h>
 
 #include "nas_log.h"
 #include "TLVDecoder.h"

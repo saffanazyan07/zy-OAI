@@ -21,8 +21,7 @@
 
 #include "rlc_sdu.h"
 
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 
 #include "LOG/log.h"
 

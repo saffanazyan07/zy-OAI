@@ -2,7 +2,7 @@
 #define KEY_NAS_DERIVER_H
 
 #include <stdbool.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <stdint.h>
 
 typedef enum {

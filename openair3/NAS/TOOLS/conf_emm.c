@@ -1,4 +1,4 @@
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 
 #include "common/utils/mem/oai_memory.h"
 #include "conf_emm.h"

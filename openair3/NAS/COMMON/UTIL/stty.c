@@ -39,9 +39,7 @@ Description Terminal I/O device control setup
 #include "commonDef.h"
 
 #include <termios.h>  // tcgetattr, tcsetattr
-#include <unistd.h>
-#include <string.h> // strdup, strtok, strcmp
-#include <stdlib.h> // free
+#include <common/utils/oai_allocator.h>
 
 /****************************************************************************/
 /****************  E X T E R N A L    D E F I N I T I O N S  ****************/

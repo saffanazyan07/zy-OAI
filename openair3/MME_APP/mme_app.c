@@ -27,7 +27,7 @@
   EMAIL   : javier.morgade@ieee.org
 */
 
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include <stdio.h>
 
 #include "mme_app.h"

@@ -32,8 +32,7 @@
 #include <netinet/sctp.h>
 #include <arpa/inet.h>
 #include "debug.h"
-#include <unistd.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 
 /* Test Suite setup and cleanup functions: */
 

@@ -46,7 +46,7 @@ Description Defines functions executed at the EMMAS Service Access
 #include "emm_msgDef.h"
 #include "emm_proc.h"
 
-#include <string.h> // strlen
+#include <common/utils/oai_allocator.h>
 
 /****************************************************************************/
 /****************  E X T E R N A L    D E F I N I T I O N S  ****************/

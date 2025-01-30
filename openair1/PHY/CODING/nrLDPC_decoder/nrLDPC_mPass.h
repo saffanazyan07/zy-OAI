@@ -26,7 +26,7 @@
 #ifndef __NR_LDPC_MPASS__H__
 #define __NR_LDPC_MPASS__H__
 
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include "common/utils/utils.h"
 #include "nrLDPCdecoder_defs.h"
 //#include <omp.h>

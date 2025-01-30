@@ -19,8 +19,7 @@
  *      contact@openairinterface.org
  */
 
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 
 /* dirty include, needed because calling _snow3g_integrity() is the only
  * way to test integrity (the spec uses 'fresh' directly and snow3g_integrity()

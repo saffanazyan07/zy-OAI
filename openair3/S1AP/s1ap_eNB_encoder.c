@@ -28,7 +28,7 @@
  */
 
 #include <stdio.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include <stdint.h>
 
 #include "assertions.h"

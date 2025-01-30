@@ -21,7 +21,7 @@
 
 #include <assert.h>
 #include <stdint.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 
 #include "ran_func_pdcp.h"
 #include "common/ran_context.h"

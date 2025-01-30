@@ -28,7 +28,7 @@
  * \warning
  */
 
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <stdint.h>
 #include <stdio.h>
 

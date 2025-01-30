@@ -22,8 +22,7 @@
 #include <pthread.h>
 #include <stdint.h>
 #include <errno.h>
-#include <string.h>
-#include <unistd.h>
+#include <common/utils/oai_allocator.h>
 #include <fcntl.h>
 
 #include <sys/types.h>

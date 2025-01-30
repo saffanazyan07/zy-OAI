@@ -22,7 +22,7 @@
 #include "nfapi_interface.h"
 #include "nfapi.h"
 #include <stdio.h>  // for printf
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include "debug.h"
 #include "nfapi_interface.h"
 /* Test Suite setup and cleanup functions: */

@@ -39,8 +39,7 @@ extern int otg_enabled;
 #include <pthread.h>
 #include <errno.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
+#include <common/utils/oai_allocator.h>
 #include <netinet/ip.h>
 #define rtf_put write
 #define rtf_get read

@@ -1,4 +1,4 @@
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 
 #ifndef T_TRACER
 int T_stdout;

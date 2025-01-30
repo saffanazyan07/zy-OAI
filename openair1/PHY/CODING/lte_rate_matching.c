@@ -26,7 +26,7 @@
 */
 #ifdef MAIN
   #include <stdio.h>
-  #include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #endif
 #include "PHY/defs_eNB.h"
 #include "PHY/LTE_TRANSPORT/transport_common.h"

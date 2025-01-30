@@ -74,9 +74,9 @@ hash_table_t  *pdcp_coll_p = NULL;
   #include <netinet/in.h>
   #include <netinet/ip.h>
   #include <netinet/udp.h>
-  #include <unistd.h>
+#include <common/utils/oai_allocator.h>
 
-  static int mbms_socket = -1;
+static int mbms_socket = -1;
 #endif
 
 uint32_t Pdcp_stats_tx_window_ms[MAX_eNB][MAX_MOBILES_PER_ENB];

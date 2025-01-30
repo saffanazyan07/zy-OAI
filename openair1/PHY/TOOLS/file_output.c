@@ -19,10 +19,8 @@
  *      contact@openairinterface.org
  */
 
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include <stdio.h>
-#include <stdlib.h>
-
 
 int write_output(const char *fname,const char *vname,void *data,int length,int dec,char format)
 {

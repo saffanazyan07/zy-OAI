@@ -28,11 +28,10 @@
 #include "uper_encoder.h"
 
 #include <stdio.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <pthread.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <unistd.h>
 
 extern RAN_CONTEXT_t RC;
 extern mui_t rrc_eNB_mui;

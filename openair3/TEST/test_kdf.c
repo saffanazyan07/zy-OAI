@@ -21,8 +21,7 @@
 
 #include <stdio.h>
 #include <stdint.h>
-#include <unistd.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 
 #include "test_util.h"
 #include "secu_defs.h"

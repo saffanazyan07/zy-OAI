@@ -1,5 +1,4 @@
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include "conf_user_plmn.h"
 
 bool parse_user_plmns_conf(config_setting_t *ue_setting, int user_id,

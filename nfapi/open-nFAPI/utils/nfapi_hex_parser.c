@@ -20,8 +20,7 @@
  */
 
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include <ctype.h>
 #include "nr_fapi.h"
 #include "nr_fapi_p5.h"

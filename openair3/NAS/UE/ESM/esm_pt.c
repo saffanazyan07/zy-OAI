@@ -44,8 +44,7 @@ Description Defines functions used to handle ESM procedure transactions.
 #include "nas_log.h"
 #include "utils.h"
 
-#include <stdlib.h> // malloc, free
-#include <string.h> // memcpy
+#include <common/utils/oai_allocator.h>
 
 /****************************************************************************/
 /****************  E X T E R N A L    D E F I N I T I O N S  ****************/

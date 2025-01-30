@@ -44,6 +44,7 @@ static void refresh_table(gold_cache_table_t *t, int sizeIncrease)
 {
   uint32_t *old = t->table;
   uint oldSz = t->tblSz;
+  const uint PAGE_SIZE = getpagesize();
   if (t->tblSz == 0)
     t->tblSz = PAGE_SIZE / sizeof(*t->table);
   if (sizeIncrease)

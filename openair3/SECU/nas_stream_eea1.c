@@ -19,8 +19,7 @@
  *      contact@openairinterface.org
  */
 
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 
 #include "assertions.h"
 #include "nas_stream_eea1.h"

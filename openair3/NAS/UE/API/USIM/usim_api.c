@@ -39,8 +39,7 @@ Description Implements the API used by the NAS layer to read/write
 *****************************************************************************/
 
 #include <stdio.h>
-#include <string.h> // memcpy, memset
-#include <stdlib.h> // malloc, free
+#include <common/utils/oai_allocator.h>
 #include "usim_api.h"
 #include "nas_log.h"
 #include "utils.h"

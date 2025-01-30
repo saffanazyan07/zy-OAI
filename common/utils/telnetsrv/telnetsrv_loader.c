@@ -29,8 +29,8 @@
  * \note
  * \warning
  */
-#define _GNU_SOURCE 
-#include <string.h>
+#define _GNU_SOURCE
+#include <common/utils/oai_allocator.h>
 #include <pthread.h>
 
 

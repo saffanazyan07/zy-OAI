@@ -31,9 +31,7 @@
 #include <openair3/NGAP/ngap_gNB.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
+#include <common/utils/oai_allocator.h>
 #include "BIT_STRING.h"
 #include "ngap_msg_includes.h"
 #include "OCTET_STRING.h"

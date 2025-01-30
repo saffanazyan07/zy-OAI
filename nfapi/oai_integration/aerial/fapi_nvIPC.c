@@ -33,16 +33,14 @@
 #define _GNU_SOURCE
 #include <sched.h>
 #include <stdio.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include <stdint.h>
-#include <stdlib.h>
 #include <errno.h>
 #include <pthread.h>
 #include <fcntl.h>
 #include <inttypes.h>
 #include <stdarg.h>
 #include <errno.h>
-#include <unistd.h>
 #include <termios.h>
 #include <stdatomic.h>
 #include <sys/queue.h>

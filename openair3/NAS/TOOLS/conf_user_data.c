@@ -1,5 +1,4 @@
-#include <string.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 
 #include "commonDef.h"
 #include "common/utils/mem/oai_memory.h"

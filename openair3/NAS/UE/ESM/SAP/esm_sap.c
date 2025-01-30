@@ -52,7 +52,7 @@ Description Defines the ESM Service Access Points at which the EPS
 #include "esm_cause.h"
 #include "esm_proc.h"
 
-#include <string.h> // memset, strlen
+#include <common/utils/oai_allocator.h>
 #include <assert.h>
 
 /****************************************************************************/

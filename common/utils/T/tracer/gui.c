@@ -1,10 +1,8 @@
 #include "defs.h"
 #include "gui/gui.h"
 #include <stdio.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <pthread.h>
-#include <unistd.h>
-#include <string.h>
 #include <math.h>
 
 static struct {

@@ -20,10 +20,8 @@
  */
 
 #include <stdio.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <stdint.h>
-#include <string.h>
-
 
 #include "TLVEncoder.h"
 #include "TLVDecoder.h"

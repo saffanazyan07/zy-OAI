@@ -34,8 +34,7 @@
 #define __LAYER2_NR_MAC_DEFS_H__
 
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include "common/platform_types.h"
 
 /* IF */

@@ -40,19 +40,16 @@
 #include <execinfo.h>
 #include <getopt.h>
 #include <linux/sched.h>
-#include <malloc.h>
+#include <common/utils/oai_allocator.h>
 #include <math.h>
 #include <pthread.h>
 #include <sched.h>
 #include <signal.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <sys/sysinfo.h>
 #include <sys/types.h>
-#include <unistd.h>
 
 #include "common_lib.h"
 #include "defs_common.h"

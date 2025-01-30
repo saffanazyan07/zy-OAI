@@ -33,9 +33,8 @@
 //#define DEBUG_HARQ
 //#define PRINT_THROUGHPUT
 
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include <math.h>
-#include <unistd.h>
 #include <execinfo.h>
 #include <signal.h>
 

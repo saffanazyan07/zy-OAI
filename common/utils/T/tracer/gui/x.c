@@ -4,8 +4,7 @@
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 
 int x_connection_fd(x_connection *_x) {
   struct x_connection *x = _x;

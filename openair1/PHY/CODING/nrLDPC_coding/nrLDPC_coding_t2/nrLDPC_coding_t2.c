@@ -17,7 +17,7 @@
 #include <getopt.h>
 #include <inttypes.h>
 #include <stdio.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include <stdbool.h>
 
 #include <math.h>
@@ -32,7 +32,6 @@
 #include <rte_dev.h>
 #include <rte_launch.h>
 #include <rte_bbdev.h>
-#include <rte_malloc.h>
 #include <rte_random.h>
 #include <rte_hexdump.h>
 #include <rte_interrupts.h>

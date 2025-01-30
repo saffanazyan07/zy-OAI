@@ -35,8 +35,7 @@ Author      Frederic Maurel
 Description Defines functions used to handle EPS bearer contexts.
 
 *****************************************************************************/
-#include <stdlib.h> // malloc, free
-#include <string.h> // memset
+#include <common/utils/oai_allocator.h>
 
 #include "commonDef.h"
 #include "nas_log.h"

@@ -2,7 +2,7 @@
 #include "gui_defs.h"
 #include "x.h"
 #include <stdio.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 
 static void paint(gui *_gui, widget *_this)
 {

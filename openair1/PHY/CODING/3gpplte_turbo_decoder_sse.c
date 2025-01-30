@@ -45,8 +45,7 @@
 
   #include "defs.h"
   #include <stdio.h>
-  #include <stdlib.h>
-  #include <string.h>
+#include <common/utils/oai_allocator.h>
 #endif
 
 #define SHUFFLE16(a, b, c, d, e, f, g, h)     \

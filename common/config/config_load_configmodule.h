@@ -33,9 +33,7 @@
 #ifndef INCLUDE_CONFIG_LOADCONFIGMODULE_H
 #define INCLUDE_CONFIG_LOADCONFIGMODULE_H
 
-
-#include <string.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include "common/config/config_paramdesc.h"

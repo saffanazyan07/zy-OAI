@@ -25,9 +25,8 @@
  */
 #define _LARGEFILE_SOURCE
 #define _FILE_OFFSET_BITS 64
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include <pthread.h>
-#include <unistd.h>
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>

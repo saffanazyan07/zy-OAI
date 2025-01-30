@@ -42,7 +42,7 @@ Description Defines structure of the AT command response returned after
 #include "nas_log.h"
 
 #include <stdio.h>  // sprintf, snprintf
-#include <string.h> // strncpy
+#include <common/utils/oai_allocator.h>
 #include <assert.h> // assert
 
 /****************************************************************************/

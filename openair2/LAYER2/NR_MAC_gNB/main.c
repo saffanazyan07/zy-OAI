@@ -36,10 +36,7 @@
 #include <sched.h>
 #include <stdbool.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <strings.h>
-#include <unistd.h>
+#include <common/utils/oai_allocator.h>
 #include "NR_DRB-ToAddMod.h"
 #include "NR_DRB-ToAddModList.h"
 #include "NR_MAC_COMMON/nr_mac.h"

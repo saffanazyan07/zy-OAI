@@ -27,9 +27,7 @@
  */
 
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
+#include <common/utils/oai_allocator.h>
 
 #include "executables/softmodem-common.h"
 #include "nr_transport_proto_ue.h"

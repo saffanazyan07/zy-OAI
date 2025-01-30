@@ -1,8 +1,7 @@
 /* license: to be defined */
 
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include <stdint.h>
 #include <inttypes.h>
 #include <sys/types.h>
@@ -17,7 +16,6 @@
 #include <stdbool.h>
 #include <rte_common.h>
 #include <rte_log.h>
-#include <rte_malloc.h>
 #include <rte_memory.h>
 #include <rte_memcpy.h>
 #include <rte_eal.h>

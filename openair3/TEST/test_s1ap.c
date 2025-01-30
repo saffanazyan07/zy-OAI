@@ -20,7 +20,7 @@
  */
 
 #include <stdint.h>
-#include <unistd.h>
+#include <common/utils/oai_allocator.h>
 
 #include "test_util.h"
 

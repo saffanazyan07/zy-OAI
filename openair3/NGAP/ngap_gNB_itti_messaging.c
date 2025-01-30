@@ -27,8 +27,7 @@
  * \version 0.1
  */
 
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include "intertask_interface.h"
 #include "ngap_messages_types.h"
 #include "sctp_messages_types.h"

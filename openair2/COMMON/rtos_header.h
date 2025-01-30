@@ -22,8 +22,7 @@
 #ifndef _RTOS_HEADER_H_
 #define _RTOS_HEADER_H_
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include <math.h>
 #include <pthread.h>
 #include <assert.h>

@@ -31,17 +31,15 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <errno.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <signal.h>
 #include <stdint.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/un.h>
-#include <unistd.h>
 #include <netinet/in.h>
 #include <net/if.h>
 #include <signal.h>
-#include <stdlib.h>
 
 #include "cli.h"
 #include "UTIL/LOG/log.h"

@@ -20,7 +20,7 @@
  */
 
 #include <stdio.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <math.h>
 
 //#include "PHY/defs.h"

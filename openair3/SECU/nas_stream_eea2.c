@@ -20,10 +20,9 @@
  */
 
 #include <arpa/inet.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <stdio.h>
 #include <stdint.h>
-#include <string.h>
 
 #include "aes_128_ctr.h"
 #include "assertions.h"

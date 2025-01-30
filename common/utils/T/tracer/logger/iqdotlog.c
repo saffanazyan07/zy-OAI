@@ -3,8 +3,7 @@
 #include "handler.h"
 #include "database.h"
 #include "filter/filter.h"
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include <stdio.h>
 
 struct iqdotlog {

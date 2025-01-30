@@ -2,7 +2,7 @@
 #define __UTIL_OPT_MAC_PCAP__H__
 
 #include <stdio.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include <arpa/inet.h>
 
 #define MAC_LTE_DLT 147

@@ -1,9 +1,8 @@
 #include "view.h"
 #include "../utils.h"
 #include <stdio.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <pthread.h>
-#include <string.h>
 
 /****************************************************************************/
 /*                              timeview                                    */

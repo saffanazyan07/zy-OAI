@@ -30,8 +30,7 @@
 #include "ngap_gNB_handlers.h"
 #include <stdbool.h>
 #include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include "INTEGER.h"
 #include "ngap_msg_includes.h"
 #include "OCTET_STRING.h"

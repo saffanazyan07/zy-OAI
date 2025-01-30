@@ -21,7 +21,7 @@
 
 #include "nr_rlc_entity.h"
 
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 
 #include "nr_rlc_entity_am.h"
 #include "nr_rlc_entity_um.h"

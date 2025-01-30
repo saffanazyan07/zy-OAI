@@ -21,8 +21,7 @@
 
 #include "rrc_gNB_du.h"
 #include <stdbool.h>
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include "F1AP_CauseMisc.h"
 #include "F1AP_CauseProtocol.h"
 #include "F1AP_CauseRadioNetwork.h"

@@ -40,7 +40,7 @@ Description NAS command line parser
 #include "parser.h"
 
 #include <stdio.h>  // fprintf
-#include <stdlib.h> // atoi
+#include <common/utils/oai_allocator.h>
 
 /****************************************************************************/
 /****************  E X T E R N A L    D E F I N I T I O N S  ****************/

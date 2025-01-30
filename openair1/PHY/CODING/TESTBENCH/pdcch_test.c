@@ -19,10 +19,9 @@
  *      contact@openairinterface.org
  */
 
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <math.h>
 #include <stdio.h>
-#include <string.h>
 
 #include "PHY/defs.h"
 #include "PHY/vars.h"

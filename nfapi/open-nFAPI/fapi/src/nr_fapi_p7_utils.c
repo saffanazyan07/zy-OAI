@@ -20,7 +20,7 @@
  */
 #include "nr_fapi_p7_utils.h"
 
-#include <malloc.h>
+#include <common/utils/oai_allocator.h>
 
 static bool eq_dl_tti_beamforming(const nfapi_nr_tx_precoding_and_beamforming_t *a,
                                   const nfapi_nr_tx_precoding_and_beamforming_t *b)

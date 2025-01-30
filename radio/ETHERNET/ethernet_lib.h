@@ -35,8 +35,7 @@
 #include <arpa/inet.h>
 #include <linux/if_packet.h>
 #include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <net/if.h>

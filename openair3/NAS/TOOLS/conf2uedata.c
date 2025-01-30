@@ -1,6 +1,5 @@
 #include <stdio.h>  // perror, printf, fprintf, snprintf
-#include <stdlib.h> // exit, free
-#include <string.h> // memset, strncpy
+#include <common/utils/oai_allocator.h>
 #include <getopt.h>
 
 #include "conf2uedata.h"

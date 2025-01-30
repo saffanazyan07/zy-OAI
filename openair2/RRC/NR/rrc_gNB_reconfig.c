@@ -30,7 +30,7 @@
 #ifndef RRC_GNB_NSA_C
 #define RRC_GNB_NSA_C
 
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 
 #include "OCTET_STRING.h"
 #include "RRC/NR/nr_rrc_proto.h"

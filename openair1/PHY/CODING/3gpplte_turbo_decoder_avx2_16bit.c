@@ -50,8 +50,7 @@
 
 #include "defs.h"
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #endif
 
 #include "PHY/sse_intrin.h"

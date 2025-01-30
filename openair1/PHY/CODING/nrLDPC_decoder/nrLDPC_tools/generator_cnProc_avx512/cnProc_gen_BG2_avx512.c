@@ -19,7 +19,7 @@
  *      contact@openairinterface.org
  */
 
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <stdio.h>
 #include <stdint.h>
 #include "../../nrLDPCdecoder_defs.h"

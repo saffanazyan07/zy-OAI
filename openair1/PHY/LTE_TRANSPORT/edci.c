@@ -32,8 +32,7 @@
  */
 
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include "PHY/defs_eNB.h"
 #include "PHY/phy_extern.h"
 #include "SCHED/sched_eNB.h"

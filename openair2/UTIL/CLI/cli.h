@@ -32,12 +32,8 @@
 #ifndef __CLI_H__
 #define __CLI_H__
 
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <malloc.h>
 #include <setjmp.h>
 #include <signal.h>
 #include <sys/socket.h>

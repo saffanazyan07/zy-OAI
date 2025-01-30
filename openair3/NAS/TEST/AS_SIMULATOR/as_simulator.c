@@ -55,8 +55,7 @@ Description Implements the Access-Stratum simulator operating between
 #include <stdio.h>  // printf, perror, snprintf
 #include <errno.h>  // errno
 #include <netdb.h>  // gai_strerror
-#include <stdlib.h> // exit
-#include <string.h> // memset
+#include <common/utils/oai_allocator.h>
 #include <poll.h> // poll
 #include <signal.h> // sigaction
 #include <pthread.h>

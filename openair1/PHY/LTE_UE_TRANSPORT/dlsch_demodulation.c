@@ -38,8 +38,7 @@
 #include "T.h"
 #include<stdio.h>
 #include<math.h>
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include <linux/version.h>
 #include <lapacke_utils.h>
 #include <lapacke.h>

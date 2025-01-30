@@ -32,10 +32,9 @@
 #ifndef PSS_UTIL_TEST_H
 #define PSS_UTIL_TEST_H
 
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include <math.h>
 #include <stdio.h>
-#include <string.h>
 #include <limits.h>
 
 #include "PHY/defs_nr_UE.h"

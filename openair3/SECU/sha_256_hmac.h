@@ -23,7 +23,7 @@
 #define SHA_256_HMAC_OAI_H 
 
 #include <stdint.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 
 #include "byte_array.h"
 

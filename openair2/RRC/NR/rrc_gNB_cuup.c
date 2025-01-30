@@ -23,7 +23,7 @@
 #include <netinet/sctp.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 #include "PHY/defs_common.h"
 #include "RRC/NR/nr_rrc_proto.h"
 #include "T.h"

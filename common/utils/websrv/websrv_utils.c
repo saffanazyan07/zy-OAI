@@ -29,9 +29,8 @@
  * \note
  * \warning
  */
-#include <unistd.h>
+#include <common/utils/oai_allocator.h>
 #include <errno.h>
-#include <string.h>
 #include <stdbool.h>
 #include "common/utils/LOG/log.h"
 #include <libgen.h>

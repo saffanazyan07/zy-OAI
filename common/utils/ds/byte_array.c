@@ -22,7 +22,7 @@
 #include "byte_array.h"
 
 #include <assert.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 
 byte_array_t copy_byte_array(byte_array_t src)
 {

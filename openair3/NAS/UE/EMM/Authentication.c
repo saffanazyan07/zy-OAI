@@ -50,8 +50,7 @@ Description Defines the authentication EMM procedure executed by the
 
 *****************************************************************************/
 
-#include <stdlib.h> // malloc, free
-#include <string.h> // memcpy, memcmp, memset
+#include <common/utils/oai_allocator.h>
 #include <arpa/inet.h> // htons
 
 #include "emm_proc.h"

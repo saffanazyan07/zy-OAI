@@ -25,7 +25,7 @@ SOFTWARE.
 #include "foreach.h"
 
 #include <assert.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 
 void for_each(seq_arr_t* arr, void* value, void (*f)(void* value, void* it))
 {

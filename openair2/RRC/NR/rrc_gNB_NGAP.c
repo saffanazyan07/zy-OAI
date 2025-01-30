@@ -34,8 +34,7 @@
 #include <openair3/ocp-gtpu/gtp_itf.h>
 #include <stdbool.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include "E1AP_ConfidentialityProtectionIndication.h"
 #include "E1AP_IntegrityProtectionIndication.h"
 #include "NGAP_CauseRadioNetwork.h"

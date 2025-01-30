@@ -27,7 +27,7 @@
   EMAIL   : javier.morgade@ieee.org
 */
 
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include <inttypes.h>
 
 #include "common/utils/LOG/log.h"

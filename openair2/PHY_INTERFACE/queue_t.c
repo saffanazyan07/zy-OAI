@@ -1,5 +1,5 @@
 #include "queue_t.h"
-#include <string.h>
+#include <common/utils/oai_allocator.h>
 #include <assert.h>
 
 #ifdef UNITTEST

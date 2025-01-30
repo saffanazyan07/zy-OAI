@@ -22,7 +22,7 @@
 #include "read_setup_ran.h"
 #include "../../E2AP/flexric/src/lib/e2ap/e2ap_node_component_config_add_wrapper.h"
 #include <assert.h>
-#include <stdlib.h>
+#include <common/utils/oai_allocator.h>
 
 #if defined(E2AP_V2) || defined(E2AP_V3)
 // NGAP
