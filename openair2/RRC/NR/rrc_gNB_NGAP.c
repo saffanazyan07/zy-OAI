@@ -87,8 +87,6 @@
 #include "openair2/E2AP/RAN_FUNCTION/O-RAN/ran_func_rc_extern.h"
 #endif
 
-extern RAN_CONTEXT_t RC;
-
 /* Masks for NGAP Encryption algorithms, NEA0 is always supported (not coded) */
 static const uint16_t NGAP_ENCRYPTION_NEA1_MASK = 0x8000;
 static const uint16_t NGAP_ENCRYPTION_NEA2_MASK = 0x4000;

@@ -44,8 +44,6 @@
 // #define DEBUG_LDPC_ENCODING
 // #define DEBUG_LDPC_ENCODING_FREE 1
 
-extern ldpc_interface_t ldpc_interface_segment;
-
 typedef struct ldpc8blocks_args_s {
   nrLDPC_TB_encoding_parameters_t *nrLDPC_TB_encoding_parameters;
   encoder_implemparams_t impp;

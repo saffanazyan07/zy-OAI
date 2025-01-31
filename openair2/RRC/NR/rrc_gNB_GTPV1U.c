@@ -36,8 +36,6 @@
 #include "rrc_eNB_GTPV1U.h"
 #include "s1ap_messages_types.h"
 
-extern RAN_CONTEXT_t RC;
-
 int rrc_gNB_process_GTPV1U_CREATE_TUNNEL_RESP(gNB_RRC_UE_t *ue,
                                               const gtpv1u_enb_create_tunnel_resp_t *const create_tunnel_resp_pP,
                                               uint8_t *inde_list)

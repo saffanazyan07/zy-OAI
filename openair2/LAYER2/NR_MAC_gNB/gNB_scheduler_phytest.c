@@ -37,10 +37,8 @@
 #include "executables/softmodem-common.h"
 #include "common/utils/nr/nr_common.h"
 
-//#define UL_HARQ_PRINT
-extern RAN_CONTEXT_t RC;
-
-//#define ENABLE_MAC_PAYLOAD_DEBUG 1
+// #define UL_HARQ_PRINT
+// #define ENABLE_MAC_PAYLOAD_DEBUG 1
 
 uint32_t target_dl_mcs = 9;
 uint32_t target_dl_Nl = 1;

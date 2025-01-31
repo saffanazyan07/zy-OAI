@@ -64,6 +64,6 @@ if (ENABLE_TESTS)
   add_subdirectory(tests)
 endif()
 
-if (ENABLE_IMSCOPE)
+if (ENABLE_IMSCOPE OR ENABLE_IMSCOPE_RECORD)
   add_subdirectory(imscope)
 endif()

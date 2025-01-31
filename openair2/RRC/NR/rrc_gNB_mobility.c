@@ -34,9 +34,7 @@
 #include "MESSAGES/asn1_msg.h"
 #include "nr_pdcp/nr_pdcp_oai_api.h"
 #include "openair3/SECU/key_nas_deriver.h"
-
-/* declared in rrc_gNB.c: should be cleaned up through helper function? useful? */
-extern mui_t rrc_gNB_mui;
+#include "openair2/RRC/NR/rrc_gNB_NGAP.h"
 
 typedef enum { HO_CTX_BOTH, HO_CTX_SOURCE, HO_CTX_TARGET } ho_ctx_type_t;
 static nr_handover_context_t *alloc_ho_ctx(ho_ctx_type_t type)

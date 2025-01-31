@@ -183,6 +183,15 @@ uint32_t nr_timer_elapsed_time(const NR_timer_t *timer);
 int set_default_nta_offset(frequency_range_t freq_range, uint32_t samples_per_subframe);
 extern const nr_bandentry_t nr_bandtable[];
 
+extern simde__m128i byte2bit16_lut[256];
+void init_byte2bit16(void);
+void  init_byte2m128i(void);
+
+static inline simde__m128i byte2bit16(uint8_t b)
+{
+  return byte2bit16_lut[b];
+}
+
 static inline int get_num_dmrs(uint16_t dmrs_mask )
 {
   int num_dmrs=0;
@@ -259,8 +268,7 @@ unsigned short get_N_b_srs(int c_srs, int b_srs);
 #define CEILIDIV(a,b) ((a+b-1)/b)
 #define ROUNDIDIV(a,b) (((a<<1)+b)/(b<<1))
 
-// Align up to a multiple of 16
-#define ALIGN_UP_16(a) ((a + 15) & ~15)
+static const char *const duplex_mode_txt[] = {"FDD", "TDD"};
 
 #ifdef __cplusplus
 #ifdef min

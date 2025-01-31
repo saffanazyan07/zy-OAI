@@ -40,6 +40,8 @@
 #include "ngap_messages_types.h"
 #include "nr_rrc_defs.h"
 
+extern mui_t rrc_gNB_mui;
+
 void rrc_gNB_send_NGAP_NAS_FIRST_REQ(gNB_RRC_INST *rrc, gNB_RRC_UE_t *UE, NR_RRCSetupComplete_IEs_t *rrcSetupComplete);
 
 int rrc_gNB_process_NGAP_INITIAL_CONTEXT_SETUP_REQ(MessageDef *msg_p, instance_t instance);

@@ -66,8 +66,8 @@ static void nr_generate_dci(PHY_VARS_gNB *gNB,
   get_coreset_rballoc(pdcch_pdu_rel15->FreqDomainResource,&n_rb,&rb_offset);
   uint16_t cset_start_sc = frame_parms->first_carrier_offset + (pdcch_pdu_rel15->BWPStart + rb_offset) * NR_NB_SC_PER_RB;
   int idx1 = pdcch_pdu_rel15->StartSymbolIndex+pdcch_pdu_rel15->DurationSymbols;
-  int idx2 = (((n_rb + rb_offset + pdcch_pdu_rel15->BWPStart) * 6 + 15) >> 4) << 4;
-  int16_t mod_dmrs[idx1][idx2] __attribute__((aligned(16)));
+  int idx2 = (((n_rb + rb_offset + pdcch_pdu_rel15->BWPStart) * 3) + 15) & ~15;
+  c16_t mod_dmrs[idx1][idx2] __attribute__((aligned(16)));
 
   for (int d = 0; d < pdcch_pdu_rel15->numDlDci; d++) {
     /*The coreset is initialised
@@ -114,7 +114,7 @@ static void nr_generate_dci(PHY_VARS_gNB *gNB,
     /// DMRS QPSK modulation
     for (int symb = cset_start_symb; symb < cset_start_symb + pdcch_pdu_rel15->DurationSymbols; symb++) {
       const uint32_t *gold = nr_gold_pdcch(frame_parms->N_RB_DL, frame_parms->symbols_per_slot, dci_pdu->ScramblingId, slot, symb);
-      nr_modulation(gold, dmrs_length, DMRS_MOD_ORDER, mod_dmrs[symb]); // Qm = 2 as DMRS is QPSK modulated
+      nr_modulation(gold, dmrs_length, DMRS_MOD_ORDER, (int16_t *)mod_dmrs[symb]); // Qm = 2 as DMRS is QPSK modulated
 
 #ifdef DEBUG_PDCCH_DMRS
       if(dci_pdu->RNTI!=0xFFFF) {
@@ -122,8 +122,10 @@ static void nr_generate_dci(PHY_VARS_gNB *gNB,
           printf("symb %d i %d %p gold seq 0x%08x mod_dmrs %d %d\n",
                  symb,
                  i,
-                 &gold_pdcch_dmrs[symb][i>>5],gold_pdcch_dmrs[symb][i>>5],
-                 mod_dmrs[symb][i<<1], mod_dmrs[symb][(i<<1)+1]);
+                 &gold_pdcch_dmrs[symb][i >> 5],
+                 gold_pdcch_dmrs[symb][i >> 5],
+                 mod_dmrs[symb][i].r,
+                 mod_dmrs[symb][i].i);
       }
 #endif
     }
@@ -160,18 +162,18 @@ static void nr_generate_dci(PHY_VARS_gNB *gNB,
 	   scrambled_output[6], scrambled_output[7], scrambled_output[8], scrambled_output[9], scrambled_output[10],scrambled_output[11] );
 #endif
     /// QPSK modulation
-    int16_t mod_dci[NR_MAX_DCI_SIZE>>1] __attribute__((aligned(16)));
-    nr_modulation(scrambled_output, encoded_length, DMRS_MOD_ORDER, mod_dci); //Qm = 2 as DMRS is QPSK modulated
+    c16_t mod_dci[NR_MAX_DCI_SIZE >> 2] __attribute__((aligned(16)));
+    nr_modulation(scrambled_output, encoded_length, DMRS_MOD_ORDER, (int16_t *)mod_dci); // Qm = 2 as DMRS is QPSK modulated
 #ifdef DEBUG_DCI
     
     for (int i=0; i<encoded_length>>1; i++)
-      printf("i %d mod_dci %d %d\n", i, mod_dci[i<<1], mod_dci[(i<<1)+1] );
-    
+      printf("i %d mod_dci %d %d\n", i, mod_dci[i].r, mod_dci[i].i);
+
 #endif
 
     /// Resource mapping
     uint16_t amp = gNB->TX_AMP;
-    int32_t *txdataF = (int32_t *)&gNB->common_vars.txdataF[beam_nb][0][txdataF_offset];
+    c16_t *txdataF = gNB->common_vars.txdataF[beam_nb][0] + txdataF_offset;
     if (cset_start_sc >= frame_parms->ofdm_symbol_size)
       cset_start_sc -= frame_parms->ofdm_symbol_size;
 
@@ -198,8 +200,7 @@ static void nr_generate_dci(PHY_VARS_gNB *gNB,
 
         for (int m = 0; m < NR_NB_SC_PER_RB; m++) {
           if (m == (k_prime << 2) + 1) { // DMRS if not already mapped
-            ((int16_t *)txdataF)[(l * frame_parms->ofdm_symbol_size + k) << 1] = (amp * mod_dmrs[l][dmrs_idx << 1]) >> 15;
-            ((int16_t *)txdataF)[((l * frame_parms->ofdm_symbol_size + k) << 1) + 1] = (amp * mod_dmrs[l][(dmrs_idx << 1) + 1]) >> 15;
+            txdataF[l * frame_parms->ofdm_symbol_size + k] = c16mulRealShift(mod_dmrs[l][dmrs_idx], amp, 15);
 
 #ifdef DEBUG_PDCCH_DMRS
             LOG_I(NR_PHY_DCI,
@@ -207,23 +208,22 @@ static void nr_generate_dci(PHY_VARS_gNB *gNB,
                   dmrs_idx,
                   l,
                   k,
-                  ((int16_t *)txdataF)[(l * frame_parms->ofdm_symbol_size + k) << 1],
-                  ((int16_t *)txdataF)[((l * frame_parms->ofdm_symbol_size + k) << 1) + 1]);
+                  txdataF[l * frame_parms->ofdm_symbol_size + k].r,
+                  txdataF[l * frame_parms->ofdm_symbol_size + k].i);
 #endif
 
             dmrs_idx++;
             k_prime++;
 
           } else { // DCI payload
-            ((int16_t *)txdataF)[(l * frame_parms->ofdm_symbol_size + k) << 1] = (amp * mod_dci[dci_idx << 1]) >> 15;
-            ((int16_t *)txdataF)[((l * frame_parms->ofdm_symbol_size + k) << 1) + 1] = (amp * mod_dci[(dci_idx << 1) + 1]) >> 15;
+            txdataF[l * frame_parms->ofdm_symbol_size + k] = c16mulRealShift(mod_dci[dci_idx], amp, 15);
 #ifdef DEBUG_DCI
             LOG_I(NR_PHY_DCI,
                   "PDCCH: l %d position %d => (%d,%d)\n",
                   l,
                   k,
-                  ((int16_t *)txdataF)[(l * frame_parms->ofdm_symbol_size + k) << 1],
-                  ((int16_t *)txdataF)[((l * frame_parms->ofdm_symbol_size + k) << 1) + 1]);
+		  		  txdataF[l * frame_parms->ofdm_symbol_size + k].r,
+		  txdataF[l * frame_parms->ofdm_symbol_size + k].i;
 #endif
 
             dci_idx++;

@@ -72,9 +72,6 @@
 #include "time_meas.h"
 #include "utils.h"
 
-extern RAN_CONTEXT_t RC;
-
-
 #define MACSTATSSTRLEN 36256
 
 void *nrmac_stats_thread(void *arg) {

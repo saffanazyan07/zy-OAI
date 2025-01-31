@@ -260,15 +260,8 @@ static int freq_domain_loopback(PHY_VARS_NR_UE *UE_tx, PHY_VARS_NR_UE *UE_rx, in
   nr_tx_psbch(UE_tx, frame, slot, &phy_data->psbch_vars, txdataF);
 
   int estimateSz = sl_ue2->sl_frame_params.samples_per_slot_wCP;
-  __attribute__((aligned(32))) struct complex16 rxdataF[1][estimateSz];
-  for (int i = 0; i < sl_ue1->sl_frame_params.samples_per_slot_wCP; i++) {
-    struct complex16 *txdataF_ptr = (struct complex16 *)&txdataF[0][i];
-    struct complex16 *rxdataF_ptr = (struct complex16 *)&rxdataF[0][i];
-    rxdataF_ptr->r = txdataF_ptr->r;
-    rxdataF_ptr->i = txdataF_ptr->i;
-    // printf("r,i TXDATAF[%d]-    %d:%d, RXDATAF[%d]-    %d:%d\n",
-    //                                   i, txdataF_ptr->r, txdataF_ptr->i, i, txdataF_ptr->r, txdataF_ptr->i);
-  }
+  __attribute__((aligned(32))) c16_t rxdataF[1][estimateSz];
+  memcpy(rxdataF[0], txdataF[0], sl_ue1->sl_frame_params.samples_per_slot_wCP * sizeof(**rxdataF));
 
   uint8_t err_status = 0;
 

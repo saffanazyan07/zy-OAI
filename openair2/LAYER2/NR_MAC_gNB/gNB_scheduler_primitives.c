@@ -63,12 +63,9 @@
 
 #include "common/utils/alg/find.h"
 
-//#define DEBUG_DCI
-
-extern RAN_CONTEXT_t RC;
-
-// CQI TABLES (10 times the value in 214 to adequately compare with R)
-// Table 1 (38.214 5.2.2.1-2)
+// #define DEBUG_DCI
+//  CQI TABLES (10 times the value in 214 to adequately compare with R)
+//  Table 1 (38.214 5.2.2.1-2)
 static const uint16_t cqi_table1[16][2] = {{0, 0},
                                            {2, 780},
                                            {2, 1200},

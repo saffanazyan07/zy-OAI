@@ -654,5 +654,16 @@ extern pthread_mutex_t      lock_ue_freelist;
 void remove_UE_from_freelist(module_id_t mod_id, rnti_t rnti);
 void put_UE_in_freelist(module_id_t mod_id, rnti_t rnti, bool removeFlag);
 void release_UE_in_freeList(module_id_t mod_id);
-
+int rrc_eNB_process_security(const protocol_ctxt_t *const ctxt_pP,
+                             rrc_eNB_ue_context_t *const ue_context_pP,
+                             security_capabilities_t *security_capabilities_pP);
+void process_eNB_security_key(const protocol_ctxt_t *const ctxt_pP,
+                              rrc_eNB_ue_context_t *const ue_context_pP,
+                              uint8_t *security_key_pP);
+int rrc_eNB_generate_RRCConnectionReconfiguration_endc(protocol_ctxt_t *ctxt,
+                                                       rrc_eNB_ue_context_t *ue_context,
+                                                       unsigned char *buffer,
+                                                       int buffer_size,
+                                                       OCTET_STRING_t *scg_group_config,
+                                                       OCTET_STRING_t *scg_RB_config);
 /** @}*/

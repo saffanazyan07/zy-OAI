@@ -80,6 +80,7 @@ extern "C"
 #define CONFIG_HLP_CHESTFREQ     "Set channel estimation type in frequency domain. 0-Linear interpolation (default). 1-PRB based averaging of channel estimates in frequency. \n"
 #define CONFIG_HLP_CHESTTIME     "Set channel estimation type in time domain. 0-Symbols take estimates of the last preceding DMRS symbol (default). 1-Symbol based averaging of channel estimates in time. \n"
 #define CONFIG_HLP_IMSCOPE       "Enable phy scope based on imgui and implot"
+#define CONFIG_HLP_IMSCOPE_RECORD "Enable recording scope data to filesystem"
 
 #define CONFIG_HLP_NONSTOP       "Go back to frame sync mode after 100 consecutive PBCH failures\n"
 //#define CONFIG_HLP_NUMUES        "Set the number of UEs for the emulation"
@@ -186,6 +187,7 @@ extern int usrp_tx_thread;
   {"A" ,                    CONFIG_HLP_TADV,          0,             .iptr=&softmodem_params.command_line_sample_advance,.defintval=0,            TYPE_INT,   0},  \
   {"E" ,                    CONFIG_HLP_TQFS,          PARAMFLAG_BOOL, .iptr=&softmodem_params.threequarter_fs, .defintval=0,            TYPE_INT,    0}, \
   {"imscope" ,              CONFIG_HLP_IMSCOPE,       PARAMFLAG_BOOL, .uptr=&enable_imscope,                   .defintval=0,            TYPE_UINT,   0}, \
+  {"imscope-record" ,       CONFIG_HLP_IMSCOPE_RECORD,PARAMFLAG_BOOL, .uptr=&enable_imscope_record,            .defintval=0,            TYPE_UINT,   0}, \
 }
 // clang-format on
 
@@ -222,6 +224,7 @@ extern int usrp_tx_thread;
                {"MONOLITHIC", "PNF", "VNF", "AERIAL","UE_STUB_PNF","UE_STUB_OFFNET","STANDALONE_PNF"}, \
                {NFAPI_MONOLITHIC, NFAPI_MODE_PNF, NFAPI_MODE_VNF, NFAPI_MODE_AERIAL,NFAPI_UE_STUB_PNF,NFAPI_UE_STUB_OFFNET,NFAPI_MODE_STANDALONE_PNF}, \
                7 } }, \
+    { .s5 = { NULL } },                     \
     { .s5 = { NULL } },                     \
     { .s5 = { NULL } },                     \
     { .s5 = { NULL } },                     \
@@ -285,6 +288,7 @@ extern int usrp_tx_thread;
 #define IS_SOFTMODEM_5GUE (get_softmodem_optmask()->bit.SOFTMODEM_5GUE_BIT)
 #define IS_SOFTMODEM_NOSTATS (get_softmodem_optmask()->bit.SOFTMODEM_NOSTATS_BIT)
 #define IS_SOFTMODEM_IMSCOPE_ENABLED (get_softmodem_optmask()->bit.SOFTMODEM_IMSCOPE_BIT)
+#define IS_SOFTMODEM_IMSCOPE_RECORD_ENABLED (get_softmodem_optmask()->bit.SOFTMODEM_IMSCOPE_RECORD_BIT)
 typedef struct optmask_s {
   union {
     struct {
@@ -304,6 +308,7 @@ typedef struct optmask_s {
       uint64_t SOFTMODEM_5GUE_BIT: 1;
       uint64_t SOFTMODEM_NOSTATS_BIT: 1;
       uint64_t SOFTMODEM_IMSCOPE_BIT: 1;
+      uint64_t SOFTMODEM_IMSCOPE_RECORD_BIT : 1;
     } bit;
     uint64_t v; // allow to export entire bit set, force to 64 bit processor atomic size
   };
@@ -361,6 +366,8 @@ void configure_rru(void *, void *arg);
 struct timespec timespec_add(struct timespec lhs, struct timespec rhs);
 struct timespec timespec_sub(struct timespec lhs, struct timespec rhs);
 extern uint8_t nfapi_mode;
+extern char *parallel_config;
+extern char *worker_config;
 #ifdef __cplusplus
 }
 #endif

@@ -99,7 +99,7 @@ void nr_generate_pdsch(processingData_L1tx_t *msgTx, int frame, int slot)
      * => size_output is a sum of parts sizes rounded up to a multiple of 64
      */
     size_t size_output_tb = rel15->rbSize * NR_SYMBOLS_PER_SLOT * NR_NB_SC_PER_RB * Qm * rel15->nrOfLayers;
-    size_output += (size_output_tb + 63 - ((size_output_tb + 63) % 64));
+    size_output += ceil_mod(size_output_tb, 64);
   }
 
   unsigned char output[size_output] __attribute__((aligned(64)));
@@ -220,7 +220,7 @@ void nr_generate_pdsch(processingData_L1tx_t *msgTx, int frame, int slot)
      * => offset_output should remain a multiple of 64 with enough offset to fit each dlsch
      */
     uint32_t size_output_tb = rel15->rbSize * NR_SYMBOLS_PER_SLOT * NR_NB_SC_PER_RB * Qm * rel15->nrOfLayers;
-    offset_output += (size_output_tb + 63) & ~63;
+    offset_output += ceil_mod(size_output_tb, 64);
 
     // Non interleaved VRB to PRB mapping
     uint16_t start_sc = frame_parms->first_carrier_offset + (rel15->rbStart+rel15->BWPStart)*NR_NB_SC_PER_RB;

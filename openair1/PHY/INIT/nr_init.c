@@ -129,6 +129,7 @@ void phy_init_nr_gNB(PHY_VARS_gNB *gNB)
 
   crcTableInit();
   init_byte2m128i();
+  init_byte2bit16();
   init_pucch2_luts();
 
   nr_init_fde(); // Init array for frequency equalization of transform precoding of PUSCH
@@ -196,7 +197,7 @@ void phy_init_nr_gNB(PHY_VARS_gNB *gNB)
   int n_buf = Prx*max_ul_mimo_layers;
 
   int nb_re_pusch = N_RB_UL * NR_NB_SC_PER_RB;
-  int nb_re_pusch2 = ALIGN_UP_16(nb_re_pusch);
+  int nb_re_pusch2 = ceil_mod(nb_re_pusch, 16);
 
   gNB->pusch_vars = (NR_gNB_PUSCH *)malloc16_clear(gNB->max_nb_pusch * sizeof(NR_gNB_PUSCH));
   for (int ULSCH_id = 0; ULSCH_id < gNB->max_nb_pusch; ULSCH_id++) {

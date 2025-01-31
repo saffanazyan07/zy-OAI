@@ -1749,7 +1749,11 @@ static void nr_rrc_ue_generate_RRCReconfigurationComplete(NR_UE_RRC_INST_t *rrc,
 
 static void nr_rrc_ue_process_rrcReestablishment(NR_UE_RRC_INST_t *rrc,
                                                  const int gNB_index,
-                                                 const NR_RRCReestablishment_t *rrcReestablishment)
+                                                 const NR_RRCReestablishment_t *rrcReestablishment,
+                                                 int srb_id,
+                                                 const uint8_t *msg,
+                                                 int msg_size,
+                                                 const nr_pdcp_integrity_data_t *msg_integrity)
 {
   // implementign procedues as described in 38.331 section 5.3.7.5
   // stop timer T301
@@ -1764,21 +1768,30 @@ static void nr_rrc_ue_process_rrcReestablishment(NR_UE_RRC_INST_t *rrc,
   // update the K gNB key based on the current K gNB key or the NH, using the stored nextHopChainingCount value
   nr_derive_key_ng_ran_star(rrc->phyCellID, rrc->arfcn_ssb, rrc->kgnb, rrc->kgnb);
 
-  // derive the K RRCenc key associated with the previously configured cipheringAlgorithm
-  // derive the K RRCint key associated with the previously configured integrityProtAlgorithm
+  // derive the K_RRCenc key associated with the previously configured cipheringAlgorithm
+  // derive the K_RRCint key associated with the previously configured integrityProtAlgorithm
   nr_pdcp_entity_security_keys_and_algos_t security_parameters;
   security_parameters.ciphering_algorithm = rrc->cipheringAlgorithm;
   security_parameters.integrity_algorithm = rrc->integrityProtAlgorithm;
   nr_derive_key(RRC_ENC_ALG, rrc->cipheringAlgorithm, rrc->kgnb, security_parameters.ciphering_key);
   nr_derive_key(RRC_INT_ALG, rrc->integrityProtAlgorithm, rrc->kgnb, security_parameters.integrity_key);
 
-  // TODO request lower layers to verify the integrity protection of the RRCReestablishment message
-  // TODO if the integrity protection check of the RRCReestablishment message fails -> go to IDLE
-
   // configure lower layers to resume integrity protection for SRB1
   // configure lower layers to resume ciphering for SRB1
-  int srb_id = 1;
+  AssertFatal(srb_id == 1, "rrcReestablishment SRB-ID %d, should be 1\n", srb_id);
   nr_pdcp_config_set_security(rrc->ue_id, srb_id, true, &security_parameters);
+
+  // request lower layers to verify the integrity protection of the RRCReestablishment message
+  // using the previously configured algorithm and the K_RRCint key
+  bool integrity_pass = nr_pdcp_check_integrity_srb(rrc->ue_id, srb_id, msg, msg_size, msg_integrity);
+  // if the integrity protection check of the RRCReestablishment message fails
+  // perform the actions upon going to RRC_IDLE as specified in 5.3.11
+  // with release cause 'RRC connection failure', upon which the procedure ends
+  if (!integrity_pass) {
+    NR_Release_Cause_t release_cause = RRC_CONNECTION_FAILURE;
+    nr_rrc_going_to_IDLE(rrc, release_cause, NULL);
+    return;
+  }
 
   // release the measurement gap configuration indicated by the measGapConfig, if configured
   rrcPerNB_t *rrcNB = rrc->perNB + gNB_index;
@@ -1860,7 +1873,13 @@ static int nr_rrc_ue_decode_dcch(NR_UE_RRC_INST_t *rrc,
 
         case NR_DL_DCCH_MessageType__c1_PR_rrcReestablishment:
           LOG_I(NR_RRC, "Logical Channel DL-DCCH (SRB1), Received RRCReestablishment\n");
-          nr_rrc_ue_process_rrcReestablishment(rrc, gNB_indexP, c1->choice.rrcReestablishment);
+          nr_rrc_ue_process_rrcReestablishment(rrc,
+                                               gNB_indexP,
+                                               c1->choice.rrcReestablishment,
+                                               Srb_id,
+                                               Buffer,
+                                               Buffer_size,
+                                               msg_integrity);
           break;
 
         case NR_DL_DCCH_MessageType__c1_PR_dlInformationTransfer: {
@@ -1894,8 +1913,7 @@ static int nr_rrc_ue_decode_dcch(NR_UE_RRC_INST_t *rrc,
           break;
         case NR_DL_DCCH_MessageType__c1_PR_securityModeCommand:
           LOG_I(NR_RRC, "Received securityModeCommand (gNB %d)\n", gNB_indexP);
-          nr_rrc_ue_process_securityModeCommand(rrc, c1->choice.securityModeCommand,
-                                                Srb_id, Buffer, Buffer_size, msg_integrity);
+          nr_rrc_ue_process_securityModeCommand(rrc, c1->choice.securityModeCommand, Srb_id, Buffer, Buffer_size, msg_integrity);
           break;
       }
     } break;

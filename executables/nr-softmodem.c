@@ -86,6 +86,7 @@ unsigned short config_frames[4] = {2,9,11,13};
 #include "time_meas.h"
 #include "utils.h"
 #include "x2ap_eNB.h"
+#include "openair1/SCHED_NR/sched_nr.h"
 
 pthread_cond_t nfapi_sync_cond;
 pthread_mutex_t nfapi_sync_mutex;
@@ -116,8 +117,7 @@ double rx_gain[MAX_NUM_CCs][4] = {{110,0,0,0},{20,0,0,0}};
 double rx_gain_off = 0.0;
 
 static int tx_max_power[MAX_NUM_CCs]; /* =  {0,0}*/;
-int chain_offset=0;
-extern void *udp_eNB_task(void *args_p);
+int chain_offset = 0;
 int emulate_rf = 0;
 int numerology = 0;
 double cpuf;
@@ -397,9 +397,6 @@ void terminate_task(task_id_t task_id, module_id_t mod_id) {
   msg = itti_alloc_new_message (TASK_ENB_APP, 0, TERMINATE_MESSAGE);
   itti_send_msg_to_task (task_id, ENB_MODULE_ID_TO_INSTANCE(mod_id), msg);
 }
-
-//extern void  free_transport(PHY_VARS_gNB *);
-extern void  nr_phy_free_RU(RU_t *);
 
 int stop_L1(module_id_t gnb_id)
 {
@@ -701,7 +698,7 @@ int main( int argc, char **argv ) {
     wait_RUs();
     // once all RUs are ready initialize the rest of the gNBs ((dependence on final RU parameters after configuration)
 
-    if (IS_SOFTMODEM_DOSCOPE || IS_SOFTMODEM_IMSCOPE_ENABLED) {
+    if (IS_SOFTMODEM_DOSCOPE || IS_SOFTMODEM_IMSCOPE_ENABLED || IS_SOFTMODEM_IMSCOPE_RECORD_ENABLED) {
       sleep(1);
       scopeParms_t p;
       p.argc = &argc;
@@ -713,6 +710,11 @@ int main( int argc, char **argv ) {
       }
       if (IS_SOFTMODEM_IMSCOPE_ENABLED) {
         load_softscope("im", &p);
+      }
+      AssertFatal(!(IS_SOFTMODEM_IMSCOPE_ENABLED && IS_SOFTMODEM_IMSCOPE_RECORD_ENABLED),
+                  "Data recoding and ImScope cannot be enabled at the same time\n");
+      if (IS_SOFTMODEM_IMSCOPE_RECORD_ENABLED) {
+        load_module_shlib("imscope_record", NULL, 0, &p);
       }
     }
 

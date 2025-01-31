@@ -34,10 +34,7 @@
 #include <openair1/PHY/TOOLS/phy_scope_interface.h>
 #include "nfapi/open-nFAPI/nfapi/public_inc/nfapi_nr_interface.h"
 #include "instrumentation.h"
-
-
-extern openair0_config_t openair0_cfg[];
-
+#include "executables/nr-softmodem-common.h"
 // #define DEBUG_PDSCH
 // #define DEBUG_PDCCH
 // #define DEBUG_PBCH(a...) printf(a)
@@ -94,7 +91,8 @@ int nr_prs_channel_estimation(uint8_t gNB_id,
   int slot_prs =
       (proc->nr_slot_rx - rep_num * prs_cfg->PRSResourceTimeGap + frame_params->slots_per_frame) % frame_params->slots_per_frame;
 
-  int16_t *rxF, *pil, mod_prs[NR_MAX_PRS_LENGTH << 1];
+  int16_t *rxF, *pil;
+  c16_t mod_prs[NR_MAX_PRS_LENGTH];
   const int16_t *fl, *fm, *fmm, *fml, *fmr, *fr;
   int16_t ch[2] = {0}, noiseFig[2] = {0};
   int16_t k_prime = 0, k = 0;
@@ -138,8 +136,7 @@ int nr_prs_channel_estimation(uint8_t gNB_id,
     for (int m = 0; m < num_pilots; m++) 
     {
       idx = (((gold_prs[(m << 1) >> 5]) >> ((m << 1) & 0x1f)) & 3);
-      mod_prs[m<<1]     = nr_qpsk_mod_table[idx<<1];
-      mod_prs[(m<<1)+1] = nr_qpsk_mod_table[(idx<<1) + 1];
+      mod_prs[m] = nr_qpsk_mod_table[idx];
     } 
      
     for (rxAnt=0; rxAnt < frame_params->nb_antennas_rx; rxAnt++)
@@ -152,7 +149,7 @@ int nr_prs_channel_estimation(uint8_t gNB_id,
       k = (prs_cfg->REOffset + k_prime) % prs_cfg->CombSize + prs_cfg->RBOffset * 12 + frame_params->first_carrier_offset;
 
       // Channel estimation and interpolation
-      pil       = (int16_t *)&mod_prs[0];
+      pil = (int16_t *)mod_prs;
       rxF       = (int16_t *)&rxdataF[rxAnt][l*frame_params->ofdm_symbol_size + k];
       
       if(prs_cfg->CombSize == 2)
@@ -520,7 +517,7 @@ int nr_prs_channel_estimation(uint8_t gNB_id,
 
 #ifdef DEBUG_PRS_CHEST
     sprintf(filename, "%s%i%s", "PRSpilot_", rxAnt, ".m");
-    LOG_M(filename, "prs_loc", &mod_prs[0], num_pilots,1,1);
+    LOG_M(filename, "prs_loc", mod_prs, num_pilots, 1, 1);
     sprintf(filename, "%s%i%s", "rxSigF_", rxAnt, ".m");
     sprintf(varname, "%s%i", "rxF_", rxAnt);
     LOG_M(filename, varname, &rxdataF[rxAnt][0], prs_cfg->NumPRSSymbols*frame_params->ofdm_symbol_size,1,1);

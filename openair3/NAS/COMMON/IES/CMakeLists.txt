@@ -1,9 +1,6 @@
-add_library(fgs_ies_lib OBJECT
-            NasKeySetIdentifier.c
-            FGSMobileIdentity.c
+add_library(nas_common_ies_lib OBJECT
+    AuthenticationResponseParameter.c
+    NasKeySetIdentifier.c
 )
 
-target_include_directories(fgs_ies_lib PUBLIC
-                           ${CMAKE_SOURCE_DIR}
-                           ${CMAKE_CURRENT_SOURCE_DIR}
-)
+target_include_directories(nas_common_ies_lib PUBLIC .)

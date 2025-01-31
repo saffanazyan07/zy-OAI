@@ -46,8 +46,6 @@
 #include "openair2/LAYER2/RLC/rlc.h"
 
 #include <executables/softmodem-common.h>
-extern RAN_CONTEXT_t RC;
-extern const uint8_t nr_slots_per_frame[5];
 
 // forward declaration of functions used in this file
 static void fill_msg3_pusch_pdu(nfapi_nr_pusch_pdu_t *pusch_pdu,

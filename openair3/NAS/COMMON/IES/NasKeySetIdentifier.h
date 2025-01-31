@@ -39,7 +39,7 @@ typedef struct NasKeySetIdentifier_tag {
   uint8_t  naskeysetidentifier:3;
 } NasKeySetIdentifier;
 
-uint8_t encode_nas_key_set_identifier(NasKeySetIdentifier *naskeysetidentifier, uint8_t iei);
+uint8_t encode_nas_key_set_identifier(const NasKeySetIdentifier *naskeysetidentifier, uint8_t iei);
 
 void dump_nas_key_set_identifier_xml(NasKeySetIdentifier *naskeysetidentifier, uint8_t iei);
 

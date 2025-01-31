@@ -77,6 +77,7 @@ void get_common_options(configmodule_interface_t *cfg)
   uint32_t noS1 = 0, nonbiot = 0;
   uint32_t rfsim = 0, do_forms = 0;
   uint32_t enable_imscope = 0;
+  uint32_t enable_imscope_record = 0;
   int nfapi_index = 0;
   char *logmem_filename = NULL;
 
@@ -139,6 +140,10 @@ void get_common_options(configmodule_interface_t *cfg)
 
   if (enable_imscope) {
     IS_SOFTMODEM_IMSCOPE_ENABLED = true;
+  }
+
+  if (enable_imscope_record) {
+    IS_SOFTMODEM_IMSCOPE_RECORD_ENABLED = true;
   }
 
   if (start_websrv) {

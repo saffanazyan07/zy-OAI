@@ -60,8 +60,6 @@
 // #define DEBUG_MIB
 // #define ENABLE_MAC_PAYLOAD_DEBUG 1
 // #define DEBUG_RAR
-extern uint32_t N_RB_DL;
-
 /* TS 36.213 Table 9.2.3-3: Mapping of values for one HARQ-ACK bit to sequences */
 static const int sequence_cyclic_shift_1_harq_ack_bit[2]
 /*        HARQ-ACK Value        0    1 */

@@ -153,8 +153,6 @@ typedef struct xer_sprint_string_s {
   size_t string_index;
 } xer_sprint_string_t;
 
-extern RAN_CONTEXT_t RC;
-
 /*
  * This is a helper function for xer_sprint, which directs all incoming data
  * into the provided string.

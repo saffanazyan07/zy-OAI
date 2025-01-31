@@ -74,7 +74,7 @@ int nr_get_srs_signal(PHY_VARS_gNB *gNB,
                       slot_t slot,
                       nfapi_nr_srs_pdu_t *srs_pdu,
                       nr_srs_info_t *nr_srs_info,
-                      int32_t srs_received_signal[][gNB->frame_parms.ofdm_symbol_size * (1 << srs_pdu->num_symbols)])
+                      c16_t srs_received_signal[][gNB->frame_parms.ofdm_symbol_size * (1 << srs_pdu->num_symbols)])
 {
   const NR_DL_FRAME_PARMS *frame_parms = &gNB->frame_parms;
 
@@ -88,12 +88,11 @@ int nr_get_srs_signal(PHY_VARS_gNB *gNB,
   const uint8_t K_TC = 2 << srs_pdu->comb_size;
   const uint16_t M_sc_b_SRS = get_m_srs(srs_pdu->config_index, srs_pdu->bandwidth_index) * NR_NB_SC_PER_RB / K_TC;
 
-  int32_t *rx_signal;
+  c16_t *rx_signal;
   bool no_srs_signal = true;
   for (int ant = 0; ant < frame_parms->nb_antennas_rx; ant++) {
-
-    memset(srs_received_signal[ant], 0, frame_parms->ofdm_symbol_size*sizeof(int32_t));
-    rx_signal = (int32_t *)&rxdataF[ant][symbol_offset];
+    memset(srs_received_signal[ant], 0, frame_parms->ofdm_symbol_size * sizeof(c16_t));
+    rx_signal = &rxdataF[ant][symbol_offset];
 
     for (int p_index = 0; p_index < N_ap; p_index++) {
 
@@ -117,7 +116,7 @@ int nr_get_srs_signal(PHY_VARS_gNB *gNB,
 
           srs_received_signal[ant][l_line_offset+subcarrier] = rx_signal[l_line_offset+subcarrier];
 
-          if (rx_signal[l_line_offset+subcarrier] != 0) {
+          if (rx_signal[l_line_offset + subcarrier].r || rx_signal[l_line_offset + subcarrier].i) {
             no_srs_signal = false;
           }
 
@@ -129,10 +128,11 @@ int nr_get_srs_signal(PHY_VARS_gNB *gNB,
           if(subcarrier_log%12 == 0) {
             LOG_I(NR_PHY,"------------ %d ------------\n", subcarrier_log/12);
           }
-          LOG_I(NR_PHY,"(%i)  \t%i\t%i\n",
+          LOG_I(NR_PHY,
+                "(%i)  \t%i\t%i\n",
                 subcarrier_log,
-                (int16_t)(srs_received_signal[ant][l_line_offset+subcarrier]&0xFFFF),
-                (int16_t)((srs_received_signal[ant][l_line_offset+subcarrier]>>16)&0xFFFF));
+                srs_received_signal[ant][l_line_offset + subcarrier].r,
+                srs_received_signal[ant][l_line_offset + subcarrier].i);
 #endif
 
           // Subcarrier increment

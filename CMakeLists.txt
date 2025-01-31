@@ -298,6 +298,7 @@ message(STATUS "Selected KPM Version: ${KPM_VERSION}")
 
 
 add_boolean_option(ENABLE_IMSCOPE OFF "Enable phy scope based on imgui" OFF)
+add_boolean_option(ENABLE_IMSCOPE_RECORD OFF "Enable recording IQ data for imscope" OFF)
 
 ##################################################
 # ASN.1 grammar C code generation & dependencies #
@@ -779,9 +780,6 @@ add_library(dfts MODULE ${OPENAIR1_DIR}/PHY/TOOLS/oai_dfts.c ${OPENAIR1_DIR}/PHY
 set(PHY_SRC_COMMON
   ${OPENAIR1_DIR}/PHY/LTE_TRANSPORT/dci_tools_common.c
   ${OPENAIR1_DIR}/PHY/LTE_TRANSPORT/lte_mcs.c
-#  ${OPENAIR1_DIR}/PHY/LTE_TRANSPORT/slss.c
-#  ${OPENAIR1_DIR}/PHY/LTE_TRANSPORT/sldch.c
-#  ${OPENAIR1_DIR}/PHY/LTE_TRANSPORT/slsch.c
   ${OPENAIR1_DIR}/PHY/LTE_UE_TRANSPORT/get_pmi.c
   ${OPENAIR1_DIR}/PHY/LTE_TRANSPORT/group_hopping.c
   ${OPENAIR1_DIR}/PHY/LTE_TRANSPORT/phich_common.c
@@ -840,13 +838,9 @@ set(PHY_SRC
   ${OPENAIR1_DIR}/PHY/LTE_TRANSPORT/pcfich.c
   ${OPENAIR1_DIR}/PHY/LTE_TRANSPORT/pucch.c
   ${OPENAIR1_DIR}/PHY/LTE_TRANSPORT/pmch.c
-#  ${OPENAIR1_DIR}/PHY/LTE_TRANSPORT/ulsch_demodulation.c
   ${OPENAIR1_DIR}/PHY/LTE_TRANSPORT/ulsch_decoding.c
   ${OPENAIR1_DIR}/PHY/LTE_TRANSPORT/rar_tools.c
   ${OPENAIR1_DIR}/PHY/LTE_TRANSPORT/uci_tools.c
-#  ${OPENAIR1_DIR}/PHY/LTE_ESTIMATION/freq_equalization.c
-#  ${OPENAIR1_DIR}/PHY/LTE_ESTIMATION/lte_adjust_sync_eNB.c
-#  ${OPENAIR1_DIR}/PHY/LTE_ESTIMATION/lte_ul_channel_estimation.c
   ${OPENAIR1_DIR}/PHY/LTE_ESTIMATION/lte_eNB_measurements.c
   ${OPENAIR1_DIR}/PHY/INIT/lte_init.c
   )
@@ -917,7 +911,6 @@ set(PHY_SRC_UE
   ${OPENAIR1_DIR}/PHY/NR_TRANSPORT/nr_prach_common.c
   ${OPENAIR1_DIR}/PHY/nr_phy_common/src/nr_phy_common_csirs.c
   ${OPENAIR1_DIR}/PHY/NR_TRANSPORT/nr_scrambling.c
-  ${OPENAIR1_DIR}/PHY/NR_REFSIG/scrambling_luts.c
   ${OPENAIR1_DIR}/PHY/NR_REFSIG/refsig.c
   ${OPENAIR1_DIR}/PHY/NR_UE_TRANSPORT/srs_modulation_nr.c
   )
@@ -1114,7 +1107,6 @@ set(L2_SRC
   ${PDCP_DIR}/pdcp_util.c
   ${PDCP_DIR}/pdcp_security.c
   ${OPENAIR2_DIR}/LAYER2/openair2_proc.c
-#  ${RRC_DIR}/rrc_UE.c
   ${RRC_DIR}/rrc_eNB.c
   ${RRC_DIR}/rrc_eNB_endc.c
   ${RRC_DIR}/rrc_eNB_S1AP.c
@@ -1129,7 +1121,6 @@ set(L2_SRC
 
 set(L2_RRC_SRC
   ${OPENAIR2_DIR}/LAYER2/openair2_proc.c
-  #  ${RRC_DIR}/rrc_UE.c
   ${RRC_DIR}/rrc_eNB.c
   ${RRC_DIR}/rrc_eNB_endc.c
   ${RRC_DIR}/rrc_eNB_S1AP.c
@@ -1368,6 +1359,7 @@ target_link_libraries(L2_UE PRIVATE asn1_lte_rrc_hdrs)
 add_library( NR_L2_UE ${NR_L2_SRC_UE} ${MAC_NR_SRC_UE} )
 target_link_libraries(NR_L2_UE PRIVATE f1ap nr_rlc)
 target_link_libraries(NR_L2_UE PRIVATE asn1_nr_rrc_hdrs asn1_lte_rrc_hdrs nr_common nr_ue_power_procedures nr_ue_ra_procedures)
+target_link_libraries(NR_L2_UE PRIVATE nr_nas)
 
 add_library(MAC_NR_COMMON
             ${OPENAIR2_DIR}/LAYER2/NR_MAC_COMMON/nr_mac_common.c
@@ -1412,6 +1404,7 @@ add_library(SCTP_CLIENT ${SCTP_SRC})
 target_link_libraries(SCTP_CLIENT PRIVATE asn1_nr_rrc_hdrs asn1_lte_rrc_hdrs)
 
 set(NAS_SRC ${OPENAIR3_DIR}/NAS/)
+
 set(libnas_api_OBJS
   ${NAS_SRC}COMMON/API/NETWORK/as_message.c
   ${NAS_SRC}COMMON/API/NETWORK/nas_message.c
@@ -1449,10 +1442,6 @@ set(libnas_emm_msg_OBJS
   ${NAS_SRC}COMMON/EMM/MSG/TrackingAreaUpdateReject.c
   ${NAS_SRC}COMMON/EMM/MSG/TrackingAreaUpdateRequest.c
   ${NAS_SRC}COMMON/EMM/MSG/UplinkNasTransport.c
-)
-
-set(libnas_fgs_msg_OBJS
-  ${NAS_SRC}COMMON/EMM/MSG/fgs_service_request.c
 )
 
 set(libnas_esm_msg_OBJS
@@ -1643,61 +1632,6 @@ set(libnas_ue_esm_sap_OBJS
   ${NAS_SRC}UE/ESM/SAP/esm_sap.c
   )
 
-set(libnrnas_emm_msg_OBJS
-  ${NAS_SRC}COMMON/EMM/MSG/RegistrationRequest.c
-  ${NAS_SRC}COMMON/EMM/MSG/RegistrationAccept.c
-  ${NAS_SRC}COMMON/EMM/MSG/FGSIdentityResponse.c
-  ${NAS_SRC}COMMON/EMM/MSG/FGSAuthenticationResponse.c
-  ${NAS_SRC}COMMON/EMM/MSG/FGSNASSecurityModeComplete.c
-  ${NAS_SRC}COMMON/EMM/MSG/RegistrationComplete.c
-  ${NAS_SRC}COMMON/EMM/MSG/FGSUplinkNasTransport.c
-  ${NAS_SRC}COMMON/ESM/MSG/PduSessionEstablishRequest.c
-  ${NAS_SRC}COMMON/ESM/MSG/PduSessionEstablishmentAccept.c
-  ${NAS_SRC}COMMON/EMM/MSG/FGSDeregistrationRequestUEOriginating.c
-  )
-
-set(libnrnas_ies_OBJS
-  ${NAS_SRC}COMMON/IES/ExtendedProtocolDiscriminator.c
-  ${NAS_SRC}COMMON/IES/FGSMobileIdentity.c
-  ${NAS_SRC}COMMON/IES/FGSRegistrationType.c
-  ${NAS_SRC}COMMON/IES/SpareHalfOctet.c
-  ${NAS_SRC}COMMON/IES/FGSRegistrationResult.c
-  ${NAS_SRC}COMMON/IES/FGMMCapability.c
-  ${NAS_SRC}COMMON/IES/NrUESecurityCapability.c
-  ${NAS_SRC}COMMON/IES/FGCNasMessageContainer.c
-  ${NAS_SRC}COMMON/IES/SORTransparentContainer.c
-  )
-
-add_library(LIB_NAS_SIMUE
-  ${NAS_SRC}UE/nas_itti_messaging.c
-  ${NAS_SRC}UE/nas_network.c
-  ${NAS_SRC}UE/nas_parser.c
-  ${NAS_SRC}UE/nas_proc.c
-  ${NAS_SRC}UE/nas_user.c
-  ${NAS_SRC}NR_UE/nr_nas_msg.c
-  ${libnas_api_OBJS}
-  ${libnas_ue_api_OBJS}
-  ${libnas_emm_msg_OBJS}
-  ${libnas_fgs_msg_OBJS}
-  ${libnas_esm_msg_OBJS}
-  ${libnas_ies_OBJS}
-  ${libnas_utils_OBJS}
-  ${libnas_ue_emm_OBJS}
-  ${libnas_ue_emm_sap_OBJS}
-  ${libnas_ue_esm_OBJS}
-  ${libnas_ue_esm_sap_OBJS}
-  ${libnrnas_emm_msg_OBJS}
-  ${libnrnas_ies_OBJS}
-  $<TARGET_OBJECTS:ds>
-  )
-target_include_directories(LIB_NAS_SIMUE PRIVATE ${OPENAIR_DIR}/common/utils/ds/)
-target_link_libraries(LIB_NAS_SIMUE PRIVATE lte_rrc)
-
-
-
-set(NAS_SIM_LIB LIB_NAS_SIMUE)
-target_link_libraries(LIB_NAS_SIMUE PRIVATE asn1_nr_rrc_hdrs asn1_lte_rrc_hdrs)
-
 add_library(LIB_NAS_UE
   ${NAS_SRC}UE/nas_itti_messaging.c
   ${NAS_SRC}UE/nas_network.c
@@ -1736,15 +1670,6 @@ set (NBIOT_SOURCES
   ${OPENAIR2_DIR}/ENB_APP/NB_IoT_config.c
   )
 add_library(NB_IoT MODULE ${NBIOT_SOURCES} )
-
-add_library(LIB_5GNAS_GNB
-  ${NAS_SRC}/COMMON/nr_common.c
-  ${OPENAIR3_DIR}//UICC/usim_interface.c
-  )
-
-target_include_directories(LIB_5GNAS_GNB PRIVATE ${OPENAIR_DIR}/common/utils/ds/)
-target_link_libraries(LIB_5GNAS_GNB PRIVATE SECURITY)
-target_link_libraries(LIB_5GNAS_GNB PRIVATE asn1_nr_rrc_hdrs asn1_lte_rrc_hdrs)
 
 # Simulation library
 ##########################
@@ -1963,7 +1888,6 @@ add_executable(nr-uesoftmodem
   ${OPENAIR_DIR}/radio/COMMON/common_lib.c
   ${OPENAIR_DIR}/radio/COMMON/record_player.c
   ${OPENAIR2_DIR}/LAYER2/NR_MAC_COMMON/nr_mac_common.c
-  ${OPENAIR3_DIR}/NAS/UE/nas_ue_task.c
   ${OPENAIR1_DIR}/PHY/TOOLS/phy_scope_interface.c
   )
 
@@ -1972,11 +1896,12 @@ target_link_libraries(nr-uesoftmodem PRIVATE
   nr_rrc SECURITY UTIL HASHTABLE SCHED_RU_LIB SCHED_NR_UE_LIB
   PHY_COMMON PHY_NR_COMMON PHY_NR_UE NR_L2_UE L2_UE_LTE_NR MAC_NR_COMMON NFAPI_LIB NFAPI_PNF_LIB
   NFAPI_USER_LIB MISC_NFAPI_NR_LIB
-  ITTI LIB_5GNAS_GNB LIB_NAS_SIMUE ${NAS_SIM_LIB} SIMU shlib_loader
+  ITTI SIMU shlib_loader
   -Wl,--end-group z dl)
 
 target_link_libraries(nr-uesoftmodem PRIVATE pthread m CONFIG_LIB rt nr_ue_phy_meas)
 target_link_libraries(nr-uesoftmodem PRIVATE ${T_LIB})
+target_link_libraries(nr-uesoftmodem PRIVATE nr_nas lib_uicc usim_lib)
 target_link_libraries(nr-uesoftmodem PRIVATE asn1_nr_rrc_hdrs asn1_lte_rrc_hdrs)
 
 # force the generation of ASN.1 so that we don't need to wait during the build
@@ -2168,10 +2093,6 @@ foreach(myExe s1ap
     -Wl,--start-group SECURITY UTIL -Wl,--end-group m rt CONFIG_LIB
     )
 endforeach(myExe)
-
-# to be added
-#../targets/TEST/PDCP/test_pdcp.c
-#../targets/TEST/PDCP/with_rlc/test_pdcp_rlc.c
 
 #ensure that the T header files are generated before targets depending on them
 if (${T_TRACER})

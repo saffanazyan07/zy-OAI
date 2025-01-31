@@ -41,8 +41,7 @@
 #include "utils.h"
 #include "openair2/PHY_INTERFACE/queue_t.h"
 #include "SCHED_NR_UE/phy_sch_processing_time.h"
-
-extern PHY_VARS_NR_UE ***PHY_vars_UE_g;
+#include "openair1/PHY/phy_extern_nr_ue.h"
 
 const char *const dl_pdu_type[] = {"DCI", "DLSCH", "RA_DLSCH", "SI_DLSCH", "P_DLSCH", "CSI_RS", "CSI_IM", "TA"};
 const char *const ul_pdu_type[] = {"PRACH", "PUCCH", "PUSCH", "SRS"};

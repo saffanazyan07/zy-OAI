@@ -32,7 +32,7 @@ typedef struct ldpc_interface_s {
 } ldpc_interface_t;
 
 // Global var to limit the rework of the dirty legacy code
-extern ldpc_interface_t ldpc_interface, ldpc_interface_offload;
+extern ldpc_interface_t ldpc_interface, ldpc_interface_offload, ldpc_interface_segment;
 
 /* functions to load the LDPC shared lib, implemented in openair1/PHY/CODING/nrLDPC_load.c */
 int load_LDPClib(char *version, ldpc_interface_t *);

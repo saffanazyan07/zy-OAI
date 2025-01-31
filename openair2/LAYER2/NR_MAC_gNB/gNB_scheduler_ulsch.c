@@ -1842,7 +1842,7 @@ static void pf_ul(module_id_t module_id,
     }
 
     int n = nr_slots_per_frame[current_BWP->scs];
-    NR_beam_alloc_t beam = beam_allocation_procedure(&nrmac->beam_info, sched_pusch->frame, sched_pusch->slot, UE->UE_beam_index, n);
+    NR_beam_alloc_t beam = beam_allocation_procedure(&nrmac->beam_info, sched_frame, sched_slot, UE->UE_beam_index, n);
     if (beam.idx < 0) {
       LOG_D(NR_MAC, "[UE %04x][%4d.%2d] Beam could not be allocated\n", UE->rnti, frame, slot);
       reset_beam_status(&nrmac->beam_info, frame, slot, UE->UE_beam_index, n_dl, dci_beam.new_beam);
@@ -1869,7 +1869,7 @@ static void pf_ul(module_id_t module_id,
                                           tda);
       if (!r) {
         LOG_D(NR_MAC, "[UE %04x][%4d.%2d] UL retransmission could not be allocated\n", UE->rnti, frame, slot);
-        reset_beam_status(&nrmac->beam_info, sched_pusch->frame, sched_pusch->slot, UE->UE_beam_index, n, beam.new_beam);
+        reset_beam_status(&nrmac->beam_info, sched_frame, sched_slot, UE->UE_beam_index, n, beam.new_beam);
         reset_beam_status(&nrmac->beam_info, frame, slot, UE->UE_beam_index, n_dl, dci_beam.new_beam);
         continue;
       }
@@ -1885,7 +1885,7 @@ static void pf_ul(module_id_t module_id,
      * if the UE disconnected in L2sim, in which case the gNB is not notified
      * (this can be considered a design flaw) */
     if (sched_ctrl->available_ul_harq.head < 0) {
-      reset_beam_status(&nrmac->beam_info, sched_pusch->frame, sched_pusch->slot, UE->UE_beam_index, n, beam.new_beam);
+      reset_beam_status(&nrmac->beam_info, sched_frame, sched_slot, UE->UE_beam_index, n, beam.new_beam);
       reset_beam_status(&nrmac->beam_info, frame, slot, UE->UE_beam_index, n_dl, dci_beam.new_beam);
       LOG_D(NR_MAC, "[UE %04x][%4d.%2d] has no free UL HARQ process, skipping\n", UE->rnti, frame, slot);
       continue;
@@ -1897,7 +1897,7 @@ static void pf_ul(module_id_t module_id,
 
     LOG_D(NR_MAC,"pf_ul: do_sched UE %04x => %s\n", UE->rnti, do_sched ? "yes" : "no");
     if ((B == 0 && !do_sched) || nr_timer_is_active(&sched_ctrl->transm_interrupt)) {
-      reset_beam_status(&nrmac->beam_info, sched_pusch->frame, sched_pusch->slot, UE->UE_beam_index, n, beam.new_beam);
+      reset_beam_status(&nrmac->beam_info, sched_frame, sched_slot, UE->UE_beam_index, n, beam.new_beam);
       reset_beam_status(&nrmac->beam_info, frame, slot, UE->UE_beam_index, n_dl, dci_beam.new_beam);
       continue;
     }
@@ -1927,7 +1927,7 @@ static void pf_ul(module_id_t module_id,
                                    false);
       if (CCEIndex < 0) {
         LOG_D(NR_MAC, "[UE %04x][%4d.%2d] no free CCE for UL DCI (BSR 0)\n", UE->rnti, frame, slot);
-        reset_beam_status(&nrmac->beam_info, sched_pusch->frame, sched_pusch->slot, UE->UE_beam_index, n, beam.new_beam);
+        reset_beam_status(&nrmac->beam_info, sched_frame, sched_slot, UE->UE_beam_index, n, beam.new_beam);
         reset_beam_status(&nrmac->beam_info, frame, slot, UE->UE_beam_index, n_dl, dci_beam.new_beam);
         continue;
       }
@@ -1962,7 +1962,7 @@ static void pf_ul(module_id_t module_id,
               rbStart,
               min_rb,
               bwpSize);
-        reset_beam_status(&nrmac->beam_info, sched_pusch->frame, sched_pusch->slot, UE->UE_beam_index, n, beam.new_beam);
+        reset_beam_status(&nrmac->beam_info, sched_frame, sched_slot, UE->UE_beam_index, n, beam.new_beam);
         reset_beam_status(&nrmac->beam_info, frame, slot, UE->UE_beam_index, n_dl, dci_beam.new_beam);
         continue;
       }
@@ -2042,11 +2042,7 @@ static void pf_ul(module_id_t module_id,
     NR_sched_pusch_t *sched_pusch = &sched_ctrl->sched_pusch;
 
     int n = nr_slots_per_frame[current_BWP->scs];
-    NR_beam_alloc_t beam = beam_allocation_procedure(&nrmac->beam_info,
-                                                     sched_pusch->frame,
-                                                     sched_pusch->slot,
-                                                     iterator->UE->UE_beam_index,
-                                                     n);
+    NR_beam_alloc_t beam = beam_allocation_procedure(&nrmac->beam_info, sched_frame, sched_slot, iterator->UE->UE_beam_index, n);
     if (beam.idx < 0) {
       LOG_D(NR_MAC, "[UE %04x][%4d.%2d] Beam could not be allocated\n", iterator->UE->rnti, frame, slot);
       iterator++;
@@ -2054,7 +2050,7 @@ static void pf_ul(module_id_t module_id,
     }
 
     if (remainUEs[beam.idx] == 0 || n_rb_sched[beam.idx] < min_rb) {
-      reset_beam_status(&nrmac->beam_info, sched_pusch->frame, sched_pusch->slot, iterator->UE->UE_beam_index, n, beam.new_beam);
+      reset_beam_status(&nrmac->beam_info, sched_frame, sched_slot, iterator->UE->UE_beam_index, n, beam.new_beam);
       iterator++;
       continue;
     }
@@ -2063,7 +2059,7 @@ static void pf_ul(module_id_t module_id,
     NR_beam_alloc_t dci_beam = beam_allocation_procedure(&nrmac->beam_info, frame, slot, iterator->UE->UE_beam_index, n_dl);
     if (dci_beam.idx < 0) {
       LOG_D(NR_MAC, "[UE %04x][%4d.%2d] Beam could not be allocated\n", iterator->UE->rnti, frame, slot);
-      reset_beam_status(&nrmac->beam_info, sched_pusch->frame, sched_pusch->slot, iterator->UE->UE_beam_index, n, beam.new_beam);
+      reset_beam_status(&nrmac->beam_info, sched_frame, sched_slot, iterator->UE->UE_beam_index, n, beam.new_beam);
       iterator++;
       continue;
     }
@@ -2079,7 +2075,7 @@ static void pf_ul(module_id_t module_id,
 
     if (CCEIndex < 0) {
       reset_beam_status(&nrmac->beam_info, frame, slot, iterator->UE->UE_beam_index, n_dl, dci_beam.new_beam);
-      reset_beam_status(&nrmac->beam_info, sched_pusch->frame, sched_pusch->slot, iterator->UE->UE_beam_index, n, beam.new_beam);
+      reset_beam_status(&nrmac->beam_info, sched_frame, sched_slot, iterator->UE->UE_beam_index, n, beam.new_beam);
       LOG_D(NR_MAC, "[UE %04x][%4d.%2d] no free CCE for UL DCI\n", iterator->UE->rnti, frame, slot);
       iterator++;
       continue;
@@ -2115,7 +2111,7 @@ static void pf_ul(module_id_t module_id,
 
     if (rbStart + min_rb >= bwpSize || max_rbSize < min_rb) {
       reset_beam_status(&nrmac->beam_info, frame, slot, iterator->UE->UE_beam_index, n_dl, dci_beam.new_beam);
-      reset_beam_status(&nrmac->beam_info, sched_pusch->frame, sched_pusch->slot, iterator->UE->UE_beam_index, n, beam.new_beam);
+      reset_beam_status(&nrmac->beam_info, sched_frame, sched_slot, iterator->UE->UE_beam_index, n, beam.new_beam);
       LOG_D(NR_MAC, "[UE %04x][%4d.%2d] could not allocate UL data: no resources (rbStart %d, min_rb %d, bwpSize %d)\n",
             iterator->UE->rnti,
             frame,
