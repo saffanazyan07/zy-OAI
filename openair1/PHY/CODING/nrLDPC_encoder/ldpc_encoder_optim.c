@@ -79,10 +79,13 @@ int LDPCencoder(uint8_t **test_input, uint8_t **channel_input, encoder_implempar
 #endif
 
   if ((Zc&31) > 0) simd_size = 16;
+#ifdef __AVX512F__
+  else if ((BG==1) && (Zc==384)) simd_size=64;
+#endif
   else simd_size = 32;
 
-  uint8_t c[22*Zc] __attribute__((aligned(32))); //padded input, unpacked, max size
-  uint8_t d[46*Zc] __attribute__((aligned(32))); //coded parity part output, unpacked, max size
+  uint8_t c[22*Zc] __attribute__((aligned(64))); //padded input, unpacked, max size
+  uint8_t d[46*Zc] __attribute__((aligned(64))); //coded parity part output, unpacked, max size
 
   // calculate number of punctured bits
   no_punctured_columns=(int)((nrows-2)*Zc+block_length-block_length*rate)/Zc;

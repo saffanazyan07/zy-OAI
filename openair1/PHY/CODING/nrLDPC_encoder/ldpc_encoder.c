@@ -114,7 +114,13 @@ int LDPCencoder(unsigned char **inputArray, unsigned char **outputArray, encoder
     fprintf(fd,"#include \"PHY/sse_intrin.h\"\n");
     fprintf(fd2,"#include \"PHY/sse_intrin.h\"\n");
 
-    if (gen_code == 1 && (Zc&31)==0) {
+    if (gen_code == 1 && (Zc&63)==0) {
+      shift=6;
+      mask=63;
+      strcpy(data_type,"__m512i");
+      strcpy(xor_command,"_mm512_xor_si512");
+    }
+    else if (gen_code == 1 && (Zc&31)==0) {
       shift=5; // AVX2 - 256-bit SIMD
       mask=31;
       strcpy(data_type,"simde__m256i");

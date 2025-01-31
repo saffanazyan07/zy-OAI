@@ -65,7 +65,22 @@ int LDPCencoder(uint8_t **input, uint8_t **output, encoder_implemparams_t *impp)
   macro_segment_end = (impp->n_segments > 8*(impp->macro_num+1)) ? 8*(impp->macro_num+1) : impp->n_segments;
   ///printf("macro_segment: %d\n", macro_segment);
   ///printf("macro_segment_end: %d\n", macro_segment_end );
+#ifdef __aarch64__
+  simde__m128i shufmask = simde_mm_set_epi64x(0x0101010101010101, 0x0000000000000000);
+  simde__m128i andmask  = simde_mm_set1_epi64x(0x0102040810204080);  // every 8 bits -> 8 bytes, pattern repeats.
+  simde__m128i zero128   = simde_mm_setzero_si128();
+  simde__m128i masks[8];
+  register simde__m128i c128;
+  masks[0] = simde_mm_set1_epi8(0x1);
+  masks[1] = simde_mm_set1_epi8(0x2);
+  masks[2] = simde_mm_set1_epi8(0x4);
+  masks[3] = simde_mm_set1_epi8(0x8);
+  masks[4] = simde_mm_set1_epi8(0x10);
+  masks[5] = simde_mm_set1_epi8(0x20);
+  masks[6] = simde_mm_set1_epi8(0x40);
+  masks[7] = simde_mm_set1_epi8(0x80);
 
+#else
   simde__m256i shufmask = simde_mm256_set_epi64x(0x0303030303030303, 0x0202020202020202,0x0101010101010101, 0x0000000000000000);
   simde__m256i andmask  = simde_mm256_set1_epi64x(0x0102040810204080);  // every 8 bits -> 8 bytes, pattern repeats.
   simde__m256i zero256   = simde_mm256_setzero_si256();
@@ -79,7 +94,7 @@ int LDPCencoder(uint8_t **input, uint8_t **output, encoder_implemparams_t *impp)
   masks[5] = simde_mm256_set1_epi8(0x20);
   masks[6] = simde_mm256_set1_epi8(0x40);
   masks[7] = simde_mm256_set1_epi8(0x80);
-
+#endif
 
 
   //determine number of bits in codeword
@@ -103,10 +118,12 @@ int LDPCencoder(uint8_t **input, uint8_t **output, encoder_implemparams_t *impp)
 
   AssertFatal(Zc > 0, "no valid Zc found for block length %d\n", block_length);
   if ((Zc&31) > 0) simd_size = 16;
-  else
-    simd_size = 32;
-  unsigned char cc[22*Zc] __attribute__((aligned(32))); //padded input, unpacked, max size
-  unsigned char dd[46*Zc] __attribute__((aligned(32))); //coded parity part output, unpacked, max size
+#ifdef __AVX512F__
+  else if ((BG==1) && Zc==384) simd_size =64;
+#endif
+  else simd_size=32;
+  unsigned char cc[22*Zc] __attribute__((aligned(64))); //padded input, unpacked, max size
+  unsigned char dd[46*Zc] __attribute__((aligned(64))); //coded parity part output, unpacked, max size
 
   // calculate number of punctured bits
   no_punctured_columns=(int)((nrows-2)*Zc+block_length-block_length*rate)/Zc;
@@ -118,6 +135,7 @@ int LDPCencoder(uint8_t **input, uint8_t **output, encoder_implemparams_t *impp)
   memset(dd,0,sizeof(unsigned char) * nrows * Zc);
 
   if(impp->tinput != NULL) start_meas(impp->tinput);
+  //interleave up to 8 transport-block segements at a time
 #if 0
   for (i=0; i<block_length; i++) {
 	//for (j=0; j<n_segments; j++) {
@@ -126,6 +144,25 @@ int LDPCencoder(uint8_t **input, uint8_t **output, encoder_implemparams_t *impp)
       temp = (input[j][i/8]&(1<<(i&7)))>>(i&7);
       //printf("c(%d,%d)=%d\n",j,i,temp);
       c[i] |= (temp << (j-macro_segment));
+    }
+  }
+#elif defined(__aarch64__)
+  for (int i=0; i<block_length>>4; i++) {
+    c128 = simde_mm_and_si128(simde_mm_cmpeq_epi8(simde_mm_andnot_si128(simde_mm_shuffle_epi8(simde_mm_set1_epi16(((uint16_t*)input[macro_segment])[i]), shufmask),andmask),zero128),masks[0]);
+    //for (j=1; j<n_segments; j++) {
+    for (int j=macro_segment+1; j < macro_segment_end; j++) {    
+      c128 = simde_mm_or_si128(simde_mm_and_si128(simde_mm_cmpeq_epi8(simde_mm_andnot_si128(simde_mm_shuffle_epi8(simde_mm_set1_epi32(((uint16_t*)input[j])[i]), shufmask),andmask),zero128),masks[j-macro_segment]),c128);
+    }
+    ((simde__m128i *)cc)[i] = c128;
+  }
+
+  for (int i=(block_length>>4)<<4;i<block_length;i++) {
+    //for (j=0; j<n_segments; j++) {
+	  for (int j=macro_segment; j < macro_segment_end; j++) {
+
+	    temp = (input[j][i/8]&(128>>(i&7)))>>(7-(i&7));
+      //printf("c(%d,%d)=%d\n",j,i,temp);
+      cc[i] |= (temp << (j-macro_segment));
     }
   }
 #else
@@ -166,48 +203,8 @@ int LDPCencoder(uint8_t **input, uint8_t **output, encoder_implemparams_t *impp)
       return(-1);
     }
   }
-  if(impp->toutput != NULL) start_meas(impp->toutput);
-  // information part and puncture columns
-  /*
-  memcpy(&output[0], &c[2*Zc], (block_length-2*Zc)*sizeof(unsigned char));
-  memcpy(&output[block_length-2*Zc], &d[0], ((nrows-no_punctured_columns) * Zc-removed_bit)*sizeof(unsigned char));
-  */
-  if ((((2*Zc)&31) == 0) && (((block_length-(2*Zc))&31) == 0)) {
-    //AssertFatal(((2*Zc)&31) == 0,"2*Zc needs to be a multiple of 32 for now\n");
-    //AssertFatal(((block_length-(2*Zc))&31) == 0,"block_length-(2*Zc) needs to be a multiple of 32 for now\n");
-    uint32_t l1 = (block_length-(2*Zc))>>5;
-    uint32_t l2 = ((nrows-no_punctured_columns) * Zc-removed_bit)>>5;
-    simde__m256i *c256p = (simde__m256i *)&cc[2*Zc];
-    simde__m256i *d256p = (simde__m256i *)&dd[0];
-    //  if (((block_length-(2*Zc))&31)>0) l1++;
-
-    for (int i=0;i<l1;i++)
-      //for (j=0;j<n_segments;j++) ((simde__m256i *)output[j])[i] = simde_mm256_and_si256(simde_mm256_srai_epi16(c256p[i],j),masks[0]);
-    	for (int j=macro_segment; j < macro_segment_end; j++) ((simde__m256i *)output[j])[i] = simde_mm256_and_si256(simde_mm256_srai_epi16(c256p[i],j-macro_segment),masks[0]);
-
-
-    //  if ((((nrows-no_punctured_columns) * Zc-removed_bit)&31)>0) l2++;
-
-    for (int i1=0, i=l1;i1<l2;i1++,i++)
-      //for (j=0;j<n_segments;j++) ((simde__m256i *)output[j])[i] = simde_mm256_and_si256(simde_mm256_srai_epi16(d256p[i1],j),masks[0]);
-    	for (int j=macro_segment; j < macro_segment_end; j++)  ((simde__m256i *)output[j])[i] = simde_mm256_and_si256(simde_mm256_srai_epi16(d256p[i1],j-macro_segment),masks[0]);
-  }
-  else {
-#ifdef DEBUG_LDPC
-  LOG_W(PHY,"using non-optimized version\n");
-#endif
-    // do non-SIMD version
-    for (int i=0;i<(block_length-2*Zc);i++)
-      //for (j=0; j<n_segments; j++)
-      for (int j=macro_segment; j < macro_segment_end; j++)
-	output[j][i] = (cc[2*Zc+i]>>(j-macro_segment))&1;
-    for (int i=0;i<((nrows-no_punctured_columns) * Zc-removed_bit);i++)
-      //for (j=0; j<n_segments; j++)
-    	  for (int j=macro_segment; j < macro_segment_end; j++)
-	output[j][block_length-2*Zc+i] = (dd[i]>>(j-macro_segment))&1;
-    }
-
-  if(impp->toutput != NULL) stop_meas(impp->toutput);
+  memcpy(output[0],&cc[2*Zc],(block_length-(2*Zc)));
+  memcpy(output[0]+block_length-(2*Zc),dd,((nrows-no_punctured_columns) * Zc-removed_bit));
   return 0;
 }
 

@@ -33,12 +33,33 @@ void nr_codeword_scrambling(uint8_t *in,
 {
   const int roundedSz = (size + 31) / 32;
   uint32_t *seq = gold_cache((n_RNTI << 15) + (q << 14) + Nid, roundedSz);
+  for (int i = 0; i < roundedSz; i++) 
+    out[i] = ((uint32_t*)in)[i] ^ seq[i];
+#if 0
+//#elif __AVX2__
   for (int i = 0; i < roundedSz; i++) {
-    simde__m256i c = ((simde__m256i*)in)[i];
-    uint32_t in32 = simde_mm256_movemask_epi8(simde_mm256_slli_epi16(c, 7));
+    __m256i c = ((__m256i*)in)[i];
+    uint32_t in32 = _mm256_movemask_epi8(_mm256_slli_epi16(c, 7));
     out[i] = in32 ^ seq[i];
     DEBUG_SCRAMBLING(LOG_D(PHY, "in[%d] %x => %x\n", i, in32, out[i]));
   }
+//#elif defined (__aarch64__)
+  const int8_t __attribute__ ((aligned (16))) ucShift[] = {0,1,2,3,4,5,6,7,0,1,2,3,4,5,6,7};
+  int8x16_t vshift = vld1q_s8(ucShift);
+  uint8x16_t *c = (uint8x16_t*)in;		     
+  uint8x16_t cshift; 
+  uint32_t in32;
+  for (int i = 0; i < roundedSz; i++) {
+    cshift = vshlq_u8(*c++, vshift);
+    in32 = vaddv_u8(vget_low_u8(cshift));
+    in32 += (vaddv_u8(vget_high_u8(cshift)) << 8);
+    cshift = vshlq_u8(*c++, vshift);
+    in32 += (vaddv_u8(vget_low_u8(cshift)) << 16);
+    in32 += (vaddv_u8(vget_high_u8(cshift)) << 24);
+    out[i] = in32 ^ seq[i];
+    DEBUG_SCRAMBLING(LOG_D(PHY, "in[%d] %x => %x\n", i, in32, out[i]));
+  }
+#endif
 }
 
 void nr_codeword_unscrambling(int16_t* llr, uint32_t size, uint8_t q, uint32_t Nid, uint32_t n_RNTI)

@@ -35,6 +35,7 @@
 #include "common/utils/assertions.h"
 #include "nr_common.h"
 #include <complex.h>
+#include <simde/x86/gfni.h>
 
 #define C_SRS_NUMBER (64)
 #define B_SRS_NUMBER (4)
@@ -131,8 +132,23 @@ void reverse_bits_u8(uint8_t const* in, size_t sz, uint8_t* out)
   DevAssert(in != NULL);
   DevAssert(out != NULL);
 
+// Bit reversal implementation based on https://wunkolo.github.io/post/2020/11/gf2p8affineqb-bit-reversal/
+#if defined(__GFNI__) && defined(__AVX512VL__)
+  int simde_sz = 16;
+  int i = 0;
+  for (; i + simde_sz <= sz; i += simde_sz) {
+    __m128i input = simde_mm_loadu_si128((__m128i *)&in[i]);
+    __m128i reversed = simde_mm_gf2p8affine_epi64_epi8(input, simde_mm_set1_epi64x(0x8040201008040201), 0);
+    simde_mm_storeu_si128((__m128i *)&out[i], reversed);
+  }
+
+  for (; i < sz; ++i) {
+    out[i] = bit_reverse_table_256[in[i]];
+  }
+#else
   for(size_t i = 0; i < sz; ++i)
     out[i] = bit_reverse_table_256[in[i]];
+#endif
 }
 
 // Reverse bits implementation based on http://graphics.stanford.edu/~seander/bithacks.html
