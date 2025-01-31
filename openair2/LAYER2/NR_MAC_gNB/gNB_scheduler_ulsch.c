@@ -453,9 +453,9 @@ static int nr_process_mac_pdu(instance_t module_idP,
         if (phr->PH < 55) {
           PH = phr->PH - 32;
         } else if (phr->PH < 63) {
-          PH = 28 + (phr->PH - 55) * 2;
+          PH = 24 + (phr->PH - 55) * 2;
         } else {
-          PH = 42;
+          PH = 38;
         }
         // in sched_ctrl we set normalized PH wrt MCS and PRBs
         long *deltaMCS = ul_bwp->pusch_Config ? ul_bwp->pusch_Config->pusch_PowerControl->deltaMCS : NULL;
@@ -1641,7 +1641,7 @@ static void nr_ue_max_mcs_min_rb(int mu,
   }
 
   if (ph_limit < tx_power)
-    LOG_W(NR_MAC, "Normalized power %d based on current resources (RBs %d, MCS %d) exceed reported PHR %d (normalized value)\n",
+    LOG_D(NR_MAC, "Normalized power %d based on current resources (RBs %d, MCS %d) exceed reported PHR %d (normalized value)\n",
           tx_power, *Rb, *mcs, ph_limit);
 }
 
