@@ -46,7 +46,6 @@
 // Declare variable useful for the send buffer function
 volatile uint8_t first_call_set = 0;
 volatile uint8_t first_rx_set = 0;
-volatile int first_read_set = 0;
 
 int xran_is_prach_slot(uint8_t PortId, uint32_t subframe_id, uint32_t slot_id);
 #include "common/utils/LOG/log.h"
@@ -110,42 +109,40 @@ void oai_xran_fh_rx_callback(void *pCallbackTag, xran_status_t status)
 #endif
     if (first_call_set) {
       if (!first_rx_set) {
-        LOG_I(NR_PHY, "first_rx is set (num_ports %d), first_read_set %d\n", num_ports, first_read_set);
+        LOG_I(NR_PHY, "first_rx is set (num_ports %d)\n", num_ports);
       }
       first_rx_set = 1;
-      if (first_read_set == 1) {
-        slot2 = slot + (subframe * slots_per_subframe);
-        rx_RU[ru_id][slot2] = 1;
-        if (last_frame > 0 && frame > 0
-            && ((slot2 > 0 && last_frame != frame) || (slot2 == 0 && last_frame != ((1024 + frame - 1) & 1023))))
-          LOG_E(PHY, "Jump in frame counter last_frame %d => %d, slot %d\n", last_frame, frame, slot2);
-        for (int i = 0; i < num_ports; i++) {
-          if (rx_RU[i][slot2] == 0)
-            return;
-        }
-        for (int i = 0; i < num_ports; i++)
-          rx_RU[i][slot2] = 0;
+      slot2 = slot + (subframe * slots_per_subframe);
+      rx_RU[ru_id][slot2] = 1;
+      if (last_frame > 0 && frame > 0
+          && ((slot2 > 0 && last_frame != frame) || (slot2 == 0 && last_frame != ((1024 + frame - 1) & 1023))))
+        LOG_E(PHY, "Jump in frame counter last_frame %d => %d, slot %d\n", last_frame, frame, slot2);
+      for (int i = 0; i < num_ports; i++) {
+        if (rx_RU[i][slot2] == 0)
+          return;
+      }
+      for (int i = 0; i < num_ports; i++)
+        rx_RU[i][slot2] = 0;
 
-        if (last_slot == -1 || slot2 != last_slot) {
+      if (last_slot == -1 || slot2 != last_slot) {
 #ifndef USE_POLLING
-          notifiedFIFO_elt_t *req = newNotifiedFIFO_elt(sizeof(oran_sync_info_t), 0, &oran_sync_fifo, NULL);
-          oran_sync_info_t *info = NotifiedFifoData(req);
-          info->tti = tti;
-          info->sl = slot2;
-          info->f = frame;
-          LOG_D(PHY, "Push %d.%d.%d (slot %d, subframe %d,last_slot %d)\n", frame, info->sl, slot, ru_id, subframe, last_slot);
-          pushNotifiedFIFO(&oran_sync_fifo, req);
+        notifiedFIFO_elt_t *req = newNotifiedFIFO_elt(sizeof(oran_sync_info_t), 0, &oran_sync_fifo, NULL);
+        oran_sync_info_t *info = NotifiedFifoData(req);
+        info->tti = tti;
+        info->sl = slot2;
+        info->f = frame;
+        LOG_D(PHY, "Push %d.%d.%d (slot %d, subframe %d,last_slot %d)\n", frame, info->sl, slot, ru_id, subframe, last_slot);
+        pushNotifiedFIFO(&oran_sync_fifo, req);
 #else
-          LOG_D(PHY, "Writing %d.%d.%d (slot %d, subframe %d,last_slot %d)\n", frame, slot2, ru_id, slot, subframe, last_slot);
-          oran_sync_info.tti = tti;
-          oran_sync_info.sl = slot2;
-          oran_sync_info.f = frame;
+        LOG_D(PHY, "Writing %d.%d.%d (slot %d, subframe %d,last_slot %d)\n", frame, slot2, ru_id, slot, subframe, last_slot);
+        oran_sync_info.tti = tti;
+        oran_sync_info.sl = slot2;
+        oran_sync_info.f = frame;
 #endif
-        } else
-          LOG_E(PHY, "Cannot Push %d.%d.%d (slot %d, subframe %d,last_slot %d)\n", frame, slot2, ru_id, slot, subframe, last_slot);
-        last_slot = slot2;
-        last_frame = frame;
-      } // first_read_set == 1
+      } else
+        LOG_E(PHY, "Cannot Push %d.%d.%d (slot %d, subframe %d,last_slot %d)\n", frame, slot2, ru_id, slot, subframe, last_slot);
+      last_slot = slot2;
+      last_frame = frame;
     } // first_call_set
   } // rx_sym == 7
 }
@@ -272,7 +269,6 @@ int xran_fh_rx_read_slot(ru_info_t *ru, int *frame, int *slot)
   void *ptr = NULL;
   int32_t *pos = NULL;
   int idx = 0;
-  first_read_set = 1;
 
   static int64_t old_rx_counter[XRAN_PORTS_NUM] = {0};
   static int64_t old_tx_counter[XRAN_PORTS_NUM] = {0};
