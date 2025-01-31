@@ -45,7 +45,6 @@
 
 // Declare variable useful for the send buffer function
 volatile uint8_t first_call_set = 0;
-volatile uint8_t first_rx_set = 0;
 
 int xran_is_prach_slot(uint8_t PortId, uint32_t subframe_id, uint32_t slot_id);
 #include "common/utils/LOG/log.h"
@@ -53,7 +52,7 @@ int xran_is_prach_slot(uint8_t PortId, uint32_t subframe_id, uint32_t slot_id);
 #ifndef USE_POLLING
 extern notifiedFIFO_t oran_sync_fifo;
 #else
-volatile oran_sync_info_t oran_sync_info;
+volatile oran_sync_info_t oran_sync_info = {0};
 #endif
 void oai_xran_fh_rx_callback(void *pCallbackTag, xran_status_t status)
 {
@@ -108,10 +107,6 @@ void oai_xran_fh_rx_callback(void *pCallbackTag, xran_status_t status)
     }
 #endif
     if (first_call_set) {
-      if (!first_rx_set) {
-        LOG_I(NR_PHY, "first_rx is set (num_ports %d)\n", num_ports);
-      }
-      first_rx_set = 1;
       slot2 = slot + (subframe * slots_per_subframe);
       rx_RU[ru_id][slot2] = 1;
       if (last_frame > 0 && frame > 0
@@ -293,10 +288,6 @@ int xran_fh_rx_read_slot(ru_info_t *ru, int *frame, int *slot)
   *frame = info->f;
   delNotifiedFIFO_elt(res);
 #else
-  LOG_D(PHY, "In  xran_fh_rx_read_slot, first_rx_set %d\n", first_rx_set);
-  while (first_rx_set == 0) {
-  }
-
   *slot = oran_sync_info.sl;
   *frame = oran_sync_info.f;
   uint32_t tti_in = oran_sync_info.tti;
