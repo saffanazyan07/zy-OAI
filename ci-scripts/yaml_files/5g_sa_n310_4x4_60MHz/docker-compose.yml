@@ -16,7 +16,7 @@ services:
             - ../../conf_files/gnb-vnf.sa.band77.162prb.nfapi.4x4.conf:/opt/oai-gnb/etc/gnb.conf
         healthcheck:
             test: /bin/bash -c "pgrep nr-softmodem"
-            interval: 10s
+            interval: 15s
             timeout: 5s
             retries: 5
     oai-pnf:
@@ -36,6 +36,6 @@ services:
             - ../../conf_files/gnb-pnf.band77.usrpn310.4x4.conf:/opt/oai-gnb/etc/gnb.conf
         healthcheck:
             test: /bin/bash -c "pgrep nr-softmodem"
-            interval: 10s
+            interval: 15s
             timeout: 5s
             retries: 5

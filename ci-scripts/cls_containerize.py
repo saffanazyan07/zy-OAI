@@ -881,7 +881,10 @@ class Containerize():
 				if deployed:
 					break
 				elif (attempt < num_attempts - 1):
-					logging.warning(f'Failed to deploy on attempt {attempt}, restart services {services}')
+					warning_msg = f'Restart services {services}'
+					logging.warning(warning_msg)
+					imagesInfo.append(warning_msg)
+					HTML.CreateHtmlTestRowQueue('N/A', 'NOK', ['\n'.join(imagesInfo)])
 					for svc in services.split():
 						CopyinServiceLog(ssh, lSourcePath, yaml_dir, svc, wd_yaml, f'{svc}-{HTML.testCase_id}-attempt{attempt}.log')
 					ssh.run(f'docker compose -f {wd_yaml} down -- {services}')
