@@ -248,9 +248,11 @@ void nr_generate_dci_top(processingData_L1tx_t *msgTx, int slot, int txdataF_off
 {
   PHY_VARS_gNB *gNB = msgTx->gNB;
   NR_DL_FRAME_PARMS *frame_parms = &gNB->frame_parms;
+  start_meas(&gNB->dci_generation_stats);
   for (int i = 0; i < msgTx->num_ul_pdcch; i++)
     nr_generate_dci(msgTx->gNB, &msgTx->ul_pdcch_pdu[i].pdcch_pdu.pdcch_pdu_rel15, txdataF_offset, frame_parms, slot);
   for (int i = 0; i < msgTx->num_dl_pdcch; i++)
     nr_generate_dci(msgTx->gNB, &msgTx->pdcch_pdu[i].pdcch_pdu_rel15, txdataF_offset, frame_parms, slot);
+  stop_meas(&gNB->dci_generation_stats);
 }
 

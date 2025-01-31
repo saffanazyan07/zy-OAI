@@ -961,10 +961,12 @@ int main(int argc, char **argv)
     reset_meas(&gNB->dlsch_segmentation_stats);
     reset_meas(&gNB->dlsch_modulation_stats);
     reset_meas(&gNB->dlsch_encoding_stats);
+    reset_meas(&gNB->dci_generation_stats);
     reset_meas(&gNB->tinput);
     reset_meas(&gNB->tprep);
     reset_meas(&gNB->tparity);
     reset_meas(&gNB->toutput);
+    reset_meas(&gNB->phase_comp_stats);
 
     uint32_t errors_scrambling[16] = {0};
     int n_errors[16] = {0};
@@ -1262,6 +1264,7 @@ int main(int argc, char **argv)
              UE->dl_harq_processes[0][slot].C,
              msgDataTx->dlsch[0][0].harq_process.pdsch_pdu.pdsch_pdu_rel15.TBSize[0] << 3);
       printDistribution(&gNB->phy_proc_tx,table_tx,"PHY proc tx");
+      printStatIndent2(&gNB->dci_generation_stats, "DCI encoding time");
       printStatIndent2(&gNB->dlsch_encoding_stats,"DLSCH encoding time");
       printStatIndent3(&gNB->dlsch_segmentation_stats,"DLSCH segmentation time");
       printStatIndent3(&gNB->tinput,"DLSCH LDPC input processing time");
@@ -1274,6 +1277,8 @@ int main(int argc, char **argv)
       printStatIndent2(&gNB->dlsch_scrambling_stats, "DLSCH scrambling time");
       printStatIndent2(&gNB->dlsch_resource_mapping_stats, "DLSCH Resource Mapping time");
       printStatIndent2(&gNB->dlsch_precoding_stats,"DLSCH Layer Precoding time");
+      if (gNB->phase_comp)
+        printStatIndent2(&gNB->phase_comp_stats, "Phase Compensation");
 
       printf("\nUE function statistics (per %d us slot)\n", 1000 >> *scc->ssbSubcarrierSpacing);
       for (int i = RX_PDSCH_STATS; i <= DLSCH_PROCEDURES_STATS; i++) {

@@ -520,6 +520,8 @@ typedef struct PHY_VARS_gNB_s {
   time_stats_t dlsch_interleaving_stats;
   time_stats_t dlsch_segmentation_stats;
 
+  time_stats_t dci_generation_stats;
+  time_stats_t phase_comp_stats;
   time_stats_t rx_pusch_stats;
   time_stats_t rx_pusch_init_stats;
   time_stats_t rx_pusch_symbol_processing_stats;
