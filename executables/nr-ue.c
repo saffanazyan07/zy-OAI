@@ -518,7 +518,7 @@ void processSlotTX(void *arg)
   bool sl_tx_action = false;
 
   if (UE->if_inst)
-    UE->if_inst->slot_indication(UE->Mod_id);
+    UE->if_inst->slot_indication(UE->Mod_id, true);
 
   if (proc->tx_slot_type == NR_UPLINK_SLOT || proc->tx_slot_type == NR_MIXED_SLOT) {
     if (UE->sl_mode == 2 && proc->tx_slot_type == NR_SIDELINK_SLOT) {
@@ -647,6 +647,9 @@ static int UE_dl_preprocessing(PHY_VARS_NR_UE *UE,
       nr_pdcp_tick(proc->frame_rx, proc->nr_slot_rx / fp->slots_per_subframe);
     }
   }
+
+  if (UE->if_inst)
+    UE->if_inst->slot_indication(UE->Mod_id, false);
 
   bool dl_slot = false;
   if (proc->rx_slot_type == NR_DOWNLINK_SLOT || proc->rx_slot_type == NR_MIXED_SLOT) {

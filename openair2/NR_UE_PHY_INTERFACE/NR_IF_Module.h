@@ -260,7 +260,7 @@ typedef int (nr_ue_dl_indication_f)(nr_downlink_indication_t *dl_info);
  */
 typedef int (nr_ue_ul_indication_f)(nr_uplink_indication_t *ul_info);
 
-typedef void (nr_ue_slot_indication_f)(uint8_t mod_id);
+typedef void (nr_ue_slot_indication_f)(uint8_t mod_id, bool is_tx);
 
 /*
  * Generic type of an application-defined callback to return various

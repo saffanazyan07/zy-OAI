@@ -80,23 +80,7 @@
 /*!\brief value for indicating BSR Timer is not running */
 #define NR_MAC_UE_BSR_TIMER_NOT_RUNNING   (0xFFFF)
 
-// ================================================
-// SSB to RO mapping private defines and structures
-// ================================================
-
-#define MAX_NB_PRACH_CONF_PERIOD_IN_ASSOCIATION_PERIOD (16) // Maximum association period is 16
-#define MAX_NB_PRACH_CONF_PERIOD_IN_ASSOCIATION_PATTERN_PERIOD (16) // Max association pattern period is 160ms and minimum PRACH configuration period is 10ms
-#define MAX_NB_ASSOCIATION_PERIOD_IN_ASSOCIATION_PATTERN_PERIOD (16) // Max nb of association periods in an association pattern period of 160ms
-#define MAX_NB_FRAME_IN_PRACH_CONF_PERIOD (16) // Max PRACH configuration period is 160ms and frame is 10ms
-#define MAX_NB_SLOT_IN_FRAME (160) // Max number of slots in a frame (@ SCS 240kHz = 160)
-#define MAX_NB_FRAME_IN_ASSOCIATION_PATTERN_PERIOD (16) // Maximum number of frames in the maximum association pattern period
 #define MAX_NB_SSB (64) // Maximum number of possible SSB indexes
-#define MAX_RO_PER_SSB (8) // Maximum number of consecutive ROs that can be mapped to an SSB according to the ssb_per_RACH config
-
-// Maximum number of ROs that can be mapped to an SSB in an association pattern
-// This is to reserve enough elements in the SSBs list for each mapped ROs for a single SSB
-// An arbitrary maximum number is chosen to be safe: maximum number of slots in an association pattern * maximum number of ROs in a slot
-#define MAX_NB_RO_PER_SSB_IN_ASSOCIATION_PATTERN (MAX_TDM*MAX_FDM*MAX_NB_SLOT_IN_FRAME*MAX_NB_FRAME_IN_ASSOCIATION_PATTERN_PERIOD)
 
 // ===============
 // DCI fields defs
@@ -169,6 +153,23 @@
   UE_STATE(UE_PERFORMING_RA) \
   UE_STATE(UE_CONNECTED) \
   UE_STATE(UE_DETACHING)
+
+// ===============================================
+// SSB to RO mapping public defines and structures
+// ===============================================
+#define MAX_SSB_PER_RO (16) // Maximum number of SSBs that can be mapped to a single RO
+#define MAX_TDM (7) // Maximum nb of PRACH occasions TDMed in a slot
+#define MAX_FDM (8) // Maximum nb of PRACH occasions FDMed in a slot
+
+// PRACH occasion details
+typedef struct prach_occasion_info {
+  int start_symbol; // 0 - 13 (14 symbols in a slot)
+  int fdm; // 0-7 (possible values of msg1-FDM: 1, 2, 4 or 8)
+  int slot;
+  int format; // RO preamble format
+  int frame_info[2];
+  int association_period_idx;
+} prach_occasion_info_t;
 
 typedef enum {
   phr_cause_prohibit_timer = 0,
@@ -273,42 +274,41 @@ static const char *const nrra_ue_text[] =
     {"UE_IDLE", "GENERATE_PREAMBLE", "WAIT_RAR", "WAIT_MSGB", "WAIT_CONTENTION_RESOLUTION", "RA_SUCCEEDED", "RA_FAILED"};
 
 typedef struct {
-  /// PRACH format retrieved from prach_ConfigIndex
-  uint16_t prach_format;
   /// Preamble Tx Counter
-  uint8_t RA_PREAMBLE_TRANSMISSION_COUNTER;
+  uint8_t preamble_tx_counter;
   /// Preamble Power Ramping Counter
-  uint8_t RA_PREAMBLE_POWER_RAMPING_COUNTER;
+  uint8_t preamble_power_ramping_cnt;
   /// 2-step RA power offset
-  int POWER_OFFSET_2STEP_RA;
+  int power_offset_2step;
   /// Target received power at gNB. Baseline is range -202..-60 dBm. Depends on delta preamble, power ramping counter and step.
-  int ra_PREAMBLE_RECEIVED_TARGET_POWER;
-  /// PRACH index for TDD (0 ... 6) depending on TDD configuration and prachConfigIndex
-  uint8_t ra_TDD_map_index;
+  int ra_preamble_rx_target_power;
   /// RA Preamble Power Ramping Step in dB
-  uint32_t RA_PREAMBLE_POWER_RAMPING_STEP;
-  ///
-  uint8_t RA_PREAMBLE_BACKOFF;
-  ///
-  uint8_t RA_SCALING_FACTOR_BI;
-  /// Indicating whether it is 2-step or 4-step RA
-  nr_ra_type_t RA_TYPE;
+  uint32_t preamble_power_ramping_step;
   /// UE configured maximum output power
-  int RA_PCMAX;
+  int Pc_max;
 } NR_PRACH_RESOURCES_t;
 
 typedef struct {
+  float ssb_per_ro;
+  int preambles_per_ssb;
+} ssb_ro_preambles_t;
 
+typedef struct {
+  bool active;
+  uint32_t preamble_index;
+  uint32_t ssb_index;
+  uint32_t prach_mask;
+} NR_pdcch_order_config_t;
+
+typedef struct {
   // pointer to RACH config dedicated
   NR_RACH_ConfigDedicated_t *rach_ConfigDedicated;
   /// state of RA procedure
   nrRA_UE_state_t ra_state;
   /// RA contention type
-  uint8_t cfra;
+  bool cfra;
   /// RA type
   nr_ra_type_t ra_type;
-  /// RA rx frame offset: compensate RA rx offset introduced by OAI gNB.
-  uint8_t RA_offset;
   /// MsgB SuccessRAR MAC subheader
   int8_t MsgB_R;
   int8_t MsgB_CH_ACESS_CPEXT;
@@ -322,53 +322,52 @@ typedef struct {
   uint16_t MsgB_rnti;
   /// Temporary CRNTI
   uint16_t t_crnti;
-  /// number of attempt for rach
-  uint8_t RA_attempt_number;
   /// Random-access procedure flag
   bool RA_active;
   /// Random-access preamble index
   int ra_PreambleIndex;
-  // When multiple SSBs per RO is configured, this indicates which one is selected in this RO -> this is used to properly compute the PRACH preamble
-  uint8_t ssb_nb_in_ro;
-
-  /// Random-access window counter
-  int16_t RA_window_cnt;
-  /// Flag to monitor if matching RAPID was received in RAR
-  uint8_t RA_RAPID_found;
-  /// Flag to monitor if BI was received in RAR
-  uint8_t RA_BI_found;
-  /// Random-access backoff counter
-  int16_t RA_backoff_indicator;
-  /// Flag to indicate whether preambles Group A was used
-  uint8_t RA_usedGroupA;
-  /// RA backoff counter
-  int16_t RA_backoff_cnt;
+  int zeroCorrelationZoneConfig;
+  int restricted_set_config;
+  // selected SSB for RACH (not the SSB-Index but the cumulative index, excluding not trasmitted SSBs)
+  int ra_ssb;
+  /// Random-access response window timer
+  NR_timer_t response_window_timer;
+  int response_window_setup_time;
+  /// Random-access backoff timer
+  NR_timer_t RA_backoff_timer;
+  int RA_backoff_limit;
+  uint8_t scaling_factor_bi;
+  /// Flag to indicate whether preambles Group A is selected
+  bool RA_GroupA;
   /// RA max number of preamble transmissions
   int preambleTransMax;
-  /// Nb of preambles per SSB
-  long cb_preambles_per_ssb;
-  int starting_preamble_nb;
-
   /// Received TPC command (in dB) from RAR
   int8_t Msg3_TPC;
-  /// Flag to indicate whether it is the first Msg3 to be transmitted
-  bool first_Msg3;
   /// RA Msg3 size in bytes
   uint8_t Msg3_size;
   /// Msg3 buffer
   uint8_t *Msg3_buffer;
-
+  // initial Random Access Preamble power
+  int preambleRxTargetPower;
+  int msg3_deltaPreamble;
   bool msg3_C_RNTI;
-
+  int preambleReceivedTargetPower_config;
   /// Random-access Contention Resolution Timer
   NR_timer_t contention_resolution_timer;
   /// Transmitted UE Contention Resolution Identifier
   uint8_t cont_res_id[6];
 
-  /// BeamfailurerecoveryConfig
-  NR_BeamFailureRecoveryConfig_t RA_BeamFailureRecoveryConfig;
+  NR_pdcch_order_config_t pdcch_order;
 
   NR_PRACH_RESOURCES_t prach_resources;
+
+  bool new_ssb;
+  int num_fd_occasions;
+  int ra_config_index;
+  ssb_ro_preambles_t ssb_ro_config;
+  int association_periods;
+  prach_occasion_info_t sched_ro_info;
+  int ro_mask_index;
 } RA_config_t;
 
 typedef struct {
@@ -436,39 +435,8 @@ typedef struct NR_UL_TIME_ALIGNMENT {
   int slot;
 } NR_UL_TIME_ALIGNMENT_t;
 
-// The PRACH Config period is a series of selected slots in one or multiple frames
-typedef struct prach_conf_period {
-  prach_occasion_slot_t prach_occasion_slot_map[MAX_NB_FRAME_IN_PRACH_CONF_PERIOD][MAX_NB_SLOT_IN_FRAME];
-  uint16_t nb_of_prach_occasion; // Total number of PRACH occasions in the PRACH Config period
-  uint8_t nb_of_frame; // Size of the PRACH Config period in number of 10ms frames
-  uint8_t nb_of_slot; // Nb of slots in each frame
-} prach_conf_period_t;
-
-// The association period is a series of PRACH Config periods
-typedef struct prach_association_period {
-  prach_conf_period_t *prach_conf_period_list[MAX_NB_PRACH_CONF_PERIOD_IN_ASSOCIATION_PERIOD];
-  uint8_t nb_of_prach_conf_period; // Nb of PRACH configuration periods within the association period
-  uint8_t nb_of_frame; // Total number of frames included in the association period
-} prach_association_period_t;
-
-// The association pattern is a series of Association periods
-typedef struct prach_association_pattern {
-  prach_association_period_t prach_association_period_list[MAX_NB_ASSOCIATION_PERIOD_IN_ASSOCIATION_PATTERN_PERIOD];
-  prach_conf_period_t prach_conf_period_list[MAX_NB_PRACH_CONF_PERIOD_IN_ASSOCIATION_PATTERN_PERIOD];
-  uint8_t nb_of_assoc_period; // Nb of association periods within the association pattern
-  uint8_t nb_of_prach_conf_period_in_max_period; // Nb of PRACH configuration periods within the maximum association pattern period (according to the size of the configured PRACH
-  uint8_t nb_of_frame; // Total number of frames included in the association pattern period (after mapping the SSBs and determining the real association pattern length)
-} prach_association_pattern_t;
-
-// SSB details
-typedef struct ssb_info {
-  prach_occasion_info_t *mapped_ro[MAX_NB_RO_PER_SSB_IN_ASSOCIATION_PATTERN]; // List of mapped RACH Occasions to this SSB index
-  uint32_t nb_mapped_ro; // Total number of mapped ROs to this SSB index
-} ssb_info_t;
-
 // List of all the possible SSBs and their details
 typedef struct ssb_list_info {
-  ssb_info_t *tx_ssb;
   int nb_tx_ssb;
   int nb_ssb_per_index[MAX_NB_SSB];
 } ssb_list_info_t;
@@ -578,8 +546,7 @@ typedef struct NR_UE_MAC_INST_s {
   NR_MIB_t *mib;
 
   si_schedInfo_t si_SchedInfo;
-  ssb_list_info_t ssb_list[MAX_NUM_BWP_UE];
-  prach_association_pattern_t prach_assoc_pattern[MAX_NUM_BWP_UE];
+  ssb_list_info_t ssb_list;
 
   NR_UE_ServingCell_Info_t sc_info;
   A_SEQUENCE_OF(NR_UE_DL_BWP_t) dl_BWPs;

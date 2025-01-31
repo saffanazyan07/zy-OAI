@@ -411,20 +411,3 @@ const uint8_t table_7_3_2_3_3_4_twoCodeword[6][14] = {
   {2,1,1,1,1,0,0,1,1,1,1,0,0,2},
 };
 
-// table 7.2-1 TS 38.321
-const uint16_t table_7_2_1[16] = {
-  5,    // row index 0
-  10,   // row index 1
-  20,   // row index 2
-  30,   // row index 3
-  40,   // row index 4
-  60,   // row index 5
-  80,   // row index 6
-  120,  // row index 7
-  160,  // row index 8
-  240,  // row index 9
-  320,  // row index 10
-  480,  // row index 11
-  960,  // row index 12
-  1920, // row index 13
-};

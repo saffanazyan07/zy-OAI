@@ -72,7 +72,6 @@
 // Messages between RRC and MAC layers
 
 typedef struct NRRrcMacRaInd_s {
-  uint32_t frame;
   bool RA_succeeded;
 } NRRrcMacRaInd;
 

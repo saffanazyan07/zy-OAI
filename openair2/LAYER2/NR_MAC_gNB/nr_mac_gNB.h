@@ -300,6 +300,7 @@ typedef struct {
   uint8_t ssb_index[MAX_NUM_OF_SSB];
   //CB preambles for each SSB
   int cb_preambles_per_ssb;
+  nr_prach_info_t prach_info;
 } NR_COMMON_channels_t;
 
 // SP ZP CSI-RS Resource Set Activation/Deactivation MAC CE

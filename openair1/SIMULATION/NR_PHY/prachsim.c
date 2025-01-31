@@ -136,13 +136,11 @@ int main(int argc, char **argv){
   c16_t **txdata;
   int N_RB_UL = 106, delay = 0, NCS_config = 13, rootSequenceIndex = 1, threequarter_fs = 0, mu = 1, fd_occasion = 0, loglvl = OAILOG_INFO, numRA = 0, prachStartSymbol = 0;
   uint8_t snr1set = 0, ue_speed1set = 0, transmission_mode = 1, n_tx = 1, n_rx = 1, awgn_flag = 0, msg1_frequencystart = 0, num_prach_fd_occasions = 1, prach_format=0;
-  uint8_t config_index = 98, prach_sequence_length = 1, restrictedSetConfig = 0, N_dur, N_t_slot, start_symbol;
-  uint16_t Nid_cell = 0, preamble_tx = 0, preamble_delay, format, format0, format1;
+  uint8_t config_index = 98, prach_sequence_length = 1, restrictedSetConfig = 0;
+  uint16_t Nid_cell = 0, preamble_tx = 0, preamble_delay, format0, format1;
   uint32_t tx_lev = 10000, prach_errors = 0; //,tx_lev_dB;
   uint64_t SSB_positions = 0x01;
   uint16_t RA_sfn_index;
-  uint8_t N_RA_slot;
-  uint8_t config_period;
   int prachOccasion = 0;
   double DS_TDL = .03;
 
@@ -482,25 +480,24 @@ int main(int argc, char **argv){
   gNB->gNB_config.prach_config.num_prach_fd_occasions.value = num_prach_fd_occasions;
   gNB->gNB_config.prach_config.num_prach_fd_occasions_list = (nfapi_nr_num_prach_fd_occasions_t *) malloc(num_prach_fd_occasions*sizeof(nfapi_nr_num_prach_fd_occasions_t));
 
-  gNB->proc.slot_rx       = slot;
+  gNB->proc.slot_rx = slot;
+  frequency_range_t freq_range = absoluteFrequencyPointA > 2016666 ? FR2 : FR1;
+  nr_prach_info_t prach_info = get_nr_prach_occasion_info_from_index(config_index, freq_range, frame_parms->frame_type);
+  int ret = get_nr_prach_sched_from_info(prach_info,
+                                         config_index,
+                                         frame,
+                                         slot,
+                                         mu,
+                                         freq_range,
+                                         &RA_sfn_index,
+                                         frame_parms->frame_type);
 
-  int ret = get_nr_prach_info_from_index(config_index,
-					 (int)frame,
-					 (int)slot,
-					 absoluteFrequencyPointA,
-					 mu,
-					 frame_parms->frame_type,
-					 &format,
-					 &start_symbol,
-					 &N_t_slot,
-					 &N_dur,
-					 &RA_sfn_index,
-					 &N_RA_slot,
-					 &config_period);
-
-  if (ret == 0) {printf("No prach in %d.%d, mu %d, config_index %d\n",frame,slot,mu,config_index); exit(-1);}
-  format0 = format&0xff;      // first column of format from table
-  format1 = (format>>8)&0xff; // second column of format from table
+  if (ret == 0) {
+    printf("No prach in %d.%d, mu %d, config_index %d\n", frame, slot, mu, config_index);
+    exit(-1);
+  }
+  format0 = prach_info.format & 0xff; // first column of format from table
+  format1 = (prach_info.format >> 8) & 0xff; // second column of format from table
 
   if (format1 != 0xff) {
     switch(format0) {

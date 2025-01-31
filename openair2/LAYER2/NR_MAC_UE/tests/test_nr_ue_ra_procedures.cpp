@@ -29,20 +29,8 @@ softmodem_params_t *get_softmodem_params(void)
 {
   return &softmodem_params;
 }
-void nr_mac_rrc_ra_ind(const module_id_t mod_id, int frame, bool success)
+void nr_mac_rrc_ra_ind(const module_id_t mod_id, bool success)
 {
-}
-int nr_write_ce_ulsch_pdu(uint8_t *mac_ce,
-                          NR_UE_MAC_INST_t *mac,
-                          NR_SINGLE_ENTRY_PHR_MAC_CE *power_headroom,
-                          const type_bsr_t *bsr,
-                          uint8_t *mac_ce_end)
-{
-  return 0;
-}
-int nr_write_ce_msg3_pdu(uint8_t *mac_ce, NR_UE_MAC_INST_t *mac, rnti_t crnti, uint8_t *mac_ce_end)
-{
-  return 0;
 }
 tbs_size_t mac_rlc_data_req(const module_id_t module_idP,
                             const rnti_t rntiP,
@@ -77,6 +65,14 @@ int nr_ue_configure_pucch(NR_UE_MAC_INST_t *mac,
 {
   return 0;
 }
+NR_UE_DL_BWP_t *get_dl_bwp_structure(NR_UE_MAC_INST_t *mac, int bwp_id, bool setup)
+{
+  return NULL;
+}
+NR_UE_UL_BWP_t *get_ul_bwp_structure(NR_UE_MAC_INST_t *mac, int bwp_id, bool setup)
+{
+  return NULL;
+}
 }
 #include <cstdio>
 #include "common/utils/LOG/log.h"
@@ -84,22 +80,32 @@ int nr_ue_configure_pucch(NR_UE_MAC_INST_t *mac,
 TEST(test_init_ra, four_step_cbra)
 {
   NR_UE_MAC_INST_t mac = {0};
-  NR_PRACH_RESOURCES_t prach_resources = {0};
+  RA_config_t *ra = &mac.ra;
   NR_RACH_ConfigCommon_t nr_rach_ConfigCommon = {0};
   NR_RACH_ConfigGeneric_t rach_ConfigGeneric = {0};
-  NR_RACH_ConfigDedicated_t *rach_ConfigDedicated = nullptr;
+  NR_RACH_ConfigDedicated_t rach_ConfigDedicated = {0};
   NR_UE_UL_BWP_t current_bwp;
+  NR_UE_DL_BWP_t dl_bwp;
   mac.current_UL_BWP = &current_bwp;
+  mac.current_DL_BWP = &dl_bwp;
+  mac.mib_ssb = 0;
   long scs = 1;
   current_bwp.scs = scs;
+  current_bwp.bwp_id = 0;
+  dl_bwp.bwp_id = 0;
   current_bwp.channel_bandwidth = 40;
   nr_rach_ConfigCommon.msg1_SubcarrierSpacing = &scs;
+  nr_rach_ConfigCommon.rach_ConfigGeneric = rach_ConfigGeneric;
+  current_bwp.rach_ConfigCommon = &nr_rach_ConfigCommon;
+  ra->rach_ConfigDedicated = &rach_ConfigDedicated;
   mac.p_Max = 23;
   mac.nr_band = 78;
   mac.frame_type = TDD;
   mac.frequency_range = FR1;
+  mac.first_sync_frame = 0;
+  int frame = 151;
 
-  init_RA(&mac, &prach_resources, &nr_rach_ConfigCommon, &rach_ConfigGeneric, rach_ConfigDedicated);
+  init_RA(&mac, frame);
 
   EXPECT_EQ(mac.ra.ra_type, RA_4_STEP);
   EXPECT_EQ(mac.state, UE_PERFORMING_RA);
@@ -110,25 +116,35 @@ TEST(test_init_ra, four_step_cbra)
 TEST(test_init_ra, four_step_cfra)
 {
   NR_UE_MAC_INST_t mac = {0};
-  NR_PRACH_RESOURCES_t prach_resources = {0};
+  RA_config_t *ra = &mac.ra;
   NR_RACH_ConfigCommon_t nr_rach_ConfigCommon = {0};
   NR_RACH_ConfigGeneric_t rach_ConfigGeneric = {0};
   NR_UE_UL_BWP_t current_bwp;
+  NR_UE_DL_BWP_t dl_bwp;
   mac.current_UL_BWP = &current_bwp;
+  mac.current_DL_BWP = &dl_bwp;
+  mac.mib_ssb = 0;
   long scs = 1;
   current_bwp.scs = scs;
+  current_bwp.bwp_id = 0;
+  dl_bwp.bwp_id = 0;
   current_bwp.channel_bandwidth = 40;
   nr_rach_ConfigCommon.msg1_SubcarrierSpacing = &scs;
+  nr_rach_ConfigCommon.rach_ConfigGeneric = rach_ConfigGeneric;
+  current_bwp.rach_ConfigCommon = &nr_rach_ConfigCommon;
   mac.p_Max = 23;
   mac.nr_band = 78;
   mac.frame_type = TDD;
   mac.frequency_range = FR1;
+  mac.first_sync_frame = 0;
+  int frame = 151;
 
   NR_RACH_ConfigDedicated_t rach_ConfigDedicated = {0};
-  struct NR_CFRA cfra;
+  NR_CFRA_t cfra;
   rach_ConfigDedicated.cfra = &cfra;
+  ra->rach_ConfigDedicated = &rach_ConfigDedicated;
 
-  init_RA(&mac, &prach_resources, &nr_rach_ConfigCommon, &rach_ConfigGeneric, &rach_ConfigDedicated);
+  init_RA(&mac, frame);
 
   EXPECT_EQ(mac.ra.ra_type, RA_4_STEP);
   EXPECT_EQ(mac.state, UE_PERFORMING_RA);

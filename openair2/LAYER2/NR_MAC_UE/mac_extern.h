@@ -40,8 +40,6 @@ extern uint8_t table_6_1_2_1_1_2_time_dom_res_alloc_A[16][3];
 //  for PDSCH from TS 38.214 subclause 5.1.2.1.1
 extern uint8_t table_5_1_2_1_1_2_time_dom_res_alloc_A[16][3];
 
-extern int64_t table_6_3_3_2_3_prachConfig_Index [256][9];
-
 // DCI
 extern const uint8_t table_7_3_1_1_2_2_3_4_5[64][20];
 extern const uint8_t table_7_3_1_1_2_12[14][3];
@@ -63,8 +61,6 @@ extern const uint8_t table_7_3_2_3_3_3_oneCodeword[24][7];
 extern const uint8_t table_7_3_2_3_3_3_twoCodeword[2][7];
 extern const uint8_t table_7_3_2_3_3_4_oneCodeword[58][14];
 extern const uint8_t table_7_3_2_3_3_4_twoCodeword[6][14];
-
-extern const uint16_t table_7_2_1[16];
 
 extern void mac_rlc_data_ind(const module_id_t module_idP,
                              const rnti_t rntiP,

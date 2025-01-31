@@ -440,8 +440,8 @@ bool search_space_monitoring_ocasion_other_si(NR_UE_MAC_INST_t *mac,
   get_monitoring_period_offset(ss, &period, &offset);
   for (int i = 0; i < duration; i++) {
     if (((frame * slots_per_frame + slot - offset - i) % period) == 0) {
-      int N = mac->ssb_list[bwp_id].nb_tx_ssb;
-      int K = mac->ssb_list->nb_ssb_per_index[mac->mib_ssb];
+      int N = mac->ssb_list.nb_tx_ssb;
+      int K = mac->ssb_list.nb_ssb_per_index[mac->mib_ssb];
 
       // numbering current frame and slot in terms of monitoring occasions in window
       int rel_slot = abs_slot - mac->si_SchedInfo.si_window_start;
@@ -558,12 +558,13 @@ void ue_dci_configuration(NR_UE_MAC_INST_t *mac, fapi_nr_dl_config_request_t *dl
       config_dci_pdu(mac, dl_config, TYPE_SI_RNTI_, slot, ss);
     }
   }
-  if (mac->state == UE_PERFORMING_RA && mac->ra.ra_state >= nrRA_WAIT_RAR) {
+  RA_config_t *ra = &mac->ra;
+  if (mac->state == UE_PERFORMING_RA && ra->ra_state >= nrRA_WAIT_RAR) {
     // if RA is ongoing use RA search space
     if (is_ss_monitor_occasion(frame, slot, slots_per_frame, pdcch_config->ra_SS)) {
       nr_rnti_type_t rnti_type = 0;
-      if (mac->ra.ra_type == RA_4_STEP) {
-        rnti_type = mac->ra.ra_state == nrRA_WAIT_RAR ? TYPE_RA_RNTI_ : TYPE_TC_RNTI_;
+      if (ra->ra_type == RA_4_STEP) {
+        rnti_type = ra->ra_state == nrRA_WAIT_RAR ? TYPE_RA_RNTI_ : TYPE_TC_RNTI_;
       } else {
         rnti_type = TYPE_MSGB_RNTI_;
       }

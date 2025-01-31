@@ -1248,13 +1248,20 @@ int set_default_nta_offset(frequency_range_t freq_range, uint32_t samples_per_su
 void nr_timer_start(NR_timer_t *timer)
 {
   timer->active = true;
+  timer->suspended = false;
   timer->counter = 0;
 }
 
 void nr_timer_stop(NR_timer_t *timer)
 {
   timer->active = false;
+  timer->suspended = false;
   timer->counter = 0;
+}
+
+void nr_timer_suspension(NR_timer_t *timer)
+{
+  timer->suspended = !timer->suspended;
 }
 
 bool nr_timer_is_active(const NR_timer_t *timer)
@@ -1267,7 +1274,7 @@ bool nr_timer_tick(NR_timer_t *timer)
   bool expired = false;
   if (timer->active) {
     timer->counter += timer->step;
-    if (timer->target == UINT_MAX) // infinite target, never expires
+    if (timer->target == UINT_MAX || timer->suspended) // infinite target, never expires
       return false;
     expired = nr_timer_expired(timer);
     if (expired)
@@ -1278,7 +1285,7 @@ bool nr_timer_tick(NR_timer_t *timer)
 
 bool nr_timer_expired(const NR_timer_t *timer)
 {
-  if (timer->target == UINT_MAX) // infinite target, never expires
+  if (timer->target == UINT_MAX || timer->suspended) // infinite target, never expires
     return false;
   return timer->counter >= timer->target;
 }

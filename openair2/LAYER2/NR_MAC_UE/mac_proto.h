@@ -45,8 +45,12 @@
    \param mac      MAC pointer */
 void nr_ue_init_mac(NR_UE_MAC_INST_t *mac);
 
+NR_UE_DL_BWP_t *get_dl_bwp_structure(NR_UE_MAC_INST_t *mac, int bwp_id, bool setup);
+NR_UE_UL_BWP_t *get_ul_bwp_structure(NR_UE_MAC_INST_t *mac, int bwp_id, bool setup);
+
 void send_srb0_rrc(int ue_id, const uint8_t *sdu, sdu_size_t sdu_len, void *data);
-void update_mac_timers(NR_UE_MAC_INST_t *mac);
+void update_mac_ul_timers(NR_UE_MAC_INST_t *mac);
+void update_mac_dl_timers(NR_UE_MAC_INST_t *mac);
 NR_LC_SCHEDULING_INFO *get_scheduling_info_from_lcid(NR_UE_MAC_INST_t *mac, NR_LogicalChannelIdentity_t lcid);
 
 /**\brief apply default configuration values in nr_mac instance
@@ -177,8 +181,6 @@ typedef struct {
   enum { b_none, b_long, b_short, b_short_trunc, b_long_trunc } type_bsr;
 } type_bsr_t;
 
-int nr_write_ce_msg3_pdu(uint8_t *mac_ce, NR_UE_MAC_INST_t *mac, rnti_t crnti, uint8_t *mac_ce_end);
-
 int nr_write_ce_ulsch_pdu(uint8_t *mac_ce,
                           NR_UE_MAC_INST_t *mac,
                           NR_SINGLE_ENTRY_PHR_MAC_CE *power_headroom,
@@ -265,6 +267,8 @@ float nr_get_Pcmin(int bandwidth_index);
 
 int get_sum_delta_pucch(NR_UE_MAC_INST_t *mac, int slot, frame_t frame);
 
+bool init_RA(NR_UE_MAC_INST_t *mac, int frame);
+
 /* Random Access */
 
 /* \brief This function schedules the PRACH according to prach_ConfigurationIndex and TS 38.211 tables 6.3.3.2.x
@@ -288,53 +292,17 @@ void configure_csi_resource_mapping(fapi_nr_dl_config_csirs_pdu_rel15_t *csirs_c
 @param
 @returns void
 */
-void nr_ue_msg3_scheduler(NR_UE_MAC_INST_t *mac,
-                          frame_t current_frame,
-                          sub_frame_t current_slot,
-                          uint8_t Msg3_tda_id);
 
-void nr_ue_contention_resolution(NR_UE_MAC_INST_t *mac, int cc_id, frame_t frame, int slot, NR_PRACH_RESOURCES_t *prach_resources);
-
-void nr_ra_failed(NR_UE_MAC_INST_t *mac, uint8_t CC_id, NR_PRACH_RESOURCES_t *prach_resources, frame_t frame, int slot);
-
+void nr_ra_contention_resolution_failed(NR_UE_MAC_INST_t *mac);
 void nr_ra_succeeded(NR_UE_MAC_INST_t *mac, const uint8_t gNB_index, const frame_t frame, const int slot);
-
-int16_t nr_get_RA_window_2Step(const NR_MsgA_ConfigCommon_r16_t *msgA_ConfigCommon_r16);
-
-int16_t nr_get_RA_window_4Step(const NR_RACH_ConfigCommon_t *rach_ConfigCommon);
-
+void nr_ra_backoff_setting(RA_config_t *ra);
 void nr_get_RA_window(NR_UE_MAC_INST_t *mac);
-
-/* \brief Function called by PHY to retrieve information to be transmitted using the RA procedure.
-If the UE is not in PUSCH mode for a particular eNB index, this is assumed to be an Msg3 and MAC
-attempts to retrieves the CCCH message from RRC. If the UE is in PUSCH mode for a particular eNB
-index and PUCCH format 0 (Scheduling Request) is not activated, the MAC may use this resource for
-andom-access to transmit a BSR along with the C-RNTI control element (see 5.1.4 from 38.321)
-@param mod_id Index of UE instance
-@param CC_id Component Carrier Index
-@param frame
-@param gNB_id gNB index
-@param nr_slot_tx slot for PRACH transmission
-@returns indication to generate PRACH to phy */
-void nr_ue_get_rach(NR_UE_MAC_INST_t *mac, int CC_id, frame_t frame, uint8_t gNB_id, int nr_slot_tx);
-
-/* \brief Function implementing the routine for the selection of Random Access resources (5.1.2 TS 38.321).
-@param mac pointer to MAC instance
-@param CC_id Component Carrier Index
-@param gNB_index gNB index
-@param rach_ConfigDedicated
-@returns void */
-void nr_get_prach_resources(NR_UE_MAC_INST_t *mac,
-                            int CC_id,
-                            uint8_t gNB_id,
-                            NR_PRACH_RESOURCES_t *prach_resources,
-                            NR_RACH_ConfigDedicated_t * rach_ConfigDedicated);
-
 void prepare_msg4_msgb_feedback(NR_UE_MAC_INST_t *mac, int pid, int ack_nack);
 void configure_initial_pucch(PUCCH_sched_t *pucch, int res_ind);
 void release_PUCCH_SRS(NR_UE_MAC_INST_t *mac);
 void nr_ue_reset_sync_state(NR_UE_MAC_INST_t *mac);
 void nr_ue_send_synch_request(NR_UE_MAC_INST_t *mac, module_id_t module_id, int cc_id, const fapi_nr_synch_request_t *sync_req);
+bool is_ss_monitor_occasion(const int frame, const int slot, const int slots_per_frame, const NR_SearchSpace_t *ss);
 
 /**
  * @brief   Get UE sync state
@@ -343,18 +311,12 @@ void nr_ue_send_synch_request(NR_UE_MAC_INST_t *mac, module_id_t module_id, int 
  */
 NR_UE_L2_STATE_t nr_ue_get_sync_state(module_id_t mod_id);
 
-void init_RA(NR_UE_MAC_INST_t *mac,
-             NR_PRACH_RESOURCES_t *prach_resources,
-             NR_RACH_ConfigCommon_t *nr_rach_ConfigCommon,
-             NR_RACH_ConfigGeneric_t *rach_ConfigGeneric,
-             NR_RACH_ConfigDedicated_t *rach_ConfigDedicated);
-
 int16_t get_prach_tx_power(NR_UE_MAC_INST_t *mac);
-void free_rach_structures(NR_UE_MAC_INST_t *nr_mac, int bwp_id);
 void schedule_RA_after_SR_failure(NR_UE_MAC_INST_t *mac);
-void nr_Msg1_transmitted(NR_UE_MAC_INST_t *mac);
+void nr_rar_not_successful(NR_UE_MAC_INST_t *mac);
+void ra_resource_selection(NR_UE_MAC_INST_t *mac);
 void nr_Msg3_transmitted(NR_UE_MAC_INST_t *mac, uint8_t CC_id, frame_t frameP, slot_t slotP, uint8_t gNB_id);
-void trigger_MAC_UE_RA(NR_UE_MAC_INST_t *mac);
+void trigger_MAC_UE_RA(NR_UE_MAC_INST_t *mac, dci_pdu_rel15_t *pdcch_order);
 void nr_get_Msg3_MsgA_PUSCH_payload(NR_UE_MAC_INST_t *mac, uint8_t *buf, int TBS_max);
 void handle_time_alignment_timer_expired(NR_UE_MAC_INST_t *mac);
 int8_t nr_ue_process_dci_freq_dom_resource_assignment(nfapi_nr_ue_pusch_pdu_t *pusch_config_pdu,
@@ -364,8 +326,6 @@ int8_t nr_ue_process_dci_freq_dom_resource_assignment(nfapi_nr_ue_pusch_pdu_t *p
                                                       uint16_t n_RB_DLBWP,
                                                       int start_DLBWP,
                                                       dci_field_t frequency_domain_assignment);
-
-void build_ssb_to_ro_map(NR_UE_MAC_INST_t *mac);
 
 void ue_init_config_request(NR_UE_MAC_INST_t *mac, int scs);
 

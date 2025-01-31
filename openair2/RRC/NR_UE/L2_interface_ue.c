@@ -174,10 +174,9 @@ void nr_ue_rrc_timer_trigger(int instance, int frame, int gnb_id)
   itti_send_msg_to_task(TASK_RRC_NRUE, instance, message_p);
 }
 
-void nr_mac_rrc_ra_ind(const module_id_t mod_id, int frame, bool success)
+void nr_mac_rrc_ra_ind(const module_id_t mod_id, bool success)
 {
   MessageDef *message_p = itti_alloc_new_message(TASK_MAC_UE, 0, NR_RRC_MAC_RA_IND);
-  NR_RRC_MAC_RA_IND (message_p).frame = frame;
   NR_RRC_MAC_RA_IND (message_p).RA_succeeded = success;
   itti_send_msg_to_task(TASK_RRC_NRUE, GNB_MODULE_ID_TO_INSTANCE(mod_id), message_p);
 }

@@ -391,8 +391,7 @@ static bool is_my_dci(NR_UE_MAC_INST_t *mac, nfapi_nr_dl_dci_pdu_t *received_pdu
      already. Only once the RA procedure succeeds is the CRNTI value updated
      to the TC_RNTI. */
   if (get_softmodem_params()->nsa) {
-    if (received_pdu->RNTI != mac->crnti &&
-        (received_pdu->RNTI != mac->ra.ra_rnti || mac->ra.RA_RAPID_found))
+    if (received_pdu->RNTI != mac->crnti && (received_pdu->RNTI != mac->ra.ra_rnti))
       return false;
   }
   if (IS_SA_MODE(get_softmodem_params())) {
@@ -1126,6 +1125,11 @@ static nr_dci_format_t handle_dci(NR_UE_MAC_INST_t *mac,
   if (mac->ra.msg3_C_RNTI && mac->ra.ra_state == nrRA_WAIT_CONTENTION_RESOLUTION)
     nr_ra_succeeded(mac, gNB_index, frame, slot);
 
+  // suspend RAR response window timer
+  // (in RFsim running multiple slot in parallel it might expire while decoding MSG2)
+  if (mac->ra.ra_state == nrRA_WAIT_RAR)
+    nr_timer_suspension(&mac->ra.response_window_timer);
+
   return nr_ue_process_dci_indication_pdu(mac, frame, slot, dci);
 }
 
@@ -1294,8 +1298,11 @@ static uint32_t nr_ue_dl_processing(NR_UE_MAC_INST_t *mac, nr_downlink_indicatio
           break;
         case FAPI_NR_RX_PDU_TYPE_RAR:
           ret_mask |= (handle_dlsch(mac, dl_info, i)) << FAPI_NR_RX_PDU_TYPE_RAR;
-          if (!dl_info->rx_ind->rx_indication_body[i].pdsch_pdu.ack_nack)
+          if (!dl_info->rx_ind->rx_indication_body[i].pdsch_pdu.ack_nack) {
             LOG_W(PHY, "Received a RAR-Msg2 but LDPC decode failed\n");
+            // resume RAR response window timer if MSG2 decoding failed
+            nr_timer_suspension(&mac->ra.response_window_timer);
+          }
           else
             LOG_I(PHY, "RAR-Msg2 decoded\n");
           break;
@@ -1331,12 +1338,15 @@ int nr_ue_dl_indication(nr_downlink_indication_t *dl_info)
   return ret2;
 }
 
-void nr_ue_slot_indication(uint8_t mod_id)
+void nr_ue_slot_indication(uint8_t mod_id, bool is_tx)
 {
   NR_UE_MAC_INST_t *mac = get_mac_inst(mod_id);
   int ret = pthread_mutex_lock(&mac->if_mutex);
   AssertFatal(!ret, "mutex failed %d\n", ret);
-  update_mac_timers(mac);
+  if (is_tx)
+    update_mac_ul_timers(mac);
+  else
+    update_mac_dl_timers(mac);
   ret = pthread_mutex_unlock(&mac->if_mutex);
   AssertFatal(!ret, "mutex failed %d\n", ret);
 }
