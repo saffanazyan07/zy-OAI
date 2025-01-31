@@ -95,14 +95,16 @@ int nas_itti_protected_msg(const char *buffer, const nas_message_t *msg, const i
 }
 #endif
 
-int nas_itti_kenb_refresh_req(const Byte_t kenb[32], int user_id) {
+int nas_itti_kenb_refresh_req(const uint8_t kenb[32], int user_id)
+{
   MessageDef *message_p;
   message_p = itti_alloc_new_message(TASK_NAS_UE, 0, NAS_KENB_REFRESH_REQ);
   memcpy(NAS_KENB_REFRESH_REQ(message_p).kenb, kenb, sizeof(NAS_KENB_REFRESH_REQ(message_p).kenb));
   return itti_send_msg_to_task(TASK_RRC_UE, NB_eNB_INST + user_id, message_p);
 }
 
-int nas_itti_cell_info_req(const plmn_t plmnID, const Byte_t rat, int user_id) {
+int nas_itti_cell_info_req(const plmn_t plmnID, const uint8_t rat, int user_id)
+{
   MessageDef *message_p;
   message_p = itti_alloc_new_message(TASK_NAS_UE, 0, NAS_CELL_SELECTION_REQ);
   NAS_CELL_SELECTION_REQ(message_p).plmnID    = plmnID;
@@ -110,7 +112,14 @@ int nas_itti_cell_info_req(const plmn_t plmnID, const Byte_t rat, int user_id) {
   return itti_send_msg_to_task(TASK_RRC_UE, NB_eNB_INST + user_id, message_p);
 }
 
-int nas_itti_nas_establish_req(as_cause_t cause, as_call_type_t type, as_stmsi_t s_tmsi, plmn_t plmnID, Byte_t *data, uint32_t length, int user_id) {
+int nas_itti_nas_establish_req(as_cause_t cause,
+                               as_call_type_t type,
+                               as_stmsi_t s_tmsi,
+                               plmn_t plmnID,
+                               uint8_t *data,
+                               uint32_t length,
+                               int user_id)
+{
   MessageDef *message_p;
   message_p = itti_alloc_new_message(TASK_NAS_UE, 0, NAS_CONN_ESTABLI_REQ);
   NAS_CONN_ESTABLI_REQ(message_p).cause                       = cause;

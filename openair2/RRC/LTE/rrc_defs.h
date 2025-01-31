@@ -801,7 +801,7 @@ typedef struct UE_RRC_INST_s {
   Rrc_State_t     RrcState;
   Rrc_Sub_State_t RrcSubState;
   plmn_t          plmnID;
-  Byte_t          rat;
+  uint8_t rat;
   uint8_t         selected_plmn_identity;
   as_nas_info_t   initialNasMsg;
   OAI_UECapability_t *UECap;

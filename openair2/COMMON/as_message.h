@@ -166,7 +166,7 @@ typedef struct as_stmsi_s {
 /* Dedicated NAS information */
 typedef struct as_nas_info_s {
   uint32_t length;    /* Length of the NAS information data       */
-  Byte_t* nas_data; /* Dedicated NAS information data container */
+  uint8_t* nas_data; /* Dedicated NAS information data container */
 } as_nas_info_t;
 
 /* Radio Access Bearer identity */
@@ -215,7 +215,7 @@ typedef struct broadcast_info_ind_s {
  * NAS request AS to refresh its KeNB key
  */
 typedef struct kenb_refresh_req_s {
-  Byte_t kenb[32];
+  uint8_t kenb[32];
 } kenb_refresh_req_t;
 
 typedef struct nsa_oai_tun_nsa_s {
@@ -229,7 +229,7 @@ typedef struct nsa_oai_tun_nsa_s {
  */
 typedef struct cell_info_req_s {
   plmn_t plmnID;  /* Selected PLMN identity           */
-  Byte_t rat;     /* Bitmap - set of radio access technologies    */
+  uint8_t rat; /* Bitmap - set of radio access technologies    */
 } cell_info_req_t;
 
 /*

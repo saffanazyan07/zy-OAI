@@ -837,7 +837,7 @@ _emm_as_encode(
   }
 
   /* Allocate memory to the NAS information container */
-  info->nas_data = malloc(length * sizeof(Byte_t));
+  info->nas_data = malloc(length * sizeof(uint8_t));
 
   if (info->nas_data != NULL) {
     /* Encode the NAS message */
@@ -889,7 +889,7 @@ _emm_as_encrypt(
   }
 
   /* Allocate memory to the NAS information container */
-  info->nas_data = malloc(length * sizeof(Byte_t));
+  info->nas_data = malloc(length * sizeof(uint8_t));
 
   if (info->nas_data != NULL) {
     /* Encrypt the NAS information message */

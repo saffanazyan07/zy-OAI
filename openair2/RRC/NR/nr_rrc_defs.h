@@ -202,8 +202,6 @@ typedef struct gNB_RRC_UE_s {
   NR_CellGroupConfig_t               *masterCellGroup;
   NR_RadioBearerConfig_t             *rb_config;
 
-  ImsiMobileIdentity_t               imsi;
-
   /* KgNB as derived from KASME received from EPC */
   uint8_t kgnb[32];
   int8_t  kgnb_ncc;

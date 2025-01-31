@@ -23,6 +23,7 @@
 #define TLV_ENCODER_H_
 
 #include <arpa/inet.h>  // htonl, htons
+#include <string.h>     // memcpy
 
 #define ENCODE_U8(buffer, value, size) \
   do {                                 \

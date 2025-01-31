@@ -50,7 +50,7 @@ int decode_nas_key_set_identifier(NasKeySetIdentifier *naskeysetidentifier, uint
 /**
  * @brief Encode the NAS key set identifier in one byte
  */
-uint8_t encode_nas_key_set_identifier(NasKeySetIdentifier *naskeysetidentifier, uint8_t iei)
+uint8_t encode_nas_key_set_identifier(const NasKeySetIdentifier *naskeysetidentifier, uint8_t iei)
 {
 #if defined (NAS_DEBUG)
   dump_nas_key_set_identifier_xml(naskeysetidentifier, iei);
