@@ -78,12 +78,15 @@ void oai_xran_fh_rx_callback(void *pCallbackTag, xran_status_t status)
 
   static int32_t last_slot = -1;
   static int32_t last_frame = -1;
+
+  /* xran context contains the same xran_fh_init struct info,
+    but xran_fh_config struct info is RU specific only */
   struct xran_device_ctx *xran_ctx = xran_dev_get_ctx();
   const struct xran_fh_init *fh_init = &xran_ctx->fh_init;
   int num_ports = fh_init->xran_ports;
 
-  const struct xran_fh_config *fh_config = &xran_ctx->fh_cfg;
-  const int slots_per_subframe = 1 << fh_config->frame_conf.nNumerology;
+  /* assuming all RUs have the same numerology */
+  const int slots_per_subframe = 1 << xran_ctx->fh_cfg.frame_conf.nNumerology;
 
   static int rx_RU[XRAN_PORTS_NUM][160] = {0};
   uint32_t rx_tti = callback_tag->slotiId;
@@ -103,17 +106,20 @@ void oai_xran_fh_rx_callback(void *pCallbackTag, xran_status_t status)
         ru_id);
   if (rx_sym == 7) { // in F release this value is defined as XRAN_FULL_CB_SYM (full slot (offset + 7))
 #ifdef F_RELEASE
-    int32_t nCellIdx = callback_tag->cellId;
-    int32_t ntti = (rx_tti + XRAN_N_FE_BUF_LEN - 1) % XRAN_N_FE_BUF_LEN;
+    for (int ru_idx = 0; ru_idx < num_ports; ru_idx++) {
+      struct xran_device_ctx *xran_ctx_per_ru = xran_dev_get_ctx_by_id(ru_idx);
+      struct xran_fh_config *fh_config = &xran_ctx_per_ru->fh_cfg;
+      for (uint16_t cc_id = 0; cc_id < 1 /* fh_config->nCC */; cc_id++) { // OAI does not support multiple CC yet.
+        for(uint32_t ant_id = 0; ant_id < fh_config->neAxc; ant_id++) {
+          struct xran_prb_map *pRbMap = (struct xran_prb_map *)xran_ctx_per_ru->sFrontHaulRxPrbMapBbuIoBufCtrl[tti % XRAN_N_FE_BUF_LEN][cc_id][ant_id].sBufferList.pBuffers->pData;
+          AssertFatal(pRbMap != NULL, "(%d:%d:%d)pRbMap == NULL. Aborting.\n", cc_id, tti % XRAN_N_FE_BUF_LEN, ant_id);
 
-    for(uint32_t ant_id = 0; ant_id < fh_config->neAxc; ant_id++) {
-      struct xran_prb_map *pRbMap = (struct xran_prb_map *)xran_ctx->sFrontHaulRxPrbMapBbuIoBufCtrl[ntti][nCellIdx][ant_id].sBufferList.pBuffers->pData;
-      AssertFatal(pRbMap != NULL, "(%d:%d:%d)pRbMap == NULL. Aborting.\n", nCellIdx, ntti, ant_id);
-
-      for (uint32_t sym_id = 0; sym_id < XRAN_NUM_OF_SYMBOL_PER_SLOT; sym_id++) {
-        for (uint32_t idxElm = 0; idxElm < pRbMap->nPrbElm; idxElm++ ) {
-          struct xran_prb_elm *pRbElm = &pRbMap->prbMap[idxElm];
-          pRbElm->nSecDesc[sym_id] = 0; // number of section descriptors per symbol; M-plane info <supported-section-types>
+          for (uint32_t sym_id = 0; sym_id < XRAN_NUM_OF_SYMBOL_PER_SLOT; sym_id++) {
+            for (uint32_t idxElm = 0; idxElm < pRbMap->nPrbElm; idxElm++ ) {
+              struct xran_prb_elm *pRbElm = &pRbMap->prbMap[idxElm];
+              pRbElm->nSecDesc[sym_id] = 0; // number of section descriptors per symbol; M-plane info <supported-section-types>
+            }
+          }
         }
       }
     }
