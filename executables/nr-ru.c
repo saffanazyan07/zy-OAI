@@ -1084,6 +1084,48 @@ void ru_tx_func(void *param)
   }//else  emulate_rf
 }
 
+/* @brief wait for the next RX TTI to be free
+ *
+ * Certain radios, e.g., RFsim, can run faster than real-time. This might
+ * create problems, e.g., if RX and TX get too far from each other. This
+ * function ensures that a maximum of 4 RX slots are processed at a time (and
+ * not more than those four are started).
+ *
+ * Through the queue L1_rx_out, we are informed about completed RX jobs.
+ * rx_tti_busy keeps track of individual slots that have been started; this
+ * function blocks until the current frame/slot is completed, signaled through
+ * a message.
+ *
+ * @param L1_rx_out the queue from which to read completed RX jobs
+ * @param rx_tti_busy array to mark RX job completion
+ * @param frame_rx the frame to wait for
+ * @param slot_rx the slot to wait for
+ */
+static bool wait_free_rx_tti(notifiedFIFO_t *L1_rx_out, bool rx_tti_busy[RU_RX_SLOT_DEPTH], int frame_rx, int slot_rx)
+{
+  int idx = slot_rx % RU_RX_SLOT_DEPTH;
+  if (rx_tti_busy[idx]) {
+    bool not_done = true;
+    LOG_D(NR_PHY, "%d.%d Waiting to access RX slot %d\n", frame_rx, slot_rx, idx);
+    // block and wait for frame_rx/slot_rx free from previous slot processing.
+    // as we can get other slots, we loop on the queue
+    while (not_done) {
+      notifiedFIFO_elt_t *res = pullNotifiedFIFO(L1_rx_out);
+      if (!res)
+        return false;
+      processingData_L1_t *info = NotifiedFifoData(res);
+      LOG_D(NR_PHY, "%d.%d Got access to RX slot %d.%d (%d)\n", frame_rx, slot_rx, info->frame_rx, info->slot_rx, idx);
+      rx_tti_busy[info->slot_rx % RU_RX_SLOT_DEPTH] = false;
+      if ((info->slot_rx % RU_RX_SLOT_DEPTH) == idx)
+        not_done = false;
+      delNotifiedFIFO_elt(res);
+    }
+  }
+  // set the tti to busy: the caller will process this slot now
+  rx_tti_busy[idx] = true;
+  return true;
+}
+
 void *ru_thread(void *param)
 {
   static int ru_thread_status;
@@ -1097,9 +1139,7 @@ void *ru_thread(void *param)
   char               threadname[40];
   int initial_wait = 0;
 
-#ifndef OAI_FHI72
   bool rx_tti_busy[RU_RX_SLOT_DEPTH] = {false};
-#endif
   // set default return value
   ru_thread_status = 0;
   // set default return value
@@ -1245,39 +1285,12 @@ void *ru_thread(void *param)
     if (ru->idx != 0)
       proc->frame_tx = (proc->frame_tx + proc->frame_offset) & 1023;
 
-#ifndef OAI_FHI72
     // do RX front-end processing (frequency-shift, dft) if needed
     int slot_type = nr_slot_select(&ru->config, proc->frame_rx, proc->tti_rx);
     if (slot_type == NR_UPLINK_SLOT || slot_type == NR_MIXED_SLOT) {
+      if (!wait_free_rx_tti(&gNB->L1_rx_out, rx_tti_busy, proc->frame_rx, proc->tti_rx))
+        break; // nothing to wait for: we have to stop
       if (ru->feprx) {
-        if (rx_tti_busy[proc->tti_rx % RU_RX_SLOT_DEPTH]) {
-          bool not_done = true;
-          LOG_D(NR_PHY, "%d.%d Waiting to access RX slot %d\n", proc->frame_rx, proc->tti_rx, proc->tti_rx % RU_RX_SLOT_DEPTH);
-          // now we block and wait our slot memory zone is freed from previous slot processing
-          // as we can get other slots ending, we loop on the queue
-          notifiedFIFO_elt_t *res = NULL;
-          while (not_done) {
-            res = pullNotifiedFIFO(&gNB->L1_rx_out);
-            if (!res)
-              break;
-            processingData_L1_t *info = (processingData_L1_t *)NotifiedFifoData(res);
-            LOG_D(NR_PHY,
-                  "%d.%d Got access to RX slot %d.%d (%d)\n",
-                  proc->frame_rx,
-                  proc->tti_rx,
-                  info->frame_rx,
-                  info->slot_rx,
-                  proc->tti_rx % RU_RX_SLOT_DEPTH);
-            rx_tti_busy[info->slot_rx % RU_RX_SLOT_DEPTH] = false;
-            if ((info->slot_rx % RU_RX_SLOT_DEPTH) == (proc->tti_rx % RU_RX_SLOT_DEPTH))
-              not_done = false;
-            delNotifiedFIFO_elt(res);
-          }
-          if (!res)
-            break;
-        }
-        // set the tti that was generated to busy
-        rx_tti_busy[proc->tti_rx % RU_RX_SLOT_DEPTH] = true;
         ru->feprx(ru,proc->tti_rx);
         LOG_D(NR_PHY, "Setting %d.%d (%d) to busy\n", proc->frame_rx, proc->tti_rx, proc->tti_rx % RU_RX_SLOT_DEPTH);
         //LOG_M("rxdata.m","rxs",ru->common.rxdata[0],1228800,1,1);
@@ -1315,7 +1328,6 @@ void *ru_thread(void *param)
         } // end if (prach_id > 0)
       } // end if (ru->feprx)
     } // end if (slot_type == NR_UPLINK_SLOT || slot_type == NR_MIXED_SLOT) {
-#endif
 
     notifiedFIFO_elt_t *resTx = newNotifiedFIFO_elt(sizeof(processingData_L1tx_t), 0, &gNB->L1_tx_out, NULL);
     processingData_L1tx_t *syncMsgTx = NotifiedFifoData(resTx);
