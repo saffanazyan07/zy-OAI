@@ -112,5 +112,6 @@ NR_CellGroupConfig_t *get_default_secondaryCellGroup(const NR_ServingCellConfigC
                                                      int uid);
 
 NR_ReconfigurationWithSync_t *get_reconfiguration_with_sync(rnti_t rnti, uid_t uid, const NR_ServingCellConfigCommon_t *scc);
+int get_tdd_period_idx(NR_TDD_UL_DL_ConfigCommon_t *tdd);
 
 #endif

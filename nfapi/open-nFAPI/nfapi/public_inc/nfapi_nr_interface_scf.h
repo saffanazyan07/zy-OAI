@@ -25,6 +25,7 @@
 #define NFAPI_MAX_NUM_CB 8
 #define NFAPI_MAX_NUM_PRGS 1
 #define NFAPI_MAX_NUM_BG_IF 1
+#define NFAPI_MAX_NUM_PERIODS 8
 
 // Extension to the generic structures for single tlv values
 
@@ -436,7 +437,10 @@ typedef struct
 
 typedef struct 
 {
-  nfapi_uint8_tlv_t tdd_period;//DL UL Transmission Periodicity. Value:0: ms0p5 1: ms0p625 2: ms1 3: ms1p25 4: ms2 5: ms2p5 6: ms5 7: ms10 8: ms3 9: ms4
+  /**DL UL Transmission Periodicity: for multiple TDD pattern,
+   * the value corresponds to the sum periodicity (3GPP TS 38.213, 11.1)
+   * Values: 0:ms0p5 1:ms0p625 2:ms1 3:ms1p25 4:ms2 5:ms2p5 6:ms5 7:ms10 8:ms20 */
+  nfapi_uint8_tlv_t tdd_period;
   nfapi_nr_max_tdd_periodicity_t* max_tdd_periodicity_list;
 
 } nfapi_nr_tdd_table_t;

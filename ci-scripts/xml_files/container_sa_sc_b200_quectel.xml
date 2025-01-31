@@ -21,8 +21,8 @@
 
 -->
 <testCaseList>
-  <htmlTabRef>TEST-SA-FR1-SC-FDMA-B200</htmlTabRef>
-  <htmlTabName>40 MHz TDD SA with SC-FDMA</htmlTabName>
+  <htmlTabRef>TEST-SA-FR1-SC-PATTERN2-FDMA-B200</htmlTabRef>
+  <htmlTabName>40 MHz TDD (pattern2) SA with SC-FDMA</htmlTabName>
   <htmlTabIcon>tasks</htmlTabIcon>
   <TestCaseRequestedList>
     300000
@@ -101,7 +101,7 @@
   </testCase>
   <testCase id="230101">
     <class>Deploy_Object</class>
-    <desc>Deploy gNB (TDD/Band78/40MHz/B200) with SC-FDMA in a container</desc>
+    <desc>Deploy gNB (TDD/pattern2/Band78/40MHz/B200) with SC-FDMA in a container</desc>
     <yaml_path>ci-scripts/yaml_files/sa_sc_b200_gnb</yaml_path>
     <eNB_instance>0</eNB_instance>
     <eNB_serverId>0</eNB_serverId>

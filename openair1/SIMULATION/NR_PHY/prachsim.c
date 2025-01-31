@@ -568,7 +568,10 @@ int main(int argc, char **argv){
 
   memcpy((void*)&ru->config,(void*)&RC.gNB[0]->gNB_config,sizeof(ru->config));
   RC.nb_nr_L1_inst=1;
-  set_tdd_config_nr(&gNB->gNB_config, mu, 7, 6, 2, 4);
+  // TDD configuration
+  gNB->gNB_config.tdd_table.tdd_period.value = 6;
+  do_tdd_config_sim(gNB, mu);
+
   phy_init_nr_gNB(gNB);
   nr_phy_init_RU(ru);
 

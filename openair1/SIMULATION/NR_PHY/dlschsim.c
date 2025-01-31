@@ -388,8 +388,9 @@ int main(int argc, char **argv)
 	frame_parms->Ncp = extended_prefix_flag ? EXTENDED : NORMAL;
 	crcTableInit();
 	nr_phy_config_request_sim(gNB, N_RB_DL, N_RB_DL, mu, Nid_cell,SSB_positions);
-        gNB->gNB_config.tdd_table.tdd_period.value = 6;
-        set_tdd_config_nr(&gNB->gNB_config, mu, 7, 6, 2, 4);
+    // TDD configuration
+    gNB->gNB_config.tdd_table.tdd_period.value = 6;
+    do_tdd_config_sim(gNB, mu);
 	phy_init_nr_gNB(gNB);
 	//init_eNB_afterRU();
 	frame_length_complex_samples = frame_parms->samples_per_subframe;

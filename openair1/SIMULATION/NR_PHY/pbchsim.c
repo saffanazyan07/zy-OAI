@@ -448,13 +448,10 @@ int main(int argc, char **argv)
   frame_parms->freq_range = mu<2 ? FR1 : FR2;
 
   nr_phy_config_request_sim(gNB, N_RB_DL, N_RB_DL, mu, Nid_cell, SSB_positions);
+  // TDD configuration
   gNB->gNB_config.tdd_table.tdd_period.value = 6;
-  if (mu == 0)
-    set_tdd_config_nr(&gNB->gNB_config, mu, 3, 6, 1, 4);
-  else if (mu == 1)
-    set_tdd_config_nr(&gNB->gNB_config, mu, 7, 6, 2, 4);
-  else if (mu == 3)
-    set_tdd_config_nr(&gNB->gNB_config, mu, 27, 6, 12, 4);
+  do_tdd_config_sim(gNB, mu);
+
   phy_init_nr_gNB(gNB);
   frame_parms->ssb_start_subcarrier = 12 * gNB->gNB_config.ssb_table.ssb_offset_point_a.value + ssb_subcarrier_offset;
   initFloatingCoresTpool(ssb_scan_threads, &nrUE_params.Tpool, false, "UE-tpool");

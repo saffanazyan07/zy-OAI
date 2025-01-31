@@ -669,10 +669,6 @@ void pnf_nr_handle_config_request(pnf_t* pnf, void *pRecvMsg, int recvMsgLen)
 			{
 				nfapi_pnf_phy_config_t* phy = nfapi_pnf_phy_config_find(config, req.header.phy_id);
 
-#if 0 // emulate set_config TLV reception (hard-code)
-				int tdd_return = set_tdd_config_nr(&req, 1, 7, 6, 2, 4);
-#endif
-
 				if(phy)
 				{
 					if(phy->state != NFAPI_PNF_PHY_RUNNING)

@@ -60,11 +60,11 @@ bool read_mac_sm(void* data)
     rd->dl_aggr_tbs = UE->mac_stats.dl.total_bytes;
     rd->ul_aggr_tbs = UE->mac_stats.ul.total_bytes;
 
-    if (is_xlsch_in_slot(RC.nrmac[mod_id]->dlsch_slot_bitmap[rd->slot / 64], rd->slot)) {
+    if (is_dl_slot(rd->slot, &RC.nrmac[mod_id]->frame_structure)) {
       rd->dl_curr_tbs = UE->mac_stats.dl.current_bytes;
       rd->dl_sched_rb = UE->mac_stats.dl.current_rbs;
     }
-    if (is_xlsch_in_slot(RC.nrmac[mod_id]->ulsch_slot_bitmap[rd->slot / 64], rd->slot)) {
+    if (is_ul_slot(rd->slot, &RC.nrmac[mod_id]->frame_structure)) {
       rd->ul_curr_tbs = UE->mac_stats.ul.current_bytes;
       rd->ul_sched_rb = sched_ctrl->sched_pusch.rbSize;
     }

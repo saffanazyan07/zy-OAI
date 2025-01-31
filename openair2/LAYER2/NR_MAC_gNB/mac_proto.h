@@ -39,6 +39,14 @@ void set_cset_offset(uint16_t);
 void get_K1_K2(int N1, int N2, int *K1, int *K2, int layers);
 int get_NTN_Koffset(const NR_ServingCellConfigCommon_t *scc);
 
+int get_first_ul_slot(const frame_structure_t *fs, bool mixed);
+int get_ul_slots_per_period(const frame_structure_t *fs);
+int get_ul_slots_per_frame(const frame_structure_t *fs);
+int get_dl_slots_per_period(const frame_structure_t *fs);
+int get_full_ul_slots_per_period(const frame_structure_t *fs);
+int get_full_dl_slots_per_period(const frame_structure_t *fs);
+int get_ul_slot_offset(const frame_structure_t *fs, int idx, bool count_mixed);
+
 void mac_top_init_gNB(ngran_node_t node_type,
                       NR_ServingCellConfigCommon_t *scc,
                       NR_ServingCellConfig_t *scd,
@@ -344,7 +352,9 @@ int nr_write_ce_dlsch_pdu(module_id_t module_idP,
 
 int binomial(int n, int k);
 
-bool is_xlsch_in_slot(uint64_t bitmap, sub_frame_t slot);
+bool is_ul_slot(const slot_t slot, const frame_structure_t *fs);
+bool is_dl_slot(const slot_t slot, const frame_structure_t *fs);
+bool is_mixed_slot(const slot_t slot, const frame_structure_t *fs);
 
 /* \brief Function to indicate a received SDU on ULSCH.
 @param Mod_id Instance ID of gNB
@@ -406,13 +416,10 @@ uint8_t get_mcs_from_cqi(int mcs_table, int cqi_table, int cqi_idx);
 
 uint8_t get_dl_nrOfLayers(const NR_UE_sched_ctrl_t *sched_ctrl, const nr_dci_format_t dci_format);
 
-void set_sched_pucch_list(NR_UE_sched_ctrl_t *sched_ctrl,
-                          const NR_UE_UL_BWP_t *ul_bwp,
-                          const NR_ServingCellConfigCommon_t *scc);
 void free_sched_pucch_list(NR_UE_sched_ctrl_t *sched_ctrl);
 
-int get_dl_tda(const gNB_MAC_INST *nrmac, const NR_ServingCellConfigCommon_t *scc, int slot);
-int get_ul_tda(gNB_MAC_INST *nrmac, const NR_ServingCellConfigCommon_t *scc, int frame, int slot);
+int get_dl_tda(const gNB_MAC_INST *nrmac, int slot);
+int get_ul_tda(gNB_MAC_INST *nrmac, int frame, int slot);
 
 int get_cce_index(const gNB_MAC_INST *nrmac,
                   const int CC_id,

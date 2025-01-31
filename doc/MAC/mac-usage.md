@@ -240,3 +240,115 @@ here, *also they pertain to the DU*, i.e., the scheduler.
   options are 2, 4, 6, 8, 10, 12, 32; **32 is a Rel-17 features**)
 * `num_ulharq` (default 16): as `num_dlharq` for UL (other valid option is 32;
   **32 is i Rel-17 feature**)
+
+## ServingCellConfigCommon parameters
+
+The `gNBs` configuration section has a big structure `servingCellConfigCommon`
+that has an influence on the overall behavior of MAC and L1. As the name says,
+this structure is a flat representation of the ServingCellConfigCommon
+structure, specified by 3GPP. Describing all of these parameters would be too
+exhaustive; more information about the individual fields can be found in 3GPP
+TS 38.331, section 6.3.2 "Radio resource control information elements".
+
+Below is a description of some of these parameters.
+
+### Frequency configuration
+
+There are many parameters, such as `absoluteFrequencySSB`, etc., that have an
+impact on the frequency used by the gNB. For more information, please check the
+[corresponding document](../gNB_frequency_setup.md).
+
+### TDD pattern configuration
+
+The TDD configuration parameters allow to use one or two TDD patterns.
+
+#### Single TDD pattern
+
+Configure the TDD pattern through these options:
+- `dl_UL_TransmissionPeriodicity`: Refers to the UL/DL slots periodicity for
+  the TDD pattern. See below for valid numbers.
+- `nrofDownlinkSlots`: Refers to the number of consecutive DL slots in the TDD
+  pattern. The number of DL slots depends on the TDD period.
+- `nrofDownlinkSymbols`: Indicates the number of consecutive DL symbols within
+  the special slot that follows the downlink slots in the TDD pattern. The
+  special slot is needed only to switch from DL to UL. The maximum number of
+  symbols in this slot is 14.
+- `nrofUplinkSlots`: Refers to the number of consecutive UL slots in the TDD
+  pattern, depending on the desired TDD period.
+- `nrofUplinkSymbols`: Indicates the number of consecutive UL symbols within
+  the special slot that follows the downlink slots in the TDD pattern. The sum
+  of downlink and uplink symbols should not exceed 14.
+- `prach_ConfigurationIndex`: index for PRACH according to tables 6.3.3.2-2 to
+  6.3.3.2-4 in TS 38.211.
+
+As an example, the below figure shows a single TDD pattern, consisting of 3 DL
+slots, 1 mixed slots (with 10 DL, 2 guard, 2 UL symbols), and 1 UL slot.
+
+![TDD Frame Structure](TDD_Frame_Structure.png)
+
+To configure this pattern in the configuration file, use
+
+```plaintext
+#dl_UL_TransmissionPeriodicity  0=ms0p5, 1=ms0p625, 2=ms1, 3=ms1p25, 4=ms2, 5=ms2p5, 6=ms5, 7=ms10, 8=ms3, 9=ms4
+
+dl_UL_TransmissionPeriodicity = 5;
+nrofDownlinkSlots             = 3;
+nrofDownlinkSymbols           = 10;
+nrofUplinkSlots               = 1;
+nrofUplinkSymbols             = 2;
+```
+
+The `dl_UL_TransmissionPeriodicity` is set to `5` (2.5ms). The above figure
+shows two TDD periods over 5ms. The 10 ms frame period must be strictly
+divisible by the sum of the TDD pattern periods.
+
+#### Two TDD patterns
+
+An optional `pattern2` structure is used to signal a TDD pattern 2.
+In this case, the TDD pattern may have two extended values of 3 ms and 4 ms.
+These values are standardized as `dl-UL-TransmissionPeriodicity-v1530`. For the
+sake of simplicity of the gNB configuration file, we have extended the set of
+`dl-UL-TransmissionPeriodicity` values to support the new TDD periods, as
+explained in the table below. However, these values will later be encoded as
+`dl-UL-TransmissionPeriodicity-v1530` to match the specifications.
+
+| `dl_UL_TransmissionPeriodicity` | TDD period |
+|---------------------------------|------------|
+| 0                               | 0.5 ms     |
+| 1                               | 0.625 ms   |
+| 2                               | 1 ms       |
+| 3                               | 1.25 ms    |
+| 4                               | 2 ms       |
+| 5                               | 2.5 ms     |
+| 6                               | 5 ms       |
+| 7                               | 10 ms      |
+| 8                               | 3 ms       |
+| 9                               | 4 ms       |
+
+The 10 ms frame period must be strictly divisible by the sum of the TDD pattern
+periods. For example, the 3 ms TDD pattern should be used with a second TDD
+pattern of 2 ms. Additionally, the 4 ms TDD pattern should be used with a
+second TDD pattern of 1 ms.
+
+As an example, this configuration might be used, where the first TDD pattern is
+followed by a second, consisting of 4 DL slots.
+```
+# pattern1
+# dl_UL_TransmissionPeriodicity
+# 0=ms0p5, 1=ms0p625, 2=ms1, 3=ms1p25, 4=ms2, 5=ms2p5, 6=ms5, 7=ms10
+# ext: 8=ms3, 9=ms4
+dl_UL_TransmissionPeriodicity  = 8;
+nrofDownlinkSlots              = 3;
+nrofDownlinkSymbols            = 6;
+nrofUplinkSlots                = 2;
+nrofUplinkSymbols              = 4;
+
+# pattern2
+pattern2: {
+    dl_UL_TransmissionPeriodicity2 = 4;
+    nrofDownlinkSlots2             = 4;
+    nrofDownlinkSymbols2           = 0;
+    nrofUplinkSlots2               = 0;
+    nrofUplinkSymbols2             = 0;
+};
+```

@@ -42,6 +42,14 @@ extern RAN_CONTEXT_t RC;
 
 //#define ENABLE_MAC_PAYLOAD_DEBUG 1
 
+/* This function checks whether the given Dl/UL slot is set
+   in the input bitmap, which is a mask indicating in which
+   slot to transmit (among those available in the TDD configuration) */
+static bool is_xlsch_in_slot(uint64_t bitmap, sub_frame_t slot)
+{
+  return (bitmap >> (slot % 64)) & 0x01;
+}
+
 uint32_t target_dl_mcs = 9;
 uint32_t target_dl_Nl = 1;
 uint32_t target_dl_bw = 50;
@@ -66,7 +74,7 @@ void nr_preprocessor_phytest(module_id_t module_id,
     return;
   }
 
-  const int tda = get_dl_tda(RC.nrmac[module_id], scc, slot);
+  const int tda = get_dl_tda(RC.nrmac[module_id], slot);
   NR_tda_info_t tda_info = get_dl_tda_info(dl_bwp,
                                            sched_ctrl->search_space->searchSpaceType->present,
                                            tda,
@@ -244,7 +252,7 @@ bool nr_ul_preprocessor_phytest(module_id_t module_id, frame_t frame, sub_frame_
                                                                         sched_ctrl->coreset->controlResourceSetId,
                                                                         sched_ctrl->search_space->searchSpaceType->present,
                                                                         TYPE_C_RNTI_);
-  const int temp_tda = get_ul_tda(nr_mac, scc, frame, slot);
+  const int temp_tda = get_ul_tda(nr_mac, frame, slot);
   if (temp_tda < 0)
     return false;
   AssertFatal(temp_tda < tdaList->list.count,
@@ -254,7 +262,7 @@ bool nr_ul_preprocessor_phytest(module_id_t module_id, frame_t frame, sub_frame_
   int K2 = get_K2(tdaList, temp_tda, mu, scc);
   const int sched_frame = (frame + (slot + K2) / nr_slots_per_frame[mu]) % MAX_FRAME_NUMBER;
   const int sched_slot = (slot + K2) % nr_slots_per_frame[mu];
-  const int tda = get_ul_tda(nr_mac, scc, sched_frame, sched_slot);
+  const int tda = get_ul_tda(nr_mac, sched_frame, sched_slot);
   if (tda < 0)
     return false;
   AssertFatal(tda < tdaList->list.count,

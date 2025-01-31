@@ -24,7 +24,9 @@
 
 The following features are valid for the gNB and the 5G-NR UE.
 
-*  Static TDD, FDD
+*  Static TDD
+   - Multi TDD pattern supported refer [TDD Configuration](NR_SA_Multi_TDD_Pattern.md)
+*  Static FDD
 *  Normal CP
 *  Subcarrier spacings: 15 and 30kHz (FR1), 120kHz (FR2)
 *  Bandwidths: 10, 20, 40, 60, 80, 100MHz
