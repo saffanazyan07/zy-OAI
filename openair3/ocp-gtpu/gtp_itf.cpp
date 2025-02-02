@@ -19,6 +19,8 @@ extern "C" {
 #include <openair2/LAYER2/PDCP_v10.1.0/pdcp.h>
 #include <openair2/LAYER2/nr_pdcp/nr_pdcp_oai_api.h>
 #include <openair2/LAYER2/nr_rlc/nr_rlc_oai_api.h>
+#include <rp-pppoe-master/src/pppoe-server.h>
+#include <rp-pppoe-master/src/pppoe.h>
 #include "openair2/SDAP/nr_sdap/nr_sdap.h"
 #include "sim.h"
 
