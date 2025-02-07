@@ -1,0 +1,2 @@
+/usr/bin/ar qc libnr_rrc.a CMakeFiles/nr_rrc.dir/openair2/RRC/NR/MESSAGES/asn1_msg.c.o
+/usr/bin/ranlib libnr_rrc.a

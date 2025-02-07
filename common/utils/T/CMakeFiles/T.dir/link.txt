@@ -1,0 +1,2 @@
+/usr/bin/ar qc libT.a CMakeFiles/T.dir/T.c.o CMakeFiles/T.dir/local_tracer.c.o
+/usr/bin/ranlib libT.a

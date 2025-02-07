@@ -1,0 +1,2 @@
+/usr/bin/ar qc libCONFIG_LIB.a CMakeFiles/CONFIG_LIB.dir/common/config/config_load_configmodule.c.o CMakeFiles/CONFIG_LIB.dir/common/config/config_userapi.c.o CMakeFiles/CONFIG_LIB.dir/common/config/config_cmdline.c.o CMakeFiles/config_internals.dir/common/config/config_common.c.o
+/usr/bin/ranlib libCONFIG_LIB.a

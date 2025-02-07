@@ -1,0 +1,2 @@
+/usr/bin/ar qc libMISC_NFAPI_LTE_LIB.a CMakeFiles/MISC_NFAPI_LTE_LIB.dir/openair1/SCHED/nfapi_lte_dummy.c.o
+/usr/bin/ranlib libMISC_NFAPI_LTE_LIB.a

@@ -1,0 +1,2 @@
+/usr/bin/ar qc libnr_phy_common.a CMakeFiles/nr_phy_common.dir/src/nr_phy_common.c.o
+/usr/bin/ranlib libnr_phy_common.a

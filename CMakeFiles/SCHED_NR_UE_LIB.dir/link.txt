@@ -1,0 +1,2 @@
+/usr/bin/ar qc libSCHED_NR_UE_LIB.a CMakeFiles/SCHED_NR_UE_LIB.dir/openair1/SCHED_NR_UE/phy_procedures_nr_ue.c.o CMakeFiles/SCHED_NR_UE_LIB.dir/openair1/SCHED_NR_UE/phy_procedures_nr_ue_sl.c.o CMakeFiles/SCHED_NR_UE_LIB.dir/openair1/SCHED_NR_UE/fapi_nr_ue_l1.c.o CMakeFiles/SCHED_NR_UE_LIB.dir/openair1/SCHED_NR_UE/phy_frame_config_nr_ue.c.o CMakeFiles/SCHED_NR_UE_LIB.dir/openair1/SCHED_NR_UE/harq_nr.c.o CMakeFiles/SCHED_NR_UE_LIB.dir/openair1/SCHED_NR_UE/pucch_uci_ue_nr.c.o
+/usr/bin/ranlib libSCHED_NR_UE_LIB.a

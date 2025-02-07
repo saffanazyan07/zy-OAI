@@ -1,0 +1,2 @@
+/usr/bin/ar qc libbarrier.a CMakeFiles/barrier.dir/barrier.c.o
+/usr/bin/ranlib libbarrier.a

@@ -1,0 +1,2 @@
+/usr/bin/ar qc libL2_LTE.a CMakeFiles/L2_LTE.dir/openair2/LAYER2/rlc_v2/rlc_oai_api.c.o CMakeFiles/L2_LTE.dir/openair2/LAYER2/rlc_v2/asn1_utils.c.o CMakeFiles/L2_LTE.dir/openair2/LAYER2/rlc_v2/rlc_ue_manager.c.o CMakeFiles/L2_LTE.dir/openair2/LAYER2/rlc_v2/rlc_entity.c.o CMakeFiles/L2_LTE.dir/openair2/LAYER2/rlc_v2/rlc_entity_am.c.o CMakeFiles/L2_LTE.dir/openair2/LAYER2/rlc_v2/rlc_entity_um.c.o CMakeFiles/L2_LTE.dir/openair2/LAYER2/rlc_v2/rlc_pdu.c.o CMakeFiles/L2_LTE.dir/openair2/LAYER2/rlc_v2/rlc_sdu.c.o
+/usr/bin/ranlib libL2_LTE.a

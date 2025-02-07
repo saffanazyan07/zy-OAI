@@ -1,0 +1,3 @@
+file(REMOVE_RECURSE
+  "libLIB_5GNAS_GNB.a"
+)

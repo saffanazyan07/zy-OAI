@@ -418,6 +418,10 @@ function main() {
             CMAKE_CMD="$CMAKE_CMD -DTRACE_ASN1C_ENC_DEC=ON"
             echo_info "Enabling asn1c internal traces via OAI logging system"
             shift 1;;
+      --pppoe)   
+            CMAKE_CMD="$CMAKE_CMD -Drp-pppoe=ON"
+            shift 1;; 
+
         -h | --help)
             print_help
             exit 1;;

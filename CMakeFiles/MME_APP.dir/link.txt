@@ -1,0 +1,2 @@
+/usr/bin/ar qc libMME_APP.a CMakeFiles/MME_APP.dir/openair3/MME_APP/mme_app.c.o CMakeFiles/MME_APP.dir/openair3/MME_APP/mme_config.c.o
+/usr/bin/ranlib libMME_APP.a

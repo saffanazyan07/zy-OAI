@@ -1,0 +1,2 @@
+/usr/bin/ar qc libnr_ue_power_procedures.a CMakeFiles/nr_ue_power_procedures.dir/nr_ue_power_procedures.c.o
+/usr/bin/ranlib libnr_ue_power_procedures.a

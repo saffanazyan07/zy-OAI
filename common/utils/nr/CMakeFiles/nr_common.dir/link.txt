@@ -1,0 +1,2 @@
+/usr/bin/ar qc libnr_common.a CMakeFiles/nr_common.dir/nr_common.c.o
+/usr/bin/ranlib libnr_common.a

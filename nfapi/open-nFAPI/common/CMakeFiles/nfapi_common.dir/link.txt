@@ -1,0 +1,2 @@
+/usr/bin/ar qc libnfapi_common.a CMakeFiles/nfapi_common.dir/src/debug.c.o CMakeFiles/nfapi_common.dir/src/nfapi.c.o
+/usr/bin/ranlib libnfapi_common.a

@@ -1,0 +1,2 @@
+/usr/bin/ar qc libnr_ue_phy_meas.a CMakeFiles/nr_ue_phy_meas.dir/src/nr_ue_phy_meas.c.o
+/usr/bin/ranlib libnr_ue_phy_meas.a

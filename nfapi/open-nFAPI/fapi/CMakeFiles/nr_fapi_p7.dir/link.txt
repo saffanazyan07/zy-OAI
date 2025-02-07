@@ -1,0 +1,2 @@
+/usr/bin/ar qc libnr_fapi_p7.a CMakeFiles/nr_fapi_p7.dir/src/nr_fapi_p7.c.o CMakeFiles/nr_fapi_p7.dir/src/nr_fapi_p7_utils.c.o
+/usr/bin/ranlib libnr_fapi_p7.a

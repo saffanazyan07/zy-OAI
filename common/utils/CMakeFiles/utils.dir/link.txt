@@ -1,0 +1,2 @@
+/usr/bin/ar qc libutils.a CMakeFiles/utils.dir/utils.c.o CMakeFiles/utils.dir/system.c.o CMakeFiles/utils.dir/time_meas.c.o CMakeFiles/utils.dir/time_stat.c.o CMakeFiles/utils.dir/tun_if.c.o
+/usr/bin/ranlib libutils.a

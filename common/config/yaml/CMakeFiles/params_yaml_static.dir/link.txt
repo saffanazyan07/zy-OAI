@@ -1,0 +1,2 @@
+/usr/bin/ar qc libparams_yaml_static.a CMakeFiles/params_yaml_static.dir/config_yaml.cpp.o
+/usr/bin/ranlib libparams_yaml_static.a

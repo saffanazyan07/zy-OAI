@@ -1,0 +1,2 @@
+/usr/bin/ar qc libtracer_filter.a CMakeFiles/tracer_filter.dir/filter.c.o
+/usr/bin/ranlib libtracer_filter.a

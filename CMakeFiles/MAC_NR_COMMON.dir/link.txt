@@ -1,0 +1,2 @@
+/usr/bin/ar qc libMAC_NR_COMMON.a CMakeFiles/MAC_NR_COMMON.dir/openair2/LAYER2/NR_MAC_COMMON/nr_mac_common.c.o CMakeFiles/MAC_NR_COMMON.dir/openair2/LAYER2/NR_MAC_COMMON/nr_compute_tbs_common.c.o
+/usr/bin/ranlib libMAC_NR_COMMON.a

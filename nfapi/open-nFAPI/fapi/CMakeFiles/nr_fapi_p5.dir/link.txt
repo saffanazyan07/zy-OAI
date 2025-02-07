@@ -1,0 +1,2 @@
+/usr/bin/ar qc libnr_fapi_p5.a CMakeFiles/nr_fapi_p5.dir/src/nr_fapi_p5.c.o CMakeFiles/nr_fapi_p5.dir/src/nr_fapi_p5_utils.c.o
+/usr/bin/ranlib libnr_fapi_p5.a

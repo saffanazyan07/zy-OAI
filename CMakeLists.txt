@@ -279,6 +279,7 @@ set (OCP_ITTI ${OPENAIR_DIR}/common/utils/ocp_itti)
 add_library(ITTI ${OCP_ITTI}/intertask_interface.cpp)
 target_link_libraries(ITTI PRIVATE asn1_lte_rrc_hdrs asn1_nr_rrc_hdrs)
 
+
 # asn1c skeletons need this
 add_definitions(-DHAVE_NETINET_IN_H)
 
@@ -2172,6 +2173,28 @@ endforeach(myExe)
 # to be added
 #../targets/TEST/PDCP/test_pdcp.c
 #../targets/TEST/PDCP/with_rlc/test_pdcp_rlc.c
+
+####pppoe####
+#add_subdirectory(/home/zyzy/zy-OAI/rp-pppoe-master/src)
+#target_link_libraries(nr-softmodem PUBLIC /home/zyzy/zy-OAI/rp-pppoe-master/src/rp-pppoe.so)
+#set(RP_PPPOE_LIB /usr/local/lib/librp-pppoe.a)
+#target_link_libraries(nr-softmodem ${RP_PPPOE_LIB})
+include_directories(/home/zyzy/zy-OAI/rp-pppoe-master/src)
+#
+#add_library(gtpu_relay STATIC
+#    /home/zyzy/zy-OAI/rp-pppoe-master/src/common.c
+#    /home/zyzy/zy-OAI/rp-pppoe-master/src/control_socket.c
+#    /home/zyzy/zy-OAI/rp-pppoe-master/src/debug.c
+#    /home/zyzy/zy-OAI/rp-pppoe-master/src/discovery.c
+#    /home/zyzy/zy-OAI/rp-pppoe-master/src/if.c
+#    /home/zyzy/zy-OAI/rp-pppoe-master/src/md5.c
+#    /home/zyzy/zy-OAI/rp-pppoe-master/src/plugin.c
+#    /home/zyzy/zy-OAI/rp-pppoe-master/src/ppp.c
+#    /home/zyzy/zy-OAI/rp-pppoe-master/src/pppoe.c
+#    /home/zyzy/zy-OAI/rp-pppoe-master/src/relay.c
+#)
+
+#target_link_libraries(nr-softmodem gtpu_relay)
 
 #ensure that the T header files are generated before targets depending on them
 if (${T_TRACER})

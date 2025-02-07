@@ -1,0 +1,2 @@
+/usr/bin/ar qc liblte_rrc.a CMakeFiles/lte_rrc.dir/openair2/RRC/LTE/MESSAGES/asn1_msg.c.o CMakeFiles/lte_rrc.dir/openair2/RRC/LTE/MESSAGES/asn1_msg_NB_IoT.c.o
+/usr/bin/ranlib liblte_rrc.a

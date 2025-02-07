@@ -1,0 +1,2 @@
+/usr/bin/ar qc libnr_fapi_common.a CMakeFiles/nr_fapi_common.dir/src/nr_fapi.c.o
+/usr/bin/ranlib libnr_fapi_common.a

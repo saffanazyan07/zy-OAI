@@ -1,0 +1,3 @@
+file(REMOVE_RECURSE
+  "libMISC_NFAPI_NR_LIB.a"
+)

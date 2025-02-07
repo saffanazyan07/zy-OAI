@@ -1,0 +1,2 @@
+/usr/bin/ar qc libtracer_logger.a CMakeFiles/tracer_logger.dir/logger.c.o CMakeFiles/tracer_logger.dir/textlog.c.o CMakeFiles/tracer_logger.dir/framelog.c.o CMakeFiles/tracer_logger.dir/ttilog.c.o CMakeFiles/tracer_logger.dir/timelog.c.o CMakeFiles/tracer_logger.dir/ticklog.c.o CMakeFiles/tracer_logger.dir/iqlog.c.o CMakeFiles/tracer_logger.dir/iqdotlog.c.o CMakeFiles/tracer_logger.dir/ticked_ttilog.c.o CMakeFiles/tracer_logger.dir/throughputlog.c.o
+/usr/bin/ranlib libtracer_logger.a

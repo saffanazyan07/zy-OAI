@@ -1,0 +1,2 @@
+/usr/bin/ar qc libnr_ue_ra_procedures.a CMakeFiles/nr_ue_ra_procedures.dir/nr_ra_procedures.c.o
+/usr/bin/ranlib libnr_ue_ra_procedures.a

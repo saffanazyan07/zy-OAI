@@ -1,0 +1,2 @@
+/usr/bin/ar qc libtracer_view.a CMakeFiles/tracer_view.dir/stdout.c.o CMakeFiles/tracer_view.dir/textlist.c.o CMakeFiles/tracer_view.dir/xy.c.o CMakeFiles/tracer_view.dir/tti.c.o CMakeFiles/tracer_view.dir/time.c.o CMakeFiles/tracer_view.dir/ticktime.c.o CMakeFiles/tracer_view.dir/scrolltti.c.o
+/usr/bin/ranlib libtracer_view.a

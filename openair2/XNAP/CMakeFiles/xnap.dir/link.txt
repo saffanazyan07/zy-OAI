@@ -1,0 +1,2 @@
+/usr/bin/ar qc libxnap.a CMakeFiles/xnap.dir/xnap_common.c.o
+/usr/bin/ranlib libxnap.a
