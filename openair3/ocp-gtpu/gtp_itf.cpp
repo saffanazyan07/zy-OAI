@@ -23,19 +23,29 @@ extern "C" {
 #include "openair2/SDAP/nr_sdap/nr_sdap.h"
 #include "sim.h"
 
-// library for PPPoE
+//edited by zyzy
+// add library 
+#include <netinet/ip.h>
+#include <netinet/udp.h>
+#include <netinet/if_ether.h>
+#include <linux/if_ether.h>
 #include <linux/if_packet.h>
-#include <linux/if_pppox.h>
-#include <net/if_arp.h>
-#include <net/ethernet.h>
-#include <signal.h>
-//#include <syslog.h>
-#include <getopt.h>
-#include <stdlib.h>
-#include <string.h>
-#include <errno.h>
-#include <sys/time.h>
+#include <net/if.h>
+//#include <cJSON.h>
 #include <unistd.h>
+#include <netinet/in.h>
+#include <net/if_arp.h>
+#include <pthread.h>
+#include <stdio.h>
+#include <math.h>
+#include <time.h>
+#include <cctype>
+
+#include <stdlib.h>
+#include <stdint.h>
+#include <string.h>
+#include <stdbool.h>
+#include <netinet/ether.h>
 
 
 #if defined(HAVE_LINUX_IF_H)
@@ -46,10 +56,31 @@ extern "C" {
 #include <sys/uio.h>
 #endif
 
-#include <rp-pppoe-master/src/relay.h>
 
 #pragma pack(1)
+//edited by zyzy
 
+#define PDCP_HASH_TABLE_SIZE  (1 << 24)  // Ensure bitwise shift precedence
+#define UE_HASH_TABLE_SIZE  (1 << 24)
+
+extern ue_id_t UE_CPE[UE_HASH_TABLE_SIZE][2];
+uint32_t CPE_IP[1000];
+uint32_t CPE_length = 0;
+
+// Declare pdcp globally to avoid stack overflow
+static uint8_t pdcp[PDCP_HASH_TABLE_SIZE][3];
+
+void initialize_pdcp_array() {
+    for (int i = 0; i < PDCP_HASH_TABLE_SIZE; i++) {
+        if (i == (PDCP_HASH_TABLE_SIZE - 1)){
+            printf("pdcp finish\n");
+        }
+        pdcp[i][0] = 0x80;
+        pdcp[i][1] = 0x00;
+        pdcp[i][2] = 0x00;
+    }
+}
+///
 typedef struct Gtpv1uMsgHeader {
   uint8_t PN:1;
   uint8_t S:1;
@@ -260,79 +291,201 @@ instance_t legacyInstanceMapping=0;
 ///////////////////////////////////
 /////////edited by zyzy////////////
 ///////////////////////////////////
-/*
-void sendPADO(PPPoEPacket *padi) {
-    PPPoEPacket pado;
-    memset(&pado, 0, sizeof(PPPoEPacket));
-
-    pado.code = CODE_PADO;
-    pado.session = htons(0);
-    pado.length = htons(0);
-    memcpy(pado.ethHdr.h_dest, padi->ethHdr.h_source, ETH_ALEN);
-    memcpy(pado.ethHdr.h_source, my_mac, ETH_ALEN);
-    pado.ethHdr.h_proto = htons(ETH_PPPOE_DISCOVERY);
-
-    LOG_I(GTPU, "Sending PADO response\n");
-    sendPacket(NULL, discoverySock, &pado, sizeof(pado));
-}
-
-void sendPADS(PPPoEPacket *padr) {
-    PPPoEPacket pads;
-    memset(&pads, 0, sizeof(PPPoEPacket));
-
-    pads.code = CODE_PADS;
-    pads.session = htons(newPPPoESession());
-    pads.length = htons(0);
-    memcpy(pads.ethHdr.h_dest, padr->ethHdr.h_source, ETH_ALEN);
-    memcpy(pads.ethHdr.h_source, my_mac, ETH_ALEN);
-    pads.ethHdr.h_proto = htons(ETH_PPPOE_DISCOVERY);
-
-    LOG_I(GTPU, "Sending PADS response, session created\n");
-    sendPacket(NULL, discoverySock, &pads, sizeof(pads));
-}
-
-void closePPPoESession(PPPoEPacket *padt) {
-    uint16_t session = ntohs(padt->session);
-    LOG_I(GTPU, "Closing PPPoE session: %d\n", session);
-    removePPPoESession(session);
-}
-
-void gtpv1uSendPPPoEPacket(instance_t instance,
-                           ue_id_t ue_id,
-                           int bearer_id,
-                           PPPoEPacket *pkt,
-                           size_t len) {
-    pthread_mutex_lock(&globGtp.gtp_lock);
-    getInstRetVoid(compatInst(instance));
-    getUeRetVoid(inst, ue_id);
-
-    auto ptr2 = ptrUe->second.bearers.find(bearer_id);
-    if (ptr2 == ptrUe->second.bearers.end()) {
-        LOG_E(GTPU, "[%ld] GTP-U instance: No UE session found for PPPoE packet\n", instance);
-        pthread_mutex_unlock(&globGtp.gtp_lock);
-        return;
+gtpv1u_bearer_t getBearer(instance_t instance, ue_id_t ue_id) {
+    auto instChk = globGtp.instances.find(compatInst(instance));
+    if (instChk == globGtp.instances.end()) {
+        LOG_E(GTPU, "Instance %ld not found\n", instance);
+        return {}; // Mengembalikan struct kosong jika tidak ditemukan
     }
 
-    LOG_I(GTPU, "[%ld] Sending PPPoE packet over GTP-U tunnel for UE:%lu, Bearer:%d\n", instance, ue_id, bearer_id);
-    
-    gtpv1uCreateAndSendMsg(compatInst(instance),
-                           ptr2->second.outgoing_ip_addr,
-                           ptr2->second.outgoing_port,
-                           GTP_GPDU,
-                           ptr2->second.teid_outgoing,
-                           (uint8_t *)pkt,
-                           len,
-                           false,
-                           false,
-                           0,
-                           0,
-                           NO_MORE_EXT_HDRS,
-                           NULL,
-                           0);
+    gtpEndPoint *inst = &instChk->second;
+    auto ptrUe = inst->ue2te_mapping.find(ue_id);
+    if (ptrUe == inst->ue2te_mapping.end()) {
+        LOG_E(GTPU, "UE ID %lu not found\n", ue_id);
+        return {}; // Kembalikan struct kosong
+    }
+
+    auto ptrBearer = ptrUe->second.bearers.find(1); // Gunakan Bearer ID 1 sebagai default
+    if (ptrBearer == ptrUe->second.bearers.end()) {
+        LOG_E(GTPU, "Bearer ID 1 not found for UE %lu\n", ue_id);////////zyzy fix this error
+        return {}; // Kembalikan struct kosong
+    }
+
+    return ptrBearer->second;
 }
-*/
+
+
+#define ARP_HASH_TABLE_SIZE 256
+#define ARP_HASH_TABLE_INDEX_MASK ((ARP_HASH_TABLE_SIZE) - 1)
+#define ARP_ENTRY_TIMEOUT 30
+
+struct device_arp_table_entry {
+    uint8_t device_mac_addr[6];
+    uint32_t device_ip;
+    time_t timestamp;
+};
+
+unsigned int hash_arp(uint32_t device_ip);
+int device_arp_table_insert(uint8_t device_mac_addr[6], uint32_t device_ip, time_t timestamp);
+struct device_arp_table_entry* device_arp_table_get_entry_by_ul_ip(uint32_t hash);
+static struct device_arp_table_entry *arp_hash_table[ARP_HASH_TABLE_SIZE] = {NULL};
+
+int device_arp_table_insert(uint8_t device_mac_addr[6], uint32_t device_ip, time_t timestamp) {
+    uint32_t table_idx = hash_arp(device_ip) & ARP_HASH_TABLE_INDEX_MASK;
+    struct device_arp_table_entry *entry = device_arp_table_get_entry_by_ul_ip(table_idx);
+
+    if (entry) {
+        memcpy(entry->device_mac_addr, device_mac_addr, 6);
+        entry->device_ip = device_ip;
+        entry->timestamp = timestamp;
+    } else {
+        entry = (struct device_arp_table_entry *)malloc(sizeof(struct device_arp_table_entry));
+        if (!entry) {
+            printf("Error allocating memory\n");
+            return -1;
+        }
+
+        memcpy(entry->device_mac_addr, device_mac_addr, 6);
+        entry->device_ip = device_ip;
+        entry->timestamp = timestamp;
+        arp_hash_table[table_idx] = entry;
+    }
+
+    return 0;
+}
+
+struct device_arp_table_entry* device_arp_table_get_entry_by_ul_ip(uint32_t hash) {
+    if (hash >= ARP_HASH_TABLE_SIZE) return NULL;
+    return arp_hash_table[hash];
+}
+
+unsigned int hash_arp(uint32_t device_ip) {
+    return device_ip % ARP_HASH_TABLE_SIZE;
+}
+
+#define Device_HASH_TABLE_SIZE 256
+#define Device_HASH_TABLE_INDEX_MASK ((Device_HASH_TABLE_SIZE) - 1)
+
+struct device_table_entry {
+    uint8_t device_mac_addr[6];
+    uint32_t cpe_ip;
+    uint32_t device_ip;
+};
+
+unsigned int hash_mac(uint8_t device_mac_addr[6]);
+int device_table_insert(uint8_t device_mac_addr[6], uint32_t cpe_ip, uint32_t device_ip);
+struct device_table_entry* device_table_get_entry_by_ul_mac(uint32_t hash);
+static struct device_table_entry *device_hash_table[Device_HASH_TABLE_SIZE] = {NULL};
+
+int device_table_insert(uint8_t device_mac_addr[6], uint32_t cpe_ip, uint32_t device_ip) {
+    uint32_t table_idx = hash_mac(device_mac_addr) & Device_HASH_TABLE_INDEX_MASK;
+    struct device_table_entry *entry = device_table_get_entry_by_ul_mac(table_idx);
+
+    if (entry) {
+        memcpy(entry->device_mac_addr, device_mac_addr, 6);
+        entry->cpe_ip = cpe_ip;
+        entry->device_ip = device_ip;
+    } else {
+        entry = (struct device_table_entry *)malloc(sizeof(struct device_table_entry));
+        if (!entry) {
+            printf("Error allocating memory\n");
+            return -1;
+        }
+
+        memcpy(entry->device_mac_addr, device_mac_addr, 6);
+        entry->cpe_ip = cpe_ip;
+        entry->device_ip = device_ip;
+        device_hash_table[table_idx] = entry;
+    }
+
+    return 0;
+}
+
+struct device_table_entry* device_table_get_entry_by_ul_mac(uint32_t hash) {
+    if (hash >= Device_HASH_TABLE_SIZE) return NULL;
+    return device_hash_table[hash];
+}
+
+unsigned int hash_mac(uint8_t device_mac_addr[6]) {
+    unsigned int hash = 0;
+    for (int i = 0; i < 6; i++) {
+        hash += device_mac_addr[i];
+        hash *= 5;
+    }
+    return hash % Device_HASH_TABLE_SIZE;
+}
+
+void dump_data(uint8_t *data, int len) {
+    for (int i = 0; i < len; i += 16) {
+        printf("%8.8x ", i);
+        int k = (len - i) < 16 ? (len - i) : 16;
+
+        for (int j = i; j < i + 16; j++) {
+            if (j < (i + k))
+                printf("%2.2x ", data[j]);
+            else
+                printf("   ");
+        }
+
+        printf("  ");
+        for (int j = i; j < i + k; j++) {
+            printf("%c", isprint(data[j]) ? data[j] : '.');
+        }
+        printf("\n");
+    }
+}
+
+#define BUFFER_SIZE 65536
+int rawsockfd;
+struct sockaddr_ll sll;
+
+__attribute__((unused)) static int createrawsocket() {  // Suppresses unused function warning
+    rawsockfd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
+    if (rawsockfd == -1) {
+        perror("socket");
+        return -1;
+    }
+
+    memset(&sll, 0, sizeof(sll));
+    sll.sll_family = AF_PACKET;
+    sll.sll_protocol = htons(ETH_P_ALL);
+    sll.sll_ifindex = if_nametoindex("rename3");
+
+    if (bind(rawsockfd, (struct sockaddr *)&sll, sizeof(sll)) == -1) {
+        perror("bind");
+        close(rawsockfd);
+        return -1;
+    }
+
+    return 0;
+}
+
+int rawsockdn;
+struct sockaddr_ll sdn;
+
+__attribute__((unused)) static int createrawsocket2() {  // Suppresses unused function warning
+    rawsockdn = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
+    if (rawsockdn == -1) {
+        perror("socket");
+        return -1;
+    }
+
+    memset(&sdn, 0, sizeof(sdn));
+    sdn.sll_family = AF_PACKET;
+    sdn.sll_protocol = htons(ETH_P_ALL);
+    sdn.sll_ifindex = if_nametoindex("enx00e04c3693ca");
+
+    if (bind(rawsockdn, (struct sockaddr *)&sdn, sizeof(sdn)) == -1) {
+        perror("bind");
+        close(rawsockdn);
+        return -1;
+    }
+
+    return 0;
+}
+
+/////////edited by zyzy end//////////
 /////////////////////////////////////
-//edited by zyzy end
 
 #define HDR_MAX 256 // 256 is supposed to be larger than any gtp header
 static int gtpv1uCreateAndSendMsg(int h,
@@ -405,6 +558,7 @@ static int gtpv1uCreateAndSendMsg(int h,
   int ret;
 
   if ((ret=sendto(h, (void *)buffer, curPtr-buffer, 0,(struct sockaddr *)&to, sizeof(to) )) != curPtr-buffer ) {
+    ///////zyzy fix this issue
     LOG_E(GTPU, "[SD %d] Failed to send data to " IPV4_ADDR " on port %d, buffer size %lu, ret: %d, errno: %d\n",
           h, IPV4_ADDR_FORMAT(peerIp), peerPort, curPtr-buffer, ret, errno);
     return GTPNOK;
@@ -412,6 +566,42 @@ static int gtpv1uCreateAndSendMsg(int h,
 
   return  !GTPNOK;
 }
+///////////////////////////////////
+/////////edited by zyzy////////////
+///////////////////////////////////
+  
+#define SRC_IP "10.45.0.50"
+#define SRC_MAC "\xac\x4d\x54\x47\x73\x28" // Your source MAC address
+#define DST_MAC "\x78\x2b\xcb\x4a\x1a\xa6" // Your destination MAC address
+int temp_instance;
+
+struct gre_header {
+  uint16_t res2:4;
+  uint16_t s:1;
+  uint16_t k:1;
+  uint16_t res1:1;
+  uint16_t c:1;
+  uint16_t ver:3;
+  uint16_t res3:5;
+  uint16_t proto;
+};
+
+unsigned short checksum5(unsigned short *buf, int nwords) {
+    int sum;
+    for(sum=0; nwords>0; nwords--)
+        sum += *buf++;
+    sum = (sum >> 16) + (sum & 0xffff);
+    sum += (sum >> 16);
+    return ~sum;
+}
+
+/////////edited by zyzy end//////////
+/////////////////////////////////////
+
+/////////////////////////////////////
+/////////checked by zyzy ////////////
+/////////////////////////////////////
+///////original code/////////
 
 void gtpv1uSendDirect(instance_t instance,
                       ue_id_t ue_id,
@@ -426,12 +616,12 @@ void gtpv1uSendDirect(instance_t instance,
   getUeRetVoid(inst, ue_id);
 
   auto ptr2 = ptrUe->second.bearers.find(bearer_id);
-
   if (ptr2 == ptrUe->second.bearers.end()) {
     LOG_E(GTPU, "[%ld] GTP-U instance: sending a packet to a non existant UE:RAB: %lx/%x\n", instance, ue_id, bearer_id);
     pthread_mutex_unlock(&globGtp.gtp_lock);
     return;
   }
+
 
   LOG_D(GTPU,
         "[%ld] sending a packet to UE:RAB:teid %lx/%x/%x, len %lu, oldseq %d, oldnum %d\n",
@@ -452,6 +642,694 @@ void gtpv1uSendDirect(instance_t instance,
   // copy to release the mutex
   gtpv1u_bearer_t tmp = ptr2->second;
   pthread_mutex_unlock(&globGtp.gtp_lock);
+
+//////////////original code///////////////
+  ///zyzy GRE Filtering
+ // 🔎 **Step 1: Parsing GTP-U Payload untuk Mencari GRE Header**
+    if (len >= 12) { // 8 bytes GTP-U header + 4 bytes GRE header
+        uint16_t gre_protocol = ntohs(*(uint16_t *)(buf + 10)); // Offset 10: GRE Protocol Type
+        if (gre_protocol == 0x0800) { // Jika GRE mengandung IPv4 (0x0800)
+            LOG_I(GTPU, "GRE header detected in GTP-U packet! Forwarding to DHCP relay.");
+
+            // **Step 2: Kirim ke DHCP Relay di CU**
+            struct sockaddr_in dhcp_relay_addr;
+            int dhcp_sock = socket(AF_INET, SOCK_DGRAM, 0);
+            if (dhcp_sock < 0) {
+                LOG_E(GTPU, "Failed to create UDP socket for DHCP relay: %s", strerror(errno));
+                return;
+            }
+
+            memset(&dhcp_relay_addr, 0, sizeof(dhcp_relay_addr));
+            dhcp_relay_addr.sin_family = AF_INET;
+            dhcp_relay_addr.sin_port = htons(67); // DHCP Server Port
+            inet_pton(AF_INET, "192.168.60.100", &dhcp_relay_addr.sin_addr); // DHCP Relay IP di CU
+
+            ssize_t sent_bytes = sendto(dhcp_sock, buf, len, 0, (struct sockaddr *)&dhcp_relay_addr, sizeof(dhcp_relay_addr));
+            if (sent_bytes < 0) {
+                LOG_E(GTPU, "Failed to forward GRE packet to DHCP relay: %s", strerror(errno));
+            } else {
+                LOG_I(GTPU, "GRE encapsulated packet forwarded to DHCP relay (sent %zd bytes).", sent_bytes);
+            }
+
+            close(dhcp_sock);
+            return; // **Tidak mengirimkan ke UPF, karena paket sudah dialihkan**
+        }
+    } 
+  
+  // added by zyzy for gre handler
+  /*
+  if (buffer[0] == 0x45){ //divide IPv6
+    struct iphdr *ip_hdr_gre = (struct iphdr *)(buffer);
+    uint32_t temp = ip_hdr_gre->saddr % 1000000;
+
+    
+    if (buffer[22] == 0x65 && buffer[23] == 0x58){ //Confirm GRE packet
+      if (buffer[54] == 0xc0 && buffer[55] == 0xa8 && buffer[56] == 0x01 && buffer[57] != 0x01){ // Non-3GPP M2M communication
+        //printf("CD uplink process\n"); 
+        struct device_table_entry *entry;
+        unsigned char *packet = buffer;
+        struct iphdr *ip_hdr_gre = (struct iphdr *)(packet);
+        uint32_t ip = ip_hdr_gre->saddr;
+        ip_hdr_gre->check = 0;
+        struct ether_header *eth_hdr = (struct ether_header *)(packet + sizeof(struct iphdr) + sizeof(struct gre_header));
+        uint32_t hash = hash_mac(eth_hdr->ether_dhost);
+
+        entry = device_table_get_entry_by_ul_mac(hash);
+        if (entry->cpe_ip != ip){
+
+          ip_hdr_gre->saddr = inet_addr(SRC_IP);;
+          ip_hdr_gre->daddr = entry->cpe_ip;
+          ip_hdr_gre->check = checksum5((unsigned short *)ip_hdr_gre, sizeof(struct iphdr) / 2);
+          uint32_t temp3 = entry->cpe_ip % 1000000;
+          length += 3;
+       
+          auto instChk=globGtp.instances.find(compatInst(compatInst(temp_instance)));
+          if (instChk == globGtp.instances.end()) {                        
+            LOG_E(GTPU,"try to get a gtp-u not existing output\n");     
+            pthread_mutex_unlock(&globGtp.gtp_lock);                                                         
+          }
+          else{
+            if (&instChk->second){
+              gtpEndPoint * inst=&instChk->second;
+              auto ptrUe=inst->ue2te_mapping.find(UE_CPE[temp3][0]);                                                                    
+              if ( ptrUe==inst->ue2te_mapping.end() ) {                          
+                pthread_mutex_unlock(&globGtp.gtp_lock);                                                                                
+              }
+              auto ptr2=ptrUe->second.bearers.find(1); //bearer_id
+              uint8_t pdcp[3] = {0x80, 0x00, 0x00};
+              pdcp[2] += ptr2->second.seqNum;
+              if (pdcp[2] < ptr2->second.seqNum) {
+                pdcp[1]++;
+              }
+              size_t prepend_length = sizeof(pdcp);
+              memmove(packet + prepend_length, packet, length);
+              memcpy(packet, pdcp, prepend_length);
+
+              ptr2->second.seqNum++;
+
+              ptr2->second.npduNum++;
+
+              tmp=ptr2->second;
+              gtpv1uCreateAndSendMsg(compatInst(temp_instance),
+                                 tmp.outgoing_ip_addr,
+                                 tmp.outgoing_port,
+                                 GTP_GPDU,
+                                 tmp.teid_outgoing,
+                                 packet,
+                                 length,
+                                 0,
+                                 0,
+                                 0,
+                                 0,
+                                 NO_MORE_EXT_HDRS, 
+                                 NULL, 
+                                 0);
+            }
+          }
+        }
+      }
+      else if (buffer[54] == 0x0a && buffer[55] == 0x3c && buffer[56] == 0x00 && buffer[57] != 0x63){ // Non-3GPP to 3GPP downlink process
+        buffer += (sizeof(struct iphdr) + sizeof(struct gre_header) + sizeof(struct ether_header));
+        length -= (sizeof(struct iphdr) + sizeof(struct gre_header) + sizeof(struct ether_header));
+        unsigned char *packet = buffer;
+        struct iphdr *ip_hdr = (struct iphdr *)(packet);
+        uint32_t temp = ip_hdr->daddr % 1000000;
+        length += 3;
+        auto instChk=globGtp.instances.find(compatInst(compatInst(temp_instance)));
+        gtpEndPoint * inst=&instChk->second;
+        auto ptrUe=inst->ue2te_mapping.find(UE_CPE[temp][0]);                                                                    
+        auto ptr2=ptrUe->second.bearers.find(1); //bearer_id
+        uint8_t pdcp[3] = {0x80, 0x00, 0x00};
+        pdcp[2] += ptr2->second.seqNum;
+        if (pdcp[2] < ptr2->second.seqNum) {
+          pdcp[1]++;
+        }
+        size_t prepend_length = sizeof(pdcp);
+        memmove(packet + prepend_length, packet, length);
+        memcpy(packet, pdcp, prepend_length);
+
+        ptr2->second.seqNum++;
+        ptr2->second.npduNum++;
+        tmp=ptr2->second;
+        gtpv1uCreateAndSendMsg(compatInst(temp_instance),
+                                 tmp.outgoing_ip_addr,
+                                 tmp.outgoing_port,
+                                 GTP_GPDU,
+                                 tmp.teid_outgoing,
+                                 packet,
+                                 length, 
+                                 seqNumFlag,
+                                 npduNumFlag, 
+                                 0, 
+                                 0, 
+                                 NO_MORE_EXT_HDRS, 
+                                 NULL, 
+                                 0);
+      }
+      else if ((buffer[36] == 0x08 && buffer[37] == 0x06 && buffer[65] != 0x01)){ //ARP Request & reply from IoT Device but not to IND Box
+        
+        ////////With IND-Box////////
+        // unsigned char packet[1024];
+        // memset(packet, 0, 1024);
+
+        // // Ethernet header
+        // struct ether_header *eth_header = (struct ether_header *)packet;
+        // memcpy(eth_header->ether_dhost, DST_MAC, ETH_ALEN);
+        // memcpy(eth_header->ether_shost, SRC_MAC, ETH_ALEN);
+        // eth_header->ether_type = htons(ETH_P_IP);
+
+        // memcpy(packet + sizeof(struct ether_header), buffer, length);
+
+        // int packet_len = sizeof(struct ether_header) + length;
+
+        // if (sendto(rawsockfd, packet, packet_len, 0, (struct sockaddr*)&sll, sizeof(sll)) == -1) {
+        //   perror("sendto");
+        //   close(rawsockfd);
+        //   exit(EXIT_FAILURE);
+        // }
+        ////////With IND-Box////////
+
+        ////////Without IND-Box////////
+        unsigned char *packet = buffer;
+        struct iphdr *ip_hdr_gre = (struct iphdr *)(packet);
+        struct ether_arp * arp_hdr = (struct ether_arp *)(packet + sizeof(struct iphdr) + sizeof(struct gre_header) + sizeof(struct ether_header));
+        struct ether_header * eth_hdr = (struct ether_header *)(packet + sizeof(struct iphdr) + sizeof(struct gre_header));
+        ip_hdr_gre->check = 0;
+        if (arp_hdr->arp_op == htons(1)){
+          device_table_insert(eth_hdr->ether_shost, ip_hdr_gre->saddr, ip_hdr_gre->saddr);
+          uint32_t value = 0;
+          memcpy(&value, arp_hdr->arp_spa, sizeof(value));
+          device_arp_table_insert(eth_hdr->ether_shost, value, time(NULL));
+          struct device_arp_table_entry *entry2;
+          
+          uint32_t arphash = *((uint32_t *)(arp_hdr->arp_tpa)) % 1000000;
+          entry2 = device_arp_table_get_entry_by_ul_ip(arphash);
+          if (entry2 && ((time(NULL) - entry2->timestamp)) < ARP_ENTRY_TIMEOUT){
+            printf("arp found\n");
+            memcpy(eth_hdr->ether_dhost, eth_hdr->ether_shost, ETH_ALEN);
+            memcpy(eth_hdr->ether_shost, entry2->device_mac_addr, ETH_ALEN);
+            //uint32_t device_ip;
+            //inet_pton(AF_INET, arp_hdr->arp_spa, &device_ip);
+            
+            arp_hdr->arp_op = htons(2);
+            //(u_char *)ip = arp_hdr->arp_tpa;
+            memcpy(arp_hdr->arp_tha, arp_hdr->arp_sha, 6);
+            memcpy(arp_hdr->arp_tpa, arp_hdr->arp_spa, 4);
+            memcpy(arp_hdr->arp_sha, entry2->device_mac_addr, 6);
+            memcpy(arp_hdr->arp_spa, (u_char *)&entry2->device_ip, 4);
+            ip_hdr_gre->daddr = ip_hdr_gre->saddr;
+            ip_hdr_gre->saddr = inet_addr(SRC_IP);;
+            ip_hdr_gre->check = checksum5((unsigned short *)ip_hdr_gre, sizeof(struct iphdr) / 2);
+            uint32_t temp3 = ip_hdr_gre->daddr % 1000000;
+            length += 3;
+
+            auto instChk=globGtp.instances.find(compatInst(compatInst(temp_instance)));
+            gtpEndPoint * inst=&instChk->second;
+            auto ptrUe=inst->ue2te_mapping.find(UE_CPE[temp3][0]);                                                                    
+            auto ptr2=ptrUe->second.bearers.find(1); //bearer_id
+            uint8_t pdcp[3] = {0x80, 0x00, 0x00};
+            pdcp[2] += ptr2->second.seqNum;
+            if (pdcp[2] < ptr2->second.seqNum) {
+              pdcp[1]++;
+            }
+            size_t prepend_length = sizeof(pdcp);
+            memmove(packet + prepend_length, packet, length);
+            memcpy(packet, pdcp, prepend_length);
+
+            ptr2->second.seqNum++;
+            ptr2->second.npduNum++;
+                  //printf("M2M SN downlink: %hu\n", ptr2->second.seqNum);
+            tmp=ptr2->second;
+            gtpv1uCreateAndSendMsg(compatInst(temp_instance),
+                                     tmp.outgoing_ip_addr,
+                                     tmp.outgoing_port,
+                                     GTP_GPDU,
+                                     tmp.teid_outgoing,
+                                     packet,
+                                     length, 
+                                     seqNumFlag,
+                                     npduNumFlag, 
+                                     0, 
+                                     0, 
+                                     NO_MORE_EXT_HDRS, 
+                                     NULL, 
+                                     0);
+          }
+          else{
+            printf("arp not found\n");
+            size_t pack_len = length;
+            if (buffer[28] == 0xff && buffer[29] == 0xff){ //ARP broadcast
+              struct iphdr *ip_hdr_gre = (struct iphdr *)(packet);
+              struct ether_header * eth_hdr = (struct ether_header *)(packet + sizeof(struct iphdr) + sizeof(struct gre_header));
+              uint32_t ip_addr = ip_hdr_gre->saddr;
+              device_table_insert(eth_hdr->ether_shost, ip_hdr_gre->saddr, ip_hdr_gre->saddr);
+              uint32_t value = 0;
+              memcpy(&value, arp_hdr->arp_spa, sizeof(value));
+              device_arp_table_insert(eth_hdr->ether_shost, value, time(NULL));
+              //uint32_t device_ip;
+            //inet_pton(AF_INET, arp_hdr->arp_spa, &device_ip);
+              // uint32_t value = 0;
+
+              // memcpy(&value, arp_hdr->arp_spa, sizeof(value));
+              // device_arp_table_insert(eth_hdr->ether_shost, value);
+              int count = 1;
+              for (int i = 0; i < 1000; i++){ //limitation for 5G CPE
+                unsigned char *packet = buffer;
+                uint8_t pdcp[3] = {0x80, 0x00, 0x00};
+                if (CPE_IP[i] != 0){
+                  //printf("src CPE_IP: %u\n", ip_addr);
+                  if (CPE_IP[i] != ip_addr){
+                    //length = pack_len;
+                    //dump_data(packet, length);
+                    if (count == 1)
+                      count++;
+                    else{
+                      packet += sizeof(pdcp);
+                      length -= 3;
+                    }
+                    //dump_data(packet, length);
+                    struct iphdr *ip_hdr_gre = (struct iphdr *)(packet);
+                    //printf("CPE_IP: %u\n", CPE_IP[i]);
+                    ip_hdr_gre->check = 0;
+                    ip_hdr_gre->saddr = inet_addr(SRC_IP);
+                    ip_hdr_gre->daddr = CPE_IP[i];
+                    ip_hdr_gre->check = checksum5((unsigned short *)ip_hdr_gre, sizeof(struct iphdr) / 2);
+                    //unsigned char *packet = buffer;
+                    uint32_t temp = CPE_IP[i] % 1000000;
+                    auto instChk=globGtp.instances.find(compatInst(compatInst(temp_instance)));
+                    gtpEndPoint * inst=&instChk->second;
+                    auto ptrUe=inst->ue2te_mapping.find(UE_CPE[temp][0]);                                                                    
+                    auto ptr2=ptrUe->second.bearers.find(1); //bearer_id
+                    pdcp[2] += ptr2->second.seqNum;
+                    if (pdcp[2] < ptr2->second.seqNum) {
+                      pdcp[1]++;
+                    }
+                    length += 3;
+                    size_t prepend_length = sizeof(pdcp);
+                    memmove(packet + prepend_length, packet, length);
+                    memcpy(packet, pdcp, prepend_length);
+                    //dump_data(packet, length);
+
+                    ptr2->second.seqNum++;
+                    ptr2->second.npduNum++;
+                    tmp=ptr2->second;
+                    gtpv1uCreateAndSendMsg(compatInst(temp_instance),
+                                             tmp.outgoing_ip_addr,
+                                             tmp.outgoing_port,
+                                             GTP_GPDU,
+                                             tmp.teid_outgoing,
+                                             packet,
+                                             length, 
+                                             seqNumFlag,
+                                             npduNumFlag, 
+                                             0, 
+                                             0, 
+                                             NO_MORE_EXT_HDRS, 
+                                             NULL, 
+                                             0);
+
+                  }
+                }
+              }
+            }
+          }
+        }
+        else{
+          printf("arp reply to\n");
+          struct device_table_entry *entry;
+          
+          struct iphdr *ip_hdr_gre = (struct iphdr *)(packet);
+          // uint32_t ip = ip_hdr_gre->saddr;
+          ip_hdr_gre->check = 0;
+          //struct iphdr *ip_hdr = (struct iphdr *)(packet + sizeof(struct iphdr) + sizeof(struct gre_header) + sizeof(struct ether_header));
+          //struct ether_header *eth_hdr = (struct ether_header *)(packet + sizeof(struct iphdr) + sizeof(struct gre_header));
+          device_table_insert(eth_hdr->ether_shost, ip_hdr_gre->saddr, ip_hdr_gre->saddr);
+          //uint32_t device_ip;
+          //inet_pton(AF_INET, arp_hdr->arp_spa, &device_ip);
+          // uint32_t value = 0;
+
+          // memcpy(&value, arp_hdr->arp_spa, sizeof(value));
+          // device_arp_table_insert(eth_hdr->ether_shost, value);
+          uint32_t hash = hash_mac(eth_hdr->ether_dhost);
+          //packet += sizeof(struct ether_header);
+          //len -= sizeof(struct ether_header);
+
+          //uint32_t temp2 = ip_dst_addr % 1000000;
+          entry = device_table_get_entry_by_ul_mac(hash);
+          if (entry){//(entry->cpe_ip != ip){
+            // if (entry == 0)
+            //   printf("device info not found\n");
+            ip_hdr_gre->saddr = inet_addr(SRC_IP);;
+            ip_hdr_gre->daddr = entry->cpe_ip;
+            ip_hdr_gre->check = checksum5((unsigned short *)ip_hdr_gre, sizeof(struct iphdr) / 2);
+            uint32_t temp3 = entry->cpe_ip % 1000000;
+            length += 3;
+            // size_t prepend_length = sizeof(pdcp[temp3]);
+            // memmove(packet + prepend_length, packet, length);
+            // memcpy(packet, pdcp[temp3], prepend_length);
+            // pdcp[temp3][2]++;
+            // if (pdcp[temp3][2] == 0xff) {
+            //   pdcp[temp3][1]++;
+            // }
+         
+            auto instChk=globGtp.instances.find(compatInst(compatInst(temp_instance)));
+            if (instChk == globGtp.instances.end()) {                        
+              LOG_E(GTPU,"try to get a gtp-u not existing output\n");     
+              pthread_mutex_unlock(&globGtp.gtp_lock);                                                         
+            }
+            else{
+              if (&instChk->second){
+                gtpEndPoint * inst=&instChk->second;
+                auto ptrUe=inst->ue2te_mapping.find(UE_CPE[temp3][0]);                                                                    
+                if ( ptrUe==inst->ue2te_mapping.end() ) {                          
+                  pthread_mutex_unlock(&globGtp.gtp_lock);                                                                                
+                }
+                auto ptr2=ptrUe->second.bearers.find(1); //bearer_id
+                uint8_t pdcp[3] = {0x80, 0x00, 0x00};
+                pdcp[2] += ptr2->second.seqNum;
+                if (pdcp[2] < ptr2->second.seqNum) {
+                  pdcp[1]++;
+                }
+                size_t prepend_length = sizeof(pdcp);
+                memmove(packet + prepend_length, packet, length);
+                memcpy(packet, pdcp, prepend_length);
+
+                ptr2->second.seqNum++;
+                // pdcp[temp3][2]++;
+                // if (pdcp[temp3][2] == 0xff) {
+                //   pdcp[temp3][1]++;
+                // }
+                ptr2->second.npduNum++;
+                //printf("M2M SN downlink: %hu\n", ptr2->second.seqNum);
+                tmp=ptr2->second;
+                gtpv1uCreateAndSendMsg(compatInst(temp_instance),
+                                   tmp.outgoing_ip_addr,
+                                   tmp.outgoing_port,
+                                   GTP_GPDU,
+                                   tmp.teid_outgoing,
+                                   packet,
+                                   length,
+                                   0,
+                                   0,
+                                   0,
+                                   0,
+                                   NO_MORE_EXT_HDRS, 
+                                   NULL, 
+                                   0);
+              }
+            }
+          }
+        }
+      }
+      else{
+        if (buffer[59] == 0x44 && buffer[61] == 0x43){ //DHCP & Tunnel Info to IND-Box
+          struct iphdr *ip_hdr_gre = (struct iphdr*)(buffer);
+
+          //////////////////////////////////////////////////
+          //
+          //
+          //                  Without IND Box
+          //
+          //
+          //////////////////////////////////////////////////
+          if (!UE_CPE[temp][1]){
+            printf("CPE add\n");
+            CPE_IP[CPE_length] = ip_hdr_gre->saddr;
+            CPE_length++;
+            UE_CPE[temp][1] = 1;
+            //printf("ue_id: %u\n", ue_id);
+          }
+          uint32_t ip_addr = ip_hdr_gre->saddr;
+          struct ether_header *eth_hdr = (struct ether_header *)(buffer + sizeof(struct iphdr) + sizeof(struct gre_header));
+
+          device_table_insert(eth_hdr->ether_shost, ip_addr, ip_addr);
+          buffer += (sizeof(struct iphdr) + sizeof(struct gre_header));
+          length -= (sizeof(struct iphdr) + sizeof(struct gre_header));
+
+          if (sendto(rawsockfd, buffer, length, 0, (struct sockaddr*)&sll, sizeof(sll)) == -1) {
+            perror("sendto");
+            close(rawsockfd);
+            exit(EXIT_FAILURE);
+          }
+    }
+        else if(buffer[60] == 0xd9 && buffer[61] == 0x03){
+          printf("tunnel update\n");
+          //////////////////////////////////////////////////
+          //
+          //
+          //                  Without IND Box
+          //
+          //
+          //////////////////////////////////////////////////
+          struct device_table_entry *entry;
+          struct ip *ip_hdr_gre = (struct ip*)(buffer);
+          uint32_t ip_addr = ip_hdr_gre->ip_src.s_addr;
+          struct ether_header *eth_hdr = (struct ether_header *)(buffer + sizeof(struct ip) + sizeof(struct gre_header));
+          // uint32_t hash = hash_mac(eth_hdr->ether_shost);
+
+          // entry = device_table_get_entry_by_ul_mac(hash);
+          device_table_insert(eth_hdr->ether_shost, ip_addr, 0);
+          uint32_t dst = ip_hdr_gre->ip_dst.s_addr;
+          ip_hdr_gre->ip_dst.s_addr = ip_addr;
+          ip_hdr_gre->ip_src.s_addr = dst;
+          memcpy(eth_hdr->ether_dhost, eth_hdr->ether_shost, ETH_ALEN);
+          memcpy(eth_hdr->ether_shost, SRC_MAC, ETH_ALEN);
+          struct ip *ip_hdr = (struct ip *)(buffer + sizeof(struct ip) + sizeof(struct gre_header) + sizeof(struct ether_header));
+          ip_hdr->ip_dst.s_addr = ip_addr;
+          ip_hdr->ip_src.s_addr = dst;
+          struct udphdr *udp_hdr = (struct udphdr *)(buffer + sizeof(struct ip) + sizeof(struct gre_header) + sizeof(struct ether_header) + sizeof(struct ip));
+          udp_hdr->dest = udp_hdr->source;
+          udp_hdr->source = htons(55555);
+          uint32_t temp3 = ip_addr % 1000000;
+          length += 3;
+            // size_t prepend_length = sizeof(pdcp[temp3]);
+            // memmove(packet + prepend_length, packet, length);
+            // memcpy(packet, pdcp[temp3], prepend_length);
+            // pdcp[temp3][2]++;
+            // if (pdcp[temp3][2] == 0xff) {
+            //   pdcp[temp3][1]++;
+            // }
+         
+          auto instChk=globGtp.instances.find(compatInst(compatInst(temp_instance)));
+          if (instChk == globGtp.instances.end()) {                        
+            LOG_E(GTPU,"try to get a gtp-u not existing output\n");     
+            pthread_mutex_unlock(&globGtp.gtp_lock);                                                         
+          }
+          else{
+            if (&instChk->second){
+              gtpEndPoint * inst=&instChk->second;
+              auto ptrUe=inst->ue2te_mapping.find(UE_CPE[temp3][0]);                                                                    
+              if ( ptrUe==inst->ue2te_mapping.end() ) {                          
+                pthread_mutex_unlock(&globGtp.gtp_lock);                                                                                
+              }
+              auto ptr2=ptrUe->second.bearers.find(1); //bearer_id
+              uint8_t pdcp[3] = {0x80, 0x00, 0x00};
+              pdcp[2] += ptr2->second.seqNum;
+              if (pdcp[2] < ptr2->second.seqNum) {
+                pdcp[1]++;
+              }
+              size_t prepend_length = sizeof(pdcp);
+              memmove(buffer + prepend_length, buffer, length);
+              memcpy(buffer, pdcp, prepend_length);
+
+              ptr2->second.seqNum++;
+                // pdcp[temp3][2]++;
+                // if (pdcp[temp3][2] == 0xff) {
+                //   pdcp[temp3][1]++;
+                // }
+              ptr2->second.npduNum++;
+                //printf("M2M SN downlink: %hu\n", ptr2->second.seqNum);
+              tmp=ptr2->second;
+              gtpv1uCreateAndSendMsg(compatInst(temp_instance),
+                                   tmp.outgoing_ip_addr,
+                                   tmp.outgoing_port,
+                                   GTP_GPDU,
+                                   tmp.teid_outgoing,
+                                   buffer,
+                                   length,
+                                   0,
+                                   0,
+                                   0,
+                                   0,
+                                   NO_MORE_EXT_HDRS, 
+                                   NULL, 
+                                   0);
+            }
+                //printf("finish\n");
+          }
+        }
+        else{ //Any traffic to IND-Box
+          buffer += (sizeof(struct iphdr) + sizeof(struct gre_header));
+          length -= (sizeof(struct iphdr) + sizeof(struct gre_header));
+
+          if (sendto(rawsockfd, buffer, length, 0, (struct sockaddr*)&sll, sizeof(sll)) == -1) {
+            perror("sendto");
+            close(rawsockfd);
+            exit(EXIT_FAILURE);
+          }
+        }
+      }
+    }
+    else{
+      if (buffer[16] == 0xc0 && buffer[17] == 0xa8 && buffer[18] == 0x01 && buffer[19] != 0x01){ // 3GPP to Non-3GPP downlink process
+        struct device_table_entry *entry;
+        struct device_arp_table_entry *entry2;
+        unsigned char *packet = buffer;
+        struct iphdr *ip_hdr = (struct iphdr *)(packet);
+        uint32_t arphash = ip_hdr->daddr % 1000000;
+        entry2 = device_arp_table_get_entry_by_ul_ip(arphash);
+        if (!entry2){
+          printf("arp not found\n");
+        }
+        uint32_t hash = hash_mac(entry2->device_mac_addr);
+
+        entry = device_table_get_entry_by_ul_mac(hash);
+        if (entry == 0){
+          printf("device info not found\n");
+        }
+        else{
+          unsigned char packet2[65536];
+          memset(packet2, 0, 65536); 
+
+          struct iphdr *ip_hdr_gre = (struct iphdr *)(packet2);
+          ip_hdr_gre->check = 0;
+          ip_hdr_gre->ihl = 5;
+          ip_hdr_gre->version = 4;
+          ip_hdr_gre->tos = 0;
+          ip_hdr_gre->tot_len = htons(length + sizeof(struct ether_header) + sizeof(struct iphdr) + sizeof(struct gre_header));
+          ip_hdr_gre->id = htons(12345);
+          ip_hdr_gre->saddr = inet_addr(SRC_IP);;
+          ip_hdr_gre->daddr = entry->cpe_ip;
+          ip_hdr_gre->frag_off = 0;
+          ip_hdr_gre->ttl = 255;
+          ip_hdr_gre->protocol = IPPROTO_GRE;
+          ip_hdr_gre->check = checksum5((unsigned short *)ip_hdr_gre, sizeof(struct iphdr) / 2);
+          
+          struct gre_header *gre_hdr = (struct gre_header *)(packet2 + sizeof(struct iphdr));
+          //gre_hdr->flags = 0;
+          gre_hdr->proto = htons(0x6558);
+
+          struct ether_header *eth_header = (struct ether_header *)(packet2 + sizeof(struct iphdr) + sizeof(struct gre_header));
+          memcpy(eth_header->ether_dhost, entry2->device_mac_addr, ETH_ALEN);
+          memcpy(eth_header->ether_shost, DST_MAC, ETH_ALEN);
+          eth_header->ether_type = htons(ETH_P_IP);
+
+          memcpy(packet2 + sizeof(struct ether_header) + sizeof(struct iphdr) + sizeof(struct gre_header), packet, length); // ¢X2?dhcp_packetcMdhcp_packet_length?wcw?
+
+          int length2 = (sizeof(struct ether_header) + sizeof(struct iphdr) + sizeof(struct gre_header)) + length;
+
+          uint32_t temp3 = entry->cpe_ip % 1000000;
+          length2 += 3;
+     
+          auto instChk=globGtp.instances.find(compatInst(compatInst(temp_instance)));
+          if (instChk == globGtp.instances.end()) {                        
+            LOG_E(GTPU,"try to get a gtp-u not existing output\n");     
+            pthread_mutex_unlock(&globGtp.gtp_lock);                                                         
+          }
+          else{
+            if (&instChk->second){
+              gtpEndPoint * inst=&instChk->second;
+              auto ptrUe=inst->ue2te_mapping.find(UE_CPE[temp3][0]);                                                                    
+              if ( ptrUe==inst->ue2te_mapping.end() ) {                          
+                pthread_mutex_unlock(&globGtp.gtp_lock);                                                                                
+              }
+              auto ptr2=ptrUe->second.bearers.find(1); //bearer_id
+              uint8_t pdcp[3] = {0x80, 0x00, 0x00};
+              pdcp[2] += ptr2->second.seqNum;
+              if (pdcp[2] < ptr2->second.seqNum) {
+                pdcp[1]++;
+              }
+              size_t prepend_length = sizeof(pdcp);
+              memmove(packet2 + prepend_length, packet2, length2);
+              memcpy(packet2, pdcp, prepend_length);
+
+              ptr2->second.seqNum++;
+              ptr2->second.npduNum++;
+              gtpv1u_bearer_t tmp=ptr2->second;
+              gtpv1uCreateAndSendMsg(compatInst(temp_instance),
+                                   tmp.outgoing_ip_addr,
+                                   tmp.outgoing_port,
+                                   GTP_GPDU,
+                                   tmp.teid_outgoing,
+                                   packet2,
+                                   length2, 
+                                   0,
+                                   0, 
+                                   0, 
+                                   0, 
+                                   NO_MORE_EXT_HDRS, 
+                                   NULL, 
+                                   0);
+            }
+          }
+        }     
+      }
+      else if (buffer[19] == 0x63){
+        unsigned char packet[1024];
+        memset(packet, 0, 1024);
+
+          // Ethernet header
+        struct ether_header *eth_header = (struct ether_header *)packet;
+        memcpy(eth_header->ether_dhost, DST_MAC, ETH_ALEN);
+        memcpy(eth_header->ether_shost, SRC_MAC, ETH_ALEN);
+        eth_header->ether_type = htons(ETH_P_IP);
+
+        memcpy(packet + sizeof(struct ether_header), buffer, length);
+
+        int packet_len = sizeof(struct ether_header) + length;
+
+        if (sendto(rawsockfd, packet, packet_len, 0, (struct sockaddr*)&sll, sizeof(sll)) == -1) {
+          perror("sendto");
+          close(rawsockfd);
+          exit(EXIT_FAILURE);
+        }
+      }
+      else if (tmp.outgoing_qfi != -1) {
+        Gtpv1uExtHeaderT ext = { 0 };
+        ext.ExtHeaderLen = 1; // in quad bytes  EXT_HDR_LNTH_OCTET_UNITS
+        ext.pdusession_cntr.spare = 0;
+        ext.pdusession_cntr.PDU_type = UL_PDU_SESSION_INFORMATION;
+        ext.pdusession_cntr.QFI = tmp.outgoing_qfi;
+        ext.pdusession_cntr.Reflective_QoS_activation = false;
+        ext.pdusession_cntr.Paging_Policy_Indicator = false;
+        ext.NextExtHeaderType = NO_MORE_EXT_HDRS;
+
+        gtpv1uCreateAndSendMsg(compatInst(instance),
+                               tmp.outgoing_ip_addr,
+                               tmp.outgoing_port,
+                               GTP_GPDU,
+                               tmp.teid_outgoing,
+                               buffer,
+                               length,
+                               seqNumFlag,
+                               npduNumFlag,
+                               tmp.seqNum,
+                               tmp.npduNum,
+                               PDU_SESSION_CONTAINER,
+                               (uint8_t *)&ext,
+                               sizeof(ext));
+      } 
+      else {
+        gtpv1uCreateAndSendMsg(compatInst(instance), 
+                               tmp.outgoing_ip_addr, 
+                               tmp.outgoing_port, 
+                               GTP_GPDU, 
+                               tmp.teid_outgoing, 
+                               buffer, 
+                               length, 
+                               seqNumFlag, 
+                               npduNumFlag, 
+                               tmp.seqNum, 
+                               tmp.npduNum, 
+                               NO_MORE_EXT_HDRS, 
+                               NULL, 
+                               0);
+      }
+    }
+  }
+  else{
+    */
+/////////////original code/////////////////
 
   if (tmp.outgoing_qfi != -1) {
     Gtpv1uExtHeaderT ext = {0};
@@ -495,1421 +1373,7 @@ void gtpv1uSendDirect(instance_t instance,
   }
 }
 
-//////////////////////////
-////// edited by zyzy////
-/////////////////////////
-uint16_t Eth_PPPOE_Discovery = ETH_PPPOE_DISCOVERY;
-uint16_t Eth_PPPOE_Session   = ETH_PPPOE_SESSION;
-
-unsigned char *
-findTag(PPPoEPacket *packet, uint16_t type, PPPoETag *tag)
-{
-    uint16_t len = ntohs(packet->length);
-    unsigned char *curTag;
-    uint16_t tagType, tagLen;
-
-    if (PPPOE_VER(packet->vertype) != 1) {
-	LOG_E(GTPU, "Invalid PPPoE version (%d)", PPPOE_VER(packet->vertype));
-	return NULL;
-    }
-    if (PPPOE_TYPE(packet->vertype) != 1) {
-	LOG_E(GTPU, "Invalid PPPoE type (%d)", PPPOE_TYPE(packet->vertype));
-	return NULL;
-    }
-
-    /* Do some sanity checks on packet */
-    if (len > ETH_JUMBO_LEN - 6) { /* 6-byte overhead for PPPoE header */
-	LOG_E(GTPU, "Invalid PPPoE packet length (%u)", len);
-	return NULL;
-    }
-
-    /* Step through the tags */
-    curTag = packet->payload;
-    while(curTag - packet->payload + TAG_HDR_SIZE <= len) {
-	/* Alignment is not guaranteed, so do this by hand... */
-	tagType = (((uint16_t) curTag[0]) << 8) +
-	    (uint16_t) curTag[1];
-	tagLen = (((uint16_t) curTag[2]) << 8) +
-	    (uint16_t) curTag[3];
-	if (tagType == TAG_END_OF_LIST) {
-	    return NULL;
-	}
-	if ((curTag - packet->payload) + tagLen + TAG_HDR_SIZE > len) {
-	    LOG_E(GTPU, "Invalid PPPoE tag length (%u)", tagLen);
-	    return NULL;
-	}
-	if (tagType == type) {
-	    memcpy(tag, curTag, tagLen + TAG_HDR_SIZE);
-	    return curTag;
-	}
-	curTag = curTag + TAG_HDR_SIZE + tagLen;
-    }
-    return NULL;
-}
-
-int
-sendPacket(PPPoEConnection *conn, int sock, PPPoEPacket *pkt, int size)
-{
-#if defined(HAVE_STRUCT_SOCKADDR_LL)
-    if (send(sock, pkt, size, 0) < 0 && (errno != ENOBUFS)) {
-	sysErr("send (sendPacket)");
-	return -1;
-    }
-#else
-    struct sockaddr sa;
-
-    if (!conn) {
-	rp_fatal("relay and server not supported on Linux 2.0 kernels");
-    }
-    if (strlen(conn->ifName) >= sizeof(sa.sa_data)) {
-        rp_fatal("Interface name too long");
-    }
-    strcpy(sa.sa_data, conn->ifName);
-    if (sendto(sock, pkt, size, 0, &sa, sizeof(sa)) < 0) {
-	sysErr("sendto (sendPacket)");
-	return -1;
-    }
-#endif
-    return 0;
-}
-
-int
-receivePacket(int sock, PPPoEPacket *pkt, int *size)
-{
-    if ((*size = recv(sock, pkt, sizeof(PPPoEPacket), 0)) < 0) {
-	sysErr("recv (receivePacket)");
-	return -1;
-    }
-    return 0;
-}
-
-int
-openInterface(char const *ifname, uint16_t type, unsigned char *hwaddr, uint16_t *mtu)
-{
-    int optval=1;
-    int fd;
-    struct ifreq ifr;
-    int domain, stype;
-
-#ifdef HAVE_STRUCT_SOCKADDR_LL
-    struct sockaddr_ll sa;
-#else
-    struct sockaddr sa;
-#endif
-
-    memset(&sa, 0, sizeof(sa));
-
-#ifdef HAVE_STRUCT_SOCKADDR_LL
-    domain = PF_PACKET;
-    stype = SOCK_RAW;
-#else
-    domain = PF_INET;
-    stype = SOCK_PACKET;
-#endif
-
-    if ((fd = socket(domain, stype, htons(type))) < 0) {
-	/* Give a more helpful message for the common error case */
-	if (errno == EPERM) {
-	    rp_fatal("Cannot create raw socket -- pppoe must be run as root.");
-	}
-	fatalSys("socket");
-    }
-
-    if (setsockopt(fd, SOL_SOCKET, SO_BROADCAST, &optval, sizeof(optval)) < 0) {
-	fatalSys("setsockopt");
-    }
-
-    /* Fill in hardware address */
-    if (hwaddr) {
-	rp_strlcpy(ifr.ifr_name, ifname, IFNAMSIZ);
-	if (ioctl(fd, SIOCGIFHWADDR, &ifr) < 0) {
-	    fatalSys("ioctl(SIOCGIFHWADDR)");
-	}
-	memcpy(hwaddr, ifr.ifr_hwaddr.sa_data, ETH_ALEN);
-#ifdef ARPHRD_ETHER
-	if (ifr.ifr_hwaddr.sa_family != ARPHRD_ETHER) {
-	    char buffer[256];
-	    sprintf(buffer, "Interface %.16s is not Ethernet", ifname);
-	    rp_fatal(buffer);
-	}
-#endif
-	if (NOT_UNICAST(hwaddr)) {
-	    char buffer[256];
-	    sprintf(buffer,
-		    "Interface %.16s has broadcast/multicast MAC address??",
-		    ifname);
-	    rp_fatal(buffer);
-	}
-    }
-
-    /* Sanity check on MTU */
-    rp_strlcpy(ifr.ifr_name, ifname, IFNAMSIZ);
-    if (ioctl(fd, SIOCGIFMTU, &ifr) < 0) {
-	fatalSys("ioctl(SIOCGIFMTU)");
-    }
-    if (ifr.ifr_mtu < ETH_DATA_LEN) {
-	printErr("Interface %.16s has MTU of %d -- should be %d.  You may have serious connection problems.",
-		ifname, ifr.ifr_mtu, ETH_DATA_LEN);
-    }
-    if (mtu) *mtu = ifr.ifr_mtu;
-
-#ifdef HAVE_STRUCT_SOCKADDR_LL
-    /* Get interface index */
-    sa.sll_family = AF_PACKET;
-    sa.sll_protocol = htons(type);
-
-    rp_strlcpy(ifr.ifr_name, ifname, IFNAMSIZ);
-    if (ioctl(fd, SIOCGIFINDEX, &ifr) < 0) {
-	fatalSys("ioctl(SIOCFIGINDEX): Could not get interface index");
-    }
-    sa.sll_ifindex = ifr.ifr_ifindex;
-
-#else
-    if (strlen(ifname) >= sizeof(sa.sa_data)) {
-        rp_fatal("Interface name too long");
-    }
-    strcpy(sa.sa_data, ifname);
-#endif
-
-    /* We're only interested in packets on specified interface */
-    if (bind(fd, (struct sockaddr *) &sa, sizeof(sa)) < 0) {
-	fatalSys("bind");
-    }
-
-    return fd;
-}
-
-size_t
-rp_strlcpy(char *dst, const char *src, size_t size)
-{
-    const char *orig_src = src;
-
-    if (size == 0) {
-	return 0;
-    }
-
-    while (--size != 0) {
-	if ((*dst++ = *src++) == '\0') {
-	    break;
-	}
-    }
-
-    if (size == 0) {
-	*dst = '\0';
-    }
-
-    return src - orig_src - 1;
-}
-
-void
-printErr(char const *fmt, ...)
-{
-    char *str;
-    va_list ap;
-    int r;
-
-    va_start(ap, fmt);
-    r = vasprintf(&str, fmt, ap);
-    va_end(ap);
-
-    if (r < 0)
-	return;
-
-    fprintf(stderr, "pppoe: %s\n", str);
-    LOG_E(GTPU, "%s", str);
-    free(str);
-}
-//relay
-PPPoEInterface Interfaces[MAX_INTERFACES];
-int NumInterfaces;
-
-/* Relay info */
-int NumSessions;
-int MaxSessions;
-PPPoESession *AllSessions;
-PPPoESession *FreeSessions;
-PPPoESession *ActiveSessions;
-
-SessionHash *AllHashes;
-SessionHash *FreeHashes;
-SessionHash *Buckets[HASHTAB_SIZE];
-
-volatile unsigned int Epoch = 0;
-volatile unsigned int CleanCounter = 0;
-
-/* How often to clean up stale sessions? */
-#define MIN_CLEAN_PERIOD 30  /* Minimum period to run cleaner */
-#define TIMEOUT_DIVISOR 20   /* How often to run cleaner per timeout period */
-unsigned int CleanPeriod = MIN_CLEAN_PERIOD;
-
-/* How long a session can be idle before it is cleaned up? */
-unsigned int IdleTimeout = MIN_CLEAN_PERIOD * TIMEOUT_DIVISOR;
-
-/* Pipe for breaking select() to initiate periodic cleaning */
-int CleanPipe[2];
-
-/* Our relay: if_index followed by peer_mac */
-#define MY_RELAY_TAG_LEN (sizeof(int) + ETH_ALEN)
-
-/* Hack for daemonizing */
-#define CLOSEFD 64
-
-//keepDescriptor
-
-static int
-keepDescriptor(int fd)
-{
-    int i;
-    if (fd == CleanPipe[0] || fd == CleanPipe[1]) return 1;
-    for (i=0; i<NumInterfaces; i++) {
-	if (fd == Interfaces[i].discoverySock ||
-	    fd == Interfaces[i].sessionSock) return 1;
-    }
-    return 0;
-}
-
-//add tag
-int
-addTag(PPPoEPacket *packet, PPPoETag const *tag)
-{
-    return insertBytes(packet, packet->payload, tag,
-		       ntohs(tag->length) + TAG_HDR_SIZE);
-}
-
-//insertBytes
-int
-insertBytes(PPPoEPacket *packet,
-	    unsigned char *loc,
-	    void const *bytes,
-	    int len)
-{
-    int toMove;
-    int plen = ntohs(packet->length);
-    /* Sanity checks */
-    if (loc < packet->payload ||
-	loc > packet->payload + plen ||
-	len + plen > MAX_PPPOE_PAYLOAD) {
-	return -1;
-    }
-
-    toMove = (packet->payload + plen) - loc;
-    memmove(loc+len, loc, toMove);
-    memcpy(loc, bytes, len);
-    packet->length = htons(plen + len);
-    return len;
-}
-
-//removeBytes
- int
-removeBytes(PPPoEPacket *packet,
-	    unsigned char *loc,
-	    int len)
-{
-    int toMove;
-    int plen = ntohs(packet->length);
-    /* Sanity checks */
-    if (len < 0 || len > plen ||
-	loc < packet->payload ||
-	loc + len > packet->payload + plen) {
-	return -1;
-    }
-
-    toMove = ((packet->payload + plen) - loc) - len;
-    memmove(loc, loc+len, toMove);
-    packet->length = htons(plen - len);
-    return len;
-}
-
-/*main*/
-
-int
-pppoerelaygtpu(int argc, char *argv[])
-{
-    //int opt;
-    int nsess = DEFAULT_SESSIONS;
-    struct sigaction sa;
-    int beDaemon = 1;
-
-    if (getuid() != geteuid() ||
-	getgid() != getegid()) {
-	fprintf(stderr, "SECURITY WARNING: pppoe-relay will NOT run suid or sgid.  Fix your installation.\n");
-	exit(EXIT_FAILURE);
-    }
-
-    openlog("pppoe-relay", LOG_PID, LOG_DAEMON);
-
-    /* Check that at least two interfaces were defined */
-  
-    if (NumInterfaces < 2) {
-	fprintf(stderr, "%s: Must define at least two interfaces\n",
-		argv[0]);
-	exit(EXIT_FAILURE);
-    }
-
-    /* Make a pipe for the cleaner*/ 
-    if (pipe(CleanPipe) < 0) {
-	fatalSys("pipe");
-    }
-
-    /* Set up alarm handler*/ 
-    sa.sa_handler = alarmHandler;
-    sigemptyset(&sa.sa_mask);
-    sa.sa_flags = SA_RESTART;
-    if (sigaction(SIGALRM, &sa, NULL) < 0) {
-	fatalSys("sigaction");
-    }
-
-    /* Allocate memory for sessions, etc.*/ 
-    initRelay(nsess);
-
-    /* Daemonize -- UNIX Network Programming, Vol. 1, Stevens */
-    if (beDaemon) {
-	int i;
-	i = fork();
-	if (i < 0) {
-	    fatalSys("fork");
-	} else if (i != 0) {
-  
-	    /* parent */
-	 
-      exit(EXIT_SUCCESS);
-	}
-	setsid();
-	signal(SIGHUP, SIG_IGN);
-	i = fork();
-	if (i < 0) {
-	    fatalSys("fork");
-	} else if (i != 0) {
-	    exit(EXIT_SUCCESS);
-	}
-
-	if (chdir("/") < 0) {
-	    fatalSys("chdir");
-	}
-	closelog();
-	for (i=0; i<CLOSEFD; i++) {
-	    if (!keepDescriptor(i)) {
-		close(i);
-	    }
-	}
- 
-
-	/* We nuked our syslog descriptor...*/ 
-	openlog("pppoe-relay", LOG_PID, LOG_DAEMON);
-    }
-
-    /* Kick off SIGALRM if there is an idle timeout */
-    if (IdleTimeout) alarm(1);
-
-    /* Enter the relay loop */
-    relayLoop();
-
-    /* Shouldn't ever get here... */
-    return EXIT_FAILURE;
-}
-
-
-//addInterface
-void
-addInterface(char const *ifname,
-	     int clientOK,
-	     int acOK)
-{
-    PPPoEInterface *i;
-    int j;
-    for (j=0; j<NumInterfaces; j++) {
-	if (!strncmp(Interfaces[j].name, ifname, IFNAMSIZ)) {
-	    fprintf(stderr, "Interface %s specified more than once.\n", ifname);
-	    exit(EXIT_FAILURE);
-	}
-    }
-
-    if (NumInterfaces >= MAX_INTERFACES) {
-	fprintf(stderr, "Too many interfaces (%d max)\n",
-		MAX_INTERFACES);
-	exit(EXIT_FAILURE);
-    }
-    i = &Interfaces[NumInterfaces++];
-    strncpy(i->name, ifname, IFNAMSIZ);
-    i->name[IFNAMSIZ] = 0;
-
-    i->discoverySock = openInterface(ifname, Eth_PPPOE_Discovery, i->mac, NULL);
-    i->sessionSock   = openInterface(ifname, Eth_PPPOE_Session,   NULL, NULL);
-    i->clientOK = clientOK;
-    i->acOK = acOK;
-}
-
-//initRelay
-void
-initRelay(int nsess)
-{
-    int i;
-    NumSessions = 0;
-    MaxSessions = nsess;
-
-    AllSessions = (PPPoESession*) calloc(MaxSessions, sizeof(PPPoESession));
-    if (!AllSessions) {
-	rp_fatal("Unable to allocate memory for PPPoE session table");
-    }
-    AllHashes = (SessionHash*) calloc(MaxSessions * 2, sizeof(SessionHash));
-    if (!AllHashes) {
-	rp_fatal("Unable to allocate memory for PPPoE hash table");
-    }
-
-    /* Initialize sessions in a linked list */
-    AllSessions[0].prev = NULL;
-    if (MaxSessions > 1) {
-	AllSessions[0].next = &AllSessions[1];
-    } else {
-	AllSessions[0].next = NULL;
-    }
-    for (i=1; i<MaxSessions-1; i++) {
-	AllSessions[i].prev = &AllSessions[i-1];
-	AllSessions[i].next = &AllSessions[i+1];
-    }
-    if (MaxSessions > 1) {
-	AllSessions[MaxSessions-1].prev = &AllSessions[MaxSessions-2];
-	AllSessions[MaxSessions-1].next = NULL;
-    }
-
-    FreeSessions = AllSessions;
-    ActiveSessions = NULL;
-
-    /* Initialize session numbers which we hand out */
-    for (i=0; i<MaxSessions; i++) {
-	AllSessions[i].sesNum = htons((uint16_t) i+1);
-    }
-
-    /* Initialize hashes in a linked list */
-    AllHashes[0].prev = NULL;
-    AllHashes[0].next = &AllHashes[1];
-    for (i=1; i<2*MaxSessions-1; i++) {
-	AllHashes[i].prev = &AllHashes[i-1];
-	AllHashes[i].next = &AllHashes[i+1];
-    }
-    AllHashes[2*MaxSessions-1].prev = &AllHashes[2*MaxSessions-2];
-    AllHashes[2*MaxSessions-1].next = NULL;
-
-    FreeHashes = AllHashes;
-}
-
-//CreateSession
-PPPoESession *
-createSession(PPPoEInterface const *ac,
-	      PPPoEInterface const *cli,
-	      unsigned char const *acMac,
-	      unsigned char const *cliMac,
-	      uint16_t acSes)
-{
-    PPPoESession *sess;
-    SessionHash *acHash, *cliHash;
-
-    if (NumSessions >= MaxSessions) {
-	//printErr("Maximum number of sessions reached -- cannot create new session");
-	return NULL;
-    }
-
-    /* Grab a free session */
-    sess = FreeSessions;
-    FreeSessions = sess->next;
-    NumSessions++;
-
-    /* Link it to the active list */
-    sess->next = ActiveSessions;
-    if (sess->next) {
-	sess->next->prev = sess;
-    }
-    ActiveSessions = sess;
-    sess->prev = NULL;
-
-    sess->epoch = Epoch;
-
-    /* Get two hash entries */
-    acHash = FreeHashes;
-    cliHash = acHash->next;
-    FreeHashes = cliHash->next;
-
-    acHash->peer = cliHash;
-    cliHash->peer = acHash;
-
-    sess->acHash = acHash;
-    sess->clientHash = cliHash;
-
-    acHash->interface = ac;
-    cliHash->interface = cli;
-
-    memcpy(acHash->peerMac, acMac, ETH_ALEN);
-    acHash->sesNum = acSes;
-    acHash->ses = sess;
-
-    memcpy(cliHash->peerMac, cliMac, ETH_ALEN);
-    cliHash->sesNum = sess->sesNum;
-    cliHash->ses = sess;
-
-    addHash(acHash);
-    addHash(cliHash);
-
-    /* Log */
-    syslog(LOG_INFO,
-	   "Opened session: server=%02x:%02x:%02x:%02x:%02x:%02x(%s:%d), client=%02x:%02x:%02x:%02x:%02x:%02x(%s:%d)",
-	   acHash->peerMac[0], acHash->peerMac[1],
-	   acHash->peerMac[2], acHash->peerMac[3],
-	   acHash->peerMac[4], acHash->peerMac[5],
-	   acHash->interface->name,
-	   ntohs(acHash->sesNum),
-	   cliHash->peerMac[0], cliHash->peerMac[1],
-	   cliHash->peerMac[2], cliHash->peerMac[3],
-	   cliHash->peerMac[4], cliHash->peerMac[5],
-	   cliHash->interface->name,
-	   ntohs(cliHash->sesNum));
-
-    return sess;
-}
-
-//freeSession
-void
-freeSession(PPPoESession *ses, char const *msg)
-{
-    syslog(LOG_INFO,
-	   "Closed session: server=%02x:%02x:%02x:%02x:%02x:%02x(%s:%d), client=%02x:%02x:%02x:%02x:%02x:%02x(%s:%d): %s",
-	   ses->acHash->peerMac[0], ses->acHash->peerMac[1],
-	   ses->acHash->peerMac[2], ses->acHash->peerMac[3],
-	   ses->acHash->peerMac[4], ses->acHash->peerMac[5],
-	   ses->acHash->interface->name,
-	   ntohs(ses->acHash->sesNum),
-	   ses->clientHash->peerMac[0], ses->clientHash->peerMac[1],
-	   ses->clientHash->peerMac[2], ses->clientHash->peerMac[3],
-	   ses->clientHash->peerMac[4], ses->clientHash->peerMac[5],
-	   ses->clientHash->interface->name,
-	   ntohs(ses->clientHash->sesNum), msg);
-
-    /* Unlink from active sessions */
-    if (ses->prev) {
-	ses->prev->next = ses->next;
-    } else {
-	ActiveSessions = ses->next;
-    }
-    if (ses->next) {
-	ses->next->prev = ses->prev;
-    }
-
-    /* Link onto free list -- this is a singly-linked list, so
-       we do not care about prev */
-    ses->next = FreeSessions;
-    FreeSessions = ses;
-
-    unhash(ses->acHash);
-    unhash(ses->clientHash);
-    NumSessions--;
-}
-
-//unhash
-void
-unhash(SessionHash *sh)
-{
-    unsigned int b = hash(sh->peerMac, sh->sesNum) % HASHTAB_SIZE;
-    if (sh->prev) {
-	sh->prev->next = sh->next;
-    } else {
-	Buckets[b] = sh->next;
-    }
-
-    if (sh->next) {
-	sh->next->prev = sh->prev;
-    }
-
-    /* Add to free list (singly-linked) */
-    sh->next = FreeHashes;
-    FreeHashes = sh;
-}
-
-//addHash
-void
-addHash(SessionHash *sh)
-{
-    unsigned int b = hash(sh->peerMac, sh->sesNum) % HASHTAB_SIZE;
-    sh->next = Buckets[b];
-    sh->prev = NULL;
-    if (sh->next) {
-	sh->next->prev = sh;
-    }
-    Buckets[b] = sh;
-}
-
-//hash
-unsigned int
-hash(unsigned char const *mac, uint16_t sesNum)
-{
-    unsigned int ans1 =
-	((unsigned int) mac[0]) |
-	(((unsigned int) mac[1]) << 8) |
-	(((unsigned int) mac[2]) << 16) |
-	(((unsigned int) mac[3]) << 24);
-    unsigned int ans2 =
-	((unsigned int) sesNum) |
-	(((unsigned int) mac[4]) << 16) |
-	(((unsigned int) mac[5]) << 24);
-    return ans1 ^ ans2;
-}
-
-//findSession
-SessionHash *
-findSession(unsigned char const *mac, uint16_t sesNum)
-{
-    unsigned int b = hash(mac, sesNum) % HASHTAB_SIZE;
-    SessionHash *sh = Buckets[b];
-    while(sh) {
-	if (!memcmp(mac, sh->peerMac, ETH_ALEN) && sesNum == sh->sesNum) {
-	    return sh;
-	}
-	sh = sh->next;
-    }
-    return NULL;
-}
-
-//FatalSys
-void
-fatalSys(char const *str)
-{
-    //printErr("%.256s: %.256s", str, strerror(errno));
-    exit(EXIT_FAILURE);
-}
-
-//sysErr
-
-void
-sysErr(char const *str)
-{
-    printErr("%.256s: %.256s", str, strerror(errno));
-}
-
-//rpFatal
-void
-rp_fatal(char const *str)
-{
-    //printErr("%s", str);
-    exit(EXIT_FAILURE);
-}
-
-//RelayLoop
-void
-relayLoop()
-{
-    fd_set readable, readableCopy;
-    int maxFD;
-    int i, r;
-    int sock;
-
-    /* Build the select set */
-    FD_ZERO(&readable);
-    maxFD = 0;
-    for (i=0; i<NumInterfaces; i++) {
-	sock = Interfaces[i].discoverySock;
-	if (sock > maxFD) maxFD = sock;
-	FD_SET(sock, &readable);
-	sock = Interfaces[i].sessionSock;
-	if (sock > maxFD) maxFD = sock;
-	FD_SET(sock, &readable);
-	if (CleanPipe[0] > maxFD) maxFD = CleanPipe[0];
-	FD_SET(CleanPipe[0], &readable);
-    }
-    maxFD++;
-    for(;;) {
-	readableCopy = readable;
-	for(;;) {
-	    r = select(maxFD, &readableCopy, NULL, NULL, NULL);
-	    if (r >= 0 || errno != EINTR) break;
-	}
-	if (r < 0) {
-	    //sysErr("select (relayLoop)");
-	    continue;
-	}
-
-	/* Handle session packets first */
-	for (i=0; i<NumInterfaces; i++) {
-	    if (FD_ISSET(Interfaces[i].sessionSock, &readableCopy)) {
-		relayGotSessionPacket(&Interfaces[i]);
-	    }
-	}
-
-	/* Now handle discovery packets */
-	for (i=0; i<NumInterfaces; i++) {
-	    if (FD_ISSET(Interfaces[i].discoverySock, &readableCopy)) {
-		relayGotDiscoveryPacket(&Interfaces[i]);
-	    }
-	}
-
-	/* Handle the session-cleaning process */
-	if (FD_ISSET(CleanPipe[0], &readableCopy)) {
-	    char dummy;
-	    CleanCounter = 0;
-#pragma GCC diagnostic ignored "-Wunused-result"      
-	    read(CleanPipe[0], &dummy, 1);
-#pragma GCC diagnostic warning "-Wunused-result"      
-	    if (IdleTimeout) cleanSessions();
-	}
-    }
-}
-
-//relayGotDiscoveryPacket
-void
-relayGotDiscoveryPacket(PPPoEInterface const *iface)
-{
-    PPPoEPacket packet;
-    int size;
-
-    if (receivePacket(iface->discoverySock, &packet, &size) < 0) {
-	return;
-    }
-    /* Ignore unknown code/version */
-    if (PPPOE_VER(packet.vertype) != 1 || PPPOE_TYPE(packet.vertype) != 1) {
-	return;
-    }
-
-    /* Validate length */
-    if ((unsigned int)(ntohs(packet.length) + HDR_SIZE) > (unsigned int)size) {
-	LOG_E(GTPU, "Bogus PPPoE length field (%u)",
-	       (unsigned int) ntohs(packet.length));
-	return;
-    }
-
-    /* Drop Ethernet frame padding */
-    if ((unsigned int)size > (unsigned int)(ntohs(packet.length) + HDR_SIZE)) {
-	size = ntohs(packet.length) + HDR_SIZE;
-    }
-
-    switch(packet.code) {
-    case CODE_PADT:
-	relayHandlePADT(iface, &packet, size);
-	break;
-    case CODE_PADI:
-	relayHandlePADI(iface, &packet, size);
-	break;
-    case CODE_PADO:
-	relayHandlePADO(iface, &packet, size);
-	break;
-    case CODE_PADR:
-	relayHandlePADR(iface, &packet, size);
-	break;
-    case CODE_PADS:
-	relayHandlePADS(iface, &packet, size);
-	break;
-    default:
-	LOG_E(GTPU, "Discovery packet on %s with unknown code %d",
-	       iface->name, (int) packet.code);
-    }
-}
-
-//relayGotSessionPacket
-void
-relayGotSessionPacket(PPPoEInterface const *iface)
-{
-    PPPoEPacket packet;
-    int size;
-    SessionHash *sh;
-    PPPoESession *ses;
-
-    if (receivePacket(iface->sessionSock, &packet, &size) < 0) {
-	return;
-    }
-
-    /* Ignore unknown code/version */
-    if (PPPOE_VER(packet.vertype) != 1 || PPPOE_TYPE(packet.vertype) != 1) {
-	return;
-    }
-
-    /* Must be a session packet */
-    if (packet.code != CODE_SESS) {
-	LOG_E(GTPU, "Session packet with code %d", (int) packet.code);
-	return;
-    }
-
-    /* Ignore session packets whose destination address isn't ours */
-    if (memcmp(packet.ethHdr.h_dest, iface->mac, ETH_ALEN)) {
-	return;
-    }
-
-    /* Validate length */
-    if ((unsigned int)(ntohs(packet.length) + HDR_SIZE) > (unsigned int)size) {
-	LOG_E(GTPU, "Bogus PPPoE length field (%u)",
-	       (unsigned int) ntohs(packet.length));
-	return;
-    }
-
-    /* Drop Ethernet frame padding */
-    if ((unsigned int)size > (unsigned int)(ntohs(packet.length) + HDR_SIZE)) {
-	size = ntohs(packet.length) + HDR_SIZE;
-    }
-
-    /* We're in business!  Find the hash */
-    sh = findSession(packet.ethHdr.h_source, packet.session);
-    if (!sh) {
-	/* Don't log this.  Someone could be running the client and the
-	   relay on the same box. */
-	return;
-    }
-
-    /* Relay it */
-    ses = sh->ses;
-    ses->epoch = Epoch;
-    sh = sh->peer;
-    packet.session = sh->sesNum;
-    memcpy(packet.ethHdr.h_source, sh->interface->mac, ETH_ALEN);
-    memcpy(packet.ethHdr.h_dest, sh->peerMac, ETH_ALEN);
-#if 0
-    fprintf(stderr, "Relaying %02x:%02x:%02x:%02x:%02x:%02x(%s:%d) to %02x:%02x:%02x:%02x:%02x:%02x(%s:%d)\n",
-	    sh->peer->peerMac[0], sh->peer->peerMac[1], sh->peer->peerMac[2],
-	    sh->peer->peerMac[3], sh->peer->peerMac[4], sh->peer->peerMac[5],
-	    sh->peer->interface->name, ntohs(sh->peer->sesNum),
-	    sh->peerMac[0], sh->peerMac[1], sh->peerMac[2],
-	    sh->peerMac[3], sh->peerMac[4], sh->peerMac[5],
-	    sh->interface->name, ntohs(sh->sesNum));
-#endif
-    sendPacket(NULL, sh->interface->sessionSock, &packet, size);
-}
-
-void
-relayHandlePADT(PPPoEInterface const *iface,
-		PPPoEPacket *packet,
-		int size)
-{
-    SessionHash *sh;
-    PPPoESession *ses;
-
-    /* Destination address must be interface's MAC address */
-    if (memcmp(packet->ethHdr.h_dest, iface->mac, ETH_ALEN)) {
-	return;
-    }
-
-    sh = findSession(packet->ethHdr.h_source, packet->session);
-    if (!sh) {
-	return;
-    }
-    /* Relay the PADT to the peer */
-    sh = sh->peer;
-    ses = sh->ses;
-    packet->session = sh->sesNum;
-    memcpy(packet->ethHdr.h_source, sh->interface->mac, ETH_ALEN);
-    memcpy(packet->ethHdr.h_dest, sh->peerMac, ETH_ALEN);
-    sendPacket(NULL, sh->interface->sessionSock, packet, size);
-
-    /* Destroy the session */
-    freeSession(ses, "Received PADT");
-}
-
-
-void
-relayHandlePADI(PPPoEInterface const *iface,
-		PPPoEPacket *packet,
-		int size)
-{
-    PPPoETag tag;
-    unsigned char *loc;
-    int i, r;
-
-    int ifIndex;
-
-    /* Can a client legally be behind this interface? */
-    if (!iface->clientOK) {
-	LOG_E(GTPU,
-	       "PADI packet from %02x:%02x:%02x:%02x:%02x:%02x on interface %s not permitted",
-	       packet->ethHdr.h_source[0],
-	       packet->ethHdr.h_source[1],
-	       packet->ethHdr.h_source[2],
-	       packet->ethHdr.h_source[3],
-	       packet->ethHdr.h_source[4],
-	       packet->ethHdr.h_source[5],
-	       iface->name);
-	return;
-    }
-
-    /* Source address must be unicast */
-    if (NOT_UNICAST(packet->ethHdr.h_source)) {
-	LOG_E(GTPU,
-	       "PADI packet from %02x:%02x:%02x:%02x:%02x:%02x on interface %s not from a unicast address",
-	       packet->ethHdr.h_source[0],
-	       packet->ethHdr.h_source[1],
-	       packet->ethHdr.h_source[2],
-	       packet->ethHdr.h_source[3],
-	       packet->ethHdr.h_source[4],
-	       packet->ethHdr.h_source[5],
-	       iface->name);
-	return;
-    }
-
-    /* Destination address must be broadcast */
-    if (NOT_BROADCAST(packet->ethHdr.h_dest)) {
-	LOG_E(GTPU,
-	       "PADI packet from %02x:%02x:%02x:%02x:%02x:%02x on interface %s not to a broadcast address",
-	       packet->ethHdr.h_source[0],
-	       packet->ethHdr.h_source[1],
-	       packet->ethHdr.h_source[2],
-	       packet->ethHdr.h_source[3],
-	       packet->ethHdr.h_source[4],
-	       packet->ethHdr.h_source[5],
-	       iface->name);
-	return;
-    }
-
-    /* Get array index of interface */
-    ifIndex = iface - Interfaces;
-
-    loc = findTag(packet, TAG_RELAY_SESSION_ID, &tag);
-    if (!loc) {
-	tag.type = htons(TAG_RELAY_SESSION_ID);
-	tag.length = htons(MY_RELAY_TAG_LEN);
-	memcpy(tag.payload, &ifIndex, sizeof(ifIndex));
-	memcpy(tag.payload+sizeof(ifIndex), packet->ethHdr.h_source, ETH_ALEN);
-	/* Add a relay tag if there's room */
-	r = addTag(packet, &tag);
-	if (r < 0) return;
-	size += r;
-    } else {
-	/* We do not reuse relay-id tags.  Drop the frame.  The RFC says the
-	   relay agent SHOULD return a Generic-Error tag, but this does not
-	   make sense for PADI packets. */
-	return;
-    }
-
-    /* Broadcast the PADI on all AC-capable interfaces except the interface
-       on which it came */
-    for (i=0; i < NumInterfaces; i++) {
-	if (iface == &Interfaces[i]) continue;
-	if (!Interfaces[i].acOK) continue;
-	memcpy(packet->ethHdr.h_source, Interfaces[i].mac, ETH_ALEN);
-	sendPacket(NULL, Interfaces[i].discoverySock, packet, size);
-    }
-
-}
-
-void
-relayHandlePADO(PPPoEInterface const *iface,
-		PPPoEPacket *packet,
-		int size)
-{
-    PPPoETag tag;
-    unsigned char *loc;
-    int ifIndex;
-    int acIndex;
-
-    /* Can a server legally be behind this interface? */
-    if (!iface->acOK) {
-	LOG_E(GTPU,
-	       "PADO packet from %02x:%02x:%02x:%02x:%02x:%02x on interface %s not permitted",
-	       packet->ethHdr.h_source[0],
-	       packet->ethHdr.h_source[1],
-	       packet->ethHdr.h_source[2],
-	       packet->ethHdr.h_source[3],
-	       packet->ethHdr.h_source[4],
-	       packet->ethHdr.h_source[5],
-	       iface->name);
-	return;
-    }
-
-    acIndex = iface - Interfaces;
-
-    /* Source address can't be broadcast */
-    if (BROADCAST(packet->ethHdr.h_source)) {
-	LOG_E(GTPU,
-	       "PADO packet from %02x:%02x:%02x:%02x:%02x:%02x on interface %s from a broadcast address",
-	       packet->ethHdr.h_source[0],
-	       packet->ethHdr.h_source[1],
-	       packet->ethHdr.h_source[2],
-	       packet->ethHdr.h_source[3],
-	       packet->ethHdr.h_source[4],
-	       packet->ethHdr.h_source[5],
-	       iface->name);
-	return;
-    }
-
-    /* Destination address must be interface's MAC address */
-    if (memcmp(packet->ethHdr.h_dest, iface->mac, ETH_ALEN)) {
-	return;
-    }
-
-    /* Find relay tag */
-    loc = findTag(packet, TAG_RELAY_SESSION_ID, &tag);
-    if (!loc) {
-	LOG_E(GTPU,
-	       "PADO packet from %02x:%02x:%02x:%02x:%02x:%02x on interface %s does not have Relay-Session-Id tag",
-	       packet->ethHdr.h_source[0],
-	       packet->ethHdr.h_source[1],
-	       packet->ethHdr.h_source[2],
-	       packet->ethHdr.h_source[3],
-	       packet->ethHdr.h_source[4],
-	       packet->ethHdr.h_source[5],
-	       iface->name);
-	return;
-    }
-
-    /* If it's the wrong length, ignore it */
-    if (ntohs(tag.length) != MY_RELAY_TAG_LEN) {
-	LOG_E(GTPU,
-	       "PADO packet from %02x:%02x:%02x:%02x:%02x:%02x on interface %s does not have correct length Relay-Session-Id tag",
-	       packet->ethHdr.h_source[0],
-	       packet->ethHdr.h_source[1],
-	       packet->ethHdr.h_source[2],
-	       packet->ethHdr.h_source[3],
-	       packet->ethHdr.h_source[4],
-	       packet->ethHdr.h_source[5],
-	       iface->name);
-	return;
-    }
-
-    /* Extract interface index */
-    memcpy(&ifIndex, tag.payload, sizeof(ifIndex));
-
-    if (ifIndex < 0 || ifIndex >= NumInterfaces ||
-	!Interfaces[ifIndex].clientOK ||
-	iface == &Interfaces[ifIndex]) {
-	LOG_E(GTPU,
-	       "PADO packet from %02x:%02x:%02x:%02x:%02x:%02x on interface %s has invalid interface in Relay-Session-Id tag",
-	       packet->ethHdr.h_source[0],
-	       packet->ethHdr.h_source[1],
-	       packet->ethHdr.h_source[2],
-	       packet->ethHdr.h_source[3],
-	       packet->ethHdr.h_source[4],
-	       packet->ethHdr.h_source[5],
-	       iface->name);
-	return;
-    }
-
-    /* Replace Relay-ID tag with opposite-direction tag */
-    memcpy(loc+TAG_HDR_SIZE, &acIndex, sizeof(acIndex));
-    memcpy(loc+TAG_HDR_SIZE+sizeof(ifIndex), packet->ethHdr.h_source, ETH_ALEN);
-
-    /* Set destination address to MAC address in relay ID */
-    memcpy(packet->ethHdr.h_dest, tag.payload + sizeof(ifIndex), ETH_ALEN);
-
-    /* Set source address to MAC address of interface */
-    memcpy(packet->ethHdr.h_source, Interfaces[ifIndex].mac, ETH_ALEN);
-
-    /* Send the PADO to the proper client */
-    sendPacket(NULL, Interfaces[ifIndex].discoverySock, packet, size);
-}
-
-void
-relayHandlePADR(PPPoEInterface const *iface,
-		PPPoEPacket *packet,
-		int size)
-{
-    PPPoETag tag;
-    unsigned char *loc;
-    int ifIndex;
-    int cliIndex;
-
-    /* Can a client legally be behind this interface? */
-    if (!iface->clientOK) {
-	LOG_E(GTPU,
-	       "PADR packet from %02x:%02x:%02x:%02x:%02x:%02x on interface %s not permitted",
-	       packet->ethHdr.h_source[0],
-	       packet->ethHdr.h_source[1],
-	       packet->ethHdr.h_source[2],
-	       packet->ethHdr.h_source[3],
-	       packet->ethHdr.h_source[4],
-	       packet->ethHdr.h_source[5],
-	       iface->name);
-	return;
-    }
-
-    cliIndex = iface - Interfaces;
-
-    /* Source address must be unicast */
-    if (NOT_UNICAST(packet->ethHdr.h_source)) {
-	LOG_E(GTPU,
-	       "PADR packet from %02x:%02x:%02x:%02x:%02x:%02x on interface %s not from a unicast address",
-	       packet->ethHdr.h_source[0],
-	       packet->ethHdr.h_source[1],
-	       packet->ethHdr.h_source[2],
-	       packet->ethHdr.h_source[3],
-	       packet->ethHdr.h_source[4],
-	       packet->ethHdr.h_source[5],
-	       iface->name);
-	return;
-    }
-
-    /* Destination address must be interface's MAC address */
-    if (memcmp(packet->ethHdr.h_dest, iface->mac, ETH_ALEN)) {
-	return;
-    }
-
-    /* Find relay tag */
-    loc = findTag(packet, TAG_RELAY_SESSION_ID, &tag);
-    if (!loc) {
-	LOG_E(GTPU,
-	       "PADR packet from %02x:%02x:%02x:%02x:%02x:%02x on interface %s does not have Relay-Session-Id tag",
-	       packet->ethHdr.h_source[0],
-	       packet->ethHdr.h_source[1],
-	       packet->ethHdr.h_source[2],
-	       packet->ethHdr.h_source[3],
-	       packet->ethHdr.h_source[4],
-	       packet->ethHdr.h_source[5],
-	       iface->name);
-	return;
-    }
-
-    /* If it's the wrong length, ignore it */
-    if (ntohs(tag.length) != MY_RELAY_TAG_LEN) {
-	LOG_E(GTPU,
-	       "PADR packet from %02x:%02x:%02x:%02x:%02x:%02x on interface %s does not have correct length Relay-Session-Id tag",
-	       packet->ethHdr.h_source[0],
-	       packet->ethHdr.h_source[1],
-	       packet->ethHdr.h_source[2],
-	       packet->ethHdr.h_source[3],
-	       packet->ethHdr.h_source[4],
-	       packet->ethHdr.h_source[5],
-	       iface->name);
-	return;
-    }
-
-    /* Extract interface index */
-    memcpy(&ifIndex, tag.payload, sizeof(ifIndex));
-
-    if (ifIndex < 0 || ifIndex >= NumInterfaces ||
-	!Interfaces[ifIndex].acOK ||
-	iface == &Interfaces[ifIndex]) {
-	LOG_E(GTPU,
-	       "PADR packet from %02x:%02x:%02x:%02x:%02x:%02x on interface %s has invalid interface in Relay-Session-Id tag",
-	       packet->ethHdr.h_source[0],
-	       packet->ethHdr.h_source[1],
-	       packet->ethHdr.h_source[2],
-	       packet->ethHdr.h_source[3],
-	       packet->ethHdr.h_source[4],
-	       packet->ethHdr.h_source[5],
-	       iface->name);
-	return;
-    }
-
-    /* Replace Relay-ID tag with opposite-direction tag */
-    memcpy(loc+TAG_HDR_SIZE, &cliIndex, sizeof(cliIndex));
-    memcpy(loc+TAG_HDR_SIZE+sizeof(ifIndex), packet->ethHdr.h_source, ETH_ALEN);
-
-    /* Set destination address to MAC address in relay ID */
-    memcpy(packet->ethHdr.h_dest, tag.payload + sizeof(ifIndex), ETH_ALEN);
-
-    /* Set source address to MAC address of interface */
-    memcpy(packet->ethHdr.h_source, Interfaces[ifIndex].mac, ETH_ALEN);
-
-    /* Send the PADR to the proper access concentrator */
-    sendPacket(NULL, Interfaces[ifIndex].discoverySock, packet, size);
-}
-
-void
-relayHandlePADS(PPPoEInterface const *iface,
-		PPPoEPacket *packet,
-		int size)
-{
-    PPPoETag tag;
-    unsigned char *loc;
-    int ifIndex;
-
-    PPPoESession *ses = NULL;
-    SessionHash *sh;
-
-    /* Can a server legally be behind this interface? */
-    if (!iface->acOK) {
-	LOG_E(GTPU,
-	       "PADS packet from %02x:%02x:%02x:%02x:%02x:%02x on interface %s not permitted",
-	       packet->ethHdr.h_source[0],
-	       packet->ethHdr.h_source[1],
-	       packet->ethHdr.h_source[2],
-	       packet->ethHdr.h_source[3],
-	       packet->ethHdr.h_source[4],
-	       packet->ethHdr.h_source[5],
-	       iface->name);
-	return;
-    }
-
-    /* Source address must be unicast */
-    if (NOT_UNICAST(packet->ethHdr.h_source)) {
-	LOG_E(GTPU,
-	       "PADS packet from %02x:%02x:%02x:%02x:%02x:%02x on interface %s not from a unicast address",
-	       packet->ethHdr.h_source[0],
-	       packet->ethHdr.h_source[1],
-	       packet->ethHdr.h_source[2],
-	       packet->ethHdr.h_source[3],
-	       packet->ethHdr.h_source[4],
-	       packet->ethHdr.h_source[5],
-	       iface->name);
-	return;
-    }
-
-    /* Destination address must be interface's MAC address */
-    if (memcmp(packet->ethHdr.h_dest, iface->mac, ETH_ALEN)) {
-	return;
-    }
-
-    /* Find relay tag */
-    loc = findTag(packet, TAG_RELAY_SESSION_ID, &tag);
-    if (!loc) {
-	LOG_E(GTPU,
-	       "PADS packet from %02x:%02x:%02x:%02x:%02x:%02x on interface %s does not have Relay-Session-Id tag",
-	       packet->ethHdr.h_source[0],
-	       packet->ethHdr.h_source[1],
-	       packet->ethHdr.h_source[2],
-	       packet->ethHdr.h_source[3],
-	       packet->ethHdr.h_source[4],
-	       packet->ethHdr.h_source[5],
-	       iface->name);
-	return;
-    }
-
-    /* If it's the wrong length, ignore it */
-    if (ntohs(tag.length) != MY_RELAY_TAG_LEN) {
-	LOG_E(GTPU,
-	       "PADS packet from %02x:%02x:%02x:%02x:%02x:%02x on interface %s does not have correct length Relay-Session-Id tag",
-	       packet->ethHdr.h_source[0],
-	       packet->ethHdr.h_source[1],
-	       packet->ethHdr.h_source[2],
-	       packet->ethHdr.h_source[3],
-	       packet->ethHdr.h_source[4],
-	       packet->ethHdr.h_source[5],
-	       iface->name);
-	return;
-    }
-
-    /* Extract interface index */
-    memcpy(&ifIndex, tag.payload, sizeof(ifIndex));
-
-    if (ifIndex < 0 || ifIndex >= NumInterfaces ||
-	!Interfaces[ifIndex].clientOK ||
-	iface == &Interfaces[ifIndex]) {
-	LOG_E(GTPU,
-	       "PADS packet from %02x:%02x:%02x:%02x:%02x:%02x on interface %s has invalid interface in Relay-Session-Id tag",
-	       packet->ethHdr.h_source[0],
-	       packet->ethHdr.h_source[1],
-	       packet->ethHdr.h_source[2],
-	       packet->ethHdr.h_source[3],
-	       packet->ethHdr.h_source[4],
-	       packet->ethHdr.h_source[5],
-	       iface->name);
-	return;
-    }
-
-    /* If session ID is zero, it's the AC responding with an error.
-       Just relay it; do not create a session */
-    if (packet->session != htons(0)) {
-	/* Check for existing session */
-	sh = findSession(packet->ethHdr.h_source, packet->session);
-	if (sh) ses = sh->ses;
-
-	/* If already an existing session, assume it's a duplicate PADS.  Send
-	   the frame, but do not create a new session.  Is this the right
-	   thing to do?  Arguably, should send an error to the client and
-	   a PADT to the server, because this could happen due to a
-	   server crash and reboot. */
-
-	if (!ses) {
-	    /* Create a new session */
-	    ses = createSession(iface, &Interfaces[ifIndex],
-				packet->ethHdr.h_source,
-				loc + TAG_HDR_SIZE + sizeof(ifIndex), packet->session);
-	    if (!ses) {
-		/* Can't allocate session -- send error PADS to client and
-		   PADT to server */
-		PPPoETag hostUniq, *hu;
-		if (findTag(packet, TAG_HOST_UNIQ, &hostUniq)) {
-		    hu = &hostUniq;
-		} else {
-		    hu = NULL;
-		}
-		relaySendError(CODE_PADS, htons(0), &Interfaces[ifIndex],
-			       loc + TAG_HDR_SIZE + sizeof(ifIndex),
-			       hu, "RP-PPPoE: Relay: Unable to allocate session");
-		relaySendError(CODE_PADT, packet->session, iface,
-			       packet->ethHdr.h_source, NULL,
-			       "RP-PPPoE: Relay: Unable to allocate session");
-		return;
-	    }
-	}
-	/* Replace session number */
-	packet->session = ses->sesNum;
-    }
-
-    /* Remove relay-ID tag */
-    removeBytes(packet, loc, MY_RELAY_TAG_LEN + TAG_HDR_SIZE);
-    size -= (MY_RELAY_TAG_LEN + TAG_HDR_SIZE);
-
-    /* Set destination address to MAC address in relay ID */
-    memcpy(packet->ethHdr.h_dest, tag.payload + sizeof(ifIndex), ETH_ALEN);
-
-    /* Set source address to MAC address of interface */
-    memcpy(packet->ethHdr.h_source, Interfaces[ifIndex].mac, ETH_ALEN);
-
-    /* Send the PADS to the proper client */
-    sendPacket(NULL, Interfaces[ifIndex].discoverySock, packet, size);
-}
-
-void
-relaySendError(unsigned char code,
-	       uint16_t session,
-	       PPPoEInterface const *iface,
-	       unsigned char const *mac,
-	       PPPoETag const *hostUniq,
-	       char const *errMsg)
-{
-    PPPoEPacket packet;
-    PPPoETag errTag;
-    int size;
-
-    memcpy(packet.ethHdr.h_source, iface->mac, ETH_ALEN);
-    memcpy(packet.ethHdr.h_dest, mac, ETH_ALEN);
-    packet.ethHdr.h_proto = htons(Eth_PPPOE_Discovery);
-    packet.vertype = PPPOE_VER_TYPE(1, 1);
-    packet.code = code;
-    packet.session = session;
-    packet.length = htons(0);
-    if (hostUniq) {
-	if (addTag(&packet, hostUniq) < 0) return;
-    }
-    errTag.type = htons(TAG_GENERIC_ERROR);
-    errTag.length = htons(strlen(errMsg));
-    strcpy((char *) errTag.payload, errMsg);
-    if (addTag(&packet, &errTag) < 0) return;
-    size = ntohs(packet.length) + HDR_SIZE;
-    if (code == CODE_PADT) {
-	sendPacket(NULL, iface->discoverySock, &packet, size);
-    } else {
-	sendPacket(NULL, iface->sessionSock, &packet, size);
-    }
-}
-
-void
-alarmHandler(int sig)
-{
-    alarm(1);
-    Epoch++;
-    CleanCounter++;
-    if (CleanCounter == CleanPeriod) {
-#pragma GCC diagnostic ignored "-Wunused-result"      
-	write(CleanPipe[1], "", 1);
-#pragma GCC diagnostic warning "-Wunused-result"      
-    }
-}
-
-void cleanSessions(void)
-{
-    PPPoESession *cur, *next;
-    cur = ActiveSessions;
-    while(cur) {
-	next = cur->next;
-	if (Epoch - cur->epoch > IdleTimeout) {
-	    /* Send PADT to each peer */
-	    relaySendError(CODE_PADT, cur->acHash->sesNum,
-			   cur->acHash->interface,
-			   cur->acHash->peerMac, NULL,
-			   "RP-PPPoE: Relay: Session exceeded idle timeout");
-	    relaySendError(CODE_PADT, cur->clientHash->sesNum,
-			   cur->clientHash->interface,
-			   cur->clientHash->peerMac, NULL,
-			   "RP-PPPoE: Relay: Session exceeded idle timeout");
-	    freeSession(cur, "Idle Timeout");
-	}
-	cur = next;
-    }
-}
-
-
+////////////////end of original code//////////////////
 static void fillDlDeliveryStatusReport(extensionHeader_t *extensionHeader, uint32_t RLC_buffer_availability, uint32_t NR_PDCP_PDU_SN){
 
   extensionHeader->buffer[0] = (1+sizeof(DlDataDeliveryStatus_flagsT)+(NR_PDCP_PDU_SN>0?3:0)+(NR_PDCP_PDU_SN>0?1:0)+1)/4;
@@ -2014,6 +1478,7 @@ static void gtpv1uEndTunnel(instance_t instance, gtpv1u_enb_end_marker_req_t *re
           compatInst(instance), inet_ntop(AF_INET, &tmp.outgoing_ip_addr, ip4, INET_ADDRSTRLEN), tmp.outgoing_port, sizeof(msgHdr));
   }
 }
+////edited by zyzy
 
 static  int udpServerSocket(openAddr_s addr) {
   LOG_I(GTPU, "Initializing UDP for local address %s with port %s\n", addr.originHost, addr.originService);
@@ -2029,7 +1494,12 @@ static  int udpServerSocket(openAddr_s addr) {
   }
 
   int sockfd=-1;
-
+  /*  
+  if (sockfd < 0) {
+    LOG_E(GTPU, "Invalid socket descriptor\n");
+    return -1;
+}
+*/
   // loop through all the results and bind to the first we can
   for(p = servinfo; p != NULL; p = p->ai_next) {
     if ((sockfd = socket(p->ai_family, p->ai_socktype,
@@ -2075,11 +1545,843 @@ static  int udpServerSocket(openAddr_s addr) {
 
   freeaddrinfo(servinfo); // all done with this structure
 
+////edited by zyzy
+  if (strlen(addr.destinationHost)>1) {
+    struct addrinfo hints;
+    memset(&hints,0,sizeof(hints));
+    hints.ai_family=AF_UNSPEC;
+    hints.ai_socktype=SOCK_DGRAM;
+    hints.ai_protocol=0;
+    hints.ai_flags=AI_PASSIVE|AI_ADDRCONFIG;
+    struct addrinfo *res=0;
+    int err=getaddrinfo(addr.destinationHost,addr.destinationService,&hints,&res);
+    ///edited by zyzy
+    
+    if (err==0) {
+      for(p = res; p != NULL; p = p->ai_next) {
+        if ((err=connect(sockfd,  p->ai_addr, p->ai_addrlen))==0)
+          break;
+      }
+    }
+    
+    if (err == 0) {
+        LOG_I(GTPU, "UDP socket successfully connected to %s:%s\n", addr.destinationHost, addr.destinationService);
+    } else {
+        LOG_E(GTPU, "UDP socket connect failed: %s\n", strerror(errno));
+    }
+    if (err)
+      LOG_E(GTPU,"Can't filter remote host: %s, %s\n", addr.destinationHost,addr.destinationService);
+  }
+  
+///////////////////
+
   int sendbuff = 1000*1000*10;
   AssertFatal(0==setsockopt(sockfd, SOL_SOCKET, SO_SNDBUF, &sendbuff, sizeof(sendbuff)),"");
   LOG_D(GTPU,"[%d] Created listener for paquets to: %s:%s, send buffer size: %d\n", sockfd, addr.originHost, addr.originService,sendbuff);
   return sockfd;
+  
 }
+
+///////////////////////////////////
+/////edited by zyzy (york)/////////
+///////////////////////////////////
+   //edited by zyzy
+/*   
+#define SERVER_PORT 12345
+
+// Fungsi untuk menghapus whitespace dalam JSON
+void remove_whitespace(char *str) {
+    int len = strlen(str);
+    int j = 0;
+    for (int i = 0; i < len; i++) {
+        if (str[i] != ' ' && str[i] != '\t' && str[i] != '\n' && str[i] != '\r') {
+            str[j++] = str[i];
+        }
+    }
+    str[j] = '\0';
+}
+
+// Fungsi untuk mengambil nilai dari JSON
+void extract_json_value(char *json, const char *key, void *dest) {
+    char *start = strstr(json, key);
+    if (start != NULL) {
+        start += strlen(key) + 1; // Move to nilai value
+        sscanf(start, "%[^,\n}]", (char *)dest);
+    }
+}
+
+// Fungsi untuk memproses informasi perangkat
+static int device_info_process(char *json_data) {
+    remove_whitespace(json_data);
+
+    uint8_t mac_addr[6];
+    uint32_t cpe_ip;
+    uint32_t device_ip;
+
+    sscanf(json_data, "{\"device_mac_addr\":[\"%2hhx\", \"%2hhx\", \"%2hhx\", \"%2hhx\", \"%2hhx\", \"%2hhx\"], \"cpe_ip\": %u, \"device_ip\": %u}",
+           &mac_addr[0], &mac_addr[1], &mac_addr[2], &mac_addr[3], &mac_addr[4], &mac_addr[5], &cpe_ip, &device_ip);
+
+    device_table_insert(mac_addr, cpe_ip, device_ip);
+    device_arp_table_insert(mac_addr, device_ip, time(NULL));
+
+    return 0;
+}
+
+// Fungsi untuk menangani TCP Server
+void *handleTCPServer(void *arg) {
+    int server_sock, client_sock;
+    struct sockaddr_in server_addr, client_addr;
+    socklen_t client_len = sizeof(client_addr);
+    char buffer[BUFFER_SIZE];
+
+    if ((server_sock = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
+        perror("Error creating server socket");
+        exit(EXIT_FAILURE);
+    }
+
+    memset(&server_addr, 0, sizeof(server_addr));
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    server_addr.sin_port = htons(SERVER_PORT);
+
+    if (bind(server_sock, (struct sockaddr *)&server_addr, sizeof(server_addr)) == -1) {
+        perror("Error binding server socket");
+        exit(EXIT_FAILURE);
+    }
+
+    if (listen(server_sock, 5) == -1) {
+        perror("Error listening on server socket");
+        exit(EXIT_FAILURE);
+    }
+
+    if ((client_sock = accept(server_sock, (struct sockaddr *)&client_addr, &client_len)) == -1) {
+        perror("Error accepting client connection");
+        exit(EXIT_FAILURE);
+    }
+
+    ssize_t bytes_received;
+    while ((bytes_received = recv(client_sock, buffer, BUFFER_SIZE, 0)) > 0) {
+        device_info_process(buffer);
+    }
+
+    if (bytes_received == -1) {
+        perror("Error receiving data from client");
+        exit(EXIT_FAILURE);
+    }
+
+    close(client_sock);
+    close(server_sock);
+    return NULL;
+}
+
+// Fungsi loop utama
+void *loop1(void *arg) {
+    unsigned char buffer[BUFFER_SIZE];
+    while (1) {
+        int len = recv(rawsockfd, buffer, BUFFER_SIZE, 0);
+        if (len == -1) {
+            perror("recv");
+            continue;
+        }
+
+        struct ether_header *eth_header = (struct ether_header *)buffer;
+        if (ntohs(eth_header->ether_type) == ETHERTYPE_IP) {
+            struct ip *ip_hdr = (struct ip *)(buffer + sizeof(struct ether_header));
+            uint32_t ip_addr = ip_hdr->ip_dst.s_addr;
+            (void)ip_addr; //edited by zyzy
+
+            if (ip_hdr->ip_p == IPPROTO_GRE) {
+                printf("GRE packet received.\n");
+            }
+        }
+    }
+    return NULL;
+}
+*/
+// Fungsi inisialisasi GTP
+/*
+instance_t gtpv1Init(openAddr_t context) {
+    pthread_mutex_lock(&globGtp.gtp_lock);
+
+    char cu_ip[] = "192.168.58.88"; // IP untuk eksekusi bersyarat
+    int result1 = strncmp(context.originHost, cu_ip, 14);
+    int id = udpServerSocket(context);
+
+    if (id >= 0) {
+        itti_subscribe_event_fd(TASK_GTPV1_U, id);
+    } else {
+        LOG_E(GTPU, "Can't create GTP-U instance\n");
+    }
+
+    if (result1 == 0) {
+        pthread_t tid1, server_thread;
+
+        if (pthread_create(&tid1, NULL, loop1, NULL) != 0) {
+            perror("pthread_create for loop1 failed");
+        }
+
+        if (pthread_create(&server_thread, NULL, handleTCPServer, NULL) != 0) {
+            perror("Error creating server thread");
+            pthread_mutex_unlock(&globGtp.gtp_lock);
+            return EXIT_FAILURE;
+        }
+    }
+
+    pthread_mutex_unlock(&globGtp.gtp_lock);
+    LOG_I(GTPU, "Created gtpu instance id: %d\n", id);
+    return id;
+}  // ✅ Pastikan fungsi ini ditutup dengan benar!
+*/
+// ✅ Bagian kode yang menangani outgoing_qfi seharusnya ada di dalam fungsi lain seperti gtpv1uSendDirect
+/*
+void gtpv1uSendDirect(instance_t instance, ue_id_t ue_id, int fd, uint8_t *buf, size_t len, bool seqNumFlag, bool npduNumFlag) {
+    gtpv1u_bearer_t tmp = getBearer(instance, ue_id);
+
+    if (tmp.outgoing_qfi != -1) {
+        Gtpv1uExtHeaderT ext = {0};
+        ext.ExtHeaderLen = 1; // in quad bytes  EXT_HDR_LNTH_OCTET_UNITS
+        ext.pdusession_cntr.spare = 0;
+        ext.pdusession_cntr.PDU_type = UL_PDU_SESSION_INFORMATION;
+        ext.pdusession_cntr.QFI = tmp.outgoing_qfi;
+        ext.pdusession_cntr.Reflective_QoS_activation = false;
+        ext.pdusession_cntr.Paging_Policy_Indicator = false;
+        ext.NextExtHeaderType = NO_MORE_EXT_HDRS;
+
+        gtpv1uCreateAndSendMsg(compatInst(instance),
+                               tmp.outgoing_ip_addr,
+                               tmp.outgoing_port,
+                               GTP_GPDU,
+                               tmp.teid_outgoing,
+                               buf,
+                               len,
+                               seqNumFlag,
+                               npduNumFlag,
+                               tmp.seqNum,
+                               tmp.npduNum,
+                               PDU_SESSION_CONTAINER,
+                               (uint8_t *)&ext,
+                               sizeof(ext));
+    } else {
+        gtpv1uCreateAndSendMsg(compatInst(instance),
+                               tmp.outgoing_ip_addr,
+                               tmp.outgoing_port,
+                               GTP_GPDU,
+                               tmp.teid_outgoing,
+                               buf,
+                               len,
+                               seqNumFlag,
+                               npduNumFlag,
+                               tmp.seqNum,
+                               tmp.npduNum,
+                               NO_MORE_EXT_HDRS,
+                               NULL,
+                               0);
+    }
+} 
+*/
+//////////////////////zyzy edited end////////////////////////// 
+/*
+void remove_whitespace(char *str) {
+    int len = strlen(str);
+    int j = 0;
+
+    for (int i = 0; i < len; i++) {
+        if (str[i] != ' ' && str[i] != '\t' && str[i] != '\n' && str[i] != '\r') {
+            str[j++] = str[i];
+        }
+    }
+    str[j] = '\0';
+}
+
+void extract_json_value(char *json, const char *key, void *dest) {
+    char *start = strstr(json, key);
+    if (start != NULL) {
+        start += strlen(key) + 1; // Move to the start of the value
+        sscanf(start, "%[^,\n}]", (char *)dest);
+    }
+}
+static int device_info_process(char *json_data)
+{
+  remove_whitespace(json_data);
+ 
+  uint8_t mac_addr[6];
+  uint32_t cpe_ip;
+  uint32_t device_ip;
+
+  sscanf(json_data, "{\"device_mac_addr\":[\"%2hhx\", \"%2hhx\", \"%2hhx\", \"%2hhx\", \"%2hhx\", \"%2hhx\"], \"cpe_ip\": %u, \"device_ip\": %u}",
+         &mac_addr[0], &mac_addr[1], &mac_addr[2], &mac_addr[3], &mac_addr[4], &mac_addr[5], &cpe_ip, &device_ip);
+
+  // printf("Device MAC Address: %02X:%02X:%02X:%02X:%02X:%02X\n", mac_addr[0], mac_addr[1],
+  //          mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
+  // printf("CPE IP: %u\n", cpe_ip);
+  // printf("Device IP: %u\n", device_ip);
+
+  device_table_insert(mac_addr, cpe_ip, device_ip);
+  //printf("he1\n");
+  device_arp_table_insert(mac_addr, device_ip, time(NULL));
+
+  return -1;
+}
+#define SERVER_PORT 12345
+void *handleTCPServer(void *arg) {
+    int server_sock, client_sock;
+    struct sockaddr_in server_addr, client_addr;
+    socklen_t client_len = sizeof(client_addr);
+    char buffer[BUFFER_SIZE];
+
+    // Create TCP socket
+    if ((server_sock = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
+        perror("Error creating server socket");
+        exit(EXIT_FAILURE);
+    }
+
+    // Bind the socket to the specified interface
+    memset(&server_addr, 0, sizeof(server_addr));
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_addr.s_addr = htonl(INADDR_ANY); // Bind to any available interface
+    server_addr.sin_port = htons(SERVER_PORT);
+    if (bind(server_sock, (struct sockaddr *)&server_addr, sizeof(server_addr)) == -1) {
+        perror("Error binding server socket");
+        exit(EXIT_FAILURE);
+    }
+
+    // Listen for connections
+    if (listen(server_sock, 5) == -1) {
+        perror("Error listening on server socket");
+        exit(EXIT_FAILURE);
+    }
+
+    // Accept client connections
+    if ((client_sock = accept(server_sock, (struct sockaddr *)&client_addr, &client_len)) == -1) {
+        perror("Error accepting client connection");
+        exit(EXIT_FAILURE);
+    }
+
+    // Receive data from client
+    ssize_t bytes_received;
+    while ((bytes_received = recv(client_sock, buffer, BUFFER_SIZE, 0)) > 0) {
+        // Process received data
+        //printf("Received from client: %.*s\n", (int)bytes_received, buffer);
+      char *json_data = (char *)buffer;
+      device_info_process(json_data);
+    }
+
+    if (bytes_received == -1) {
+        perror("Error receiving data from client");
+        exit(EXIT_FAILURE);
+    }
+
+    //close(client_sock);
+    //close(server_sock);
+    return NULL;
+}
+
+void *loop1(void *arg) {
+  unsigned char buffer[BUFFER_SIZE];
+  while (1) {
+    int len = recv(rawsockfd, buffer, BUFFER_SIZE, 0);
+    if (len == -1) {
+      perror("recv");
+      continue;
+    }
+
+    struct ether_header *eth_header = (struct ether_header *)buffer;
+    if (ntohs(eth_header->ether_type) == ETHERTYPE_IP) {
+      //printf("IPv4 packet\n");
+      struct ip *ip_hdr = (struct ip*)(buffer + sizeof(struct ether_header));
+      uint32_t ip_addr = ip_hdr->ip_dst.s_addr;
+      uint32_t ip_src_addr = ip_hdr->ip_src.s_addr;
+      //printf("ip: %u\n", ip_src_addr);
+      if (ip_hdr->ip_p == IPPROTO_GRE) {
+        uint32_t ip_src_addr = ip_hdr->ip_src.s_addr;
+        uint32_t ip_dst_addr = ip_hdr->ip_dst.s_addr;
+        gtpEndPoint * inst;
+        gtpv1u_bearer_t tmp;
+        if (ip_src_addr == 1660959754){ //IP=10.60.0.99
+          //printf("is DHCP ack\n");
+          unsigned char *packet = buffer;
+          packet += sizeof(struct ether_header);
+          len -= sizeof(struct ether_header);
+          len += 3;
+          uint32_t temp = ip_dst_addr % 1000000;
+                     
+          auto instChk=globGtp.instances.find(compatInst(compatInst(temp_instance)));
+          if (instChk == globGtp.instances.end()) {                        
+            LOG_E(GTPU,"try to get a gtp-u not existing output\n");     
+            pthread_mutex_unlock(&globGtp.gtp_lock);              
+            return NULL;                                              
+          }
+          else{
+            if (&instChk->second){
+              gtpEndPoint * inst=&instChk->second;
+              auto ptrUe=inst->ue2te_mapping.find(UE_CPE[temp][0]);                                                                    
+              if ( ptrUe==inst->ue2te_mapping.end() ) {                          
+                pthread_mutex_unlock(&globGtp.gtp_lock);                       
+                return NULL;                                                             
+              }
+
+              auto ptr2=ptrUe->second.bearers.find(1); //bearer_id
+              uint8_t pdcp[3] = {0x80, 0x00, 0x00};
+              pdcp[2] += ptr2->second.seqNum;
+              if (pdcp[2] < ptr2->second.seqNum) {
+                  pdcp[1]++;
+              }
+              size_t prepend_length = sizeof(pdcp);
+              memmove(packet + prepend_length, packet, len);
+              memcpy(packet, pdcp, prepend_length);
+
+              ptr2->second.seqNum++;
+
+              ptr2->second.npduNum++; 
+
+              tmp=ptr2->second;
+              
+              gtpv1uCreateAndSendMsg(compatInst(temp_instance),
+                               tmp.outgoing_ip_addr,
+                               tmp.outgoing_port,
+                               GTP_GPDU,
+                               tmp.teid_outgoing,
+                               packet,
+                               len,
+                               0,
+                               0,
+                               0,
+                               0,
+                               NO_MORE_EXT_HDRS, 
+                               NULL, 
+                               0);
+            }
+          }                                                        
+        }
+      }
+      else if (ip_hdr->ip_p == IPPROTO_UDP){ //process UDP packet
+        struct udphdr *udp_hdr = (struct udphdr*)(buffer + sizeof(struct ether_header) + sizeof(struct ip));
+        //process Device Info
+        if (ntohs(udp_hdr->dest) == 5555){
+          size_t json_offset = sizeof(struct ether_header) + sizeof(struct ip) + sizeof(struct udphdr);
+
+          char *json_data = (char *)buffer + json_offset;
+          //printf("Device info get\n");
+          device_info_process(json_data);
+          printf("tunnel change\n");
+        }
+        //////////////////////////////////////////////////
+        //
+        //
+        //                  Without IND Box
+        //                  Author: York
+        //
+        //////////////////////////////////////////////////
+        else if (ntohs(udp_hdr->dest) == 68){ //DHCP Ack
+          //printf("DHCP Ack\n");
+          struct device_table_entry *entry;
+          struct ether_header *eth_hdr = (struct ether_header *)buffer;
+          struct iphdr *ip_hdr = (struct iphdr *)(buffer + sizeof(struct ether_header));
+          uint32_t hash = hash_mac(eth_hdr->ether_dhost);
+        
+          entry = device_table_get_entry_by_ul_mac(hash);
+          if (entry == 0){
+            printf("device info not found\n");
+          }
+          else{
+            device_table_insert(eth_hdr->ether_dhost, entry->cpe_ip, ip_hdr->daddr);
+            device_arp_table_insert(eth_hdr->ether_dhost, ip_hdr->daddr, time(NULL));
+
+            unsigned char packet[1024];
+            memset(packet, 0, 1024);
+
+            struct iphdr *ip_hdr_gre = (struct iphdr *)packet;
+            ip_hdr_gre->check = 0;
+            ip_hdr_gre->ihl = 5;
+            ip_hdr_gre->version = 4;
+            ip_hdr_gre->tos = 0;
+            ip_hdr_gre->tot_len = htons(len + sizeof(struct iphdr) + sizeof(struct gre_header));
+            ip_hdr_gre->id = htons(12345);
+            ip_hdr_gre->saddr = inet_addr(SRC_IP);;
+            ip_hdr_gre->daddr = entry->cpe_ip;
+            ip_hdr_gre->frag_off = 0;
+            ip_hdr_gre->ttl = 255;
+            ip_hdr_gre->protocol = IPPROTO_GRE;
+            ip_hdr_gre->check = checksum5((unsigned short *)ip_hdr_gre, sizeof(struct iphdr) / 2);
+            
+            struct gre_header *gre_hdr = (struct gre_header *)(packet + sizeof(struct iphdr));
+            //gre_hdr->flags = 0;
+            gre_hdr->proto = htons(0x6558);
+
+            memcpy(packet + sizeof(struct iphdr) + sizeof(struct gre_header), buffer, len); // ¢X2?dhcp_packetcMdhcp_packet_length?wcw?
+
+            int length = sizeof(struct iphdr) + sizeof(struct gre_header) + len;
+
+            uint32_t temp3 = entry->cpe_ip % 1000000;
+            length += 3;
+            size_t prepend_length = sizeof(pdcp[temp3]);
+            memmove(packet + prepend_length, packet, length);
+            memcpy(packet, pdcp[temp3], prepend_length);
+            pdcp[temp3][2]++;
+            if (pdcp[temp3][2] == 0xff) {
+              pdcp[temp3][1]++;
+            }
+     
+            auto instChk=globGtp.instances.find(compatInst(compatInst(temp_instance)));
+            if (instChk == globGtp.instances.end()) {                        
+              LOG_E(GTPU,"try to get a gtp-u not existing output\n");     
+              pthread_mutex_unlock(&globGtp.gtp_lock);                                                         
+            }
+            else{
+              if (&instChk->second){
+                gtpEndPoint * inst=&instChk->second;
+                auto ptrUe=inst->ue2te_mapping.find(UE_CPE[temp3][0]);                                                                    
+                if ( ptrUe==inst->ue2te_mapping.end() ) {                          
+                  pthread_mutex_unlock(&globGtp.gtp_lock);                                                                                
+                }
+                auto ptr2=ptrUe->second.bearers.find(1); //bearer_id
+                gtpv1u_bearer_t tmp=ptr2->second;
+                gtpv1uCreateAndSendMsg(compatInst(temp_instance),
+                                     tmp.outgoing_ip_addr,
+                                     tmp.outgoing_port,
+                                     GTP_GPDU,
+                                     tmp.teid_outgoing,
+                                     packet,
+                                     length, 
+                                     0,
+                                     0, 
+                                     0, 
+                                     0, 
+                                     NO_MORE_EXT_HDRS, 
+                                     NULL, 
+                                     0);
+              }
+            }
+          }
+        }
+        else{
+          struct device_table_entry *entry;
+          struct ether_header *eth_hdr = (struct ether_header *)buffer;
+
+          uint32_t hash = hash_mac(eth_hdr->ether_dhost);
+          entry = device_table_get_entry_by_ul_mac(hash);
+          if (entry == 0){
+            printf("device info not found\n");
+            continue;
+          }
+          else{
+            unsigned char packet[65536];
+            memset(packet, 0, 65536);
+
+            struct iphdr *ip_hdr_gre = (struct iphdr *)packet;
+            ip_hdr_gre->check = 0;
+            ip_hdr_gre->ihl = 5;
+            ip_hdr_gre->version = 4;
+            ip_hdr_gre->tos = 0;
+            ip_hdr_gre->tot_len = htons(len + sizeof(struct iphdr) + sizeof(struct gre_header));
+            ip_hdr_gre->id = htons(12345);
+            ip_hdr_gre->saddr = inet_addr(SRC_IP);;
+            ip_hdr_gre->daddr = entry->cpe_ip;
+            ip_hdr_gre->frag_off = 0;
+            ip_hdr_gre->ttl = 255;
+            ip_hdr_gre->protocol = IPPROTO_GRE;
+            ip_hdr_gre->check = checksum5((unsigned short *)ip_hdr_gre, sizeof(struct iphdr) / 2);
+            
+            struct gre_header *gre_hdr = (struct gre_header *)(packet + sizeof(struct iphdr));
+            gre_hdr->proto = htons(0x6558);
+
+            memcpy(packet + sizeof(struct iphdr) + sizeof(struct gre_header), buffer, len); // ¢X2?dhcp_packetcMdhcp_packet_length?wcw?
+
+            int length = sizeof(struct iphdr) + sizeof(struct gre_header) + len;
+
+            uint32_t temp3 = entry->cpe_ip % 1000000;
+            length += 3;
+       
+            auto instChk=globGtp.instances.find(compatInst(compatInst(temp_instance)));
+            if (instChk == globGtp.instances.end()) {                        
+              LOG_E(GTPU,"try to get a gtp-u not existing output\n");     
+              pthread_mutex_unlock(&globGtp.gtp_lock);                                                         
+            }
+            else{
+              if (&instChk->second){
+                gtpEndPoint * inst=&instChk->second;
+                auto ptrUe=inst->ue2te_mapping.find(UE_CPE[temp3][0]);                                                                    
+                if ( ptrUe==inst->ue2te_mapping.end() ) {                          
+                  pthread_mutex_unlock(&globGtp.gtp_lock);                                                                                
+                }
+                auto ptr2=ptrUe->second.bearers.find(1); //bearer_id
+                uint8_t pdcp[3] = {0x80, 0x00, 0x00};
+                pdcp[2] += ptr2->second.seqNum;
+                if (pdcp[2] < ptr2->second.seqNum) {
+                  pdcp[1]++;
+                }
+                size_t prepend_length = sizeof(pdcp);
+                memmove(packet + prepend_length, packet, length);
+                memcpy(packet, pdcp, prepend_length);
+
+                ptr2->second.seqNum++;
+                ptr2->second.npduNum++;
+                gtpv1u_bearer_t tmp=ptr2->second;
+                gtpv1uCreateAndSendMsg(compatInst(temp_instance),
+                                     tmp.outgoing_ip_addr,
+                                     tmp.outgoing_port,
+                                     GTP_GPDU,
+                                     tmp.teid_outgoing,
+                                     packet,
+                                     length, 
+                                     0,
+                                     0, 
+                                     0, 
+                                     0, 
+                                     NO_MORE_EXT_HDRS, 
+                                     NULL, 
+                                     0);
+              }
+            }
+          }
+        }  
+      }
+      else if(ip_addr == 1644182538){ //dst == 10.60.0.98
+        printf("L2 Ignore\n");
+      }
+      else if (ip_src_addr == 1660959754){ //10.60.0.99
+        unsigned char *packet = buffer;
+        packet += sizeof(struct ether_header);
+        len -= sizeof(struct ether_header);
+        uint32_t temp = ip_addr % 1000000;
+        len += 3;
+        auto instChk=globGtp.instances.find(compatInst(compatInst(temp_instance)));
+        gtpEndPoint * inst=&instChk->second;
+        auto ptrUe=inst->ue2te_mapping.find(UE_CPE[temp][0]);                                                                    
+        auto ptr2=ptrUe->second.bearers.find(1); //bearer_id
+        uint8_t pdcp[3] = {0x80, 0x00, 0x00};
+        pdcp[2] += ptr2->second.seqNum;
+        if (pdcp[2] < ptr2->second.seqNum) {
+          pdcp[1]++;
+        }
+        size_t prepend_length = sizeof(pdcp);
+        memmove(packet + prepend_length, packet, len);
+        memcpy(packet, pdcp, prepend_length);
+
+        ptr2->second.seqNum++;
+        ptr2->second.npduNum++;
+        gtpv1u_bearer_t tmp=ptr2->second;
+        gtpv1uCreateAndSendMsg(compatInst(temp_instance),
+                                 tmp.outgoing_ip_addr,
+                                 tmp.outgoing_port,
+                                 GTP_GPDU,
+                                 tmp.teid_outgoing,
+                                 packet,
+                                 len, 
+                                 0,
+                                 0, 
+                                 0, 
+                                 0, 
+                                 NO_MORE_EXT_HDRS, 
+                                 NULL, 
+                                 0);
+      }
+      else {
+        struct device_table_entry *entry;
+        struct ether_header *eth_hdr = (struct ether_header *)buffer;
+        uint32_t hash = hash_mac(eth_hdr->ether_dhost);
+        entry = device_table_get_entry_by_ul_mac(hash);
+        if (entry == 0){
+          continue;
+        }
+        else{
+          unsigned char packet[65536];
+          memset(packet, 0, 65536);
+
+          struct iphdr *ip_hdr_gre = (struct iphdr *)packet;
+          ip_hdr_gre->check = 0;
+          ip_hdr_gre->ihl = 5;
+          ip_hdr_gre->version = 4;
+          ip_hdr_gre->tos = 0;
+          ip_hdr_gre->tot_len = htons(len + sizeof(struct iphdr) + sizeof(struct gre_header));
+          ip_hdr_gre->id = htons(12345);
+          ip_hdr_gre->saddr = inet_addr(SRC_IP);;
+          ip_hdr_gre->daddr = entry->cpe_ip;
+          ip_hdr_gre->frag_off = 0;
+          ip_hdr_gre->ttl = 255;
+          ip_hdr_gre->protocol = IPPROTO_GRE;
+          ip_hdr_gre->check = checksum5((unsigned short *)ip_hdr_gre, sizeof(struct iphdr) / 2);
+          
+          struct gre_header *gre_hdr = (struct gre_header *)(packet + sizeof(struct iphdr));
+
+          gre_hdr->proto = htons(0x6558);
+
+          memcpy(packet + sizeof(struct iphdr) + sizeof(struct gre_header), buffer, len); // ¢X2?dhcp_packetcMdhcp_packet_length?wcw?
+
+          int length = sizeof(struct iphdr) + sizeof(struct gre_header) + len;
+
+          uint32_t temp3 = entry->cpe_ip % 1000000;
+          length += 3;
+     
+          auto instChk=globGtp.instances.find(compatInst(compatInst(temp_instance)));
+          if (instChk == globGtp.instances.end()) {                        
+            LOG_E(GTPU,"try to get a gtp-u not existing output\n");     
+            pthread_mutex_unlock(&globGtp.gtp_lock);                                                         
+          }
+          else{
+            if (&instChk->second){
+              gtpEndPoint * inst=&instChk->second;
+              auto ptrUe=inst->ue2te_mapping.find(UE_CPE[temp3][0]);                                                                    
+              if ( ptrUe==inst->ue2te_mapping.end() ) {                          
+                pthread_mutex_unlock(&globGtp.gtp_lock);                                                                                
+              }
+              auto ptr2=ptrUe->second.bearers.find(1); //bearer_id
+              uint8_t pdcp[3] = {0x80, 0x00, 0x00};
+              pdcp[2] += ptr2->second.seqNum;
+              if (pdcp[2] < ptr2->second.seqNum) {
+                pdcp[1]++;
+              }
+              size_t prepend_length = sizeof(pdcp);
+              memmove(packet + prepend_length, packet, length);
+              memcpy(packet, pdcp, prepend_length);
+
+              ptr2->second.seqNum++;
+              ptr2->second.npduNum++;
+              gtpv1u_bearer_t tmp=ptr2->second;
+              gtpv1uCreateAndSendMsg(compatInst(temp_instance),
+                                   tmp.outgoing_ip_addr,
+                                   tmp.outgoing_port,
+                                   GTP_GPDU,
+                                   tmp.teid_outgoing,
+                                   packet,
+                                   length, 
+                                   0,
+                                   0, 
+                                   0, 
+                                   0, 
+                                   NO_MORE_EXT_HDRS, 
+                                   NULL, 
+                                   0);
+            }
+          }
+        }
+      }
+    }
+    else if(ntohs(eth_header->ether_type) == ETHERTYPE_ARP){
+      struct device_table_entry *entry;
+      struct ether_header *eth_hdr = (struct ether_header *)buffer;
+
+      uint32_t hash = hash_mac(eth_hdr->ether_dhost);
+
+      entry = device_table_get_entry_by_ul_mac(hash);
+      if (entry == 0){
+        continue;
+      }
+      else{
+        unsigned char packet[65536];
+        memset(packet, 0, 65536);
+
+        struct iphdr *ip_hdr_gre = (struct iphdr *)packet;
+        ip_hdr_gre->check = 0;
+        ip_hdr_gre->ihl = 5;
+        ip_hdr_gre->version = 4;
+        ip_hdr_gre->tos = 0;
+        ip_hdr_gre->tot_len = htons(len + sizeof(struct iphdr) + sizeof(struct gre_header));
+        ip_hdr_gre->id = htons(12345);
+        ip_hdr_gre->saddr = inet_addr(SRC_IP);;
+        ip_hdr_gre->daddr = entry->cpe_ip;
+        ip_hdr_gre->frag_off = 0;
+        ip_hdr_gre->ttl = 255;
+        ip_hdr_gre->protocol = IPPROTO_GRE;
+        ip_hdr_gre->check = checksum5((unsigned short *)ip_hdr_gre, sizeof(struct iphdr) / 2);
+          
+        struct gre_header *gre_hdr = (struct gre_header *)(packet + sizeof(struct iphdr));
+        //gre_hdr->flags = 0;
+        gre_hdr->proto = htons(0x6558);
+
+        memcpy(packet + sizeof(struct iphdr) + sizeof(struct gre_header), buffer, len); // ¢X2?dhcp_packetcMdhcp_packet_length?wcw?
+
+        int length = sizeof(struct iphdr) + sizeof(struct gre_header) + len;
+
+        uint32_t temp3 = entry->cpe_ip % 1000000;
+        length += 3;
+     
+        auto instChk=globGtp.instances.find(compatInst(compatInst(temp_instance)));
+        if (instChk == globGtp.instances.end()) {                        
+          LOG_E(GTPU,"try to get a gtp-u not existing output\n");     
+          pthread_mutex_unlock(&globGtp.gtp_lock);                                                         
+        }
+        else{
+          if (&instChk->second){
+            gtpEndPoint * inst=&instChk->second;
+            auto ptrUe=inst->ue2te_mapping.find(UE_CPE[temp3][0]);                                                                    
+            if ( ptrUe==inst->ue2te_mapping.end() ) {                          
+              pthread_mutex_unlock(&globGtp.gtp_lock);                                                                                
+            }
+            auto ptr2=ptrUe->second.bearers.find(1); //bearer_id
+            uint8_t pdcp[3] = {0x80, 0x00, 0x00};
+            pdcp[2] += ptr2->second.seqNum;
+            if (pdcp[2] < ptr2->second.seqNum) {
+              pdcp[1]++;
+            }
+            size_t prepend_length = sizeof(pdcp);
+            memmove(packet + prepend_length, packet, length);
+            memcpy(packet, pdcp, prepend_length);
+
+            ptr2->second.seqNum++;
+            ptr2->second.npduNum++;
+            gtpv1u_bearer_t tmp=ptr2->second;
+            gtpv1uCreateAndSendMsg(compatInst(temp_instance),
+                                   tmp.outgoing_ip_addr,
+                                   tmp.outgoing_port,
+                                   GTP_GPDU,
+                                   tmp.teid_outgoing,
+                                   packet,
+                                   length, 
+                                   0,
+                                   0, 
+                                   0, 
+                                   0, 
+                                   NO_MORE_EXT_HDRS, 
+                                   NULL, 
+                                   0);
+          }
+        }
+      }
+    }
+  }
+  return NULL;
+}
+
+instance_t gtpv1Init(openAddr_t context) {
+  pthread_mutex_lock(&globGtp.gtp_lock);
+
+  char cu_ip[] = "192.168.60.8"; // IP for conditional execution
+  int result1 = strncmp(context.originHost, cu_ip, 14);
+  int id = udpServerSocket(context);
+
+  if (id >= 0) {
+    itti_subscribe_event_fd(TASK_GTPV1_U, id);
+  } else {
+    LOG_E(GTPU, "Can't create GTP-U instance\n");
+  }
+
+  // Custom functionality from edited code
+  if (result1 == 0) {
+    createrawsocket();
+    initialize_pdcp_array();
+    printf("suitable\n");
+    temp_instance = id;
+
+    pthread_t tid1, server_thread;
+
+    if (pthread_create(&tid1, NULL, loop1, NULL) != 0) {
+      perror("pthread_create for loop1 failed");
+    }
+
+    if (pthread_create(&server_thread, NULL, handleTCPServer, NULL) != 0) {
+      perror("Error creating server thread");
+      pthread_mutex_unlock(&globGtp.gtp_lock);
+      return EXIT_FAILURE;
+    }
+  }
+
+  pthread_mutex_unlock(&globGtp.gtp_lock);
+  LOG_I(GTPU, "Created gtpu instance id: %d\n", id);
+  return id;
+}
+*/
+////////////official code//////////////
 
 instance_t gtpv1Init(openAddr_t context) {
   pthread_mutex_lock(&globGtp.gtp_lock);
@@ -2095,6 +2397,8 @@ instance_t gtpv1Init(openAddr_t context) {
   return id;
 }
 
+
+/////////////////////////////////////////////
 void GtpuUpdateTunnelOutgoingAddressAndTeid(instance_t instance, ue_id_t ue_id, ebi_t bearer_id, in_addr_t newOutgoingAddr, teid_t newOutgoingTeid) {
   pthread_mutex_lock(&globGtp.gtp_lock);
   getInstRetVoid(compatInst(instance));
@@ -2117,6 +2421,7 @@ void GtpuUpdateTunnelOutgoingAddressAndTeid(instance_t instance, ue_id_t ue_id, 
 
 // create gtpu tunnel for 5g
 // edited by zyzy
+//
 teid_t newGtpuCreateTunnel(instance_t instance,
                            ue_id_t ue_id,
                            int incoming_bearer_id,
@@ -2192,7 +2497,7 @@ teid_t newGtpuCreateTunnel(instance_t instance,
   return incoming_teid;
 } //CU to AMF and CU to DU then updated after add DRB 
 
-
+//
 int gtpv1u_create_s1u_tunnel(instance_t instance,
                              const gtpv1u_enb_create_tunnel_req_t  *create_tunnel_req,
                              gtpv1u_enb_create_tunnel_resp_t *create_tunnel_resp,
@@ -2237,7 +2542,7 @@ int gtpv1u_create_s1u_tunnel(instance_t instance,
 
   return !GTPNOK;
 }
-
+//
 int gtpv1u_update_s1u_tunnel(
   const instance_t                              instance,
   const gtpv1u_enb_create_tunnel_req_t *const   create_tunnel_req,
@@ -2273,7 +2578,7 @@ int gtpv1u_update_s1u_tunnel(
   pthread_mutex_unlock(&globGtp.gtp_lock);
   return 0;
 }
-
+//
 int gtpv1u_create_ngu_tunnel(const instance_t instance,
                              const gtpv1u_gnb_create_tunnel_req_t *const create_tunnel_req,
                              gtpv1u_gnb_create_tunnel_resp_t *const create_tunnel_resp,
@@ -2315,7 +2620,9 @@ int gtpv1u_create_ngu_tunnel(const instance_t instance,
   return !GTPNOK;
 }
 
-//
+///////////////////////////////////
+/////official new function/////////
+///////////////////////////////////
 int gtpv1u_update_ue_id(const instance_t instanceP, ue_id_t old_ue_id, ue_id_t new_ue_id)
 {
   pthread_mutex_lock(&globGtp.gtp_lock);
@@ -2343,6 +2650,7 @@ int gtpv1u_update_ue_id(const instance_t instanceP, ue_id_t old_ue_id, ue_id_t n
   LOG_I(GTPU, "[%ld] Updated tunnels from UEid %lx to UEid %lx\n", instanceP, old_ue_id, new_ue_id);
   return !GTPNOK;
 }
+///deleted function (gtpv1u_update_ngu_tunnel)
 
 int gtpv1u_create_x2u_tunnel(
   const instance_t instanceP,
@@ -2351,7 +2659,9 @@ int gtpv1u_create_x2u_tunnel(
   AssertFatal( false, "to be developped\n");
 }
 
-
+///////////////////////////////////
+/////official new function/////////
+///////////////////////////////////
 int newGtpuDeleteOneTunnel(instance_t instance, ue_id_t ue_id, int rb_id)
 {
   pthread_mutex_lock(&globGtp.gtp_lock);
@@ -2377,7 +2687,7 @@ int newGtpuDeleteOneTunnel(instance_t instance, ue_id_t ue_id, int rb_id)
     LOG_I(GTPU, "bearer %ld\n", b.first);
   return !GTPNOK;
 }
-
+////////////////////////////////////
 int newGtpuDeleteAllTunnels(instance_t instance, ue_id_t ue_id) {
   LOG_D(GTPU, "[%ld] Start delete tunnels for ue id %lu\n",
         instance, ue_id);
@@ -2399,7 +2709,9 @@ int newGtpuDeleteAllTunnels(instance_t instance, ue_id_t ue_id) {
   LOG_I(GTPU, "[%ld] Deleted all tunnels for ue id %ld (%d tunnels deleted)\n", instance, ue_id, nb);
   return !GTPNOK;
 }
-
+///////////////////////////////////
+/////official update function//////
+///////////////////////////////////
 int gtpv1u_delete_s1u_tunnel( const instance_t instance,
                               const gtpv1u_enb_delete_tunnel_req_t *const req_pP) {
   LOG_D(GTPU, "[%ld] Start delete tunnels for RNTI %x\n", instance, req_pP->rnti);
@@ -2430,18 +2742,24 @@ int gtpv1u_delete_s1u_tunnel( const instance_t instance,
 
   if (ptrRNTI->second.bearers.size() == 0)
     // no tunnels on this rnti, erase the ue entry
-    inst->ue2te_mapping.erase(ptrRNTI);
+    inst->ue2te_mapping.erase(ptrRNTI); //inst->ue2te_mapping.erase(ptrUe);
 
   pthread_mutex_unlock(&globGtp.gtp_lock);
   LOG_I(GTPU, "[%ld] Deleted released tunnels for RNTI %x (%d tunnels deleted)\n", instance, req_pP->rnti, nb);
   return !GTPNOK;
 }
+//////////////////////////////////////////
 
+///////////////////////////////////
+/////official new function/////////
+///////////////////////////////////
 // Legacy delete tunnel finish by deleting all the ue id
+
 int gtpv1u_delete_all_s1u_tunnel(const instance_t instance, const rnti_t rnti)
 {
   return newGtpuDeleteAllTunnels(instance, rnti);
 }
+//////////////////////////////////////////
 
 int newGtpuDeleteTunnels(instance_t instance, ue_id_t ue_id, int nbTunnels, pdusessionid_t *pdusession_id) {
   LOG_D(GTPU, "[%ld] Start delete tunnels for ue id %lu\n",
@@ -2589,84 +2907,6 @@ static int Gtpv1uHandleEndMarker(int h,
   LOG_D(GTPU,"[%d] Received END marker packet for: teid:%x\n", h, ntohl(msgHdr->teid));
   return !GTPNOK;
 }
-///////////////////////////////////
-/////////edited by zyzy////////////
-///////////////////////////////////
-/*
-void handlePPPoE(PPPoEPacket *pppoePkt) {
-    if (!pppoePkt) {
-        LOG_E(GTPU, "PPPoE packet is NULL, skipping...\n");
-        return;
-    }
-
-    switch (pppoePkt->code) {
-        case CODE_PADI:
-            LOG_I(GTPU, "Received PADI (PPPoE Active Discovery Initiation) packet.\n");
-            sendPADO(pppoePkt);
-            break;
-
-        case CODE_PADR:
-            LOG_I(GTPU, "Received PADR (PPPoE Active Discovery Request) packet.\n");
-            sendPADS(pppoePkt);
-            break;
-
-        case CODE_PADT:
-            LOG_I(GTPU, "Received PADT (PPPoE Active Discovery Terminate) packet.\n");
-            closePPPoESession(pppoePkt);
-            break;
-
-        case CODE_SESS:
-            LOG_I(GTPU, "Received PPPoE Session packet.\n");
-            processPPPoESession(pppoePkt);
-            break;
-
-        default:
-            LOG_W(GTPU, "Unknown PPPoE packet code: %d\n", pppoePkt->code);
-            break;
-    }
-}
-
-static int Gtpv1uHandleGpdu(int h,
-                            uint8_t *msgBuf,
-                            uint32_t msgBufLen,
-                            uint16_t peerPort,
-                            uint32_t peerIp) {
-  Gtpv1uMsgHeaderT *msgHdr = (Gtpv1uMsgHeaderT *) msgBuf;
-
-  if (msgHdr->version != 1 || msgHdr->PT != 1) {
-    LOG_E(GTPU, "[%d] Received a packet that is not GTP header\n", h);
-    return GTPNOK;
-  }
-
-  pthread_mutex_lock(&globGtp.gtp_lock);
-  getInstRetInt(h);
-  auto tunnel = globGtp.te2ue_mapping.find(ntohl(msgHdr->teid));
-
-  if (tunnel == globGtp.te2ue_mapping.end()) {
-    LOG_E(GTPU,"[%d] Received a incoming packet on unknown teid (%x) Dropping!\n", h, ntohl(msgHdr->teid));
-    pthread_mutex_unlock(&globGtp.gtp_lock);
-    return GTPNOK;
-  }
-
-  uint8_t *payload = msgBuf + sizeof(Gtpv1uMsgHeaderT);
-  uint16_t ethType = ntohs(*(uint16_t *)(payload + 12)); // Ambil Ethernet Type
-
-  if (ethType == ETH_PPPOE_SESSION || ethType == ETH_PPPOE_DISCOVERY) {
-    LOG_I(GTPU, "[%d] PPPoE packet detected in GTP-U tunnel\n", h);
-
-    // Parsing PPPoE
-    PPPoEPacket *pppoePkt = (PPPoEPacket *) payload;
-    handlePPPoE(pppoePkt);
-  } else {
-    LOG_I(GTPU, "[%d] Non-PPPoE packet in GTP-U, processing normally\n", h);
-  }
-
-  pthread_mutex_unlock(&globGtp.gtp_lock);
-  return !GTPNOK;
-}
-*/
-//////////////////////////////////////////
-
 static int Gtpv1uHandleGpdu(int h,
                             uint8_t *msgBuf,
                             uint32_t msgBufLen,
@@ -2867,8 +3107,6 @@ static int Gtpv1uHandleGpdu(int h,
         ntohl(msgHdr->teid));
   return !GTPNOK;
 }
-
-////////////////////////////////////////////////////////////////////
 void gtpv1uReceiver(int h) {
   uint8_t           udpData[65536];
   int               udpDataLen;

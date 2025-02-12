@@ -23,8 +23,8 @@
 #define OAI_VERSION_H_
 
 #define GIT_BRANCH "develop"
-#define GIT_COMMIT_HASH "a050ce5f8f"
-#define GIT_COMMIT_DATE "Sun Feb 2 12:20:00 2025 +0000"
+#define GIT_COMMIT_HASH "3030bc662b"
+#define GIT_COMMIT_DATE "Fri Feb 7 16:43:24 2025 +0000"
 
 #define OAI_FIRMWARE_VERSION GIT_COMMIT_HASH
 #define OAI_PACKAGE_VERSION "Branch: " GIT_BRANCH " Abrev. Hash: " GIT_COMMIT_HASH " Date: " GIT_COMMIT_DATE
