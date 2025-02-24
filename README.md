@@ -95,3 +95,14 @@ Your email should contain below information:
 - Known/open issues are present on [GitLab](https://gitlab.eurecom.fr/oai/openairinterface5g/-/issues), so keep checking.
 
 Always remember a structured email will help us understand your issues quickly.
+
+# trobleshooting
+Log file for compilation is being written to: /home/zyzy/zy-OAI/cmake_targets/log/all.txt
+compilation of  nr-softmodem nr-cuup nr-uesoftmodem rfsimulator params_libconfig coding rfsimulator dfts params_yaml failed
+build have failed
+zyzy@zyoai-cu:~/zy-OAI/cmake_targets$ cat /home/zyzy/zy-OAI/cmake_targets/log/all.txt
+Error: could not load cache
+```
+cd /home/zyzy/zy-OAI
+rm -rf CMakeCache.txt CMakeFiles/
+```
