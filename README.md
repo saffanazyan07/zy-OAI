@@ -103,6 +103,6 @@ build have failed
 zyzy@zyoai-cu:~/zy-OAI/cmake_targets$ cat /home/zyzy/zy-OAI/cmake_targets/log/all.txt
 Error: could not load cache
 ```
-cd /home/zyzy/zy-OAI
-rm -rf CMakeCache.txt CMakeFiles/
+cd /home/zyzy/zy-OAI/cmake_targets/ran_build/build
+sudo rm -rf CMakeCache.txt CMakeFiles/
 ```
