@@ -1,2 +1,0 @@
-/usr/bin/ar qc libGTPV1U.a CMakeFiles/GTPV1U.dir/openair2/RRC/NR/rrc_gNB_GTPV1U.c.o CMakeFiles/GTPV1U.dir/openair2/RRC/LTE/rrc_eNB_GTPV1U.c.o CMakeFiles/GTPV1U.dir/openair3/ocp-gtpu/gtp_itf.cpp.o
-/usr/bin/ranlib libGTPV1U.a

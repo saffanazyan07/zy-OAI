@@ -1,3 +1,0 @@
-file(REMOVE_RECURSE
-  "libPHY_NR_NO_AVX_256.a"
-)

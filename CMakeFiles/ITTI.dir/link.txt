@@ -1,2 +1,0 @@
-/usr/bin/ar qc libITTI.a CMakeFiles/ITTI.dir/common/utils/ocp_itti/intertask_interface.cpp.o
-/usr/bin/ranlib libITTI.a

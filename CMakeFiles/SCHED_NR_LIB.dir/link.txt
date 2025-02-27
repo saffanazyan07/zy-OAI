@@ -1,2 +1,0 @@
-/usr/bin/ar qc libSCHED_NR_LIB.a CMakeFiles/SCHED_NR_LIB.dir/openair1/SCHED_NR/fapi_nr_l1.c.o CMakeFiles/SCHED_NR_LIB.dir/openair1/SCHED_NR/phy_procedures_nr_gNB.c.o CMakeFiles/SCHED_NR_LIB.dir/openair1/SCHED_NR/nr_prach_procedures.c.o CMakeFiles/SCHED_NR_LIB.dir/openair1/SCHED_NR/phy_frame_config_nr.c.o
-/usr/bin/ranlib libSCHED_NR_LIB.a

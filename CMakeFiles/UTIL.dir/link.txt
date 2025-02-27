@@ -1,2 +1,0 @@
-/usr/bin/ar qc libUTIL.a CMakeFiles/UTIL.dir/common/utils/LOG/vcd_signal_dumper.c.o CMakeFiles/UTIL.dir/openair2/UTIL/OPT/probe.c.o
-/usr/bin/ranlib libUTIL.a

@@ -1,3 +1,0 @@
-file(REMOVE_RECURSE
-  "libSCHED_RU_LIB.a"
-)

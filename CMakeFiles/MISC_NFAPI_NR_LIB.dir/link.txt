@@ -1,2 +1,0 @@
-/usr/bin/ar qc libMISC_NFAPI_NR_LIB.a CMakeFiles/MISC_NFAPI_NR_LIB.dir/openair1/SCHED/nfapi_nr_dummy.c.o
-/usr/bin/ranlib libMISC_NFAPI_NR_LIB.a

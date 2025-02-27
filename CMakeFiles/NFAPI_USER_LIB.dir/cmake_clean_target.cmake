@@ -1,3 +1,0 @@
-file(REMOVE_RECURSE
-  "libNFAPI_USER_LIB.a"
-)

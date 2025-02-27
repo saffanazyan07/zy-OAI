@@ -1,2 +1,0 @@
-/usr/bin/ar qc libminimal_lib.a CMakeFiles/minimal_lib.dir/common/utils/minimal_stub.c.o
-/usr/bin/ranlib libminimal_lib.a

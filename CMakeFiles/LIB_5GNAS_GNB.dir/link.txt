@@ -1,2 +1,0 @@
-/usr/bin/ar qc libLIB_5GNAS_GNB.a CMakeFiles/LIB_5GNAS_GNB.dir/openair3/NAS/COMMON/nr_common.c.o CMakeFiles/LIB_5GNAS_GNB.dir/openair3/UICC/usim_interface.c.o
-/usr/bin/ranlib libLIB_5GNAS_GNB.a

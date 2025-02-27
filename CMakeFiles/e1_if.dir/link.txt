@@ -1,2 +1,0 @@
-/usr/bin/ar qc libe1_if.a CMakeFiles/e1_if.dir/openair2/RRC/NR/cucp_cuup_direct.c.o CMakeFiles/e1_if.dir/openair2/RRC/NR/cucp_cuup_e1ap.c.o
-/usr/bin/ranlib libe1_if.a
