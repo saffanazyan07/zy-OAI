@@ -1,2 +1,0 @@
-/usr/bin/ar qc librp-pppoe.a CMakeFiles/rp-pppoe.dir/common.c.o CMakeFiles/rp-pppoe.dir/control_socket.c.o CMakeFiles/rp-pppoe.dir/debug.c.o CMakeFiles/rp-pppoe.dir/discovery.c.o CMakeFiles/rp-pppoe.dir/if.c.o CMakeFiles/rp-pppoe.dir/md5.c.o CMakeFiles/rp-pppoe.dir/plugin.c.o CMakeFiles/rp-pppoe.dir/ppp.c.o CMakeFiles/rp-pppoe.dir/pppoe.c.o CMakeFiles/rp-pppoe.dir/relay.c.o
-/usr/bin/ranlib librp-pppoe.a
