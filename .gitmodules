@@ -2,3 +2,6 @@
 	path = openair2/E2AP/flexric
 	url = https://gitlab.eurecom.fr/mosaic5g/flexric.git
 	branch = remotes/origin/service-models-integration
+[submodule "openair3/ocp-gtpu/zy-agf"]
+	path = openair3/ocp-gtpu/zy-agf
+	url = https://github.com/saffanazyan07/zy-agf.git
