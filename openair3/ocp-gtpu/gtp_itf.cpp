@@ -589,7 +589,6 @@ static void gtpv1uEndTunnel(instance_t instance, gtpv1u_enb_end_marker_req_t *re
   }
 }
 ////edited by zyzy
-
 static  int udpServerSocket(openAddr_s addr) {
   LOG_I(GTPU, "Initializing UDP for local address %s with port %s\n", addr.originHost, addr.originService);
   int status;
@@ -604,12 +603,6 @@ static  int udpServerSocket(openAddr_s addr) {
   }
 
   int sockfd=-1;
-  /*  
-  if (sockfd < 0) {
-    LOG_E(GTPU, "Invalid socket descriptor\n");
-    return -1;
-}
-*/
   // loop through all the results and bind to the first we can
   for(p = servinfo; p != NULL; p = p->ai_next) {
     if ((sockfd = socket(p->ai_family, p->ai_socktype,
@@ -654,24 +647,6 @@ static  int udpServerSocket(openAddr_s addr) {
   }
 
   freeaddrinfo(servinfo); // all done with this structure
-    
-    if (err==0) {
-      for(p = res; p != NULL; p = p->ai_next) {
-        if ((err=connect(sockfd,  p->ai_addr, p->ai_addrlen))==0)
-          break;
-      }
-    }
-    
-    if (err == 0) {
-        LOG_I(GTPU, "UDP socket successfully connected to %s:%s\n", addr.destinationHost, addr.destinationService);
-    } else {
-        LOG_E(GTPU, "UDP socket connect failed: %s\n", strerror(errno));
-    }
-    if (err)
-      LOG_E(GTPU,"Can't filter remote host: %s, %s\n", addr.destinationHost,addr.destinationService);
-  }
-  
-///////////////////
 
   int sendbuff = 1000*1000*10;
   AssertFatal(0==setsockopt(sockfd, SOL_SOCKET, SO_SNDBUF, &sendbuff, sizeof(sendbuff)),"");
