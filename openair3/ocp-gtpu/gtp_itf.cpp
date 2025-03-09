@@ -31,6 +31,7 @@ extern "C" {
 #include <linux/if_ether.h>
 #include <linux/if_packet.h>
 #include <net/if.h>
+#include <l2tp.h>
 //#include <cJSON.h>
 #include <unistd.h>
 #include <netinet/in.h>
