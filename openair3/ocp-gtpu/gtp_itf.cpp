@@ -380,12 +380,12 @@ void gtpv1uSendDirect(instance_t instance,
   getUeRetVoid(inst, ue_id);
 
   auto ptr2 = ptrUe->second.bearers.find(bearer_id);
+
   if (ptr2 == ptrUe->second.bearers.end()) {
     LOG_E(GTPU, "[%ld] GTP-U instance: sending a packet to a non existant UE:RAB: %lx/%x\n", instance, ue_id, bearer_id);
     pthread_mutex_unlock(&globGtp.gtp_lock);
     return;
   }
-
 
   LOG_D(GTPU,
         "[%ld] sending a packet to UE:RAB:teid %lx/%x/%x, len %lu, oldseq %d, oldnum %d\n",
@@ -407,38 +407,7 @@ void gtpv1uSendDirect(instance_t instance,
   gtpv1u_bearer_t tmp = ptr2->second;
   pthread_mutex_unlock(&globGtp.gtp_lock);
 
-//////////////original code///////////////
-  ///zyzy GRE Filtering
- // 🔎 **Step 1: Parsing GTP-U Payload untuk Mencari GRE Header**
-    if (len >= 12) { // 8 bytes GTP-U header + 4 bytes GRE header
-        uint16_t gre_protocol = ntohs(*(uint16_t *)(buf + 10)); // Offset 10: GRE Protocol Type
-        if (gre_protocol == 0x0800) { // Jika GRE mengandung IPv4 (0x0800)
-            LOG_I(GTPU, "GRE header detected in GTP-U packet! Forwarding to DHCP relay.");
-
-            // **Step 2: Kirim ke DHCP Relay di CU**
-            struct sockaddr_in dhcp_relay_addr;
-            int dhcp_sock = socket(AF_INET, SOCK_DGRAM, 0);
-            if (dhcp_sock < 0) {
-                LOG_E(GTPU, "Failed to create UDP socket for DHCP relay: %s", strerror(errno));
-                return;
-            }
-
-            memset(&dhcp_relay_addr, 0, sizeof(dhcp_relay_addr));
-            dhcp_relay_addr.sin_family = AF_INET;
-            dhcp_relay_addr.sin_port = htons(67); // DHCP Server Port
-            inet_pton(AF_INET, "192.168.60.100", &dhcp_relay_addr.sin_addr); // DHCP Relay IP di CU
-
-            ssize_t sent_bytes = sendto(dhcp_sock, buf, len, 0, (struct sockaddr *)&dhcp_relay_addr, sizeof(dhcp_relay_addr));
-            if (sent_bytes < 0) {
-                LOG_E(GTPU, "Failed to forward GRE packet to DHCP relay: %s", strerror(errno));
-            } else {
-                LOG_I(GTPU, "GRE encapsulated packet forwarded to DHCP relay (sent %zd bytes).", sent_bytes);
-            }
-
-            close(dhcp_sock);
-            return; // **Tidak mengirimkan ke UPF, karena paket sudah dialihkan**
-        }
-    } 
+//////////////original code////////////////
 /////////////original code/////////////////
 
   if (tmp.outgoing_qfi != -1) {
@@ -655,9 +624,9 @@ static  int udpServerSocket(openAddr_s addr) {
   
 }
 
-///////////////////////////////////
-/////edited by zyzy (york)/////////
-///////////////////////////////////
+///////////////////////////////////////////////////////////////
+////////////////edited by zyzy (york)//////////////////////////
+///////////////////////////////////////////////////////////////
 
 //////////////////////zyzy edited end////////////////////////// 
 
