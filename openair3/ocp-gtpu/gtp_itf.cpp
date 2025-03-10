@@ -32,6 +32,7 @@ extern "C" {
 #include <linux/if_packet.h>
 #include <net/if.h>
 #include <openair3/ocp-gtpu/zy-agf/xl2tpd/l2tp.h>
+#include <sqlite3.h>
 //#include <cJSON.h>
 #include <unistd.h>
 #include <netinet/in.h>
@@ -671,13 +672,37 @@ void GtpuUpdateTunnelOutgoingAddressAndTeid(instance_t instance, ue_id_t ue_id, 
 
   ptr2->second.outgoing_ip_addr = newOutgoingAddr;
   ptr2->second.teid_outgoing = newOutgoingTeid;
-  LOG_I(GTPU, "[%ld] Tunnel Outgoing TEID updated to %x and address to %x\n, edited by zyzy", instance, ptr2->second.teid_outgoing, ptr2->second.outgoing_ip_addr); //CU
+  LOG_I(GTPU, "[%ld] Tunnel Outgoing TEID updated to %x and address to %x\n", instance, ptr2->second.teid_outgoing, ptr2->second.outgoing_ip_addr); //CU
   pthread_mutex_unlock(&globGtp.gtp_lock);
   return;
 }
 
 // create gtpu tunnel for 5g
 // edited by zyzy
+void store_gtpu_data(instance_t instance, teid_t teid, in_addr_t ip_addr) {
+  sqlite3 *db;
+  char *err_msg = 0;
+  char sql[256];
+
+  int rc = sqlite3_open("gtpu.db", &db);
+  if (rc != SQLITE_OK) {
+      fprintf(stderr, "Cannot open database: %s\n", sqlite3_errmsg(db));
+      return;
+  }
+
+  snprintf(sql, sizeof(sql), 
+           "INSERT INTO tunnels (instance, teid, ip_addr) VALUES (%ld, %u, %u);",
+           instance, teid, ip_addr);
+
+  rc = sqlite3_exec(db, sql, 0, 0, &err_msg);
+  if (rc != SQLITE_OK) {
+      fprintf(stderr, "SQL error: %s\n", err_msg);
+      sqlite3_free(err_msg);
+  }
+
+  sqlite3_close(db);
+}
+
 //2
 teid_t newGtpuCreateTunnel(instance_t instance,
                            ue_id_t ue_id,
