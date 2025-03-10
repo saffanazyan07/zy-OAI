@@ -196,6 +196,7 @@ class gtpEndPoints {
 static gtpEndPoints globGtp;
 
 // note TEid 0 is reserved for specific usage: echo req/resp, error and supported extensions
+//2
 static  teid_t gtpv1uNewTeid(void) {
 #ifdef GTPV1U_LINEAR_TEID_ALLOCATION
   g_gtpv1u_teid = g_gtpv1u_teid + 1;
@@ -270,7 +271,7 @@ instance_t legacyInstanceMapping=0;
         LOG_I(GTPU, "[%ld] %s success: UE ID %ld\n", instance, __func__, Ue); \
     }
 //end
-    
+
 ///////////////////////////////////
 /////////edited by zyzy////////////
 ///////////////////////////////////
@@ -279,6 +280,7 @@ instance_t legacyInstanceMapping=0;
 /////////////////////////////////////
 
 #define HDR_MAX 256 // 256 is supposed to be larger than any gtp header
+///2
 static int gtpv1uCreateAndSendMsg(int h,
                                   uint32_t peerIp,
                                   uint16_t peerPort,
@@ -369,7 +371,7 @@ static int gtpv1uCreateAndSendMsg(int h,
 /////////checked by zyzy ////////////
 /////////////////////////////////////
 ///////original code/////////
-
+//2
 void gtpv1uSendDirect(instance_t instance,
                       ue_id_t ue_id,
                       int bearer_id,
@@ -456,6 +458,7 @@ void gtpv1uSendDirect(instance_t instance,
 }
 
 ////////////////end of original code//////////////////
+///2
 static void fillDlDeliveryStatusReport(extensionHeader_t *extensionHeader, uint32_t RLC_buffer_availability, uint32_t NR_PDCP_PDU_SN){
 
   extensionHeader->buffer[0] = (1+sizeof(DlDataDeliveryStatus_flagsT)+(NR_PDCP_PDU_SN>0?3:0)+(NR_PDCP_PDU_SN>0?1:0)+1)/4;
@@ -484,7 +487,7 @@ static void fillDlDeliveryStatusReport(extensionHeader_t *extensionHeader, uint3
                               (NR_PDCP_PDU_SN>0?3:0)+
                               (NR_PDCP_PDU_SN>0?1:0)+1;
 }
-
+///2
 static void gtpv1uSendDlDeliveryStatus(instance_t instance, gtpv1u_DU_buffer_report_req_t *req){
   ue_id_t ue_id=req->ue_id;
   int  bearer_id=req->pdusession_id;
@@ -512,7 +515,7 @@ static void gtpv1uSendDlDeliveryStatus(instance_t instance, gtpv1u_DU_buffer_rep
   gtpv1uCreateAndSendMsg(
       compatInst(instance), tmp.outgoing_ip_addr, tmp.outgoing_port, GTP_GPDU, tmp.teid_outgoing, NULL, 0, false, false, 0, 0, NR_RAN_CONTAINER, extensionHeader->buffer, extensionHeader->length);
 }
-
+///2
 static void gtpv1uEndTunnel(instance_t instance, gtpv1u_enb_end_marker_req_t *req)
 {
   ue_id_t ue_id=req->rnti;
@@ -561,6 +564,7 @@ static void gtpv1uEndTunnel(instance_t instance, gtpv1u_enb_end_marker_req_t *re
   }
 }
 ////edited by zyzy
+//2
 static  int udpServerSocket(openAddr_s addr) {
   LOG_I(GTPU, "Initializing UDP for local address %s with port %s\n", addr.originHost, addr.originService);
   int status;
@@ -634,7 +638,7 @@ static  int udpServerSocket(openAddr_s addr) {
 //////////////////////zyzy edited end////////////////////////// 
 
 ////////////official code//////////////
-
+//2
 instance_t gtpv1Init(openAddr_t context) {
   pthread_mutex_lock(&globGtp.gtp_lock);
   int id=udpServerSocket(context);
@@ -651,6 +655,7 @@ instance_t gtpv1Init(openAddr_t context) {
 
 
 /////////////////////////////////////////////
+//2
 void GtpuUpdateTunnelOutgoingAddressAndTeid(instance_t instance, ue_id_t ue_id, ebi_t bearer_id, in_addr_t newOutgoingAddr, teid_t newOutgoingTeid) {
   pthread_mutex_lock(&globGtp.gtp_lock);
   getInstRetVoid(compatInst(instance));
@@ -673,7 +678,7 @@ void GtpuUpdateTunnelOutgoingAddressAndTeid(instance_t instance, ue_id_t ue_id, 
 
 // create gtpu tunnel for 5g
 // edited by zyzy
-//
+//2
 teid_t newGtpuCreateTunnel(instance_t instance,
                            ue_id_t ue_id,
                            int incoming_bearer_id,
@@ -749,7 +754,7 @@ teid_t newGtpuCreateTunnel(instance_t instance,
   return incoming_teid;
 } //CU to AMF and CU to DU then updated after add DRB 
 
-//
+//2
 int gtpv1u_create_s1u_tunnel(instance_t instance,
                              const gtpv1u_enb_create_tunnel_req_t  *create_tunnel_req,
                              gtpv1u_enb_create_tunnel_resp_t *create_tunnel_resp,
@@ -794,7 +799,7 @@ int gtpv1u_create_s1u_tunnel(instance_t instance,
 
   return !GTPNOK;
 }
-//
+//2
 int gtpv1u_update_s1u_tunnel(
   const instance_t                              instance,
   const gtpv1u_enb_create_tunnel_req_t *const   create_tunnel_req,
@@ -830,7 +835,7 @@ int gtpv1u_update_s1u_tunnel(
   pthread_mutex_unlock(&globGtp.gtp_lock);
   return 0;
 }
-//
+//2
 int gtpv1u_create_ngu_tunnel(const instance_t instance,
                              const gtpv1u_gnb_create_tunnel_req_t *const create_tunnel_req,
                              gtpv1u_gnb_create_tunnel_resp_t *const create_tunnel_resp,
@@ -875,6 +880,7 @@ int gtpv1u_create_ngu_tunnel(const instance_t instance,
 ///////////////////////////////////
 /////official new function/////////
 ///////////////////////////////////
+//2
 int gtpv1u_update_ue_id(const instance_t instanceP, ue_id_t old_ue_id, ue_id_t new_ue_id)
 {
   pthread_mutex_lock(&globGtp.gtp_lock);
@@ -903,7 +909,7 @@ int gtpv1u_update_ue_id(const instance_t instanceP, ue_id_t old_ue_id, ue_id_t n
   return !GTPNOK;
 }
 ///deleted function (gtpv1u_update_ngu_tunnel)
-
+//2
 int gtpv1u_create_x2u_tunnel(
   const instance_t instanceP,
   const gtpv1u_enb_create_x2u_tunnel_req_t   *const create_tunnel_req_pP,
@@ -914,6 +920,7 @@ int gtpv1u_create_x2u_tunnel(
 ///////////////////////////////////
 /////official new function/////////
 ///////////////////////////////////
+//2
 int newGtpuDeleteOneTunnel(instance_t instance, ue_id_t ue_id, int rb_id)
 {
   pthread_mutex_lock(&globGtp.gtp_lock);
@@ -940,6 +947,7 @@ int newGtpuDeleteOneTunnel(instance_t instance, ue_id_t ue_id, int rb_id)
   return !GTPNOK;
 }
 ////////////////////////////////////
+//2
 int newGtpuDeleteAllTunnels(instance_t instance, ue_id_t ue_id) {
   LOG_D(GTPU, "[%ld] Start delete tunnels for ue id %lu\n",
         instance, ue_id);
@@ -964,6 +972,7 @@ int newGtpuDeleteAllTunnels(instance_t instance, ue_id_t ue_id) {
 ///////////////////////////////////
 /////official update function//////
 ///////////////////////////////////
+//2
 int gtpv1u_delete_s1u_tunnel( const instance_t instance,
                               const gtpv1u_enb_delete_tunnel_req_t *const req_pP) {
   LOG_D(GTPU, "[%ld] Start delete tunnels for RNTI %x\n", instance, req_pP->rnti);
@@ -1001,7 +1010,7 @@ int gtpv1u_delete_s1u_tunnel( const instance_t instance,
   return !GTPNOK;
 }
 //////////////////////////////////////////
-
+//////////////////////////////////////////
 ///////////////////////////////////
 /////official new function/////////
 ///////////////////////////////////
@@ -1011,7 +1020,11 @@ int gtpv1u_delete_all_s1u_tunnel(const instance_t instance, const rnti_t rnti)
 {
   return newGtpuDeleteAllTunnels(instance, rnti);
 }
-//////////////////////////////////////////
+
+
+int gtpv1u_delete_ngu_tunnel( const instance_t instance, gtpv1u_gnb_delete_tunnel_req_t *req) {
+return  newGtpuDeleteTunnels(instance, req->ue_id, req->num_pdusession, req->pdusession_id);
+}
 
 int newGtpuDeleteTunnels(instance_t instance, ue_id_t ue_id, int nbTunnels, pdusessionid_t *pdusession_id) {
   LOG_D(GTPU, "[%ld] Start delete tunnels for ue id %lu\n",
@@ -1040,19 +1053,13 @@ int newGtpuDeleteTunnels(instance_t instance, ue_id_t ue_id, int nbTunnels, pdus
   LOG_I(GTPU, "[%ld] Deleted all tunnels for ue id %lu (%d tunnels deleted)\n", instance, ue_id, nb);
   return !GTPNOK;
 }
-
-int gtpv1u_delete_x2u_tunnel( const instance_t instanceP,
-                              const gtpv1u_enb_delete_tunnel_req_t *const req_pP) {
+//2
+int gtpv1u_delete_x2u_tunnel( const instance_t instanceP, const gtpv1u_enb_delete_tunnel_req_t *const req_pP) {
   LOG_E(GTPU,"x2 tunnel not implemented\n");
   return 0;
 }
 
-
-int gtpv1u_delete_ngu_tunnel( const instance_t instance,
-                              gtpv1u_gnb_delete_tunnel_req_t *req) {
-  return  newGtpuDeleteTunnels(instance, req->ue_id, req->num_pdusession, req->pdusession_id);
-}
-
+///2
 static int Gtpv1uHandleEchoReq(int h,
                                uint8_t *msgBuf,
                                uint32_t msgBufLen,
@@ -1075,7 +1082,7 @@ static int Gtpv1uHandleEchoReq(int h,
   uint8_t recovery[2]= {14,0};
   return gtpv1uCreateAndSendMsg(h, peerIp, peerPort, GTP_ECHO_RSP, ntohl(msgHdr->teid), recovery, sizeof recovery, true, false, seq, 0, NO_MORE_EXT_HDRS, NULL, 0);
 }
-
+//2
 static int Gtpv1uHandleError(int h,
                              uint8_t *msgBuf,
                              uint32_t msgBufLen,
@@ -1085,7 +1092,7 @@ static int Gtpv1uHandleError(int h,
   int rc = GTPNOK;
   return rc;
 }
-
+//2
 static int Gtpv1uHandleSupportedExt(int h,
                                     uint8_t *msgBuf,
                                     uint32_t msgBufLen,
@@ -1099,6 +1106,7 @@ static int Gtpv1uHandleSupportedExt(int h,
 // When end marker arrives, we notify the client with buffer size = 0
 // The client will likely call "delete tunnel"
 // nevertheless we don't take the initiative
+//2
 static int Gtpv1uHandleEndMarker(int h,
                                  uint8_t *msgBuf,
                                  uint32_t msgBufLen,
@@ -1159,6 +1167,7 @@ static int Gtpv1uHandleEndMarker(int h,
   LOG_D(GTPU,"[%d] Received END marker packet for: teid:%x\n", h, ntohl(msgHdr->teid));
   return !GTPNOK;
 }
+//zyzy edited
 static int Gtpv1uHandleGpdu(int h,
                             uint8_t *msgBuf,
                             uint32_t msgBufLen,
@@ -1359,24 +1368,23 @@ static int Gtpv1uHandleGpdu(int h,
         ntohl(msgHdr->teid));
   return !GTPNOK;
 }
+///2
 void gtpv1uReceiver(int h) {
-  uint8_t           udpData[65536];
-  int               udpDataLen;
+  uint8_t            udpData[65536];
+  int                udpDataLen;
   socklen_t          from_len;
   struct sockaddr_in addr;
   from_len = (socklen_t)sizeof(struct sockaddr_in);
 
-  if ((udpDataLen = recvfrom(h, udpData, sizeof(udpData), 0,
-                             (struct sockaddr *)&addr, &from_len)) < 0) {
+  if ((udpDataLen = recvfrom(h, udpData, sizeof(udpData), 0, (struct sockaddr *)&addr, &from_len)) < 0) {
     LOG_E(GTPU, "[%d] Recvfrom failed (%s)\n", h, strerror(errno));
     return;
   } else if (udpDataLen == 0) {
     LOG_W(GTPU, "[%d] Recvfrom returned 0\n", h);
     return;
-  } else {
-    if ( udpDataLen < (int)sizeof(Gtpv1uMsgHeaderT) ) {
-      LOG_W(GTPU, "[%d] received malformed gtp packet \n", h);
-      return;
+  } else { if (udpDataLen < (int)sizeof(Gtpv1uMsgHeaderT) ) {
+    LOG_W(GTPU, "[%d] received malformed gtp packet \n", h);
+    return;
     }
     Gtpv1uMsgHeaderT* msg=(Gtpv1uMsgHeaderT*) udpData;
     if ( (int)(ntohs(msg->msgLength) + sizeof(Gtpv1uMsgHeaderT)) != udpDataLen ) {
@@ -1416,7 +1424,7 @@ void gtpv1uReceiver(int h) {
 }
 
 #include <openair2/ENB_APP/enb_paramdef.h>
-
+////////1 
 void *gtpv1uTask(void *args)  {
   while(1) {
     /* Trying to fetch a message from the message queue.

@@ -29,15 +29,13 @@
 #define GTPV1U_MAX_BEARERS_PER_UE max_val_LTE_DRB_Identity
 #define NR_GTPV1U_MAX_BEARERS_PER_UE max_val_NR_DRB_Identity
 
-#define GTPV1U_ENB_TUNNEL_DATA_IND(mSGpTR)    (mSGpTR)->ittiMsg.Gtpv1uTunnelDataInd
+#define GTPV1U_ENB_TUNNEL_DATA_IND(mSGpTR)        (mSGpTR)->ittiMsg.Gtpv1uTunnelDataInd
 #define GTPV1U_ENB_DATA_FORWARDING_REQ(mSGpTR)    (mSGpTR)->ittiMsg.Gtpv1uDataForwardingReq
 #define GTPV1U_ENB_DATA_FORWARDING_IND(mSGpTR)    (mSGpTR)->ittiMsg.Gtpv1uDataForwardingInd
-#define GTPV1U_ENB_END_MARKER_REQ(mSGpTR)     (mSGpTR)->ittiMsg.Gtpv1uEndMarkerReq
-#define GTPV1U_ENB_END_MARKER_IND(mSGpTR)     (mSGpTR)->ittiMsg.Gtpv1uEndMarkerInd
-
-#define GTPV1U_REQ(mSGpTR)    (mSGpTR)->ittiMsg.gtpv1uReq
-
-#define GTPV1U_DU_BUFFER_REPORT_REQ(mSGpTR)    (mSGpTR)->ittiMsg.NRGtpv1uBufferReportReq
+#define GTPV1U_ENB_END_MARKER_REQ(mSGpTR)         (mSGpTR)->ittiMsg.Gtpv1uEndMarkerReq
+#define GTPV1U_ENB_END_MARKER_IND(mSGpTR)         (mSGpTR)->ittiMsg.Gtpv1uEndMarkerInd
+#define GTPV1U_REQ(mSGpTR)                        (mSGpTR)->ittiMsg.gtpv1uReq
+#define GTPV1U_DU_BUFFER_REPORT_REQ(mSGpTR)       (mSGpTR)->ittiMsg.NRGtpv1uBufferReportReq
 
 #define GTPV1U_ALL_TUNNELS_TEID (teid_t)0xFFFFFFFF
 
@@ -50,7 +48,7 @@ typedef struct gtpv1u_enb_create_x2u_tunnel_req_s {
 } gtpv1u_enb_create_x2u_tunnel_req_t;
 
 typedef struct gtpv1u_enb_create_x2u_tunnel_resp_s {
-  uint8_t                status;               ///< Status of S1U endpoint creation (Failed = 0xFF or Success = 0x0)
+  uint8_t                status;      ///< Status of S1U endpoint creation (Failed = 0xFF or Success = 0x0)
   rnti_t                 rnti;
   int                    num_tunnels;
   teid_t                 enb_X2u_teid[GTPV1U_MAX_BEARERS_PER_UE];  ///< Tunnel Endpoint Identifier
@@ -68,7 +66,7 @@ typedef struct gtpv1u_enb_create_tunnel_req_s {
 } gtpv1u_enb_create_tunnel_req_t;
 
 typedef struct gtpv1u_enb_create_tunnel_resp_s {
-  uint8_t                status;               ///< Status of S1U endpoint creation (Failed = 0xFF or Success = 0x0)
+  uint8_t                status;       ///< Status of S1U endpoint creation (Failed = 0xFF or Success = 0x0)
   rnti_t                 rnti;
   int                    num_tunnels;
   teid_t                 enb_S1u_teid[GTPV1U_MAX_BEARERS_PER_UE];  ///< Tunnel Endpoint Identifier
@@ -96,7 +94,7 @@ typedef struct gtpv1u_enb_delete_tunnel_req_s {
   rnti_t                 rnti;
   uint8_t                num_erab;
   ebi_t                  eps_bearer_id[GTPV1U_MAX_BEARERS_PER_UE];
-  //teid_t                 enb_S1u_teid;         ///< local SGW S11 Tunnel Endpoint Identifier
+  //teid_t               enb_S1u_teid;         ///< local SGW S11 Tunnel Endpoint Identifier
   int                    from_gnb;             ///< Indicates if the message comes from gNB or eNB (1 = comes from gNB, 0 from eNB)
 } gtpv1u_enb_delete_tunnel_req_t;
 
@@ -115,17 +113,17 @@ typedef struct gtpv1u_enb_data_forwarding_req_s {
 } gtpv1u_enb_data_forwarding_req_t;
 
 typedef struct gtpv1u_enb_data_forwarding_ind_s {
-  uint32_t         frame;
-  uint8_t          enb_flag;
-  rb_id_t          rb_id;
-  uint32_t         muip;
-  uint32_t         confirmp;
-  uint32_t         sdu_size;
-  uint8_t          *sdu_p;
-  uint8_t          mode;
-  uint16_t         rnti;
-  uint8_t          module_id;
-  uint8_t          eNB_index;
+  uint32_t              frame;
+  uint8_t               enb_flag;
+  rb_id_t               rb_id;
+  uint32_t              muip;
+  uint32_t              confirmp;
+  uint32_t              sdu_size;
+  uint8_t               *sdu_p;
+  uint8_t               mode;
+  uint16_t              rnti;
+  uint8_t               module_id;
+  uint8_t               eNB_index;
 } gtpv1u_enb_data_forwarding_ind_t;
 
 typedef struct gtpv1u_enb_end_marker_req_s {
@@ -137,17 +135,17 @@ typedef struct gtpv1u_enb_end_marker_req_s {
 } gtpv1u_enb_end_marker_req_t;
 
 typedef struct gtpv1u_enb_end_marker_ind_s {
-  uint32_t       frame;
-  uint8_t        enb_flag;
-  rb_id_t        rb_id;
-  uint32_t       muip;
-  uint32_t       confirmp;
-  uint32_t       sdu_size;
-  uint8_t        *sdu_p;
-  uint8_t        mode;
-  uint16_t       rnti;
-  uint8_t        module_id;
-  uint8_t        eNB_index;
+  uint32_t              frame;
+  uint8_t               enb_flag;
+  rb_id_t               rb_id;
+  uint32_t              muip;
+  uint32_t              confirmp;
+  uint32_t              sdu_size;
+  uint8_t               *sdu_p;
+  uint8_t               mode;
+  uint16_t              rnti;
+  uint8_t               module_id;
+  uint8_t               eNB_index;
 } gtpv1u_enb_end_marker_ind_t;
 
 typedef struct {
@@ -157,25 +155,27 @@ typedef struct {
   char                  localPortStr[256];
 } Gtpv1uReq;
 
+///////////////////////////////////gnb////////////////////////////////////
 
 typedef struct gtpv1u_gnb_create_tunnel_req_s {
   ue_id_t                ue_id;
   int                    num_tunnels;
   teid_t                 outgoing_teid[NR_GTPV1U_MAX_BEARERS_PER_UE];
-  int outgoing_qfi[NR_GTPV1U_MAX_BEARERS_PER_UE];
+  int                    outgoing_qfi[NR_GTPV1U_MAX_BEARERS_PER_UE];
   pdusessionid_t         pdusession_id[NR_GTPV1U_MAX_BEARERS_PER_UE];
   ebi_t                  incoming_rb_id[NR_GTPV1U_MAX_BEARERS_PER_UE];
   transport_layer_addr_t dst_addr[NR_GTPV1U_MAX_BEARERS_PER_UE];
 } gtpv1u_gnb_create_tunnel_req_t;
 
 typedef struct gtpv1u_gnb_create_tunnel_resp_s {
-  uint8_t                status;               ///< Status of S1U endpoint creation (Failed = 0xFF or Success = 0x0)
+  uint8_t                status;           ///< Status of S1U endpoint creation (Failed = 0xFF or Success = 0x0)
   ue_id_t                ue_id;
   int                    num_tunnels;
   teid_t                 gnb_NGu_teid[NR_GTPV1U_MAX_BEARERS_PER_UE];  ///< Tunnel Endpoint Identifier
   pdusessionid_t         pdusession_id[NR_GTPV1U_MAX_BEARERS_PER_UE];
   transport_layer_addr_t gnb_addr;
 } gtpv1u_gnb_create_tunnel_resp_t;
+
 typedef struct gtpv1u_gnb_delete_tunnel_req_s {
   ue_id_t                ue_id;
   uint8_t                num_pdusession;
@@ -184,8 +184,8 @@ typedef struct gtpv1u_gnb_delete_tunnel_req_s {
 
 typedef struct gtpv1u_gnb_delete_tunnel_resp_s {
   ue_id_t                ue_id;
-  uint8_t                status;               ///< Status of NGU endpoint deleteion (Failed = 0xFF or Success = 0x0)
-  teid_t                 gnb_NGu_teid;         ///< local NGU Tunnel Endpoint Identifier to be deleted
+  uint8_t                status;           ///< Status of NGU endpoint deleteion (Failed = 0xFF or Success = 0x0)
+  teid_t                 gnb_NGu_teid;     ///< local NGU Tunnel Endpoint Identifier to be deleted
 } gtpv1u_gnb_delete_tunnel_resp_t;
 
 

@@ -95,8 +95,8 @@ extern "C" {
                              gtpCallbackSDAP callBackSDAP);
 
   void GtpuUpdateTunnelOutgoingAddressAndTeid(instance_t instance,
-                                    ue_id_t ue_id,
-                                    ebi_t bearer_id,
+                                              ue_id_t ue_id,
+                                              ebi_t bearer_id,
                                               in_addr_t newOutgoingAddr,
                                               teid_t newOutgoingTeid);
 
