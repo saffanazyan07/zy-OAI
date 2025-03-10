@@ -32,7 +32,6 @@ extern "C" {
 #include <linux/if_packet.h>
 #include <net/if.h>
 #include <openair3/ocp-gtpu/zy-agf/xl2tpd/l2tp.h>
-#include <sqlite3.h>
 //#include <cJSON.h>
 #include <unistd.h>
 #include <netinet/in.h>
@@ -679,31 +678,7 @@ void GtpuUpdateTunnelOutgoingAddressAndTeid(instance_t instance, ue_id_t ue_id, 
 
 // create gtpu tunnel for 5g
 // edited by zyzy
-void store_gtpu_data(instance_t instance, teid_t teid, in_addr_t ip_addr) {
-  sqlite3 *db;
-  char *err_msg = 0;
-  char sql[256];
 
-  int rc = sqlite3_open("gtpu.db", &db);
-  if (rc != SQLITE_OK) {
-      fprintf(stderr, "Cannot open database: %s\n", sqlite3_errmsg(db));
-      return;
-  }
-
-  snprintf(sql, sizeof(sql), 
-           "INSERT INTO tunnels (instance, teid, ip_addr) VALUES (%ld, %u, %u);",
-           instance, teid, ip_addr);
-
-  rc = sqlite3_exec(db, sql, 0, 0, &err_msg);
-  if (rc != SQLITE_OK) {
-      fprintf(stderr, "SQL error: %s\n", err_msg);
-      sqlite3_free(err_msg);
-  }
-
-  sqlite3_close(db);
-}
-
-//2
 teid_t newGtpuCreateTunnel(instance_t instance,
                            ue_id_t ue_id,
                            int incoming_bearer_id,
@@ -824,7 +799,7 @@ int gtpv1u_create_s1u_tunnel(instance_t instance,
 
   return !GTPNOK;
 }
-//2
+
 int gtpv1u_update_s1u_tunnel(
   const instance_t                              instance,
   const gtpv1u_enb_create_tunnel_req_t *const   create_tunnel_req,
@@ -860,7 +835,7 @@ int gtpv1u_update_s1u_tunnel(
   pthread_mutex_unlock(&globGtp.gtp_lock);
   return 0;
 }
-//2
+
 int gtpv1u_create_ngu_tunnel(const instance_t instance,
                              const gtpv1u_gnb_create_tunnel_req_t *const create_tunnel_req,
                              gtpv1u_gnb_create_tunnel_resp_t *const create_tunnel_resp,
@@ -905,7 +880,7 @@ int gtpv1u_create_ngu_tunnel(const instance_t instance,
 ///////////////////////////////////
 /////official new function/////////
 ///////////////////////////////////
-//2
+
 int gtpv1u_update_ue_id(const instance_t instanceP, ue_id_t old_ue_id, ue_id_t new_ue_id)
 {
   pthread_mutex_lock(&globGtp.gtp_lock);
@@ -934,7 +909,7 @@ int gtpv1u_update_ue_id(const instance_t instanceP, ue_id_t old_ue_id, ue_id_t n
   return !GTPNOK;
 }
 ///deleted function (gtpv1u_update_ngu_tunnel)
-//2
+
 int gtpv1u_create_x2u_tunnel(
   const instance_t instanceP,
   const gtpv1u_enb_create_x2u_tunnel_req_t   *const create_tunnel_req_pP,
@@ -945,7 +920,7 @@ int gtpv1u_create_x2u_tunnel(
 ///////////////////////////////////
 /////official new function/////////
 ///////////////////////////////////
-//2
+
 int newGtpuDeleteOneTunnel(instance_t instance, ue_id_t ue_id, int rb_id)
 {
   pthread_mutex_lock(&globGtp.gtp_lock);
@@ -972,7 +947,7 @@ int newGtpuDeleteOneTunnel(instance_t instance, ue_id_t ue_id, int rb_id)
   return !GTPNOK;
 }
 ////////////////////////////////////
-//2
+
 int newGtpuDeleteAllTunnels(instance_t instance, ue_id_t ue_id) {
   LOG_D(GTPU, "[%ld] Start delete tunnels for ue id %lu\n",
         instance, ue_id);
@@ -997,7 +972,7 @@ int newGtpuDeleteAllTunnels(instance_t instance, ue_id_t ue_id) {
 ///////////////////////////////////
 /////official update function//////
 ///////////////////////////////////
-//2
+
 int gtpv1u_delete_s1u_tunnel( const instance_t instance,
                               const gtpv1u_enb_delete_tunnel_req_t *const req_pP) {
   LOG_D(GTPU, "[%ld] Start delete tunnels for RNTI %x\n", instance, req_pP->rnti);
@@ -1078,13 +1053,13 @@ int newGtpuDeleteTunnels(instance_t instance, ue_id_t ue_id, int nbTunnels, pdus
   LOG_I(GTPU, "[%ld] Deleted all tunnels for ue id %lu (%d tunnels deleted)\n", instance, ue_id, nb);
   return !GTPNOK;
 }
-//2
+
 int gtpv1u_delete_x2u_tunnel( const instance_t instanceP, const gtpv1u_enb_delete_tunnel_req_t *const req_pP) {
   LOG_E(GTPU,"x2 tunnel not implemented\n");
   return 0;
 }
 
-///2
+
 static int Gtpv1uHandleEchoReq(int h,
                                uint8_t *msgBuf,
                                uint32_t msgBufLen,
@@ -1107,7 +1082,7 @@ static int Gtpv1uHandleEchoReq(int h,
   uint8_t recovery[2]= {14,0};
   return gtpv1uCreateAndSendMsg(h, peerIp, peerPort, GTP_ECHO_RSP, ntohl(msgHdr->teid), recovery, sizeof recovery, true, false, seq, 0, NO_MORE_EXT_HDRS, NULL, 0);
 }
-//2
+
 static int Gtpv1uHandleError(int h,
                              uint8_t *msgBuf,
                              uint32_t msgBufLen,
@@ -1117,7 +1092,7 @@ static int Gtpv1uHandleError(int h,
   int rc = GTPNOK;
   return rc;
 }
-//2
+
 static int Gtpv1uHandleSupportedExt(int h,
                                     uint8_t *msgBuf,
                                     uint32_t msgBufLen,
@@ -1131,7 +1106,7 @@ static int Gtpv1uHandleSupportedExt(int h,
 // When end marker arrives, we notify the client with buffer size = 0
 // The client will likely call "delete tunnel"
 // nevertheless we don't take the initiative
-//2
+
 static int Gtpv1uHandleEndMarker(int h,
                                  uint8_t *msgBuf,
                                  uint32_t msgBufLen,
