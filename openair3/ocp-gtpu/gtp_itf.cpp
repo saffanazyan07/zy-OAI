@@ -671,7 +671,7 @@ void GtpuUpdateTunnelOutgoingAddressAndTeid(instance_t instance, ue_id_t ue_id, 
 
   ptr2->second.outgoing_ip_addr = newOutgoingAddr;
   ptr2->second.teid_outgoing = newOutgoingTeid;
-  LOG_I(GTPU, "[%ld] Tunnel Outgoing TEID updated to %x and address to %x\n", instance, ptr2->second.teid_outgoing, ptr2->second.outgoing_ip_addr); //CU
+  LOG_I(GTPU, "[%ld] Tunnel Outgoing TEID updated to %x and address to %x\n, edited by zyzy", instance, ptr2->second.teid_outgoing, ptr2->second.outgoing_ip_addr); //CU
   pthread_mutex_unlock(&globGtp.gtp_lock);
   return;
 }
