@@ -60,7 +60,6 @@ static void initialize_agent(ngran_node_t node_type, e2_agent_args_t oai_args)
   // Advice: run multiple executables to have multiple instances
   const instance_t e1_inst = 0;
   const e1ap_upcp_inst_t *e1inst = getCxtE1(e1_inst);
-
   const int nb_id = e1inst->gnb_id;
   const int cu_up_id = e1inst->cuup.setupReq.gNB_cu_up_id;
   const int mcc = e1inst->cuup.setupReq.plmn[0].id.mcc;
@@ -68,7 +67,6 @@ static void initialize_agent(ngran_node_t node_type, e2_agent_args_t oai_args)
   const int mnc_digit_len = e1inst->cuup.setupReq.plmn[0].id.mnc_digit_length;
 
   printf("[E2 NODE]: mcc = %d mnc = %d mnc_digit = %d nb_id = %d \n", mcc, mnc, mnc_digit_len, nb_id);
-
   printf("[E2 NODE]: Args %s %s \n", args.ip, args.libs_dir);
 
   sm_io_ag_ran_t io = init_ran_func_ag();
@@ -144,6 +142,7 @@ f1ap_cudu_inst_t *getCxt(instance_t instanceP)
   fake.gtpInst = e1inst->gtpInstF1U;
   return &fake;
 }
+
 configmodule_interface_t *uniqCfg = NULL;
 
 void rrc_gNB_send_NGAP_UE_CONTEXT_RELEASE_COMPLETE(instance_t instance, uint32_t gNB_ue_ngap_id) { };
