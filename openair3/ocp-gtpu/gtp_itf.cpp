@@ -380,7 +380,7 @@ void gtpv1uSendDirect(instance_t instance,
     // Trigger inisialisasi GTP-U hanya jika belum dilakukan
   if (!gtpu_initialized) {
     LOG_I(GTPU, "Initializing GTP-U system at first packet send.\n");
-    initialize_gtpu_system("192.168.60.88", "192.168.60.99");
+    initialize_gtpu_system("192.168.60.88", "192.168.60.99"); // local IP,remote IP
     gtpu_initialized = true;
   }
   // zyzy end
