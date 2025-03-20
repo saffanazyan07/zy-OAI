@@ -79,7 +79,7 @@ extern "C" {
 
   int gtpv1u_delete_ngu_tunnel( const instance_t instance,
                                 gtpv1u_gnb_delete_tunnel_req_t *req);
-  //new
+
   int gtpv1u_update_ue_id(const instance_t instanceP, ue_id_t old_ue_id, ue_id_t new_ue_id);
 
   // New API
@@ -103,8 +103,14 @@ extern "C" {
   int newGtpuDeleteOneTunnel(instance_t instance, ue_id_t ue_id, int rb_id);
   int newGtpuDeleteAllTunnels(instance_t instance, ue_id_t ue_id);
   int newGtpuDeleteTunnels(instance_t instance, ue_id_t ue_id, int nbTunnels, pdusessionid_t *pdusession_id);
-  //new
+
   void gtpv1uSendDirect(instance_t instance, ue_id_t ue_id, int bearer_id, uint8_t *buf, size_t len, bool seqNumFlag, bool npduNumFlag);
+  // zyzy
+  // Deklarasi variabel global
+  extern bool gtpu_initialized;
+  // Deklarasi fungsi
+  void initialize_gtpu_system(const char *local_ip, const char *remote_ip);
+  //end
   instance_t gtpv1Init(openAddr_t context);
   void *gtpv1uTask(void *args);
 
