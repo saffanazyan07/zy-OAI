@@ -78,10 +78,9 @@ Replace interface and IP address with actual configuration used in your setup.
 
 📝 Notes
 Make sure all required system packages and libraries are installed.
-
 Interface naming and IP addressing must match between z-cu and z-agf.
-
 Log files (if any) will typically appear in log/ or output/ directories.
+
 📬 Contact
 Author: saffanazyan07
 Email: saffanazyan07@gmail.com
