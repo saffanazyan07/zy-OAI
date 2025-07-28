@@ -20,14 +20,14 @@ zy-cu/
 ```
 ---
 
-## 🖥️ Deployment Note: Use Two Separate VMs
+## 🖥️ Deployment Note: Use 2 Separate VMs
 
 > ❗ **Important:** `z-cu` and `z-agf` must not run on the same virtual machine (VM).
 
 To ensure correct network behavior and avoid interface conflicts, you must deploy:
 
-- `z-cu` on **VM #1**
-- `z-agf` on **VM #2**
+- `z-cu` on **VM #2**
+- `z-agf` on **VM #3**
 
 Both VMs should be on the same network bridge or have a reachable route to each other.
 
@@ -35,9 +35,10 @@ Both VMs should be on the same network bridge or have a reachable route to each 
 
 | Component | VM |Purpose | Interface | Example IP        |
 |-----------|----|--------|-----------|-------------------|
-| z-cu      | VM1| N2 / N3     | `enp0s8`    | `192.168.60.8`   |
+| 5gc       | VM1| N2 / N3     | `enp0s8`    | `192.168.60.2`   |
+| z-cu      | VM2| N2 / N3     | `enp0s8`    | `192.168.60.8`   |
 |           |    | F1          | `enp0s9`    | `192.168.60.88`   |
-| z-agf     | VM2| F1          | `enp0s9`    | `192.168.60.77`   |
+| z-agf     | VM3| F1          | `enp0s9`    | `192.168.60.77`   |
 
 Make sure each component is configured to connect to the peer’s IP and port accordingly.
 
