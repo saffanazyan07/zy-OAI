@@ -1950,6 +1950,88 @@ if(E2_AGENT)
   target_link_libraries(nr-cuup PRIVATE e2_agent e2_agent_arg e2_ran_func_cuup)
   target_compile_definitions(nr-cuup PRIVATE ${E2AP_VERSION} ${KPM_VERSION} E2_AGENT)
 endif()
+# edited zyzy
+# z-cu
+###################################################
+
+add_executable(z-cu
+  ${rrc_h}
+  ${nr_rrc_h}
+  ${s1ap_h}
+  ${OPENAIR_DIR}/executables/nr-gnb.c
+  ${OPENAIR_DIR}/executables/nr-ru.c
+  ${OPENAIR_DIR}/executables/z-cu.c
+  ${OPENAIR_DIR}/executables/softmodem-common.c
+  ${OPENAIR_DIR}/radio/COMMON/common_lib.c
+  ${OPENAIR_DIR}/radio/COMMON/record_player.c
+  ${OPENAIR_DIR}/common/utils/lte/ue_power.c
+  ${OPENAIR_DIR}/common/utils/lte/prach_utils.c
+  ${PHY_INTERFACE_DIR}/queue_t.c
+  ${OPENAIR1_DIR}/PHY/TOOLS/phy_scope_interface.c
+  )
+
+target_link_libraries(z-cu PRIVATE
+  -Wl,--start-group
+  UTIL HASHTABLE SCTP_CLIENT SCHED_LIB SCHED_RU_LIB SCHED_NR_LIB PHY_NR PHY PHY_COMMON PHY_NR_COMMON PHY_RU GTPV1U SECURITY
+  ITTI ${NAS_UE_LIB} lte_rrc nr_rrc
+  ngap s1ap L2_LTE_NR L2_NR MAC_NR_COMMON NFAPI_LIB NFAPI_VNF_LIB NFAPI_PNF_LIB NFAPI_USER_LIB SIMU
+  x2ap f1ap m2ap m3ap e1ap shlib_loader
+  -Wl,--end-group z dl)
+
+target_link_libraries(z-cu PRIVATE pthread m CONFIG_LIB rt sctp)
+target_link_libraries(z-cu PRIVATE ${T_LIB})
+target_link_libraries(z-cu PRIVATE asn1_nr_rrc_hdrs asn1_lte_rrc_hdrs)
+target_link_libraries(z-cu PRIVATE asn1_nr_rrc_hdrs asn1_lte_rrc_hdrs)
+add_boolean_option(OAI_AERIAL OFF "Activate OAI's AERIAL driver" OFF)
+if (OAI_AERIAL)
+  target_compile_definitions(z-cu PUBLIC ENABLE_AERIAL)
+  target_link_libraries(z-cu PUBLIC aerial_lib)
+endif()
+if(E2_AGENT)
+  target_compile_definitions(z-cu PRIVATE ${E2AP_VERSION} ${KPM_VERSION} E2_AGENT)
+endif()
+
+# z-agf
+###################################################
+
+add_executable(z-agf
+  ${rrc_h}
+  ${nr_rrc_h}
+  ${s1ap_h}
+  ${OPENAIR_DIR}/executables/nr-gnb.c
+  ${OPENAIR_DIR}/executables/nr-ru.c
+  ${OPENAIR_DIR}/executables/z-agf.c
+  ${OPENAIR_DIR}/executables/softmodem-common.c
+  ${OPENAIR_DIR}/radio/COMMON/common_lib.c
+  ${OPENAIR_DIR}/radio/COMMON/record_player.c
+  ${OPENAIR_DIR}/common/utils/lte/ue_power.c
+  ${OPENAIR_DIR}/common/utils/lte/prach_utils.c
+  ${PHY_INTERFACE_DIR}/queue_t.c
+  ${OPENAIR1_DIR}/PHY/TOOLS/phy_scope_interface.c
+  )
+
+target_link_libraries(z-agf PRIVATE
+  -Wl,--start-group
+  UTIL HASHTABLE SCTP_CLIENT SCHED_LIB SCHED_RU_LIB SCHED_NR_LIB PHY_NR PHY PHY_COMMON PHY_NR_COMMON PHY_RU GTPV1U SECURITY
+  ITTI ${NAS_UE_LIB} lte_rrc nr_rrc
+  ngap s1ap L2_LTE_NR L2_NR MAC_NR_COMMON NFAPI_LIB NFAPI_VNF_LIB NFAPI_PNF_LIB NFAPI_USER_LIB SIMU
+  x2ap f1ap m2ap m3ap e1ap shlib_loader
+  -Wl,--end-group z dl)
+
+target_link_libraries(z-agf PRIVATE pthread m CONFIG_LIB rt sctp)
+target_link_libraries(z-agf PRIVATE ${T_LIB})
+target_link_libraries(z-agf PRIVATE asn1_nr_rrc_hdrs asn1_lte_rrc_hdrs)
+target_link_libraries(z-agf PRIVATE asn1_nr_rrc_hdrs asn1_lte_rrc_hdrs)
+add_boolean_option(OAI_AERIAL OFF "Activate OAI's AERIAL driver" OFF)
+if (OAI_AERIAL)
+  target_compile_definitions(z-agf PUBLIC ENABLE_AERIAL)
+  target_link_libraries(z-agf PUBLIC aerial_lib)
+endif()
+if(E2_AGENT)
+  target_compile_definitions(z-agf PRIVATE ${E2AP_VERSION} ${KPM_VERSION} E2_AGENT)
+endif()
+
+##### end-edited zyzy
 
 # nr-uesoftmodem is  UE implementation
 #######################################

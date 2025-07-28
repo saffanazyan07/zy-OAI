@@ -31,11 +31,18 @@ extern "C" {
 #include <linux/if_ether.h>
 #include <linux/if_packet.h>
 #include <net/if.h>
-#include <openair3/ocp-gtpu/zy-agf/xl2tpd/l2tp.h>
+#include <fcntl.h>
 #include <unistd.h>
-#include <netinet/in.h>
 #include <pthread.h>
 #include <stdio.h>
+#include <stdint.h>
+#include <stdbool.h>
+#include <stdlib.h>
+#include <errno.h>
+#include <string.h>
+#include <sys/ioctl.h>
+//#include <openair3/ocp-gtpu/zy-agf/xl2tpd/l2tp.h>
+
 
 #if defined(HAVE_LINUX_IF_H)
 #include <linux/if.h>
@@ -45,16 +52,24 @@ extern "C" {
 #include <sys/uio.h>
 #endif
 
-
 #pragma pack(1)
-//edited by zyzy
+
+//zyzy
 struct gtp_header {
   uint8_t flags;
   uint8_t message_type;
   uint16_t length;
   uint32_t teid;
 };
-//END
+
+gtpu_tunnel_t gtpu_tunnels[MAX_TUNNELS] = {
+  {"192.168.60.88", "192.168.60.77", 2154, -1, -1, 0x00000001, PTHREAD_MUTEX_INITIALIZER}, // TEID = 1
+  {"192.168.60.88", "192.168.60.99", 2153, -1, -1, 0x00000002, PTHREAD_MUTEX_INITIALIZER}  // TEID = 2
+};
+
+pthread_mutex_t gtp_lock = PTHREAD_MUTEX_INITIALIZER;
+bool gtpu_initialized = false;
+//zyzy end
 typedef struct Gtpv1uMsgHeader {
   uint8_t PN:1;
   uint8_t S:1;
@@ -245,6 +260,8 @@ instance_t legacyInstanceMapping=0;
         LOG_I(GTPU, "[%ld] %s success: UE ID %ld\n", instance, __func__, Ue); \
     }
 //end
+
+
 /////////edited by zyzy end//////////
 /////////////////////////////////////
 
@@ -336,7 +353,7 @@ static int gtpv1uCreateAndSendMsg(int h,
 /////////////////////////////////////
 ///////original code/////////
 // note: the function to send direct message from ue to upf for example icmp from ue
-
+/*
 void gtpv1uSendDirect(instance_t instance,
                       ue_id_t ue_id,
                       int bearer_id,
@@ -380,7 +397,7 @@ void gtpv1uSendDirect(instance_t instance,
     // Trigger inisialisasi GTP-U hanya jika belum dilakukan
   if (!gtpu_initialized) {
     LOG_I(GTPU, "Initializing GTP-U system at first packet send.\n");
-    initialize_gtpu_system("192.168.60.88", "192.168.60.99"); // local IP,remote IP
+    initialize_gtpu_system("192.168.60.77", "192.168.60.88"); //local, remote
     gtpu_initialized = true;
   }
   // zyzy end
@@ -428,9 +445,116 @@ void gtpv1uSendDirect(instance_t instance,
                            0);
   }
 }
-
+*/
 ////////////////end of original code//////////////////
-//--------------------------------zyzy--------------------------------//
+//==============================================================================//
+//--------------------------------edited by zyzy--------------------------------//
+//==============================================================================//
+void gtpv1uSendDirect(instance_t instance,
+                      ue_id_t ue_id,
+                      int bearer_id,
+                      uint8_t *buf,
+                      size_t len,
+                      bool seqNumFlag,
+                      bool npduNumFlag)
+{
+    pthread_mutex_lock(&globGtp.gtp_lock);
+    getInstRetVoid(compatInst(instance));
+    getUeRetVoid(inst, ue_id);
+
+    auto ptr2 = ptrUe->second.bearers.find(bearer_id);
+
+    if (ptr2 == ptrUe->second.bearers.end()) {
+        LOG_E(GTPU, "[%ld] GTP-U instance: sending a packet to a non-existent UE:RAB: %lx/%x\n", instance, ue_id, bearer_id);
+        pthread_mutex_unlock(&globGtp.gtp_lock);
+        return;
+    }
+
+    LOG_D(GTPU,
+          "[%ld] Sending packet to UE:RAB:teid %lx/%x/%x, len %lu, oldseq %d, oldnum %d\n",
+          instance,
+          ue_id,
+          bearer_id,
+          ptr2->second.teid_outgoing,
+          len,
+          ptr2->second.seqNum,
+          ptr2->second.npduNum);
+
+    if (seqNumFlag)
+        ptr2->second.seqNum++;
+
+    if (npduNumFlag)
+        ptr2->second.npduNum++;
+
+    // Salin struktur bearer agar aman sebelum membuka mutex
+    gtpv1u_bearer_t tmp = ptr2->second;
+    pthread_mutex_unlock(&globGtp.gtp_lock);
+
+    // Inisialisasi GTP-U jika belum diinisialisasi (hanya sekali)
+    // Inisialisasi GTP-U System
+    if (!gtpu_initialized) {
+      pthread_mutex_lock(&gtp_lock);
+      if (!gtpu_initialized) {  // Double-check setelah lock
+          LOG_I(GTPU, "Initializing GTP-U system at first packet send.\n");
+  
+          for (int i = 0; i < MAX_TUNNELS; i++) {
+            if (initialize_gtpu_tunnel(&gtpu_tunnels[i], i) == 0) {
+                LOG_I(GTPU, "Tunnel %d initialized successfully\n", i);
+            } else {
+                LOG_E(GTPU, "Tunnel %d initialization failed\n", i);
+            }
+          }
+  
+          start_gtpu_threads();
+          gtpu_initialized = true;
+          LOG_I(GTPU, "All tunnels initialized successfully.\n");
+      }
+      pthread_mutex_unlock(&gtp_lock);
+  }
+  
+  
+    // Mengirim paket dengan atau tanpa header ekstensi
+    if (tmp.outgoing_qfi != -1) {
+        Gtpv1uExtHeaderT ext = {0};
+        ext.ExtHeaderLen = 1; // in quad bytes  EXT_HDR_LNTH_OCTET_UNITS
+        ext.pdusession_cntr.spare = 0;
+        ext.pdusession_cntr.PDU_type = UL_PDU_SESSION_INFORMATION;
+        ext.pdusession_cntr.QFI = tmp.outgoing_qfi;
+        ext.pdusession_cntr.Reflective_QoS_activation = false;
+        ext.pdusession_cntr.Paging_Policy_Indicator = false;
+        ext.NextExtHeaderType = NO_MORE_EXT_HDRS;
+
+        gtpv1uCreateAndSendMsg(compatInst(instance),
+                               tmp.outgoing_ip_addr,
+                               tmp.outgoing_port,
+                               GTP_GPDU,
+                               tmp.teid_outgoing,
+                               buf,
+                               len,
+                               seqNumFlag,
+                               npduNumFlag,
+                               tmp.seqNum,
+                               tmp.npduNum,
+                               PDU_SESSION_CONTAINER,
+                               (uint8_t *)&ext,
+                               sizeof(ext));
+    } else {
+        gtpv1uCreateAndSendMsg(compatInst(instance),
+                               tmp.outgoing_ip_addr,
+                               tmp.outgoing_port,
+                               GTP_GPDU,
+                               tmp.teid_outgoing,
+                               buf,
+                               len,
+                               seqNumFlag,
+                               npduNumFlag,
+                               tmp.seqNum,
+                               tmp.npduNum,
+                               NO_MORE_EXT_HDRS,
+                               NULL,
+                               0);
+    }
+}
 
 //--------------------------------zyzy end--------------------------------//
 
@@ -612,281 +736,247 @@ static  int udpServerSocket(openAddr_s addr) {
 //-------------------------------------------------------------------------------------//
 
 //-------------------------- Edited and optimized by zyzy -----------------------------//
-/*
-#ifndef IFF_TUN
-#define IFF_TUN         0x0001
-#endif
 
-#ifndef IFF_NO_PI
-#define IFF_NO_PI       0x1000
-#endif
-
-#ifndef TUNSETIFF
-#define TUNSETIFF       _IOW('T', 202, int)
-#endif
-
-#define GTPU_PORT 2000
-#define BUFFER_SIZE 65536
-
-// Inisialisasi variabel global
-bool gtpu_initialized = false; 
-static int tun_fd = -1;
-static int udp_sock = -1;
-static uint32_t global_teid = 0x1000; // Example TEID
-
+// Function to create TUN device
 int create_tun_device(const char *dev) {
   struct ifreq ifr;
   int fd = open("/dev/net/tun", O_RDWR);
-  if (fd < 0) {
-      perror("Opening /dev/net/tun failed");
-      exit(EXIT_FAILURE);
-  }
-
-  memset(&ifr, 0, sizeof(ifr));
-  strncpy(ifr.ifr_name, dev, IFNAMSIZ - 1);  // Gunakan IFNAMSIZ - 1
-  ifr.ifr_name[IFNAMSIZ - 1] = '\0';          // Tambahkan null terminator
-  ifr.ifr_flags = IFF_TUN | IFF_NO_PI;
-
-  if (ioctl(fd, TUNSETIFF, (void *)&ifr) < 0) {
-      perror("ioctl(TUNSETIFF) failed");
-      close(fd);
-      return -1;
-  }
-
-  return fd;
-}
-
-
-void forward_to_gtpu(int udp_sock, struct sockaddr_in *remote_addr, char *packet, ssize_t len, uint32_t teid) {
-  char buffer[BUFFER_SIZE];
-  struct gtp_header *gtp = (struct gtp_header *)buffer;
-
-  gtp->flags = 0x40;
-  gtp->message_type = 0xff;
-  gtp->length = htons(len);
-  gtp->teid = htonl(teid);
-
-  memcpy(buffer + sizeof(struct gtp_header), packet, len);
-
-  ssize_t sent = sendto(udp_sock, buffer, sizeof(struct gtp_header) + len, 0,
-                        (struct sockaddr *)remote_addr, sizeof(*remote_addr));
-
-  if (sent < 0)
-    LOG_E(GTPU, "Error sending GTP packet: %s", strerror(errno));
-  else
-    LOG_D(GTPU, "Sent %zd bytes via GTP-U\n", sent);
-}
-
-void process_gtpu_packet(char *buffer, ssize_t len, int tun_fd) {
-  struct gtp_header *gtp = (struct gtp_header *)buffer;
-
-  if (gtp->message_type == 0xff) {
-      ssize_t written = write(tun_fd, buffer + sizeof(struct gtp_header), len - sizeof(struct gtp_header));
-      if (written < 0) {
-          LOG_E(GTPU, "Error writing to TUN device: %s", strerror(errno));
-      } else {
-          LOG_D(GTPU, "Wrote %zd bytes to TUN\n", written);
-      }
-  } else {
-      LOG_W(GTPU, "Unhandled GTP message type: %02x", gtp->message_type);
-  }
-}
-
-
-void* lupf_thread(void* arg) {
-  char buffer[BUFFER_SIZE];
-  struct sockaddr_in remote_addr;
-  socklen_t addr_len = sizeof(remote_addr);
-
-  while (1) {
-    fd_set fds;
-    FD_ZERO(&fds);
-    FD_SET(tun_fd, &fds);
-    FD_SET(udp_sock, &fds);
-
-    int maxfd = (tun_fd > udp_sock ? tun_fd : udp_sock) + 1;
-
-    int ret = select(maxfd, &fds, NULL, NULL, NULL);
-    if (ret < 0) {
-      LOG_E(GTPU, "select() error: %s\n", strerror(errno));
-      continue;
-    }
-
-    if (FD_ISSET(tun_fd, &fds)) {
-      ssize_t len = read(tun_fd, buffer, sizeof(buffer));
-      if (len > 0) {
-        LOG_D(GTPU, "Packet from TUN (%zd bytes), sending over UDP\n", len);
-        forward_to_gtpu(udp_sock, &remote_addr, buffer, len, global_teid);
-      }
-    }
-
-    if (FD_ISSET(udp_sock, &fds)) {
-      ssize_t len = recvfrom(udp_sock, buffer, sizeof(buffer), 0, (struct sockaddr*)&remote_addr, &addr_len);
-      if (len > 0) {
-        LOG_D(GTPU, "Packet from UDP (%zd bytes), writing to TUN\n", len);
-        process_gtpu_packet(buffer, len, tun_fd);
-      }
-    }
-  }
-
-  return NULL;
-}
-
-void initialize_gtpu_system(openAddr_t addr) {
-  LOG_I(GTPU, "Entering initialize_gtpu_system\n");
-
-  if (gtpu_initialized) {
-      LOG_I(GTPU, "GTP-U system already initialized\n");
-      return;
-  }
-
-  // Buat TUN device dengan nama gtp-tun0
-  int tun_fd = create_tun_device("gtp-tun0");
-  if (tun_fd < 0) {
-      LOG_E(GTPU, "Failed to create GTP-U TUN device\n");
-      return;
-  }
-
-  // Menambahkan alamat IP ke interface TUN
-  int ret = system("ip addr add 10.45.0.88/24 dev gtp-tun0");
-  if (ret != 0) {
-      LOG_E(GTPU, "Failed to assign IP address to gtp-tun0, return code: %d\n", ret);
-  } else {
-      LOG_I(GTPU, "Successfully assigned IP address to gtp-tun0\n");
-  }
-
-  // Mengaktifkan interface TUN
-  ret = system("ip link set gtp-tun0 up");
-  if (ret != 0) {
-      LOG_E(GTPU, "Failed to bring up gtp-tun0, return code: %d\n", ret);
-  } else {
-      LOG_I(GTPU, "Successfully brought up gtp-tun0\n");
-  }
-
-  LOG_I(GTPU, "Successfully initialized GTP-U TUN device and configured IP address\n");
-
-  gtpu_initialized = true;
-}
-*/
-#ifndef IFF_TUN
-#define IFF_TUN         0x0001
-#endif
-
-#ifndef IFF_NO_PI
-#define IFF_NO_PI       0x1000
-#endif
-
-#ifndef TUNSETIFF
-#define TUNSETIFF       _IOW('T', 202, int)
-#endif
-
-#define GTPU_PORT 2000
-#define BUFFER_SIZE 65536
-
-
-// Inisialisasi variabel global
-bool gtpu_initialized = false;
-static int tun_fd = -1;
-static int udp_sock = -1;
-//static uint32_t global_teid = 0x1000; // Contoh TEID
-
-int create_tun_device(const char *dev) {
-  struct ifreq ifr;
-  int fd = open("/dev/net/tun", O_RDWR);
-  if (fd < 0) {
-      LOG_E(GTPU, "Opening /dev/net/tun failed: %s\n", strerror(errno));
-      exit(EXIT_FAILURE);
-  }
+  if (fd < 0) return -1;
 
   memset(&ifr, 0, sizeof(ifr));
   strncpy(ifr.ifr_name, dev, IFNAMSIZ - 1);
   ifr.ifr_flags = IFF_TUN | IFF_NO_PI;
 
-  if (ioctl(fd, TUNSETIFF, (void *)&ifr) < 0) {
-      LOG_E(GTPU, "TUNSETIFF failed: %s\n", strerror(errno));
+  if (ioctl(fd, TUNSETIFF, &ifr) < 0) {
       close(fd);
       return -1;
   }
 
-  LOG_I(GTPU, "Created TUN device %s\n", dev);
   return fd;
 }
 
-// Mengirim paket ke GTP-U
-void forward_to_gtpu(int udp_sock, struct sockaddr_in *remote_addr, char *packet, ssize_t len, uint32_t teid) {
+// Forwarding packet to GTP-U
+void forward_to_gtpu(gtpu_tunnel_t *tunnel, char *packet, ssize_t len, uint32_t teid) {
   char buffer[BUFFER_SIZE];
   struct gtp_header *gtp = (struct gtp_header *)buffer;
 
-  gtp->flags = 0x40;
-  gtp->message_type = 0xff;
+  // Proper GTP-U header according to standards (GTPv1-U)
+  gtp->flags = 0x30;  // Version 1, GTP protocol
+  gtp->message_type = 0xff;  // T-PDU (Payload IP packet)
   gtp->length = htons(len);
   gtp->teid = htonl(teid);
 
   memcpy(buffer + sizeof(struct gtp_header), packet, len);
 
-  ssize_t sent = sendto(udp_sock, buffer, sizeof(struct gtp_header) + len, 0,
-                        (struct sockaddr *)remote_addr, sizeof(*remote_addr));
+  // Debugging: Print GTP header in hex format
+  printf("[DEBUG GTP-U] Header:");
+  for (size_t i = 0; i < sizeof(struct gtp_header); i++)
+      printf(" %02x", (unsigned char)buffer[i]);
+  printf("\n");
+
+  // Initialize remote address explicitly
+  struct sockaddr_in remote_addr = {0};
+  remote_addr.sin_family = AF_INET;
+  remote_addr.sin_port = htons(tunnel->port);
+  inet_pton(AF_INET, tunnel->remote_ip, &remote_addr.sin_addr);
+
+  ssize_t sent = sendto(tunnel->udp_sock, buffer, sizeof(struct gtp_header) + len, 0,
+                        (struct sockaddr *)&remote_addr, sizeof(remote_addr));
 
   if (sent < 0) {
       LOG_E(GTPU, "Error sending GTP packet: %s\n", strerror(errno));
   } else {
-      LOG_D(GTPU, "Sent %zd bytes via GTP-U to %s:%d\n", sent, inet_ntoa(remote_addr->sin_addr), ntohs(remote_addr->sin_port));
+      LOG_I(GTPU, "Sent %zd bytes via GTP-U to %s:%d (TEID: %08X)\n",
+            sent, tunnel->remote_ip, tunnel->port, teid);
   }
 }
 
-void initialize_gtpu_system(const char *local_ip, const char *remote_ip) {
-  LOG_I(GTPU, "Initializing GTP-U system...\n");
 
-  if (gtpu_initialized) {
-      LOG_I(GTPU, "GTP-U system already initialized\n");
+// Processing GTP-U packet
+void process_gtpu_packet(gtpu_tunnel_t *tunnel, char *buffer, ssize_t len) {
+  if (len < (ssize_t)sizeof(struct gtp_header)) {
+      LOG_W(GTPU, "GTP packet too short!\n");
       return;
   }
 
-  tun_fd = create_tun_device("gtp-tun0");
-  if (tun_fd < 0) {
-      LOG_E(GTPU, "Failed to create GTP-U TUN device\n");
-      return;
-  }
+  struct gtp_header *gtp = (struct gtp_header *)buffer;
 
-  int ret = system("ip addr add 10.45.0.88/24 dev gtp-tun0");
-  if (ret != 0) {
-      LOG_E(GTPU, "Failed to assign IP address to gtp-tun0, return code: %d\n", ret);
+  if (gtp->message_type == 0xff) { // T-PDU
+      ssize_t payload_len = ntohs(gtp->length);
+      if ((size_t)(payload_len + sizeof(struct gtp_header)) > (size_t)len) {
+          LOG_W(GTPU, "Invalid GTP payload length!\n");
+          return;
+      }
+
+      ssize_t written = write(tunnel->tun_fd, buffer + sizeof(struct gtp_header), payload_len);
+      if (written < 0) {
+          LOG_E(GTPU, "Error writing to TUN device: %s\n", strerror(errno));
+      } else {
+          LOG_I(GTPU, "Wrote %zd bytes to TUN device (from GTP-U)\n", written);
+      }
   } else {
-      LOG_I(GTPU, "Assigned IP address to gtp-tun0\n");
+      LOG_W(GTPU, "Unhandled GTP message type: %02x\n", gtp->message_type);
   }
+}
 
-  ret = system("ip link set gtp-tun0 up");
-  if (ret != 0) {
-      LOG_E(GTPU, "Failed to bring up gtp-tun0, return code: %d\n", ret);
-  } else {
-      LOG_I(GTPU, "Successfully brought up gtp-tun0\n");
+void gtpu_packet_loop(gtpu_tunnel_t *tunnel) {
+  fd_set read_fds;
+  struct sockaddr_in remote_addr, sender_addr;
+  socklen_t addr_len = sizeof(sender_addr);
+  char buffer[BUFFER_SIZE];
+
+  memset(&remote_addr, 0, sizeof(remote_addr));
+  remote_addr.sin_family = AF_INET;
+  remote_addr.sin_port = htons(tunnel->port);
+  inet_pton(AF_INET, tunnel->remote_ip, &remote_addr.sin_addr);
+
+  LOG_I(GTPU, "Starting GTP-U loop for tunnel: %s:%d (TEID: %08X)\n",
+        tunnel->remote_ip, tunnel->port, tunnel->teid);
+
+  while (1) {
+      FD_ZERO(&read_fds);
+      FD_SET(tunnel->tun_fd, &read_fds);
+      FD_SET(tunnel->udp_sock, &read_fds);
+
+      int max_fd = (tunnel->tun_fd > tunnel->udp_sock ? tunnel->tun_fd : tunnel->udp_sock) + 1;
+
+      int activity = select(max_fd, &read_fds, NULL, NULL, NULL);
+
+      if (activity < 0 && errno != EINTR) {
+          LOG_E(GTPU, "Select error: %s\n", strerror(errno));
+          continue;
+      }
+
+      // Handle TUN → UDP
+      if (FD_ISSET(tunnel->tun_fd, &read_fds)) {
+          ssize_t len = read(tunnel->tun_fd, buffer, BUFFER_SIZE);
+          if (len > 0) {
+              LOG_I(GTPU, "TUN received %zd bytes, sending via UDP (TEID: %08X)\n", len, tunnel->teid);
+              forward_to_gtpu(tunnel, buffer, len, tunnel->teid);
+          } else if (len < 0) {
+              LOG_E(GTPU, "TUN read error: %s\n", strerror(errno));
+          }
+      }
+
+      // Handle UDP → TUN (ini yang kurang di VM 88 kamu)
+      if (FD_ISSET(tunnel->udp_sock, &read_fds)) {
+          ssize_t len = recvfrom(tunnel->udp_sock, buffer, BUFFER_SIZE, 0,
+                                 (struct sockaddr *)&sender_addr, &addr_len);
+          if (len > 0) {
+              LOG_I(GTPU, "Received %zd bytes from UDP socket (from %s:%d)\n",
+                    len, inet_ntoa(sender_addr.sin_addr), ntohs(sender_addr.sin_port));
+              process_gtpu_packet(tunnel, buffer, len);
+          } else if (len < 0 && errno != EAGAIN) {
+              LOG_E(GTPU, "UDP recvfrom error: %s\n", strerror(errno));
+          }
+      }
   }
+}
 
-  udp_sock = socket(AF_INET, SOCK_DGRAM, 0);
-  if (udp_sock < 0) {
+void *gtpu_packet_loop_thread(void *arg) {
+  gtpu_packet_loop((gtpu_tunnel_t *)arg);
+  return NULL;
+}
+
+void start_gtpu_threads() {
+  pthread_t threads[MAX_TUNNELS];
+
+  for (int i = 0; i < MAX_TUNNELS; i++) {
+      if (pthread_create(&threads[i], NULL, gtpu_packet_loop_thread, &gtpu_tunnels[i]) != 0) {
+          perror("Failed to create GTP-U thread");
+      }
+  }
+}
+
+int initialize_gtpu_tunnel(gtpu_tunnel_t *tunnel, int tunnel_index) {
+  LOG_I(GTPU, "Initializing GTP-U tunnel %d: %s -> %s (Port: %d, TEID: %08X)\n",
+        tunnel_index, tunnel->local_ip, tunnel->remote_ip, tunnel->port, tunnel->teid);
+
+  // --- Step 1: Buat UDP socket ---
+  tunnel->udp_sock = socket(AF_INET, SOCK_DGRAM, 0);
+  if (tunnel->udp_sock < 0) {
       LOG_E(GTPU, "Failed to create UDP socket: %s\n", strerror(errno));
-      exit(EXIT_FAILURE);
+      return -1;
   }
 
   struct sockaddr_in local_addr = {0};
   local_addr.sin_family = AF_INET;
-  local_addr.sin_port = htons(GTPU_PORT);
-  inet_pton(AF_INET, local_ip, &local_addr.sin_addr);
+  local_addr.sin_port = htons(tunnel->port);
+  inet_pton(AF_INET, tunnel->local_ip, &local_addr.sin_addr);
 
-  if (bind(udp_sock, (struct sockaddr *)&local_addr, sizeof(local_addr)) < 0) {
-      LOG_E(GTPU, "Failed to bind UDP socket: %s\n", strerror(errno));
-      close(udp_sock);
-      exit(EXIT_FAILURE);
+  if (bind(tunnel->udp_sock, (struct sockaddr *)&local_addr, sizeof(local_addr)) < 0) {
+      LOG_E(GTPU, "Failed to bind UDP socket to %s:%d, error: %s\n",
+            tunnel->local_ip, tunnel->port, strerror(errno));
+      close(tunnel->udp_sock);
+      return -1;
   }
 
-  LOG_I(GTPU, "GTP-U system initialized, listening on %s:%d\n", local_ip, GTPU_PORT);
-  gtpu_initialized = true;
+  // --- Step 2: UDP sukses, baru buat TUN ---
+  char tun_name[16];
+  snprintf(tun_name, sizeof(tun_name), "gtp-tun%d", tunnel_index);
+  tunnel->tun_fd = create_tun_device(tun_name);
+  if (tunnel->tun_fd < 0) {
+      LOG_E(GTPU, "Failed to create TUN device %s\n", tun_name);
+      close(tunnel->udp_sock);
+      return -1;
+  }
+
+  // --- Step 3: Tentukan Subnet IP secara Dinamis ---
+  int subnet_base = 50 + tunnel_index;  // Setiap tunnel punya subnet berbeda
+  int ip_host = 88;  // Host ID tetap sama pada setiap subnet
+
+  // --- Step 4: Konfigurasi IP pada TUN ---
+  char cmd[CMD_BUFFER_SIZE];
+  snprintf(cmd, sizeof(cmd), "ip addr add 10.%d.0.%d/24 dev %s", subnet_base, ip_host, tun_name);
+  int ret = system(cmd);
+  if (ret != 0) {
+      LOG_E(GTPU, "Failed to assign IP to %s, code: %d\n", tun_name, ret);
+      close(tunnel->udp_sock);
+      close(tunnel->tun_fd);
+      return -1;
+  }
+
+  snprintf(cmd, sizeof(cmd), "ip link set %s up", tun_name);
+  ret = system(cmd);
+  if (ret != 0) {
+      LOG_E(GTPU, "Failed to bring up %s, code: %d\n", tun_name, ret);
+      close(tunnel->udp_sock);
+      close(tunnel->tun_fd);
+      return -1;
+  }
+
+  LOG_I(GTPU, "Tunnel %d fully initialized (UDP & TUN ready): %s -> %s (Subnet: 10.%d.0.0/24)\n",
+        tunnel_index, tunnel->local_ip, tunnel->remote_ip, subnet_base);
+
+  return 0;
+}
+
+int initialize_gtpu_system(gtpu_tunnel_t *tunnel) {
+  struct sockaddr_in addr = {0};
+
+  tunnel->udp_sock = socket(AF_INET, SOCK_DGRAM, 0);
+  if (tunnel->udp_sock < 0) {
+      perror("socket creation failed");
+      return -1;
+  }
+
+  addr.sin_family = AF_INET;
+  addr.sin_addr.s_addr = inet_addr(tunnel->local_ip);
+  addr.sin_port = htons(tunnel->port);
+
+  if (bind(tunnel->udp_sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+      perror("bind failed");
+      close(tunnel->udp_sock);
+      return -1;
+  }
+
+  tunnel->tun_fd = create_tun_device("gtp-tun0");
+  if (tunnel->tun_fd < 0) return -1;
+
+  return 0;
 }
 
 //----------------------------edited by zyzy end---------------------------------------//
-
-
-
 ////////////official code//////////////
 
 instance_t gtpv1Init(openAddr_t context) {
@@ -902,8 +992,6 @@ instance_t gtpv1Init(openAddr_t context) {
   LOG_I(GTPU, "Created gtpu instance id: %d\n", id);
   return id;
 }
-
-
 /////////////////////////////////////////////
 //-------------------------------------------------------------------------------------//
 void GtpuUpdateTunnelOutgoingAddressAndTeid(instance_t instance, ue_id_t ue_id, ebi_t bearer_id, in_addr_t newOutgoingAddr, teid_t newOutgoingTeid) {
@@ -1131,7 +1219,6 @@ int newGtpuDeleteAllTunnels(instance_t instance, ue_id_t ue_id) {
 //    - Delete all tunnel (call newGtpu delete all tunnel function )
 // Note : Note implemented
 //-----------------------------------------------------------------------------------------------------------------//
-
 int gtpv1u_create_s1u_tunnel(instance_t instance,
                              const gtpv1u_enb_create_tunnel_req_t  *create_tunnel_req,
                              gtpv1u_enb_create_tunnel_resp_t *create_tunnel_resp,

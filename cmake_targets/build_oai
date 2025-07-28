@@ -252,6 +252,16 @@ function main() {
             TARGET_LIST="$TARGET_LIST nr-uesoftmodem"
             echo_info "Will compile NR UE"
             shift;;
+       --z-cu)
+            gNB=1
+            TARGET_LIST="$TARGET_LIST z-cu"
+            echo_info "Will compile z-cu"
+            shift;;
+       --z-agf)
+            gNB=1
+            TARGET_LIST="$TARGET_LIST z-agf nr-uesoftmodem"
+            echo_info "Will compile Z-AGF"
+            shift;;       
        --mu)
             CMAKE_CMD="$CMAKE_CMD -DUE_EXPANSION=True -DPRE_SCD_THREAD=True"
             echo_info "Will compile with UE_EXPANSION"
