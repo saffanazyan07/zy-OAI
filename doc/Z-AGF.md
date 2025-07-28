@@ -7,7 +7,7 @@ This guide provides step-by-step instructions on setting up, building, and runni
 ## 📁 Project Structure
 
 Your folder should be structured as follows:
-
+```
 zy-cu/
 ├── CMakeLists.txt
 ├── executables/
@@ -16,11 +16,7 @@ zy-cu/
 │ └── zy-agf/ ← Contains z-agf source code or submodule
 ├── build/
 └── ...
-
-yaml
-Copy
-Edit
-
+```
 ---
 
 ## 🔧 Step 1: Clone the Repositories
