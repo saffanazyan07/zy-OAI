@@ -12,10 +12,11 @@ zy-cu/
 ├── CMakeLists.txt
 ├── executables/
 ├── openair3/
-│ └── ocp-gtpu/
-│ └── zy-agf/ ← Contains z-agf source code or submodule
+│   └── ocp-gtpu/
+│       └── zy-agf/         ← ✅ z-agf berada di dalam ocp-gtpu
 ├── build/
 └── ...
+
 ```
 ---
 
