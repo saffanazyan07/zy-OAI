@@ -47,17 +47,17 @@ Make sure each component is configured to connect to the peer’s IP and port ac
 ### Clone the main project (`z-cu`)
 
 ```bash
-git clone https://github.com/saffanazyan07/zy-OAI.git zy-cu
+sudo git clone https://github.com/saffanazyan07/zy-OAI.git zy-cu
 cd zy-cu
 ```
 Option A: If using submodules (recommended)
 ```bash
-git submodule update --init --recursive
+sudo git submodule update --init --recursive
 ```
 Option B: If copying manually
 ```
 cd openair3/ocp-gtpu
-git clone -b master https://github.com/saffanazyan07/zy-agf.git
+sudo git clone -b master https://github.com/saffanazyan07/zy-agf.git
 ```
 ## ⚙️ Step 2: Configuration Setup
 ### 🔨 config z-cu 
@@ -136,7 +136,7 @@ cd cmake_targets
 🔨 Build z-agf
 ```
 cd cmake_targets
-# Run your CU build process here
+# Run your Z-AGF build process here
 ./build_oai --z-agf -I
 cd ../openair3/ocp-gtpu/zy-agf
 chmod +x run_z-agf.sh
