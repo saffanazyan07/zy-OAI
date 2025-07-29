@@ -64,7 +64,6 @@ git clone -b master https://github.com/saffanazyan07/zy-agf.git
 ## ⚙️ Step 2: Configuration Setup
 ### 🔨 config z-cu 
 ```
-cd zy-cu
 sudo nano targets/PROJECTS/GENERIC-NR-5GC/CONF/cu_gnb.conf
 ```
 ### set mcc/mnc N2/N3 F1 interface IP
@@ -119,7 +118,6 @@ gNBs =
 ### set tunnel for local connection
 open directory
 ```
-cd zy-cu
 sudo nano openair3/ocp-gtpu/gtp_itf.cpp
 ```
 change to your F1 IP config (support for 2 z-agf(77,99))
