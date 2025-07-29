@@ -137,10 +137,10 @@ cd cmake_targets
 ```
 🔨 Build z-agf
 ```
-cd zy-cu/cmake_targets
+cd cmake_targets
 # Run your CU build process here
 ./build_oai --z-agf -I
-cd openair3/ocp-gtpu/zy-agf
+cd ../openair3/ocp-gtpu/zy-agf
 chmod +x run_z-agf.sh
 ./run_z-agf.sh
 ```
