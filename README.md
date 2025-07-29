@@ -50,6 +50,7 @@ Make sure each component is configured to connect to the peer’s IP and port ac
 git clone https://github.com/saffanazyan07/zy-OAI.git zy-cu
 cd zy-cu
 ```
+> You can skip this process
 Option A: If using submodules (recommended)
 ```bash
 git submodule update --init --recursive
