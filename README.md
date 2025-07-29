@@ -131,7 +131,7 @@ gtpu_tunnel_t gtpu_tunnels[MAX_TUNNELS] = {
 ## ⚙️ Step 3: Build the Components
 🔨 Build z-cu 
 ```
-cd zy-cu/cmake_targets
+cd cmake_targets
 # Run your CU build process here
 ./build_oai --z-cu -I
 ```
