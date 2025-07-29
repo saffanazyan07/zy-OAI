@@ -131,15 +131,15 @@ gtpu_tunnel_t gtpu_tunnels[MAX_TUNNELS] = {
 ```
 cd cmake_targets
 # Run your CU build process here
-./build_oai --z-cu -I
+sudo ./build_oai --z-cu -I
 ```
 🔨 Build z-agf
 ```
 cd cmake_targets
 # Run your Z-AGF build process here
-./build_oai --z-agf -I
+sudo ./build_oai --z-agf -I
 cd ../openair3/ocp-gtpu/zy-agf
-chmod +x run_z-agf.sh
+sudo chmod +x run_z-agf.sh
 ./run_z-agf.sh
 ```
 If needed, adjust environment variables and install dependencies before running the build.
