@@ -35,7 +35,7 @@ unsigned short config_frames[4] = {2,9,11,13};
 #include "openair2/E2AP/flexric/src/agent/e2_agent_api.h"
 #include "openair2/E2AP/RAN_FUNCTION/init_ran_func.h"
 #endif
-#include "nr-softmodem.h"
+#include "z-agf.h"
 #include <common/utils/assertions.h>
 #include <openair2/GNB_APP/gnb_app.h>
 #include <openair3/ocp-gtpu/gtp_itf.h>
