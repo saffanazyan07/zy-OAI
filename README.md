@@ -113,7 +113,7 @@ gNBs =
   }
 );
 ```
-### set tunnel for local connection in CU and DU VM
+### set tunnel for local connection in Z-CU and Z-AGF VM
 open directory
 ```
 sudo nano openair3/ocp-gtpu/gtp_itf.cpp
