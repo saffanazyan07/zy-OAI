@@ -113,12 +113,12 @@ gNBs =
   }
 );
 ```
-### set tunnel for local connection
+### set tunnel for local connection in CU and DU VM
 open directory
 ```
 sudo nano openair3/ocp-gtpu/gtp_itf.cpp
 ```
-change to your F1 IP config (support for 2 z-agf(77,99))
+change to your F1 IP config (support for 2 z-agf (77,99))
 ```
 gtpu_tunnel_t gtpu_tunnels[MAX_TUNNELS] = {
   {"192.168.60.88", "192.168.60.77", 2154, -1, -1, 0x00000001, PTHREAD_MUTEX_INITIALIZER}, // TEID = 1 
