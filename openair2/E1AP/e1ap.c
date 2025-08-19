@@ -31,7 +31,7 @@
 #include "common/utils/LOG/log.h"
 #include "openair2/F1AP/f1ap_common.h"
 #include "e1ap_default_values.h"
-#include "gtp_itf.h"
+#include "gtp_itf_z-cu.h"
 #include "openair2/LAYER2/nr_pdcp/cucp_cuup_handler.h"
 #include "lib/e1ap_bearer_context_management.h"
 #include "lib/e1ap_interface_management.h"
