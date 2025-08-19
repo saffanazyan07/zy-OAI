@@ -1391,6 +1391,8 @@ add_library (GTPV1U
   ${NR_RRC_DIR}/rrc_gNB_GTPV1U.c
   ${RRC_DIR}/rrc_eNB_GTPV1U.c
   ${OPENAIR3_DIR}/ocp-gtpu/gtp_itf.cpp
+  ${OPENAIR3_DIR}/ocp-gtpu/gtp_itf_z-cu.cpp
+  ${OPENAIR3_DIR}/ocp-gtpu/gtp_itf_z-agf.cpp
   )
 target_link_libraries(GTPV1U PRIVATE asn1_nr_rrc_hdrs asn1_lte_rrc_hdrs)
 target_link_libraries(GTPV1U PRIVATE SIMU)
