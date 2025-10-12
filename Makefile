@@ -922,6 +922,19 @@ nr-softmodem/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/nr-softmodem.dir/build.make CMakeFiles/nr-softmodem.dir/build
 .PHONY : nr-softmodem/fast
 
+#edited by zyzy
+#=============================================================================
+# Target rules for targets named z-cu
+
+# Build rule for target.
+z-cu: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 z-cu
+.PHONY : z-cu
+
+# fast build rule for target.
+z-cu/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/z-cu.dir/build.make CMakeFiles/z-cu.dir/build
+.PHONY : z-cu/fast
 #=============================================================================
 # Target rules for targets named nr-cuup
 
