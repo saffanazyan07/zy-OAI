@@ -37,7 +37,8 @@
 #include "lib/f1ap_rrc_message_transfer.h"
 #include "f1ap_cu_paging.h"
 #include "f1ap_cu_task.h"
-#include <openair3/ocp-gtpu/gtp_itf.h>
+#include <openair3/ocp-gtpu/gtp_itf_z-cu.h>
+#include <openair3/ocp-gtpu/gtp_itf_z-agf.h>
 
 //Fixme: Uniq dirty DU instance, by global var, datamodel need better management
 instance_t CUuniqInstance=0;

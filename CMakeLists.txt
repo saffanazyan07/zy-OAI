@@ -1386,16 +1386,38 @@ include_directories("${OPENAIR1_DIR}/SCHED_NR_UE")
 
 # CN libs
 ##########################
-
+### zyzy edit
 add_library (GTPV1U
   ${NR_RRC_DIR}/rrc_gNB_GTPV1U.c
   ${RRC_DIR}/rrc_eNB_GTPV1U.c
   ${OPENAIR3_DIR}/ocp-gtpu/gtp_itf.cpp
-  )
+#  ${OPENAIR3_DIR}/ocp-gtpu/gtp_itf_z-cu.cpp
+#  ${OPENAIR3_DIR}/ocp-gtpu/gtp_itf_z-agf.cpp
+)
 target_link_libraries(GTPV1U PRIVATE asn1_nr_rrc_hdrs asn1_lte_rrc_hdrs)
 target_link_libraries(GTPV1U PRIVATE SIMU)
 include_directories(${OPENAIR3_DIR}/ocp-gtp)
 
+#add_library(GTPV1U_Z_CU
+#  ${NR_RRC_DIR}/rrc_gNB_GTPV1U.c
+#  ${RRC_DIR}/rrc_eNB_GTPV1U.c
+#  ${OPENAIR3_DIR}/ocp-gtpu/gtp_itf_z-cu.cpp
+#)
+#target_include_directories(GTPV1U_Z_CU PRIVATE ${OPENAIR3_DIR}/ocp-gtpu)
+#target_link_libraries(GTPV1U_Z_CU PRIVATE asn1_nr_rrc_hdrs asn1_lte_rrc_hdrs SIMU)
+
+#add_library(GTPV1U_Z_AGF
+#  ${NR_RRC_DIR}/rrc_gNB_GTPV1U.c
+#  ${RRC_DIR}/rrc_eNB_GTPV1U.c
+#  ${OPENAIR3_DIR}/ocp-gtpu/gtp_itf_z-agf.cpp
+#)
+#target_include_directories(GTPV1U_Z_AGF PRIVATE ${OPENAIR3_DIR}/ocp-gtpu)
+#target_link_libraries(GTPV1U_Z_AGF PRIVATE asn1_nr_rrc_hdrs asn1_lte_rrc_hdrs SIMU)
+
+# Lalu executable A link ke GTPV1U_Z_CU, executable B link ke GTPV1U_Z_AGF
+# target_link_libraries(exec_cu PRIVATE GTPV1U_Z_CU)
+# target_link_libraries(exec_agf PRIVATE GTPV1U_Z_AGF)
+### end zyzy edit
 set (MME_APP_SRC
   ${OPENAIR3_DIR}/MME_APP/mme_app.c
   ${OPENAIR3_DIR}/MME_APP/mme_config.c

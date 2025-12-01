@@ -38,7 +38,7 @@ unsigned short config_frames[4] = {2,9,11,13};
 #include "z-cu.h"
 #include <common/utils/assertions.h>
 #include <openair2/GNB_APP/gnb_app.h>
-#include <openair3/ocp-gtpu/gtp_itf.h>
+#include <openair3/ocp-gtpu/gtp_itf_z-cu.h>
 #include <pthread.h>
 #include <sched.h>
 #include <simple_executable.h>
