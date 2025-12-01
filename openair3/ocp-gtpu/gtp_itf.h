@@ -109,6 +109,7 @@ extern "C" {
   //-------------------------- GTP Interface Header ------------------------------//
   //----------------------------- edited by zyzy ---------------------------------//
   //==============================================================================//
+  /*
   #ifndef GTP_ITF_H
   #define GTP_ITF_H
 
@@ -153,6 +154,7 @@ extern "C" {
   void start_gtpu_threads();
 
   #endif // GTP_ITF_H
+  */
   //-------------------------------- edited by zyzy -----------------------------//
   //==============================================================================//
   instance_t gtpv1Init(openAddr_t context);
@@ -204,6 +206,16 @@ extern "C" {
 
     //RB_ENTRY(gtpv1u_ue_data_s) gtpv1u_ue_node;
   } gtpv1u_ue_data_t;
+
+int gtpv1u_send_pdcp_data(
+    instance_t instance, 
+    ue_id_t ue_id, 
+    rb_id_t rb_id, 
+    uint8_t *buf, 
+    size_t len,
+    bool seqNumFlag,
+    bool npduNumFlag
+);
 
 #ifdef __cplusplus
 }

@@ -88,7 +88,7 @@ void set_bearer_context_pdcp_config(bearer_context_pdcp_config_t *pdcp_config, d
   pdcp_config->reorderingTimer = rrc_drb->pdcp_config.t_Reordering;
   pdcp_config->rLC_Mode = um_on_default_drb ? E1AP_RLC_Mode_rlc_um_bidirectional : E1AP_RLC_Mode_rlc_am;
 }
-
+//zyzy: recheck
 drb_t *generateDRB(gNB_RRC_UE_t *ue,
                    uint8_t drb_id,
                    const rrc_pdu_session_param_t *pduSession,
@@ -117,13 +117,16 @@ drb_t *generateDRB(gNB_RRC_UE_t *ue,
     est_drb->cnAssociation.sdap_config.sdap_HeaderDL = NR_SDAP_Config__sdap_HeaderDL_absent;
     est_drb->cnAssociation.sdap_config.sdap_HeaderUL = NR_SDAP_Config__sdap_HeaderUL_absent;
   }
-  for (int qos_flow_index = 0; qos_flow_index < pduSession->param.nb_qos; qos_flow_index++) {
-    est_drb->cnAssociation.sdap_config.mappedQoS_FlowsToAdd[qos_flow_index] = pduSession->param.qos[qos_flow_index].qfi;
+  //zyzy: SDAP mapping loop QoS Flow to DRB depend on qfi 
+  for (int qos_flow_index = 0; qos_flow_index < pduSession->param.nb_qos; qos_flow_index++) { 
+    est_drb->cnAssociation.sdap_config.mappedQoS_FlowsToAdd[qos_flow_index] = pduSession->param.qos[qos_flow_index].qfi; 
+    
     if (pduSession->param.qos[qos_flow_index].fiveQI > 5)
       est_drb->status = DRB_ACTIVE_NONGBR;
     else
       est_drb->status = DRB_ACTIVE;
   }
+
   /* PDCP Configuration */
   set_default_drb_pdcp_config(&est_drb->pdcp_config, do_drb_integrity, do_drb_ciphering);
 
@@ -145,7 +148,7 @@ NR_DRB_ToAddMod_t *generateDRB_ASN1(const drb_t *drb_asn1)
   DRB_config->drb_Identity = drb_asn1->drb_id;
   association->present = drb_asn1->cnAssociation.present;
 
-  /* SDAP Configuration */
+  // SDAP Configuration 
   SDAP_config->pdu_Session = drb_asn1->cnAssociation.sdap_config.pdusession_id;
   SDAP_config->sdap_HeaderDL = drb_asn1->cnAssociation.sdap_config.sdap_HeaderDL;
   SDAP_config->sdap_HeaderUL = drb_asn1->cnAssociation.sdap_config.sdap_HeaderUL;
@@ -160,7 +163,7 @@ NR_DRB_ToAddMod_t *generateDRB_ASN1(const drb_t *drb_asn1)
 
   association->choice.sdap_Config = SDAP_config;
 
-  /* PDCP Configuration */
+  // PDCP Configuration 
   asn1cCallocOne(drb->discardTimer, drb_asn1->pdcp_config.discardTimer);
   asn1cCallocOne(drb->pdcp_SN_SizeUL, drb_asn1->pdcp_config.pdcp_SN_SizeUL);
   asn1cCallocOne(drb->pdcp_SN_SizeDL, drb_asn1->pdcp_config.pdcp_SN_SizeDL);
@@ -179,6 +182,7 @@ NR_DRB_ToAddMod_t *generateDRB_ASN1(const drb_t *drb_asn1)
 
   return DRB_config;
 }
+
 
 uint8_t get_next_available_drb_id(gNB_RRC_UE_t *ue)
 {

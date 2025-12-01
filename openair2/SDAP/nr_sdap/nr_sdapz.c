@@ -49,7 +49,12 @@ bool sdap_data_req(protocol_ctxt_t *ctxt_p,
     LOG_E(SDAP, "%s:%d:%s: Entity not found with ue: 0x%"PRIx64" and pdusession id: %d\n", __FILE__, __LINE__, __FUNCTION__, ue_id, pdusession_id);
     return 0;
   }
-
+  //zy
+  if (sdap_entity->use_tap && qfi == sdap_entity->private_qfi) {
+  LOG_D(SDAP, "TX via TAP (p-QFI=%u, UE=0x%"PRIx64", PDU Session=%d)\n",
+        qfi, ue_id, pdusession_id);
+  }
+  //zy-e
   bool ret = sdap_entity->tx_entity(sdap_entity,
                                     ctxt_p,
                                     srb_flag,
@@ -80,7 +85,9 @@ void sdap_data_ind(rb_id_t pdcp_entity,
     LOG_E(SDAP, "%s:%d:%s: Entity not found for ue rnti/ue_id: %lx and pdusession id: %d\n", __FILE__, __LINE__, __FUNCTION__, ue_id, pdusession_id);
     return;
   }
-
+  if (sdap_entity->use_tap && has_sdap_rx && sdap_entity->private_qfi > 0) {
+    LOG_D(SDAP, "RX via TAP (p-QFI=%u)\n", sdap_entity->private_qfi);
+  }
   sdap_entity->rx_entity(sdap_entity,
                          pdcp_entity,
                          is_gnb,

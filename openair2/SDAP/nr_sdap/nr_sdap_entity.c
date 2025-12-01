@@ -341,11 +341,14 @@ void nr_sdap_qfi2drb_map_update(nr_sdap_entity_t *entity, uint8_t qfi, rb_id_t d
   if(qfi < SDAP_MAX_QFI &&
      qfi > SDAP_MAP_RULE_EMPTY &&
      drb > 0 &&
-     drb <= AVLBL_DRB){
+     drb <= AVLBL_DRB)
+     {
+
     entity->qfi2drb_table[qfi].drb_id = drb;
     entity->qfi2drb_table[qfi].has_sdap_rx = has_sdap_rx;
     entity->qfi2drb_table[qfi].has_sdap_tx = has_sdap_tx;
-    LOG_D(SDAP, "Updated mapping: QFI %u -> DRB %ld \n", qfi, entity->qfi2drb_table[qfi].drb_id);
+
+    LOG_I(SDAP, "Updated mapping: QFI %u -> DRB %ld (rx=%d tx=%d)\n", qfi, entity->qfi2drb_table[qfi].drb_id, has_sdap_rx, has_sdap_tx);
   } else {
     LOG_D(SDAP, "Map updated failed, QFI: %u, DRB: %ld\n", qfi, drb);
   }

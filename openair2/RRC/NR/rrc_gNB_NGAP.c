@@ -752,7 +752,7 @@ void rrc_gNB_send_NGAP_UPLINK_NAS(gNB_RRC_INST *rrc, gNB_RRC_UE_t *UE, const NR_
   NGAP_UPLINK_NAS(msg_p).nas_pdu.buffer = buf;
   itti_send_msg_to_task(TASK_NGAP, rrc->module_id, msg_p);
 }
-
+//re-check
 void rrc_gNB_send_NGAP_PDUSESSION_SETUP_RESP(gNB_RRC_INST *rrc, gNB_RRC_UE_t *UE, uint8_t xid)
 {
   MessageDef *msg_p;

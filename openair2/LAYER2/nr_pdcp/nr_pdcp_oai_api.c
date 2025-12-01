@@ -642,21 +642,22 @@ uint64_t nr_pdcp_module_init(uint64_t _pdcp_optmask, int id)
                      : 1;
     tun_init(ifprefix, num_if, id);
     if (IS_SOFTMODEM_NOS1) {
-      const char *ip = !get_softmodem_params()->nsa ? "10.0.1.2" : "10.0.1.3";
+      const char *ip = !get_softmodem_params()->nsa ? "10.46.0.2" : "10.46.0.3";
       tun_config(1, ip, NULL, ifprefix);
       set_qfi_pduid(7, 10);
     }
     LOG_I(PDCP, "UE pdcp will use tun interface\n");
     start_pdcp_tun_ue();
   } else if (ENB_NAS_USE_TUN) {
-    char *ifprefix = get_softmodem_params()->nsa ? "oaitun_gnb" : "oaitun_enb";
+    char *ifprefix = get_softmodem_params()->nsa ? "oaitun_enb" : "oaitun_gnb";
     tun_init(ifprefix, 1, id);
-    tun_config(1, "10.0.1.1", NULL, ifprefix);
+    tun_config(1, "10.46.0.1", NULL, ifprefix);
     LOG_I(PDCP, "ENB pdcp will use tun interface\n");
     start_pdcp_tun_enb();
   }
 
   return pdcp_optmask ;
+
 }
 
 static void deliver_sdu_drb(void *_ue, nr_pdcp_entity_t *entity,
@@ -842,7 +843,7 @@ void add_drb(int is_gnb,
   int has_integrity;
   int has_ciphering;
 
-  /* if pdcp_Config->t_Reordering is not present, it means infinity (-1) */
+  // if pdcp_Config->t_Reordering is not present, it means infinity (-1)
   int t_reordering = -1;
   if (s->pdcp_Config->t_Reordering != NULL) {
     t_reordering = decode_t_reordering(*s->pdcp_Config->t_Reordering);
@@ -886,14 +887,14 @@ void add_drb(int is_gnb,
     mappedQFIs2AddCount = s->cnAssociation->choice.sdap_Config->mappedQoS_FlowsToAdd->list.count;
     LOG_D(SDAP, "Captured mappedQoS_FlowsToAdd from RRC: %ld \n", *mappedQFIs2Add);
   }
-  /* TODO(?): accept different UL and DL SN sizes? */
+  // TODO(?): accept different UL and DL SN sizes? 
   if (sn_size_ul != sn_size_dl) {
     LOG_E(PDCP, "%s:%d:%s: fatal, bad SN sizes, must be same. ul=%d, dl=%d\n",
           __FILE__, __LINE__, __FUNCTION__, sn_size_ul, sn_size_dl);
     exit(1);
   }
 
-  /* get actual ciphering and integrity algorithm based on pdcp_Config */
+  // get actual ciphering and integrity algorithm based on pdcp_Config 
   nr_pdcp_entity_security_keys_and_algos_t actual_security_parameters = *security_parameters;
   actual_security_parameters.ciphering_algorithm = has_ciphering ? security_parameters->ciphering_algorithm : 0;
   actual_security_parameters.integrity_algorithm = has_integrity ? security_parameters->integrity_algorithm : 0;
@@ -913,7 +914,7 @@ void add_drb(int is_gnb,
     nr_pdcp_ue_add_drb_pdcp_entity(ue, drb_id, pdcp_drb);
 
     LOG_I(PDCP, "added drb %d to UE ID %ld\n", drb_id, UEid);
-    /* add new SDAP entity for the PDU session the DRB belongs to */
+    // add new SDAP entity for the PDU session the DRB belongs to
     new_nr_sdap_entity(is_gnb,
                        has_sdap_rx,
                        has_sdap_tx,
@@ -922,11 +923,149 @@ void add_drb(int is_gnb,
                        is_sdap_DefaultDRB,
                        drb_id,
                        mappedQFIs2Add,
-                       mappedQFIs2AddCount);
+                       mappedQFIs2AddCount
+                       //true
+                      ); //zyzy if using p-qfi change to true
   }
   nr_pdcp_manager_unlock(nr_pdcp_ue_manager);
 }
 
+
+/*zyzy: qfi 
+void add_drb(int is_gnb,
+             ue_id_t UEid,
+             struct NR_DRB_ToAddMod *s,
+             const nr_pdcp_entity_security_keys_and_algos_t *security_parameters)
+{
+  nr_pdcp_entity_t *pdcp_drb;
+  nr_pdcp_ue_t *ue;
+
+  int drb_id = s->drb_Identity;
+  int sn_size_ul = decode_sn_size_ul(*s->pdcp_Config->drb->pdcp_SN_SizeUL);
+  int sn_size_dl = decode_sn_size_dl(*s->pdcp_Config->drb->pdcp_SN_SizeDL);
+  int discard_timer = decode_discard_timer(*s->pdcp_Config->drb->discardTimer);
+
+  int has_integrity = 0;
+  int has_ciphering = 1;
+
+  int t_reordering = -1;
+  if (s->pdcp_Config->t_Reordering != NULL)
+    t_reordering = decode_t_reordering(*s->pdcp_Config->t_Reordering);
+
+  if (s->pdcp_Config->drb != NULL &&
+      s->pdcp_Config->drb->integrityProtection != NULL)
+    has_integrity = 1;
+
+  if (s->pdcp_Config->ext1 != NULL &&
+      s->pdcp_Config->ext1->cipheringDisabled != NULL)
+    has_ciphering = 0;
+
+  if ((!s->cnAssociation) ||
+      s->cnAssociation->present == NR_DRB_ToAddMod__cnAssociation_PR_NOTHING) {
+    LOG_E(PDCP,
+          "add_drb(): fatal, cnAssociation missing or invalid\n");
+    exit(-1);
+  }
+
+  // ------------------- SDAP / PDU Session Info ------------------- 
+  int pdusession_id;
+  bool has_sdap_rx = false;
+  bool has_sdap_tx = false;
+  bool is_sdap_DefaultDRB = false;
+
+  NR_QFI_t *mappedQFIs2Add = NULL;
+  uint8_t mappedQFIs2AddCount = 0;
+
+  if (s->cnAssociation->present ==
+      NR_DRB_ToAddMod__cnAssociation_PR_eps_BearerIdentity) {
+
+    pdusession_id = s->cnAssociation->choice.eps_BearerIdentity;
+  }
+  else {
+
+    NR_SDAP_Config_t *sc = s->cnAssociation->choice.sdap_Config;
+
+    pdusession_id = sc->pdu_Session;
+    has_sdap_rx = is_sdap_rx(is_gnb, sc);
+    has_sdap_tx = is_sdap_tx(is_gnb, sc);
+    is_sdap_DefaultDRB = sc->defaultDRB ? true : false;
+
+    mappedQFIs2AddCount = sc->mappedQoS_FlowsToAdd->list.count;
+
+    if (mappedQFIs2AddCount > 0)
+      mappedQFIs2Add = (NR_QFI_t *)sc->mappedQoS_FlowsToAdd->list.array[0];
+
+    LOG_I(SDAP,
+      "SDAP: PDU session %d, DRB %d, mappedQFIs count=%d\n",
+      pdusession_id, drb_id, mappedQFIs2AddCount);
+
+    for (int i = 0; i < mappedQFIs2AddCount; i++) {
+      LOG_I(SDAP, " → QFI[%d] = %ld\n", i,
+            *(NR_QFI_t *)sc->mappedQoS_FlowsToAdd->list.array[i]);
+    }
+  }
+
+  // UL/DL SN size mismatch check 
+  if (sn_size_ul != sn_size_dl) {
+    LOG_E(PDCP,
+          "add_drb(): fatal SN size mismatch (%d vs %d)\n",
+          sn_size_ul, sn_size_dl);
+    exit(1);
+  }
+
+  // Final security parameters 
+  nr_pdcp_entity_security_keys_and_algos_t actual_security_parameters =
+      *security_parameters;
+
+  actual_security_parameters.ciphering_algorithm =
+      has_ciphering ? security_parameters->ciphering_algorithm : 0;
+
+  actual_security_parameters.integrity_algorithm =
+      has_integrity ? security_parameters->integrity_algorithm : 0;
+
+  // ------------------- PDCP Entity Creation ------------------- 
+  nr_pdcp_manager_lock(nr_pdcp_ue_manager);
+
+  ue = nr_pdcp_manager_get_ue(nr_pdcp_ue_manager, UEid);
+
+  if (nr_pdcp_get_rb(ue, drb_id, false) != NULL) {
+    LOG_W(PDCP,
+          "DRB %d already exists for UE %ld, skipping\n",
+          drb_id, UEid);
+  }
+  else {
+
+    pdcp_drb = new_nr_pdcp_entity(
+        NR_PDCP_DRB_AM, is_gnb, drb_id, pdusession_id,
+        has_sdap_rx, has_sdap_tx,
+        deliver_sdu_drb, ue,
+        is_gnb ? deliver_pdu_drb_gnb : deliver_pdu_drb_ue,
+        ue,
+        sn_size_dl, t_reordering, discard_timer,
+        &actual_security_parameters);
+
+    nr_pdcp_ue_add_drb_pdcp_entity(ue, drb_id, pdcp_drb);
+
+    LOG_I(PDCP, "Added DRB %d to UE %ld\n", drb_id, UEid);
+
+    // ------------------- SDAP Entity Creation ------------------- 
+    new_nr_sdap_entity(
+        is_gnb,
+        has_sdap_rx,
+        has_sdap_tx,
+        UEid,
+        pdusession_id,
+        is_sdap_DefaultDRB,
+        drb_id,
+        mappedQFIs2Add,      // pointer to QFI array 
+        mappedQFIs2AddCount  // number of QFIs 
+    );
+  }
+
+  nr_pdcp_manager_unlock(nr_pdcp_ue_manager);
+}
+*/
+//zyzy: end
 void nr_pdcp_add_srbs(eNB_flag_t enb_flag,
                       ue_id_t UEid,
                       NR_SRB_ToAddModList_t *const srb2add_list,

@@ -48,7 +48,7 @@ static instance_t get_f1_gtp_instance(void)
     return -1; // means no F1
   return inst->gtpInst;
 }
-
+// zyzy recheck
 static int drb_gtpu_create(instance_t instance,
                            uint32_t ue_id,
                            int incoming_id,
