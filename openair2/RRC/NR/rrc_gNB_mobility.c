@@ -20,11 +20,8 @@
  */
 
 #include <stdlib.h>
-
 #include "assertions.h"
-
 #include "rrc_gNB_mobility.h"
-
 #include "nr_rrc_proto.h"
 #include "rrc_gNB_du.h"
 #include "rrc_gNB_radio_bearers.h"

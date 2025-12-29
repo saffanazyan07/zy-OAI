@@ -252,6 +252,11 @@ function main() {
             TARGET_LIST="$TARGET_LIST nr-uesoftmodem"
             echo_info "Will compile NR UE"
             shift;;
+       --d-cu)
+            gNB=1
+            TARGET_LIST="$TARGET_LIST d-cu"
+            echo_info "Will compile d-cu"
+            shift;;
        --z-cu)
             gNB=1
             TARGET_LIST="$TARGET_LIST z-cu"
@@ -259,6 +264,7 @@ function main() {
             shift;;
        --z-agf)
             gNB=1
+            nrUE=1
             TARGET_LIST="$TARGET_LIST z-agf nr-uesoftmodem"
             echo_info "Will compile Z-AGF"
             shift;;       
@@ -346,7 +352,7 @@ function main() {
             shift;;
        --build-doxygen)
            CMAKE_CMD="$CMAKE_CMD -DGENERATE_DOXYGEN=ON"
-	   TARGET_LIST="$TARGET_LIST doc"
+	         TARGET_LIST="$TARGET_LIST doc"
            BUILD_DOXYGEN=1
            echo_info "Will build doxygen support"
            shift;;     
@@ -428,7 +434,7 @@ function main() {
             CMAKE_CMD="$CMAKE_CMD -DTRACE_ASN1C_ENC_DEC=ON"
             echo_info "Enabling asn1c internal traces via OAI logging system"
             shift 1;;
-      --pppoe)   
+       --pppoe)   
             CMAKE_CMD="$CMAKE_CMD -Drp-pppoe=ON"
             shift 1;; 
 

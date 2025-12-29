@@ -55,7 +55,7 @@ extern "C" {
 #pragma pack(1)
 
 //zyzy
-/*
+
 struct gtp_header {
   uint8_t flags;
   uint8_t message_type;
@@ -70,7 +70,7 @@ gtpu_tunnel_t gtpu_tunnels[MAX_TUNNELS] = {
 
 pthread_mutex_t gtp_lock = PTHREAD_MUTEX_INITIALIZER;
 bool gtpu_initialized = false;
-*/
+
 //zyzy end
 typedef struct Gtpv1uMsgHeader {
   uint8_t PN:1;
@@ -268,178 +268,6 @@ instance_t legacyInstanceMapping=0;
 /////////////////////////////////////
 
 
-/////////////////////////////////////
-/////////checked by dita ////////////
-/////////////////////////////////////
-
-// Helper function untuk mendapatkan gtpv1u_bearer_t menggunakan UE ID dan RB ID (kunci PDCP)
-/*
-static gtpv1u_bearer_t *get_pdcp_bearer(gtpEndPoint *inst, ue_id_t ue_id, rb_id_t rb_id) {
-    auto ue_it = inst->ue2te_mapping.find(ue_id);
-    if (ue_it == inst->ue2te_mapping.end()) {
-        return NULL;
-    }
-    
-    // RB ID adalah kunci untuk map bearers
-    auto bearer_it = ue_it->second.bearers.find(rb_id);
-    if (bearer_it == ue_it->second.bearers.end()) {
-        return NULL;
-    }
-    return &bearer_it->second;
-}
-*/
-//==============================================================================//
-//-------------------- PDCP-CENTERED TUNNEL IMPLEMENTATION ---------------------//
-//==============================================================================//
-
-// 1. Implementasi gtpv1u_create_pdcp_tunnel (Membuat Tunnel PDCP)
-/*
-teid_t gtpv1u_create_pdcp_tunnel(
-    instance_t instance, 
-    ue_id_t ue_id, 
-    rb_id_t rb_id, 
-    teid_t remote_teid, 
-    in_addr_t remote_addr, 
-    tcp_udp_port_t port,
-    int outgoing_qfi
-) {
-    pthread_mutex_lock(&globGtp.gtp_lock);
-    
-    // Dapatkan Instance GTP-U (socket handler)
-    auto instChk = globGtp.instances.find(compatInst(instance));
-    if (instChk == globGtp.instances.end()) {
-        LOG_E(GTPU, "[%ld] %s failed: instance not found\n", instance, __func__);
-        pthread_mutex_unlock(&globGtp.gtp_lock);
-        return GTPNOK;
-    }
-    gtpEndPoint *inst = &instChk->second;
-
-    // --- Cek/Buat Entri UE ---
-    auto ue_it = inst->ue2te_mapping.find(ue_id);
-    if (ue_it == inst->ue2te_mapping.end()) {
-        LOG_I(GTPU, "[%ld] Adding new UE ID %lx to mapping\n", instance, ue_id);
-        teidData_t new_ue_data = {}; // Inisialisasi map bearers kosong
-        inst->ue2te_mapping[ue_id] = new_ue_data;
-        ue_it = inst->ue2te_mapping.find(ue_id);
-    }
-
-    // --- Alokasi TEID Lokal ---
-    // TEID lokal digunakan sebagai pengenal di node AGF/CU ini.
-    teid_t local_teid = gtpv1uNewTeid(); 
-    
-    // --- Buat/Perbarui Bearer (Tunnel) ---
-    gtpv1u_bearer_t new_bearer = {};
-    
-    new_bearer.teid_incoming = local_teid;  // TEID Lokal (Self: AGF/CU)
-    new_bearer.teid_outgoing = remote_teid; // TEID Remote (Peer: CU/DU/RU)
-    new_bearer.outgoing_ip_addr = remote_addr;
-    new_bearer.outgoing_port = port;
-    new_bearer.outgoing_qfi = outgoing_qfi;
-    new_bearer.seqNum = 0;
-    new_bearer.npduNum = 0;
-
-    // Masukkan/Perbarui ke map bearers (Kunci utama PDCP/RB ID)
-    ue_it->second.bearers[rb_id] = new_bearer;
-
-    // Logika ini menggantikan F1AP (Control Plane) dalam mengatur F1-U (User Plane)
-    char remote_ip_str[16];
-    snprintf(remote_ip_str, 16, IPV4_ADDR_FORMAT_NO_PARENS, IPV4_ADDR_FORMAT(remote_addr));
-    
-    LOG_I(GTPU, 
-          "[%ld] PDCP Tunnel (GTP-U) CREATED: UE %lx, RB %u, Local TEID: %u, Remote TEID: %u, QFI: %d, Remote IP: %s\n", 
-          instance, ue_id, rb_id, local_teid, remote_teid, outgoing_qfi, remote_ip_str);
-          
-    pthread_mutex_unlock(&globGtp.gtp_lock);
-    return local_teid;
-}
-
-
-// 2. Implementasi gtpv1u_send_pdcp_data (Mengirim PDCP PDU)
-int gtpv1u_send_pdcp_data(
-    instance_t instance, 
-    ue_id_t ue_id, 
-    rb_id_t rb_id, 
-    uint8_t *buf, 
-    size_t len,
-    bool seqNumFlag,
-    bool npduNumFlag
-) {
-    pthread_mutex_lock(&globGtp.gtp_lock);
-    
-    // Dapatkan Instance GTP-U (socket handler)
-    auto instChk = globGtp.instances.find(compatInst(instance));
-    if (instChk == globGtp.instances.end()) {
-        LOG_E(GTPU, "[%ld] %s failed: instance not found\n", instance, __func__);
-        pthread_mutex_unlock(&globGtp.gtp_lock);
-        return GTPNOK;
-    }
-    gtpEndPoint *inst = &instChk->second;
-    
-    // Dapatkan Bearer (Tunnel) berdasarkan PDCP/RB ID
-    gtpv1u_bearer_t *bearer_p = get_pdcp_bearer(inst, ue_id, rb_id);
-    
-    if (!bearer_p) {
-        LOG_E(GTPU, "[%ld] GTP-U instance: PDCP Tunnel for UE:RB %lx/%x not found\n", instance, ue_id, rb_id);
-        pthread_mutex_unlock(&globGtp.gtp_lock);
-        return GTPNOK;
-    }
-
-    // Perbarui Sequence/N-PDU Number
-    if (seqNumFlag)
-        bearer_p->seqNum++;
-
-    if (npduNumFlag)
-        bearer_p->npduNum++;
-
-    // Salin struktur bearer agar aman sebelum membuka mutex
-    gtpv1u_bearer_t tmp = *bearer_p;
-    pthread_mutex_unlock(&globGtp.gtp_lock);
-
-    LOG_D(GTPU, "[%ld] Sending PDCP PDU via tunnel UE:RB:teid %lx/%x/%x, len %lu\n",
-          instance, ue_id, rb_id, tmp.teid_outgoing, len);
-
-
-    // --- Pengiriman Paket GTP-U (Payload adalah PDCP PDU) ---
-    int extHdrType = NO_MORE_EXT_HDRS;
-    uint8_t ext_buffer[sizeof(Gtpv1uExtHeaderT)] = {0};
-    uint8_t ext_length = 0;
-    
-    // Jika ada QFI, tambahkan PDU Session Container (untuk 5G)
-    if (tmp.outgoing_qfi != -1) {
-        Gtpv1uExtHeaderT *ext = (Gtpv1uExtHeaderT *)ext_buffer;
-        ext->ExtHeaderLen = 1; // in quad bytes
-        ext->pdusession_cntr.PDU_type = UL_PDU_SESSION_INFORMATION; // Asumsi Uplink (AGF/CU ke Peer)
-        ext->pdusession_cntr.QFI = tmp.outgoing_qfi;
-        ext->NextExtHeaderType = NO_MORE_EXT_HDRS;
-        
-        extHdrType = PDU_SESSION_CONTAINER;
-        ext_length = sizeof(Gtpv1uExtHeaderT);
-    }
-
-    int ret = gtpv1uCreateAndSendMsg(
-        compatInst(instance),
-        tmp.outgoing_ip_addr,
-        tmp.outgoing_port,
-        GTP_GPDU,
-        tmp.teid_outgoing, // TEID Peer (DU/CU/RU)
-        buf,               // Payload (PDCP PDU)
-        len,
-        seqNumFlag,
-        npduNumFlag,
-        tmp.seqNum,
-        tmp.npduNum,
-        extHdrType,
-        ext_buffer,
-        ext_length
-    );
-
-    // Kembalikan jumlah byte PDCP PDU yang dikirim
-    return (ret != GTPNOK) ? (int)len : GTPNOK;
-}
-*/
-/////////////////END EDIT BY DITA////////////////////////
-/////////////////////////////////////////////////////////
-
 #define HDR_MAX 256 // 256 is supposed to be larger than any gtp header
 
 //-----------------------------------------------------------------------//
@@ -528,7 +356,7 @@ static int gtpv1uCreateAndSendMsg(int h,
 /////////////////////////////////////
 ///////original code/////////
 // note: the function to send direct message from ue to upf for example icmp from ue
-
+/*
 void gtpv1uSendDirect(instance_t instance,
                       ue_id_t ue_id,
                       int bearer_id,
@@ -568,16 +396,18 @@ void gtpv1uSendDirect(instance_t instance,
   // copy to release the mutex
   gtpv1u_bearer_t tmp = ptr2->second;
   pthread_mutex_unlock(&globGtp.gtp_lock);
+  */
   //zyzy
     // Trigger inisialisasi GTP-U hanya jika belum dilakukan
-    /*
+  /*
   if (!gtpu_initialized) {
     LOG_I(GTPU, "Initializing GTP-U system at first packet send.\n");
     initialize_gtpu_system("192.168.60.77", "192.168.60.88"); //local, remote
     gtpu_initialized = true;
   }
-    */
+  */
   // zyzy end
+  /*
   if (tmp.outgoing_qfi != -1) {
   Gtpv1uExtHeaderT ext = {0};
   ext.ExtHeaderLen = 1; // in quad bytes  EXT_HDR_LNTH_OCTET_UNITS
@@ -622,12 +452,12 @@ void gtpv1uSendDirect(instance_t instance,
                            0);
   }
 }
-
+*/
 ////////////////end of original code//////////////////
 //==============================================================================//
 //--------------------------------edited by zyzy--------------------------------//
 //==============================================================================//
-/*
+
 void gtpv1uSendDirect(instance_t instance,
                       ue_id_t ue_id,
                       int bearer_id,
@@ -658,7 +488,7 @@ void gtpv1uSendDirect(instance_t instance,
           ptr2->second.seqNum,
           ptr2->second.npduNum);
 
-    if (seqNumFlag)
+    if (seqNumFlag)s
         ptr2->second.seqNum++;
 
     if (npduNumFlag)
@@ -689,7 +519,6 @@ void gtpv1uSendDirect(instance_t instance,
       }
       pthread_mutex_unlock(&gtp_lock);
   }
-  
   
     // Mengirim paket dengan atau tanpa header ekstensi
     if (tmp.outgoing_qfi != -1) {
@@ -733,7 +562,7 @@ void gtpv1uSendDirect(instance_t instance,
                                0);
     }
 }
-*/
+
 //--------------------------------zyzy end--------------------------------//
 
 static void fillDlDeliveryStatusReport(extensionHeader_t *extensionHeader, uint32_t RLC_buffer_availability, uint32_t NR_PDCP_PDU_SN){
@@ -914,7 +743,7 @@ static  int udpServerSocket(openAddr_s addr) {
 //-------------------------------------------------------------------------------------//
 
 //-------------------------- Edited and optimized by zyzy -----------------------------//
-/*
+
 // Function to create TUN device
 int create_tun_device(const char *dev) {
   struct ifreq ifr;
@@ -1153,7 +982,7 @@ int initialize_gtpu_system(gtpu_tunnel_t *tunnel) {
 
   return 0;
 }
-*/
+
 //----------------------------edited by zyzy end---------------------------------------//
 ////////////official code//////////////
 
@@ -1167,7 +996,7 @@ instance_t gtpv1Init(openAddr_t context) {
     LOG_E(GTPU,"can't create GTP-U instance\n");
 
   pthread_mutex_unlock(&globGtp.gtp_lock);
-  LOG_I(GTPU, "Created gtpu instance id: %d\n", id);
+  LOG_I(GTPU, "Created gtpu instance z-cu id: %d\n", id);
   return id;
 }
 /////////////////////////////////////////////

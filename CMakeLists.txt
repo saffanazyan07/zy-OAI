@@ -1386,37 +1386,45 @@ include_directories("${OPENAIR1_DIR}/SCHED_NR_UE")
 
 # CN libs
 ##########################
-### zyzy edit
+### ori
 add_library (GTPV1U
   ${NR_RRC_DIR}/rrc_gNB_GTPV1U.c
   ${RRC_DIR}/rrc_eNB_GTPV1U.c
   ${OPENAIR3_DIR}/ocp-gtpu/gtp_itf.cpp
-#  ${OPENAIR3_DIR}/ocp-gtpu/gtp_itf_z-cu.cpp
-#  ${OPENAIR3_DIR}/ocp-gtpu/gtp_itf_z-agf.cpp
 )
 target_link_libraries(GTPV1U PRIVATE asn1_nr_rrc_hdrs asn1_lte_rrc_hdrs)
 target_link_libraries(GTPV1U PRIVATE SIMU)
 include_directories(${OPENAIR3_DIR}/ocp-gtp)
 
-#add_library(GTPV1U_Z_CU
-#  ${NR_RRC_DIR}/rrc_gNB_GTPV1U.c
-#  ${RRC_DIR}/rrc_eNB_GTPV1U.c
-#  ${OPENAIR3_DIR}/ocp-gtpu/gtp_itf_z-cu.cpp
-#)
-#target_include_directories(GTPV1U_Z_CU PRIVATE ${OPENAIR3_DIR}/ocp-gtpu)
-#target_link_libraries(GTPV1U_Z_CU PRIVATE asn1_nr_rrc_hdrs asn1_lte_rrc_hdrs SIMU)
+### dita edit
+add_library (DCUGTPV1U
+  ${NR_RRC_DIR}/rrc_gNB_GTPV1U.c
+  ${RRC_DIR}/rrc_eNB_GTPV1U.c
+  ${OPENAIR3_DIR}/ocp-gtpu/gtp_itf_d-cu.cpp
+)
+target_link_libraries(DCUGTPV1U PRIVATE asn1_nr_rrc_hdrs asn1_lte_rrc_hdrs)
+target_link_libraries(DCUGTPV1U PRIVATE SIMU)
+include_directories(${OPENAIR3_DIR}/ocp-gtp)
 
-#add_library(GTPV1U_Z_AGF
-#  ${NR_RRC_DIR}/rrc_gNB_GTPV1U.c
-#  ${RRC_DIR}/rrc_eNB_GTPV1U.c
-#  ${OPENAIR3_DIR}/ocp-gtpu/gtp_itf_z-agf.cpp
-#)
-#target_include_directories(GTPV1U_Z_AGF PRIVATE ${OPENAIR3_DIR}/ocp-gtpu)
-#target_link_libraries(GTPV1U_Z_AGF PRIVATE asn1_nr_rrc_hdrs asn1_lte_rrc_hdrs SIMU)
+### zyzy edit
+add_library (ZCUGTPV1U
+  ${NR_RRC_DIR}/rrc_gNB_GTPV1U.c
+  ${RRC_DIR}/rrc_eNB_GTPV1U.c
+  ${OPENAIR3_DIR}/ocp-gtpu/gtp_itf_z-cu.cpp
+)
+target_link_libraries(ZCUGTPV1U PRIVATE asn1_nr_rrc_hdrs asn1_lte_rrc_hdrs)
+target_link_libraries(ZCUGTPV1U PRIVATE SIMU)
+include_directories(${OPENAIR3_DIR}/ocp-gtp)
 
-# Lalu executable A link ke GTPV1U_Z_CU, executable B link ke GTPV1U_Z_AGF
-# target_link_libraries(exec_cu PRIVATE GTPV1U_Z_CU)
-# target_link_libraries(exec_agf PRIVATE GTPV1U_Z_AGF)
+add_library(GTPV1U_Z_AGF
+  ${NR_RRC_DIR}/rrc_gNB_GTPV1U.c
+  ${RRC_DIR}/rrc_eNB_GTPV1U.c
+  ${OPENAIR3_DIR}/ocp-gtpu/gtp_itf_z-agf.cpp
+)
+target_link_libraries(GTPV1U_Z_AGF PRIVATE asn1_nr_rrc_hdrs asn1_lte_rrc_hdrs)
+target_link_libraries(GTPV1U_Z_AGF PRIVATE SIMU)
+include_directories(${OPENAIR3_DIR}/ocp-gtp)
+
 ### end zyzy edit
 set (MME_APP_SRC
   ${OPENAIR3_DIR}/MME_APP/mme_app.c
@@ -1949,7 +1957,6 @@ if(E2_AGENT)
   target_compile_definitions(nr-softmodem PRIVATE ${E2AP_VERSION} ${KPM_VERSION} E2_AGENT)
 endif()
 
-
 # force the generation of ASN.1 so that we don't need to wait during the build
 target_link_libraries(nr-softmodem PRIVATE
   asn1_lte_rrc asn1_nr_rrc asn1_s1ap asn1_ngap asn1_m2ap asn1_m3ap asn1_x2ap asn1_f1ap asn1_lpp)
@@ -1972,6 +1979,51 @@ if(E2_AGENT)
   target_link_libraries(nr-cuup PRIVATE e2_agent e2_agent_arg e2_ran_func_cuup)
   target_compile_definitions(nr-cuup PRIVATE ${E2AP_VERSION} ${KPM_VERSION} E2_AGENT)
 endif()
+# d-cu
+# edited by dita
+###################################################
+
+add_executable(d-cu
+  ${rrc_h}
+  ${nr_rrc_h}
+  ${s1ap_h}
+  ${OPENAIR_DIR}/executables/nr-gnb.c
+  ${OPENAIR_DIR}/executables/nr-ru.c
+  ${OPENAIR_DIR}/executables/d-cu.c
+  ${OPENAIR_DIR}/executables/softmodem-common.c
+  ${OPENAIR_DIR}/radio/COMMON/common_lib.c
+  ${OPENAIR_DIR}/radio/COMMON/record_player.c
+  ${OPENAIR_DIR}/common/utils/lte/ue_power.c
+  ${OPENAIR_DIR}/common/utils/lte/prach_utils.c
+  ${PHY_INTERFACE_DIR}/queue_t.c
+  ${OPENAIR1_DIR}/PHY/TOOLS/phy_scope_interface.c
+  )
+
+target_link_libraries(d-cu PRIVATE
+ -Wl,--start-group
+  UTIL HASHTABLE SCTP_CLIENT SCHED_LIB SCHED_RU_LIB SCHED_NR_LIB PHY_NR PHY PHY_COMMON PHY_NR_COMMON PHY_RU DCUGTPV1U SECURITY
+  ITTI ${NAS_UE_LIB} lte_rrc nr_rrc
+  ngap s1ap L2_LTE_NR L2_NR MAC_NR_COMMON NFAPI_LIB NFAPI_VNF_LIB NFAPI_PNF_LIB NFAPI_USER_LIB SIMU
+  x2ap f1ap m2ap m3ap e1ap shlib_loader
+  -Wl,--end-group z dl)
+
+target_link_libraries(d-cu PRIVATE pthread m CONFIG_LIB rt sctp)
+target_link_libraries(d-cu PRIVATE ${T_LIB})
+target_link_libraries(d-cu PRIVATE asn1_nr_rrc_hdrs asn1_lte_rrc_hdrs)
+target_link_libraries(d-cu PRIVATE asn1_nr_rrc_hdrs asn1_lte_rrc_hdrs)
+add_boolean_option(OAI_AERIAL OFF "Activate OAI's AERIAL driver" OFF)
+if (OAI_AERIAL)
+  target_compile_definitions(d-cu PUBLIC ENABLE_AERIAL)
+  target_link_libraries(d-cu PUBLIC aerial_lib)
+endif()
+if(E2_AGENT)
+  target_compile_definitions(d-cu PRIVATE ${E2AP_VERSION} ${KPM_VERSION} E2_AGENT)
+endif()
+
+# force the generation of ASN.1 so that we don't need to wait during the build
+target_link_libraries(d-cu PRIVATE
+  asn1_lte_rrc asn1_nr_rrc asn1_s1ap asn1_ngap asn1_m2ap asn1_m3ap asn1_x2ap asn1_f1ap asn1_lpp)
+
 # edited zyzy
 # z-cu
 ###################################################
@@ -1993,8 +2045,8 @@ add_executable(z-cu
   )
 
 target_link_libraries(z-cu PRIVATE
-  -Wl,--start-group
-  UTIL HASHTABLE SCTP_CLIENT SCHED_LIB SCHED_RU_LIB SCHED_NR_LIB PHY_NR PHY PHY_COMMON PHY_NR_COMMON PHY_RU GTPV1U SECURITY
+ -Wl,--start-group
+  UTIL HASHTABLE SCTP_CLIENT SCHED_LIB SCHED_RU_LIB SCHED_NR_LIB PHY_NR PHY PHY_COMMON PHY_NR_COMMON PHY_RU ZCUGTPV1U SECURITY
   ITTI ${NAS_UE_LIB} lte_rrc nr_rrc
   ngap s1ap L2_LTE_NR L2_NR MAC_NR_COMMON NFAPI_LIB NFAPI_VNF_LIB NFAPI_PNF_LIB NFAPI_USER_LIB SIMU
   x2ap f1ap m2ap m3ap e1ap shlib_loader
@@ -2012,6 +2064,10 @@ endif()
 if(E2_AGENT)
   target_compile_definitions(z-cu PRIVATE ${E2AP_VERSION} ${KPM_VERSION} E2_AGENT)
 endif()
+
+# force the generation of ASN.1 so that we don't need to wait during the build
+target_link_libraries(z-cu PRIVATE
+  asn1_lte_rrc asn1_nr_rrc asn1_s1ap asn1_ngap asn1_m2ap asn1_m3ap asn1_x2ap asn1_f1ap asn1_lpp)
 
 # z-agf
 ###################################################
@@ -2034,7 +2090,7 @@ add_executable(z-agf
 
 target_link_libraries(z-agf PRIVATE
   -Wl,--start-group
-  UTIL HASHTABLE SCTP_CLIENT SCHED_LIB SCHED_RU_LIB SCHED_NR_LIB PHY_NR PHY PHY_COMMON PHY_NR_COMMON PHY_RU GTPV1U SECURITY
+  UTIL HASHTABLE SCTP_CLIENT SCHED_LIB SCHED_RU_LIB SCHED_NR_LIB PHY_NR PHY PHY_COMMON PHY_NR_COMMON PHY_RU GTPV1U_Z_AGF SECURITY
   ITTI ${NAS_UE_LIB} lte_rrc nr_rrc
   ngap s1ap L2_LTE_NR L2_NR MAC_NR_COMMON NFAPI_LIB NFAPI_VNF_LIB NFAPI_PNF_LIB NFAPI_USER_LIB SIMU
   x2ap f1ap m2ap m3ap e1ap shlib_loader
@@ -2052,6 +2108,10 @@ endif()
 if(E2_AGENT)
   target_compile_definitions(z-agf PRIVATE ${E2AP_VERSION} ${KPM_VERSION} E2_AGENT)
 endif()
+
+# force the generation of ASN.1 so that we don't need to wait during the build
+target_link_libraries(z-agf PRIVATE
+  asn1_lte_rrc asn1_nr_rrc asn1_s1ap asn1_ngap asn1_m2ap asn1_m3ap asn1_x2ap asn1_f1ap asn1_lpp)
 
 ##### end-edited zyzy
 

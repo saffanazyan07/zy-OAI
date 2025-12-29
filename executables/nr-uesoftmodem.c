@@ -24,7 +24,6 @@
 #include <sched.h>
 #include <stdbool.h>
 #include <signal.h>
-
 #include "T.h"
 #include "common/oai_version.h"
 #include "assertions.h"
@@ -36,7 +35,6 @@
 #include "common/utils/load_module_shlib.h"
 //#undef FRAME_LENGTH_COMPLEX_SAMPLES //there are two conflicting definitions, so we better make sure we don't use it at all
 #include "common/utils/nr/nr_common.h"
-
 #include "radio/COMMON/common_lib.h"
 #include "radio/ETHERNET/if_defs.h"
 
@@ -60,13 +58,10 @@ unsigned short config_frames[4] = {2,9,11,13};
 #endif
 #include "common/utils/LOG/log.h"
 #include "common/utils/LOG/vcd_signal_dumper.h"
-
 #include "UTIL/OPT/opt.h"
 #include "enb_config.h"
 #include "LAYER2/nr_pdcp/nr_pdcp_oai_api.h"
-
 #include "intertask_interface.h"
-
 #include "PHY/INIT/nr_phy_init.h"
 #include "system.h"
 #include <openair2/RRC/NR_UE/rrc_proto.h>
@@ -115,9 +110,7 @@ int oai_exit = 0;
 
 
 static int      tx_max_power[MAX_NUM_CCs] = {0};
-
 double          rx_gain_off = 0.0;
-
 uint64_t        downlink_frequency[MAX_NUM_CCs][4];
 int32_t         uplink_frequency_offset[MAX_NUM_CCs][4];
 uint64_t        sidelink_frequency[MAX_NUM_CCs][4];
