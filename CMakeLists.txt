@@ -1416,13 +1416,22 @@ target_link_libraries(ZCUGTPV1U PRIVATE asn1_nr_rrc_hdrs asn1_lte_rrc_hdrs)
 target_link_libraries(ZCUGTPV1U PRIVATE SIMU)
 include_directories(${OPENAIR3_DIR}/ocp-gtp)
 
-add_library(GTPV1U_Z_AGF
+add_library(GTPV1U_Z_AGF1
   ${NR_RRC_DIR}/rrc_gNB_GTPV1U.c
   ${RRC_DIR}/rrc_eNB_GTPV1U.c
-  ${OPENAIR3_DIR}/ocp-gtpu/gtp_itf_z-agf.cpp
+  ${OPENAIR3_DIR}/ocp-gtpu/gtp_itf_z-agf1.cpp
 )
-target_link_libraries(GTPV1U_Z_AGF PRIVATE asn1_nr_rrc_hdrs asn1_lte_rrc_hdrs)
-target_link_libraries(GTPV1U_Z_AGF PRIVATE SIMU)
+target_link_libraries(GTPV1U_Z_AGF1 PRIVATE asn1_nr_rrc_hdrs asn1_lte_rrc_hdrs)
+target_link_libraries(GTPV1U_Z_AGF1 PRIVATE SIMU)
+include_directories(${OPENAIR3_DIR}/ocp-gtp)
+
+add_library(GTPV1U_Z_AGF2
+  ${NR_RRC_DIR}/rrc_gNB_GTPV1U.c
+  ${RRC_DIR}/rrc_eNB_GTPV1U.c
+  ${OPENAIR3_DIR}/ocp-gtpu/gtp_itf_z-agf2.cpp
+)
+target_link_libraries(GTPV1U_Z_AGF2 PRIVATE asn1_nr_rrc_hdrs asn1_lte_rrc_hdrs)
+target_link_libraries(GTPV1U_Z_AGF2 PRIVATE SIMU)
 include_directories(${OPENAIR3_DIR}/ocp-gtp)
 
 ### end zyzy edit
@@ -2069,10 +2078,10 @@ endif()
 target_link_libraries(z-cu PRIVATE
   asn1_lte_rrc asn1_nr_rrc asn1_s1ap asn1_ngap asn1_m2ap asn1_m3ap asn1_x2ap asn1_f1ap asn1_lpp)
 
-# z-agf
+# z-agf1
 ###################################################
 
-add_executable(z-agf
+add_executable(z-agf1
   ${rrc_h}
   ${nr_rrc_h}
   ${s1ap_h}
@@ -2088,31 +2097,73 @@ add_executable(z-agf
   ${OPENAIR1_DIR}/PHY/TOOLS/phy_scope_interface.c
   )
 
-target_link_libraries(z-agf PRIVATE
+target_link_libraries(z-agf1 PRIVATE
   -Wl,--start-group
-  UTIL HASHTABLE SCTP_CLIENT SCHED_LIB SCHED_RU_LIB SCHED_NR_LIB PHY_NR PHY PHY_COMMON PHY_NR_COMMON PHY_RU GTPV1U_Z_AGF SECURITY
+  UTIL HASHTABLE SCTP_CLIENT SCHED_LIB SCHED_RU_LIB SCHED_NR_LIB PHY_NR PHY PHY_COMMON PHY_NR_COMMON PHY_RU GTPV1U_Z_AGF1 SECURITY
   ITTI ${NAS_UE_LIB} lte_rrc nr_rrc
   ngap s1ap L2_LTE_NR L2_NR MAC_NR_COMMON NFAPI_LIB NFAPI_VNF_LIB NFAPI_PNF_LIB NFAPI_USER_LIB SIMU
   x2ap f1ap m2ap m3ap e1ap shlib_loader
   -Wl,--end-group z dl)
 
-target_link_libraries(z-agf PRIVATE pthread m CONFIG_LIB rt sctp)
-target_link_libraries(z-agf PRIVATE ${T_LIB})
-target_link_libraries(z-agf PRIVATE asn1_nr_rrc_hdrs asn1_lte_rrc_hdrs)
-target_link_libraries(z-agf PRIVATE asn1_nr_rrc_hdrs asn1_lte_rrc_hdrs)
+target_link_libraries(z-agf1 PRIVATE pthread m CONFIG_LIB rt sctp)
+target_link_libraries(z-agf1 PRIVATE ${T_LIB})
+target_link_libraries(z-agf1 PRIVATE asn1_nr_rrc_hdrs asn1_lte_rrc_hdrs)
+target_link_libraries(z-agf1 PRIVATE asn1_nr_rrc_hdrs asn1_lte_rrc_hdrs)
 add_boolean_option(OAI_AERIAL OFF "Activate OAI's AERIAL driver" OFF)
 if (OAI_AERIAL)
-  target_compile_definitions(z-agf PUBLIC ENABLE_AERIAL)
-  target_link_libraries(z-agf PUBLIC aerial_lib)
+  target_compile_definitions(z-agf1 PUBLIC ENABLE_AERIAL)
+  target_link_libraries(z-agf1 PUBLIC aerial_lib)
 endif()
 if(E2_AGENT)
-  target_compile_definitions(z-agf PRIVATE ${E2AP_VERSION} ${KPM_VERSION} E2_AGENT)
+  target_compile_definitions(z-agf1 PRIVATE ${E2AP_VERSION} ${KPM_VERSION} E2_AGENT)
 endif()
 
 # force the generation of ASN.1 so that we don't need to wait during the build
-target_link_libraries(z-agf PRIVATE
+target_link_libraries(z-agf1 PRIVATE
   asn1_lte_rrc asn1_nr_rrc asn1_s1ap asn1_ngap asn1_m2ap asn1_m3ap asn1_x2ap asn1_f1ap asn1_lpp)
+# z-agf
+###################################################
 
+add_executable(z-agf2
+  ${rrc_h}
+  ${nr_rrc_h}
+  ${s1ap_h}
+  ${OPENAIR_DIR}/executables/nr-gnb.c
+  ${OPENAIR_DIR}/executables/nr-ru.c
+  ${OPENAIR_DIR}/executables/z-agf.c
+  ${OPENAIR_DIR}/executables/softmodem-common.c
+  ${OPENAIR_DIR}/radio/COMMON/common_lib.c
+  ${OPENAIR_DIR}/radio/COMMON/record_player.c
+  ${OPENAIR_DIR}/common/utils/lte/ue_power.c
+  ${OPENAIR_DIR}/common/utils/lte/prach_utils.c
+  ${PHY_INTERFACE_DIR}/queue_t.c
+  ${OPENAIR1_DIR}/PHY/TOOLS/phy_scope_interface.c
+  )
+
+target_link_libraries(z-agf2 PRIVATE
+  -Wl,--start-group
+  UTIL HASHTABLE SCTP_CLIENT SCHED_LIB SCHED_RU_LIB SCHED_NR_LIB PHY_NR PHY PHY_COMMON PHY_NR_COMMON PHY_RU GTPV1U_Z_AGF2 SECURITY
+  ITTI ${NAS_UE_LIB} lte_rrc nr_rrc
+  ngap s1ap L2_LTE_NR L2_NR MAC_NR_COMMON NFAPI_LIB NFAPI_VNF_LIB NFAPI_PNF_LIB NFAPI_USER_LIB SIMU
+  x2ap f1ap m2ap m3ap e1ap shlib_loader
+  -Wl,--end-group z dl)
+
+target_link_libraries(z-agf2 PRIVATE pthread m CONFIG_LIB rt sctp)
+target_link_libraries(z-agf2 PRIVATE ${T_LIB})
+target_link_libraries(z-agf2 PRIVATE asn1_nr_rrc_hdrs asn1_lte_rrc_hdrs)
+target_link_libraries(z-agf2 PRIVATE asn1_nr_rrc_hdrs asn1_lte_rrc_hdrs)
+add_boolean_option(OAI_AERIAL OFF "Activate OAI's AERIAL driver" OFF)
+if (OAI_AERIAL)
+  target_compile_definitions(z-agf2 PUBLIC ENABLE_AERIAL)
+  target_link_libraries(z-agf2 PUBLIC aerial_lib)
+endif()
+if(E2_AGENT)
+  target_compile_definitions(z-agf2 PRIVATE ${E2AP_VERSION} ${KPM_VERSION} E2_AGENT)
+endif()
+
+# force the generation of ASN.1 so that we don't need to wait during the build
+target_link_libraries(z-agf2 PRIVATE
+  asn1_lte_rrc asn1_nr_rrc asn1_s1ap asn1_ngap asn1_m2ap asn1_m3ap asn1_x2ap asn1_f1ap asn1_lpp)
 ##### end-edited zyzy
 
 # nr-uesoftmodem is  UE implementation

@@ -23,7 +23,7 @@ extern "C" {
 #include "openair2/SDAP/nr_sdap/nr_sdap.h"
 #include "sim.h"
 
-//edited by zyzy
+//edited by dita
 // add library 
 #include <netinet/ip.h>
 #include <netinet/udp.h>
@@ -41,7 +41,7 @@ extern "C" {
 #include <errno.h>
 #include <string.h>
 #include <sys/ioctl.h>
-//#include <openair3/ocp-gtpu/zy-agf/xl2tpd/l2tp.h>
+
 
 
 #if defined(HAVE_LINUX_IF_H)
@@ -54,24 +54,7 @@ extern "C" {
 
 #pragma pack(1)
 
-//zyzy
-/*
-struct gtp_header {
-  uint8_t flags;
-  uint8_t message_type;
-  uint16_t length;
-  uint32_t teid;
-};
 
-gtpu_tunnel_t gtpu_tunnels[MAX_TUNNELS] = {
-  {"192.168.60.88", "192.168.60.77", 2154, -1, -1, 0x00000001, PTHREAD_MUTEX_INITIALIZER}, // TEID = 1
-  {"192.168.60.88", "192.168.60.99", 2153, -1, -1, 0x00000002, PTHREAD_MUTEX_INITIALIZER}  // TEID = 2
-};
-
-pthread_mutex_t gtp_lock = PTHREAD_MUTEX_INITIALIZER;
-bool gtpu_initialized = false;
-*/
-//zyzy end
 typedef struct Gtpv1uMsgHeader {
   uint8_t PN:1;
   uint8_t S:1;
@@ -236,9 +219,6 @@ instance_t legacyInstanceMapping=0;
     return GTPNOK;                                                     \
   }                                                             \
   gtpEndPoint * inst=&instChk->second;
-///////////////////////////////////
-/////////edited by zyzy////////////
-///////////////////////////////////
 
  #define getUeRetVoid(insT, Ue)                                            \
     auto ptrUe=insT->ue2te_mapping.find(Ue);                        \
@@ -250,7 +230,7 @@ instance_t legacyInstanceMapping=0;
     } else { \
         LOG_I(GTPU, "[%ld] %s success: UE ID %ld\n", instance, __func__, Ue); \
     }
-//end
+
 #define getUeRetInt(insT, Ue)                                            \
     auto ptrUe=insT->ue2te_mapping.find(Ue);                        \
                                                                         \
@@ -261,11 +241,7 @@ instance_t legacyInstanceMapping=0;
     } else { \
         LOG_I(GTPU, "[%ld] %s success: UE ID %ld\n", instance, __func__, Ue); \
     }
-//end
 
-
-/////////edited by zyzy end//////////
-/////////////////////////////////////
 
 
 /////////////////////////////////////
@@ -395,7 +371,7 @@ int gtpv1u_send_pdcp_data(
     gtpv1u_bearer_t tmp = *bearer_p;
     pthread_mutex_unlock(&globGtp.gtp_lock);
 
-    LOG_D(GTPU, "[%ld] Sending PDCP PDU via tunnel UE:RB:teid %lx/%x/%x, len %lu\n",
+    LOG_I(GTPU, "[%ld] Sending PDCP PDU via tunnel UE:RB:teid %lx/%x/%x, len %lu\n",
           instance, ue_id, rb_id, tmp.teid_outgoing, len);
 
 
@@ -457,7 +433,7 @@ static int gtpv1uCreateAndSendMsg(int h,
                                   int extHdrType,
                                   uint8_t *extensionHeader_buffer,
                                   uint8_t extensionHeader_length) {
-  LOG_D(GTPU, "Peer IP:%u peer port:%u outgoing teid:%u \n", peerIp, peerPort, teid);
+  LOG_I(GTPU, "Peer IP:%u peer port:%u outgoing teid:%u \n", peerIp, peerPort, teid); //D
 
   uint8_t buffer[msgLen+HDR_MAX]; 
   uint8_t *curPtr=buffer;
@@ -489,11 +465,11 @@ static int gtpv1uCreateAndSendMsg(int h,
     if (extensionHeader_length > 0) {
       memcpy(curPtr, extensionHeader_buffer, extensionHeader_length);
       curPtr += extensionHeader_length;
-      LOG_D(GTPU, "Extension Header for DDD added. The length is: %d, extension header type is: %x \n", extensionHeader_length, *((uint8_t *)(buffer + 11)));
+      LOG_I(GTPU, "Extension Header for DDD added. The length is: %d, extension header type is: %x \n", extensionHeader_length, *((uint8_t *)(buffer + 11)));
       extHdrType = extensionHeader_buffer[extensionHeader_length - 1];
-      LOG_D(GTPU, "Next extension header type is: %x \n", *((uint8_t *)(buffer + 11)));
+      LOG_I(GTPU, "Next extension header type is: %x \n", *((uint8_t *)(buffer + 11)));
     } else {
-      LOG_W(GTPU, "Extension header type not supported, returning... \n");
+      LOG_I(GTPU, "Extension header type not supported, returning... \n");
     }
   }
 
@@ -509,7 +485,7 @@ static int gtpv1uCreateAndSendMsg(int h,
   to.sin_family      = AF_INET;
   to.sin_port        = htons(peerPort);
   to.sin_addr.s_addr = peerIp ;
-  LOG_D(GTPU,"sending packet size: %ld to %s\n",curPtr-buffer, inet_ntoa(to.sin_addr) );
+  LOG_I(GTPU,"sending packet size: %ld to %s\n",curPtr-buffer, inet_ntoa(to.sin_addr) );
   int ret;
   
 
@@ -523,10 +499,6 @@ static int gtpv1uCreateAndSendMsg(int h,
   return  !GTPNOK;
 }
 
-/////////////////////////////////////
-/////////checked by zyzy ////////////
-/////////////////////////////////////
-///////original code/////////
 // note: the function to send direct message from ue to upf for example icmp from ue
 
 void gtpv1uSendDirect(instance_t instance,
@@ -549,7 +521,7 @@ void gtpv1uSendDirect(instance_t instance,
     return;
   }
 
-  LOG_D(GTPU,
+  LOG_I(GTPU,
         "[%ld] sending a packet to UE:RAB:teid %lx/%x/%x, len %lu, oldseq %d, oldnum %d\n",
         instance,
         ue_id,
@@ -568,16 +540,6 @@ void gtpv1uSendDirect(instance_t instance,
   // copy to release the mutex
   gtpv1u_bearer_t tmp = ptr2->second;
   pthread_mutex_unlock(&globGtp.gtp_lock);
-  //zyzy
-    // Trigger inisialisasi GTP-U hanya jika belum dilakukan
-    /*
-  if (!gtpu_initialized) {
-    LOG_I(GTPU, "Initializing GTP-U system at first packet send.\n");
-    initialize_gtpu_system("192.168.60.77", "192.168.60.88"); //local, remote
-    gtpu_initialized = true;
-  }
-    */
-  // zyzy end
   if (tmp.outgoing_qfi != -1) {
   Gtpv1uExtHeaderT ext = {0};
   ext.ExtHeaderLen = 1; // in quad bytes  EXT_HDR_LNTH_OCTET_UNITS
@@ -588,7 +550,7 @@ void gtpv1uSendDirect(instance_t instance,
   ext.pdusession_cntr.Paging_Policy_Indicator = false;
   ext.NextExtHeaderType = NO_MORE_EXT_HDRS;
     
-  //zyzy: this for UL MSG
+  // this for UL MSG
   gtpv1uCreateAndSendMsg(compatInst(instance),
                           tmp.outgoing_ip_addr,
                           tmp.outgoing_port,
@@ -604,7 +566,7 @@ void gtpv1uSendDirect(instance_t instance,
                           (uint8_t *)&ext,
                           sizeof(ext));
   } 
-  //zyzy: this for DL MSG
+  // this for DL MSG
   else {
     gtpv1uCreateAndSendMsg(compatInst(instance),
                            tmp.outgoing_ip_addr,
@@ -623,119 +585,6 @@ void gtpv1uSendDirect(instance_t instance,
   }
 }
 
-////////////////end of original code//////////////////
-//==============================================================================//
-//--------------------------------edited by zyzy--------------------------------//
-//==============================================================================//
-/*
-void gtpv1uSendDirect(instance_t instance,
-                      ue_id_t ue_id,
-                      int bearer_id,
-                      uint8_t *buf,
-                      size_t len,
-                      bool seqNumFlag,
-                      bool npduNumFlag)
-{
-    pthread_mutex_lock(&globGtp.gtp_lock);
-    getInstRetVoid(compatInst(instance));
-    getUeRetVoid(inst, ue_id);
-
-    auto ptr2 = ptrUe->second.bearers.find(bearer_id);
-
-    if (ptr2 == ptrUe->second.bearers.end()) {
-        LOG_E(GTPU, "[%ld] GTP-U instance: sending a packet to a non-existent UE:RAB: %lx/%x\n", instance, ue_id, bearer_id);
-        pthread_mutex_unlock(&globGtp.gtp_lock);
-        return;
-    }
-
-    LOG_D(GTPU,
-          "[%ld] Sending packet to UE:RAB:teid %lx/%x/%x, len %lu, oldseq %d, oldnum %d\n",
-          instance,
-          ue_id,
-          bearer_id,
-          ptr2->second.teid_outgoing,
-          len,
-          ptr2->second.seqNum,
-          ptr2->second.npduNum);
-
-    if (seqNumFlag)
-        ptr2->second.seqNum++;
-
-    if (npduNumFlag)
-        ptr2->second.npduNum++;
-
-    // Salin struktur bearer agar aman sebelum membuka mutex
-    gtpv1u_bearer_t tmp = ptr2->second;
-    pthread_mutex_unlock(&globGtp.gtp_lock);
-
-    // Inisialisasi GTP-U jika belum diinisialisasi (hanya sekali)
-    // Inisialisasi GTP-U System
-    if (!gtpu_initialized) {
-      pthread_mutex_lock(&gtp_lock);
-      if (!gtpu_initialized) {  // Double-check setelah lock
-          LOG_I(GTPU, "Initializing GTP-U system at first packet send.\n");
-  
-          for (int i = 0; i < MAX_TUNNELS; i++) {
-            if (initialize_gtpu_tunnel(&gtpu_tunnels[i], i) == 0) {
-                LOG_I(GTPU, "Tunnel %d initialized successfully\n", i);
-            } else {
-                LOG_E(GTPU, "Tunnel %d initialization failed\n", i);
-            }
-          }
-  
-          start_gtpu_threads();
-          gtpu_initialized = true;
-          LOG_I(GTPU, "All tunnels initialized successfully.\n");
-      }
-      pthread_mutex_unlock(&gtp_lock);
-  }
-  
-  
-    // Mengirim paket dengan atau tanpa header ekstensi
-    if (tmp.outgoing_qfi != -1) {
-        Gtpv1uExtHeaderT ext = {0};
-        ext.ExtHeaderLen = 1; // in quad bytes  EXT_HDR_LNTH_OCTET_UNITS
-        ext.pdusession_cntr.spare = 0;
-        ext.pdusession_cntr.PDU_type = UL_PDU_SESSION_INFORMATION;
-        ext.pdusession_cntr.QFI = tmp.outgoing_qfi;
-        ext.pdusession_cntr.Reflective_QoS_activation = false;
-        ext.pdusession_cntr.Paging_Policy_Indicator = false;
-        ext.NextExtHeaderType = NO_MORE_EXT_HDRS;
-
-        gtpv1uCreateAndSendMsg(compatInst(instance),
-                               tmp.outgoing_ip_addr,
-                               tmp.outgoing_port,
-                               GTP_GPDU,
-                               tmp.teid_outgoing,
-                               buf,
-                               len,
-                               seqNumFlag,
-                               npduNumFlag,
-                               tmp.seqNum,
-                               tmp.npduNum,
-                               PDU_SESSION_CONTAINER,
-                               (uint8_t *)&ext,
-                               sizeof(ext));
-    } else {
-        gtpv1uCreateAndSendMsg(compatInst(instance),
-                               tmp.outgoing_ip_addr,
-                               tmp.outgoing_port,
-                               GTP_GPDU,
-                               tmp.teid_outgoing,
-                               buf,
-                               len,
-                               seqNumFlag,
-                               npduNumFlag,
-                               tmp.seqNum,
-                               tmp.npduNum,
-                               NO_MORE_EXT_HDRS,
-                               NULL,
-                               0);
-    }
-}
-*/
-//--------------------------------zyzy end--------------------------------//
-
 static void fillDlDeliveryStatusReport(extensionHeader_t *extensionHeader, uint32_t RLC_buffer_availability, uint32_t NR_PDCP_PDU_SN){
 
   extensionHeader->buffer[0] = (1+sizeof(DlDataDeliveryStatus_flagsT)+(NR_PDCP_PDU_SN>0?3:0)+(NR_PDCP_PDU_SN>0?1:0)+1)/4;
@@ -751,7 +600,7 @@ static void fillDlDeliveryStatusReport(extensionHeader_t *extensionHeader, uint3
     extensionHeader->buffer[offset] =   (NR_PDCP_PDU_SN >> 16) & 0xff;
     extensionHeader->buffer[offset+1] = (NR_PDCP_PDU_SN >> 8) & 0xff;
     extensionHeader->buffer[offset+2] = NR_PDCP_PDU_SN & 0xff;
-    LOG_D(GTPU, "Octets reporting NR_PDCP_PDU_SN, extensionHeader->buffer[offset]: %u, extensionHeader->buffer[offset+1]:%u, extensionHeader->buffer[offset+2]:%u \n", extensionHeader->buffer[offset], extensionHeader->buffer[offset+1],extensionHeader->buffer[offset+2]);
+    LOG_I(GTPU, "Octets reporting NR_PDCP_PDU_SN, extensionHeader->buffer[offset]: %u, extensionHeader->buffer[offset+1]:%u, extensionHeader->buffer[offset+2]:%u \n", extensionHeader->buffer[offset], extensionHeader->buffer[offset+1],extensionHeader->buffer[offset+2]);
     extensionHeader->buffer[offset+3] = 0x00; //Padding octet
     offset = offset+3;
   }
@@ -765,7 +614,7 @@ static void fillDlDeliveryStatusReport(extensionHeader_t *extensionHeader, uint3
                               (NR_PDCP_PDU_SN>0?1:0)+1;
 }
 //-----------------------------------------------------------------------//
-//zyzy: 
+
 static void gtpv1uSendDlDeliveryStatus(instance_t instance, gtpv1u_DU_buffer_report_req_t *req){
   ue_id_t ue_id=req->ue_id;
   int  bearer_id=req->pdusession_id;
@@ -776,7 +625,7 @@ static void gtpv1uSendDlDeliveryStatus(instance_t instance, gtpv1u_DU_buffer_rep
   auto ptr2=ptrUe->second.bearers.find(bearer_id);
 
   if ( ptr2 == ptrUe->second.bearers.end() ) {
-    LOG_D(GTPU,"GTP-U instance: %ld sending a packet to a non existant UE ID:RAB: %lu/%x\n", instance, ue_id, bearer_id);
+    LOG_I(GTPU,"GTP-U instance: %ld sending a packet to a non existant UE ID:RAB: %lu/%x\n", instance, ue_id, bearer_id);
     pthread_mutex_unlock(&globGtp.gtp_lock);
     return;
   }
@@ -811,7 +660,7 @@ static void gtpv1uEndTunnel(instance_t instance, gtpv1u_enb_end_marker_req_t *re
     return;
   }
 
-  LOG_D(GTPU,"[%ld] sending a end packet packet to UE:RAB:teid %lx/%x/%x\n",
+  LOG_I(GTPU,"[%ld] sending a end packet packet to UE:RAB:teid %lx/%x/%x\n",
         instance, ue_id, bearer_id,ptr2->second.teid_outgoing);
   gtpv1u_bearer_t tmp=ptr2->second;
   pthread_mutex_unlock(&globGtp.gtp_lock);
@@ -834,7 +683,7 @@ static void gtpv1uEndTunnel(instance_t instance, gtpv1u_enb_end_marker_req_t *re
   to.sin_addr.s_addr = tmp.outgoing_ip_addr;
   char ip4[INET_ADDRSTRLEN];
   //char ip6[INET6_ADDRSTRLEN];
-  LOG_D(GTPU,"[%ld] sending end packet to %s\n", instance, inet_ntoa(to.sin_addr) );
+  LOG_I(GTPU,"[%ld] sending end packet to %s\n", instance, inet_ntoa(to.sin_addr) );
 
   if (sendto(compatInst(instance), (void *)&msgHdr, sizeof(msgHdr), 0,(struct sockaddr *)&to, sizeof(to) ) !=  sizeof(msgHdr)) {
     LOG_E(GTPU,
@@ -861,13 +710,13 @@ static  int udpServerSocket(openAddr_s addr) {
   for(p = servinfo; p != NULL; p = p->ai_next) {
     if ((sockfd = socket(p->ai_family, p->ai_socktype,
                          p->ai_protocol)) == -1) {
-      LOG_W(GTPU,"socket: %s\n", strerror(errno));
+      LOG_I(GTPU,"socket: %s\n", strerror(errno));
       continue;
     }
 
     if (bind(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
       close(sockfd);
-      LOG_W(GTPU,"bind: %s\n", strerror(errno));
+      LOG_I(GTPU,"bind: %s\n", strerror(errno));
       continue;
     } else {
       // We create the gtp instance on the socket
@@ -881,7 +730,7 @@ static  int udpServerSocket(openAddr_s addr) {
         globGtp.instances[sockfd].ipVersion=4;
         break;
       } else if (p->ai_family == AF_INET6) {
-        LOG_W(GTPU,"Local address is IP v6\n");
+        LOG_I(GTPU,"Local address is IP v6\n");
         struct sockaddr_in6 *ipv6=(struct sockaddr_in6 *)p->ai_addr;
         memcpy(globGtp.instances[sockfd].foundAddr,
                &ipv6->sin6_addr.s6_addr, sizeof(ipv6->sin6_addr.s6_addr));
@@ -904,257 +753,11 @@ static  int udpServerSocket(openAddr_s addr) {
 
   int sendbuff = 1000*1000*10;
   AssertFatal(0==setsockopt(sockfd, SOL_SOCKET, SO_SNDBUF, &sendbuff, sizeof(sendbuff)),"");
-  LOG_D(GTPU,"[%d] Created listener for paquets to: %s:%s, send buffer size: %d\n", sockfd, addr.originHost, addr.originService,sendbuff);
+  LOG_I(GTPU,"[%d] Created listener for paquets to: %s:%s, send buffer size: %d\n", sockfd, addr.originHost, addr.originService,sendbuff);
   return sockfd;
   
 }
-//-------------------------------------------------------------------------------------//
-// create gtpu tunnel for cu-agf
-// edited by zyzy
-//-------------------------------------------------------------------------------------//
 
-//-------------------------- Edited and optimized by zyzy -----------------------------//
-/*
-// Function to create TUN device
-int create_tun_device(const char *dev) {
-  struct ifreq ifr;
-  int fd = open("/dev/net/tun", O_RDWR);
-  if (fd < 0) return -1;
-
-  memset(&ifr, 0, sizeof(ifr));
-  strncpy(ifr.ifr_name, dev, IFNAMSIZ - 1);
-  ifr.ifr_flags = IFF_TUN | IFF_NO_PI;
-
-  if (ioctl(fd, TUNSETIFF, &ifr) < 0) {
-      close(fd);
-      return -1;
-  }
-
-  return fd;
-}
-
-// Forwarding packet to GTP-U
-void forward_to_gtpu(gtpu_tunnel_t *tunnel, char *packet, ssize_t len, uint32_t teid) {
-  char buffer[BUFFER_SIZE];
-  struct gtp_header *gtp = (struct gtp_header *)buffer;
-
-  // Proper GTP-U header according to standards (GTPv1-U)
-  gtp->flags = 0x30;  // Version 1, GTP protocol
-  gtp->message_type = 0xff;  // T-PDU (Payload IP packet)
-  gtp->length = htons(len);
-  gtp->teid = htonl(teid);
-
-  memcpy(buffer + sizeof(struct gtp_header), packet, len);
-
-  // Debugging: Print GTP header in hex format
-  printf("[DEBUG GTP-U] Header:");
-  for (size_t i = 0; i < sizeof(struct gtp_header); i++)
-      printf(" %02x", (unsigned char)buffer[i]);
-  printf("\n");
-
-  // Initialize remote address explicitly
-  struct sockaddr_in remote_addr = {0};
-  remote_addr.sin_family = AF_INET;
-  remote_addr.sin_port = htons(tunnel->port);
-  inet_pton(AF_INET, tunnel->remote_ip, &remote_addr.sin_addr);
-
-  ssize_t sent = sendto(tunnel->udp_sock, buffer, sizeof(struct gtp_header) + len, 0,
-                        (struct sockaddr *)&remote_addr, sizeof(remote_addr));
-
-  if (sent < 0) {
-      LOG_E(GTPU, "Error sending GTP packet: %s\n", strerror(errno));
-  } else {
-      LOG_I(GTPU, "Sent %zd bytes via GTP-U to %s:%d (TEID: %08X)\n",
-            sent, tunnel->remote_ip, tunnel->port, teid);
-  }
-}
-
-
-// Processing GTP-U packet
-void process_gtpu_packet(gtpu_tunnel_t *tunnel, char *buffer, ssize_t len) {
-  if (len < (ssize_t)sizeof(struct gtp_header)) {
-      LOG_W(GTPU, "GTP packet too short!\n");
-      return;
-  }
-
-  struct gtp_header *gtp = (struct gtp_header *)buffer;
-
-  if (gtp->message_type == 0xff) { // T-PDU
-      ssize_t payload_len = ntohs(gtp->length);
-      if ((size_t)(payload_len + sizeof(struct gtp_header)) > (size_t)len) {
-          LOG_W(GTPU, "Invalid GTP payload length!\n");
-          return;
-      }
-
-      ssize_t written = write(tunnel->tun_fd, buffer + sizeof(struct gtp_header), payload_len);
-      if (written < 0) {
-          LOG_E(GTPU, "Error writing to TUN device: %s\n", strerror(errno));
-      } else {
-          LOG_I(GTPU, "Wrote %zd bytes to TUN device (from GTP-U)\n", written);
-      }
-  } else {
-      LOG_W(GTPU, "Unhandled GTP message type: %02x\n", gtp->message_type);
-  }
-}
-
-void gtpu_packet_loop(gtpu_tunnel_t *tunnel) {
-  fd_set read_fds;
-  struct sockaddr_in remote_addr, sender_addr;
-  socklen_t addr_len = sizeof(sender_addr);
-  char buffer[BUFFER_SIZE];
-
-  memset(&remote_addr, 0, sizeof(remote_addr));
-  remote_addr.sin_family = AF_INET;
-  remote_addr.sin_port = htons(tunnel->port);
-  inet_pton(AF_INET, tunnel->remote_ip, &remote_addr.sin_addr);
-
-  LOG_I(GTPU, "Starting GTP-U loop for tunnel: %s:%d (TEID: %08X)\n",
-        tunnel->remote_ip, tunnel->port, tunnel->teid);
-
-  while (1) {
-      FD_ZERO(&read_fds);
-      FD_SET(tunnel->tun_fd, &read_fds);
-      FD_SET(tunnel->udp_sock, &read_fds);
-
-      int max_fd = (tunnel->tun_fd > tunnel->udp_sock ? tunnel->tun_fd : tunnel->udp_sock) + 1;
-
-      int activity = select(max_fd, &read_fds, NULL, NULL, NULL);
-
-      if (activity < 0 && errno != EINTR) {
-          LOG_E(GTPU, "Select error: %s\n", strerror(errno));
-          continue;
-      }
-
-      // Handle TUN → UDP
-      if (FD_ISSET(tunnel->tun_fd, &read_fds)) {
-          ssize_t len = read(tunnel->tun_fd, buffer, BUFFER_SIZE);
-          if (len > 0) {
-              LOG_I(GTPU, "TUN received %zd bytes, sending via UDP (TEID: %08X)\n", len, tunnel->teid);
-              forward_to_gtpu(tunnel, buffer, len, tunnel->teid);
-          } else if (len < 0) {
-              LOG_E(GTPU, "TUN read error: %s\n", strerror(errno));
-          }
-      }
-
-      // Handle UDP → TUN (ini yang kurang di VM 88 kamu)
-      if (FD_ISSET(tunnel->udp_sock, &read_fds)) {
-          ssize_t len = recvfrom(tunnel->udp_sock, buffer, BUFFER_SIZE, 0,
-                                 (struct sockaddr *)&sender_addr, &addr_len);
-          if (len > 0) {
-              LOG_I(GTPU, "Received %zd bytes from UDP socket (from %s:%d)\n",
-                    len, inet_ntoa(sender_addr.sin_addr), ntohs(sender_addr.sin_port));
-              process_gtpu_packet(tunnel, buffer, len);
-          } else if (len < 0 && errno != EAGAIN) {
-              LOG_E(GTPU, "UDP recvfrom error: %s\n", strerror(errno));
-          }
-      }
-  }
-}
-
-void *gtpu_packet_loop_thread(void *arg) {
-  gtpu_packet_loop((gtpu_tunnel_t *)arg);
-  return NULL;
-}
-
-void start_gtpu_threads() {
-  pthread_t threads[MAX_TUNNELS];
-
-  for (int i = 0; i < MAX_TUNNELS; i++) {
-      if (pthread_create(&threads[i], NULL, gtpu_packet_loop_thread, &gtpu_tunnels[i]) != 0) {
-          perror("Failed to create GTP-U thread");
-      }
-  }
-}
-
-int initialize_gtpu_tunnel(gtpu_tunnel_t *tunnel, int tunnel_index) {
-  LOG_I(GTPU, "Initializing GTP-U tunnel %d: %s -> %s (Port: %d, TEID: %08X)\n",
-        tunnel_index, tunnel->local_ip, tunnel->remote_ip, tunnel->port, tunnel->teid);
-
-  // --- Step 1: Buat UDP socket ---
-  tunnel->udp_sock = socket(AF_INET, SOCK_DGRAM, 0);
-  if (tunnel->udp_sock < 0) {
-      LOG_E(GTPU, "Failed to create UDP socket: %s\n", strerror(errno));
-      return -1;
-  }
-
-  struct sockaddr_in local_addr = {0};
-  local_addr.sin_family = AF_INET;
-  local_addr.sin_port = htons(tunnel->port);
-  inet_pton(AF_INET, tunnel->local_ip, &local_addr.sin_addr);
-
-  if (bind(tunnel->udp_sock, (struct sockaddr *)&local_addr, sizeof(local_addr)) < 0) {
-      LOG_E(GTPU, "Failed to bind UDP socket to %s:%d, error: %s\n",
-            tunnel->local_ip, tunnel->port, strerror(errno));
-      close(tunnel->udp_sock);
-      return -1;
-  }
-
-  // --- Step 2: UDP sukses, baru buat TUN ---
-  char tun_name[16];
-  snprintf(tun_name, sizeof(tun_name), "gtp-tun%d", tunnel_index);
-  tunnel->tun_fd = create_tun_device(tun_name);
-  if (tunnel->tun_fd < 0) {
-      LOG_E(GTPU, "Failed to create TUN device %s\n", tun_name);
-      close(tunnel->udp_sock);
-      return -1;
-  }
-
-  // --- Step 3: Tentukan Subnet IP secara Dinamis ---
-  int subnet_base = 50 + tunnel_index;  // Setiap tunnel punya subnet berbeda
-  int ip_host = 88;  // Host ID tetap sama pada setiap subnet
-
-  // --- Step 4: Konfigurasi IP pada TUN ---
-  char cmd[CMD_BUFFER_SIZE];
-  snprintf(cmd, sizeof(cmd), "ip addr add 10.%d.0.%d/24 dev %s", subnet_base, ip_host, tun_name);
-  int ret = system(cmd);
-  if (ret != 0) {
-      LOG_E(GTPU, "Failed to assign IP to %s, code: %d\n", tun_name, ret);
-      close(tunnel->udp_sock);
-      close(tunnel->tun_fd);
-      return -1;
-  }
-
-  snprintf(cmd, sizeof(cmd), "ip link set %s up", tun_name);
-  ret = system(cmd);
-  if (ret != 0) {
-      LOG_E(GTPU, "Failed to bring up %s, code: %d\n", tun_name, ret);
-      close(tunnel->udp_sock);
-      close(tunnel->tun_fd);
-      return -1;
-  }
-
-  LOG_I(GTPU, "Tunnel %d fully initialized (UDP & TUN ready): %s -> %s (Subnet: 10.%d.0.0/24)\n",
-        tunnel_index, tunnel->local_ip, tunnel->remote_ip, subnet_base);
-
-  return 0;
-}
-
-int initialize_gtpu_system(gtpu_tunnel_t *tunnel) {
-  struct sockaddr_in addr = {0};
-
-  tunnel->udp_sock = socket(AF_INET, SOCK_DGRAM, 0);
-  if (tunnel->udp_sock < 0) {
-      perror("socket creation failed");
-      return -1;
-  }
-
-  addr.sin_family = AF_INET;
-  addr.sin_addr.s_addr = inet_addr(tunnel->local_ip);
-  addr.sin_port = htons(tunnel->port);
-
-  if (bind(tunnel->udp_sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-      perror("bind failed");
-      close(tunnel->udp_sock);
-      return -1;
-  }
-
-  tunnel->tun_fd = create_tun_device("gtp-tun0");
-  if (tunnel->tun_fd < 0) return -1;
-
-  return 0;
-}
-*/
-//----------------------------edited by zyzy end---------------------------------------//
 ////////////official code//////////////
 
 instance_t gtpv1Init(openAddr_t context) {
@@ -1205,7 +808,7 @@ int gtpv1u_update_ue_id(const instance_t instanceP, ue_id_t old_ue_id, ue_id_t n
   auto inst = &globGtp.instances[compatInst(instanceP)];
   auto it = inst->ue2te_mapping.find(old_ue_id);
   if (it == inst->ue2te_mapping.end()) {
-    LOG_W(GTPU, "[%ld] Update GTP tunnels for UEid: %lx, but no tunnel exits\n", instanceP, old_ue_id);
+    LOG_I(GTPU, "[%ld] Update GTP tunnels for UEid: %lx, but no tunnel exits\n", instanceP, old_ue_id);
     pthread_mutex_unlock(&globGtp.gtp_lock);
     return GTPNOK;
   }
@@ -1252,7 +855,7 @@ teid_t newGtpuCreateTunnel(instance_t instance,
   auto it=inst->ue2te_mapping.find(ue_id);
 
   if ( it != inst->ue2te_mapping.end() &&  it->second.bearers.find(outgoing_bearer_id) != it->second.bearers.end()) {
-    LOG_W(GTPU,"[%ld] Create a config for a already existing GTP tunnel (ue id %lu)\n", instance, ue_id);
+    LOG_I(GTPU,"[%ld] Create a config for a already existing GTP tunnel (ue id %lu)\n", instance, ue_id);
     inst->ue2te_mapping.erase(it);
   } //Jika UE sebelumnya sudah punya tunnel dengan bearer ID itu → di-reset.
 
@@ -1261,7 +864,7 @@ teid_t newGtpuCreateTunnel(instance_t instance,
 
   //Dicek ulang supaya tidak duplikasi:
   while (globGtp.te2ue_mapping.find(incoming_teid) != globGtp.te2ue_mapping.end()) {
-    LOG_W(GTPU, "[%ld] generated a random Teid that exists, re-generating (%x)\n", instance, incoming_teid);
+    LOG_I(GTPU, "[%ld] generated a random Teid that exists, re-generating (%x)\n", instance, incoming_teid);
     incoming_teid=gtpv1uNewTeid();
   };
 
@@ -1341,7 +944,7 @@ int newGtpuDeleteOneTunnel(instance_t instance, ue_id_t ue_id, int rb_id)
 }
 
 int newGtpuDeleteTunnels(instance_t instance, ue_id_t ue_id, int nbTunnels, pdusessionid_t *pdusession_id) {
-  LOG_D(GTPU, "[%ld] Start delete tunnels for ue id %lu\n",
+  LOG_I(GTPU, "[%ld] Start delete tunnels for ue id %lu\n",
         instance, ue_id);
   pthread_mutex_lock(&globGtp.gtp_lock);
   getInstRetInt(compatInst(instance));
@@ -1369,7 +972,7 @@ int newGtpuDeleteTunnels(instance_t instance, ue_id_t ue_id, int nbTunnels, pdus
 }
 
 int newGtpuDeleteAllTunnels(instance_t instance, ue_id_t ue_id) {
-  LOG_D(GTPU, "[%ld] Start delete tunnels for ue id %lu\n",
+  LOG_I(GTPU, "[%ld] Start delete tunnels for ue id %lu\n",
         instance, ue_id);
   pthread_mutex_lock(&globGtp.gtp_lock);
   getInstRetInt(compatInst(instance));
@@ -1405,7 +1008,7 @@ int gtpv1u_create_s1u_tunnel(instance_t instance,
                              gtpv1u_enb_create_tunnel_resp_t *create_tunnel_resp,
                              gtpCallback callBack)
 {
-  LOG_D(GTPU, "[%ld] Start create tunnels for UE ID %u, num_tunnels %d, sgw_S1u_teid %x\n",
+  LOG_I(GTPU, "[%ld] Start create tunnels for UE ID %u, num_tunnels %d, sgw_S1u_teid %x\n",
         instance,
         create_tunnel_req->rnti,
         create_tunnel_req->num_tunnels,
@@ -1450,7 +1053,7 @@ int gtpv1u_update_s1u_tunnel(
   const gtpv1u_enb_create_tunnel_req_t *const   create_tunnel_req,
   const rnti_t                                  prior_rnti
 ) {
-  LOG_D(GTPU, "[%ld] Start update tunnels for old RNTI %x, new RNTI %x, num_tunnels %d, sgw_S1u_teid %x, eps_bearer_id %x\n",
+  LOG_I(GTPU, "[%ld] Start update tunnels for old RNTI %x, new RNTI %x, num_tunnels %d, sgw_S1u_teid %x, eps_bearer_id %x\n",
         instance,
         prior_rnti,
         create_tunnel_req->rnti,
@@ -1483,12 +1086,12 @@ int gtpv1u_update_s1u_tunnel(
 
 int gtpv1u_delete_s1u_tunnel( const instance_t instance,
                               const gtpv1u_enb_delete_tunnel_req_t *const req_pP) {
-  LOG_D(GTPU, "[%ld] Start delete tunnels for RNTI %x\n", instance, req_pP->rnti);
+  LOG_I(GTPU, "[%ld] Start delete tunnels for RNTI %x\n", instance, req_pP->rnti);
   pthread_mutex_lock(&globGtp.gtp_lock);
   auto inst = &globGtp.instances[compatInst(instance)];
   auto ptrRNTI = inst->ue2te_mapping.find(req_pP->rnti);
   if (ptrRNTI == inst->ue2te_mapping.end()) {
-    LOG_W(GTPU, "[%ld] Delete Released GTP tunnels for rnti: %x, but no tunnel exits\n", instance, req_pP->rnti);
+    LOG_I(GTPU, "[%ld] Delete Released GTP tunnels for rnti: %x, but no tunnel exits\n", instance, req_pP->rnti);
     pthread_mutex_unlock(&globGtp.gtp_lock);
     return -1;
   }
@@ -1536,7 +1139,7 @@ int gtpv1u_create_ngu_tunnel(const instance_t instance,
                              gtpCallback callBack,
                              gtpCallbackSDAP callBackSDAP)
 {
-  LOG_D(GTPU, "[%ld] Start create tunnels for ue id %lu, num_tunnels %d, sgw_S1u_teid %x\n",
+  LOG_I(GTPU, "[%ld] Start create tunnels for ue id %lu, num_tunnels %d, sgw_S1u_teid %x\n",
         instance,
         create_tunnel_req->ue_id,
         create_tunnel_req->num_tunnels,
@@ -1608,7 +1211,6 @@ int gtpv1u_delete_x2u_tunnel( const instance_t instanceP, const gtpv1u_enb_delet
 // Note : Note implemented
 //-------------------------------------------------------------------------------------------------------------------//
 
-
 static int Gtpv1uHandleEchoReq(int h,
                                uint8_t *msgBuf,
                                uint32_t msgBufLen,
@@ -1627,7 +1229,7 @@ static int Gtpv1uHandleEchoReq(int h,
   }
 
   uint16_t seq=ntohs(*(uint16_t *)(msgHdr+1));
-  LOG_D(GTPU, "[%d] Received a echo request, TEID: %d, seq: %hu\n", h, msgHdr->teid, seq);
+  LOG_I(GTPU, "[%d] Received a echo request, TEID: %d, seq: %hu\n", h, msgHdr->teid, seq);
   uint8_t recovery[2]= {14,0};
   return gtpv1uCreateAndSendMsg(h, peerIp, peerPort, GTP_ECHO_RSP, ntohl(msgHdr->teid), recovery, sizeof recovery, true, false, seq, 0, NO_MORE_EXT_HDRS, NULL, 0);
 }
@@ -1713,7 +1315,7 @@ static int Gtpv1uHandleEndMarker(int h,
                                 &destinationL2Id) )
     LOG_E(GTPU,"[%d] down layer refused incoming packet\n", h);
 
-  LOG_D(GTPU,"[%d] Received END marker packet for: teid:%x\n", h, ntohl(msgHdr->teid));
+  LOG_I(GTPU,"[%d] Received END marker packet for: teid:%x\n", h, ntohl(msgHdr->teid));
   return !GTPNOK;
 }
 
@@ -1794,16 +1396,16 @@ static int Gtpv1uHandleGpdu(int h,
               //NR_PDCP_PDU_SN = msgBuf[offset+6] << 16 | msgBuf[offset+7] << 8 | msgBuf[offset+8];
 
               NR_PDCP_PDU_SN = msgBuf[offset+additional_offset] << 16 | msgBuf[offset+additional_offset+1] << 8 | msgBuf[offset+additional_offset+2]; 
-              LOG_D(GTPU, " NR_PDCP_PDU_SN: %u \n",  NR_PDCP_PDU_SN);
+              LOG_I(GTPU, " NR_PDCP_PDU_SN: %u \n",  NR_PDCP_PDU_SN);
             }
           }
           else{
-            LOG_W(GTPU, "NR-RAN container type: %d not supported \n", PDU_type);
+            LOG_I(GTPU, "NR-RAN container type: %d not supported \n", PDU_type);
           }
           break;
         }
         default:
-          LOG_W(GTPU, "unhandled extension 0x%2.2x, skipping\n", next_extension_header_type);
+          LOG_I(GTPU, "unhandled extension 0x%2.2x, skipping\n", next_extension_header_type);
 	    break;
       }
 
@@ -1872,9 +1474,9 @@ static int Gtpv1uHandleGpdu(int h,
   }
 
   if(NR_PDCP_PDU_SN > 0 && NR_PDCP_PDU_SN %5 ==0){
-    LOG_D (GTPU, "Create and send DL DATA Delivery status for the previously received PDU, NR_PDCP_PDU_SN: %u \n", NR_PDCP_PDU_SN);
+    LOG_I (GTPU, "Create and send DL DATA Delivery status for the previously received PDU, NR_PDCP_PDU_SN: %u \n", NR_PDCP_PDU_SN);
     int rlc_tx_buffer_space = nr_rlc_get_available_tx_space(ctxt.rntiMaybeUEid, rb_id + 3);
-    LOG_D(GTPU, "Available buffer size in RLC for Tx: %d \n", rlc_tx_buffer_space);
+    LOG_I(GTPU, "Available buffer size in RLC for Tx: %d \n", rlc_tx_buffer_space);
   
     /*Total size of DDD_status PDU = 1 octet to report extension header length
      * size of mandatory part + 3 octets for highest transmitted/delivered PDCP SN
@@ -1895,7 +1497,7 @@ static int Gtpv1uHandleGpdu(int h,
     extensionHeader->buffer[offset] =   (NR_PDCP_PDU_SN >> 16) & 0xff;
     extensionHeader->buffer[offset+1] = (NR_PDCP_PDU_SN >> 8) & 0xff;
     extensionHeader->buffer[offset+2] = NR_PDCP_PDU_SN & 0xff;
-    LOG_D(GTPU, "Octets reporting NR_PDCP_PDU_SN, extensionHeader-> %u:%u:%u \n",
+    LOG_I(GTPU, "Octets reporting NR_PDCP_PDU_SN, extensionHeader-> %u:%u:%u \n",
           extensionHeader->buffer[offset],
           extensionHeader->buffer[offset+1],
           extensionHeader->buffer[offset+2]);
@@ -1912,7 +1514,7 @@ static int Gtpv1uHandleGpdu(int h,
         h, peerIp, peerPort, GTP_GPDU, globGtp.te2ue_mapping[ntohl(msgHdr->teid)].outgoing_teid, NULL, 0, false, false, 0, 0, NR_RAN_CONTAINER, extensionHeader->buffer, extensionHeader->length);
   }
 
-  LOG_D(GTPU,"[%d] Received a %d bytes packet for: teid:%x\n", h,
+  LOG_I(GTPU,"[%d] Received a %d bytes packet for: teid:%x\n", h,
         msgBufLen-offset,
         ntohl(msgHdr->teid));
   return !GTPNOK;
@@ -1929,18 +1531,18 @@ void gtpv1uReceiver(int h) {
     LOG_E(GTPU, "[%d] Recvfrom failed (%s)\n", h, strerror(errno));
     return;
   } else if (udpDataLen == 0) {
-    LOG_W(GTPU, "[%d] Recvfrom returned 0\n", h);
+    LOG_I(GTPU, "[%d] Recvfrom returned 0\n", h);
     return;
   } else { if (udpDataLen < (int)sizeof(Gtpv1uMsgHeaderT) ) {
-    LOG_W(GTPU, "[%d] received malformed gtp packet \n", h);
+    LOG_I(GTPU, "[%d] received malformed gtp packet \n", h);
     return;
     }
     Gtpv1uMsgHeaderT* msg=(Gtpv1uMsgHeaderT*) udpData;
     if ( (int)(ntohs(msg->msgLength) + sizeof(Gtpv1uMsgHeaderT)) != udpDataLen ) {
-      LOG_W(GTPU, "[%d] received malformed gtp packet length\n", h); 
+      LOG_I(GTPU, "[%d] received malformed gtp packet length\n", h); 
       return;
     }
-    LOG_D(GTPU, "[%d] Received GTP data, msg type: %x\n", h, msg->msgType);
+    LOG_I(GTPU, "[%d] Received GTP data, msg type: %x\n", h, msg->msgType);
     switch(msg->msgType) {
       case GTP_ECHO_RSP:
         break;
@@ -1989,7 +1591,7 @@ void *gtpv1uTask(void *args)  {
       openAddr_t addr= {{0}};
       const instance_t myInstance = ITTI_MSG_DESTINATION_INSTANCE(message_p);
       const int msgType = ITTI_MSG_ID(message_p);
-      LOG_D(GTPU, "GTP-U received %s for instance %ld\n", messages_info[msgType].name, myInstance);
+      LOG_I(GTPU, "GTP-U received %s for instance %ld\n", messages_info[msgType].name, myInstance);
       switch (msgType) {
           // DATA TO BE SENT TO UDP
 

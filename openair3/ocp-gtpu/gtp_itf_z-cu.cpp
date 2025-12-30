@@ -488,7 +488,7 @@ void gtpv1uSendDirect(instance_t instance,
           ptr2->second.seqNum,
           ptr2->second.npduNum);
 
-    if (seqNumFlag)s
+    if (seqNumFlag)
         ptr2->second.seqNum++;
 
     if (npduNumFlag)
