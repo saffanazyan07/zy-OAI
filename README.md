@@ -11,8 +11,8 @@ Your folder should be structured as follows:
 zy-cu/
 ├── CMakeLists.txt
 ├── executables/
-|   └── z-cu.cpp
-|   └── z-agf.cpp
+|   └── z-cu.c
+|   └── z-agf.c
 ├── openair3/
 │   └── ocp-gtpu/
 │       └── zy-agf/         ← ✅ z-agf
