@@ -11,6 +11,8 @@ Your folder should be structured as follows:
 zy-cu/
 ├── CMakeLists.txt
 ├── executables/
+|   └── z-cu.c
+|   └── z-agf.c
 ├── openair3/
 │   └── ocp-gtpu/
 │       └── zy-agf/         ← ✅ z-agf
@@ -139,7 +141,6 @@ cd cmake_targets
 # Run your Z-AGF build process here
 sudo ./build_oai --z-agf -I
 cd ../openair3/ocp-gtpu/zy-agf
-sudo chmod +x run_z-agf.sh
 ./run_z-agf.sh
 ```
 If needed, adjust environment variables and install dependencies before running the build.
@@ -148,8 +149,7 @@ If needed, adjust environment variables and install dependencies before running 
 ▶️ Run z-cu
 ```
 cd zy-cu
-chmod +x run_cu.sh
-./run_cu.sh
+./run_z-cu.sh
 ```
 ▶️ Run z-agf
 ```
