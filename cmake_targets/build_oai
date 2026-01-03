@@ -222,6 +222,16 @@ function main() {
             TARGET_LIST="$TARGET_LIST nr-softmodem nr-cuup"
             echo_info "Will compile gNB"
             shift;;
+      --z-cu)
+            gNB=1
+            TARGET_LIST="$TARGET_LIST z-cu"
+            echo_info "Will compile gNB"
+            shift;;
+      --d-cu)
+            gNB=1
+            TARGET_LIST="$TARGET_LIST d-cu"
+            echo_info "Will compile gNB"
+            shift;;
        --RU)
             RU=1
             TARGET_LIST="$TARGET_LIST oairu"

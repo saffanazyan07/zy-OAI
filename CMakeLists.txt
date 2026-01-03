@@ -1374,6 +1374,45 @@ target_link_libraries(GTPV1U PRIVATE asn1_nr_rrc_hdrs asn1_lte_rrc_hdrs)
 target_link_libraries(GTPV1U PRIVATE SIMU ds)
 include_directories(${OPENAIR3_DIR}/ocp-gtp)
 
+### dita edit
+add_library (DCUGTPV1U
+  ${RRC_DIR}/rrc_eNB_GTPV1U.c
+  ${OPENAIR3_DIR}/ocp-gtpu/gtp_itf_d-cu.cpp
+  ${OPENAIR3_DIR}/ocp-gtpu/gtpu_extensions.c
+)
+target_link_libraries(DCUGTPV1U PRIVATE asn1_nr_rrc_hdrs asn1_lte_rrc_hdrs)
+target_link_libraries(DCUGTPV1U PRIVATE SIMU)
+include_directories(${OPENAIR3_DIR}/ocp-gtp)
+
+### zyzy edit
+add_library (ZCUGTPV1U
+  ${RRC_DIR}/rrc_eNB_GTPV1U.c
+  ${OPENAIR3_DIR}/ocp-gtpu/gtp_itf_z-cu.cpp
+  ${OPENAIR3_DIR}/ocp-gtpu/gtpu_extensions.c
+)
+target_link_libraries(ZCUGTPV1U PRIVATE asn1_nr_rrc_hdrs asn1_lte_rrc_hdrs)
+target_link_libraries(ZCUGTPV1U PRIVATE SIMU)
+include_directories(${OPENAIR3_DIR}/ocp-gtp)
+
+add_library(ZAGF1GTPV1U
+  ${RRC_DIR}/rrc_eNB_GTPV1U.c
+  ${OPENAIR3_DIR}/ocp-gtpu/gtp_itf_z-agf1.cpp
+  ${OPENAIR3_DIR}/ocp-gtpu/gtpu_extensions.c
+)
+target_link_libraries(ZAGF1GTPV1U PRIVATE asn1_nr_rrc_hdrs asn1_lte_rrc_hdrs)
+target_link_libraries(ZAGF1GTPV1U PRIVATE SIMU)
+include_directories(${OPENAIR3_DIR}/ocp-gtp)
+
+add_library(ZAGF2GTPV1U
+  ${RRC_DIR}/rrc_eNB_GTPV1U.c
+  ${OPENAIR3_DIR}/ocp-gtpu/gtp_itf_z-agf2.cpp
+  ${OPENAIR3_DIR}/ocp-gtpu/gtpu_extensions.c
+)
+target_link_libraries(ZAGF2GTPV1U PRIVATE asn1_nr_rrc_hdrs asn1_lte_rrc_hdrs)
+target_link_libraries(ZAGF2GTPV1U PRIVATE SIMU)
+include_directories(${OPENAIR3_DIR}/ocp-gtp)
+
+### end zyzy edit
 set (MME_APP_SRC
   ${OPENAIR3_DIR}/MME_APP/mme_app.c
   ${OPENAIR3_DIR}/MME_APP/mme_config.c
@@ -1787,6 +1826,213 @@ target_link_libraries(lte-uesoftmodem PRIVATE ${blas_LIBRARIES} ${cblas_LIBRARIE
 # force the generation of ASN.1 so that we don't need to wait during the build
 target_link_libraries(lte-uesoftmodem PRIVATE
                       asn1_lte_rrc asn1_s1ap asn1_m2ap asn1_m3ap asn1_x2ap)
+# edited by dita
+###################################################
+
+add_executable(d-cu
+  ${rrc_h}
+  ${nr_rrc_h}
+  ${s1ap_h}
+  ${OPENAIR_DIR}/executables/nr-gnb.c
+  ${OPENAIR_DIR}/executables/nr-ru.c
+  ${OPENAIR_DIR}/executables/d-cu.c
+  ${OPENAIR_DIR}/executables/softmodem-common.c
+  ${OPENAIR_DIR}/radio/COMMON/common_lib.c
+  ${OPENAIR_DIR}/radio/COMMON/record_player.c
+  ${OPENAIR_DIR}/common/utils/lte/ue_power.c
+  ${OPENAIR_DIR}/common/utils/lte/prach_utils.c
+  ${PHY_INTERFACE_DIR}/queue_t.c
+  ${OPENAIR1_DIR}/PHY/TOOLS/phy_scope_interface.c
+  )
+
+target_link_libraries(d-cu PRIVATE
+  -Wl,--start-group
+  UTIL HASHTABLE SCTP_CLIENT SCHED_LIB SCHED_RU_LIB SCHED_NR_LIB PHY_NR PHY PHY_COMMON PHY_NR_COMMON PHY_RU GTPV1U SECURITY
+  ITTI ${NAS_UE_LIB} lte_rrc nr_rrc
+  ngap s1ap L2_LTE_NR L2_NR MAC_NR_COMMON NFAPI_LIB NFAPI_VNF_LIB NFAPI_PNF_LIB NFAPI_USER_LIB SIMU
+  x2ap f1ap m2ap m3ap e1ap shlib_loader
+  time_management
+  -Wl,--end-group z dl)
+
+target_link_libraries(d-cu PRIVATE pthread m CONFIG_LIB rt)
+target_link_libraries(d-cu PRIVATE ${T_LIB})
+target_link_libraries(d-cu PRIVATE asn1_nr_rrc_hdrs asn1_lte_rrc_hdrs)
+target_link_libraries(d-cu PRIVATE asn1_nr_rrc_hdrs asn1_lte_rrc_hdrs)
+add_boolean_option(OAI_WLS OFF "Activate OAI's WLS driver" OFF)
+if (OAI_WLS)
+    target_link_libraries(d-cu PUBLIC wls_integration_lib)
+else()
+    target_link_libraries(d-cu PUBLIC nfapi_socket_lib)
+endif()
+add_boolean_option(OAI_AERIAL OFF "Activate OAI's AERIAL driver" OFF)
+if (OAI_AERIAL)
+  target_compile_definitions(d-cu PUBLIC ENABLE_AERIAL)
+  target_link_libraries(d-cu PUBLIC aerial_lib)
+endif()
+if(E2_AGENT)
+  target_link_libraries(d-cu PUBLIC e2_agent e2_agent_arg e2_ran_func_du_cucp_cuup)
+  target_compile_definitions(d-cu PRIVATE ${E2AP_VERSION} ${KPM_VERSION} E2_AGENT)
+endif()
+
+
+# force the generation of ASN.1 so that we don't need to wait during the build
+target_link_libraries(d-cu PRIVATE
+  asn1_lte_rrc asn1_nr_rrc asn1_s1ap asn1_ngap asn1_m2ap asn1_m3ap asn1_x2ap asn1_f1ap asn1_lpp)
+
+# edited by zyzy
+###################################################
+
+add_executable(z-cu
+  ${rrc_h}
+  ${nr_rrc_h}
+  ${s1ap_h}
+  ${OPENAIR_DIR}/executables/nr-gnb.c
+  ${OPENAIR_DIR}/executables/nr-ru.c
+  ${OPENAIR_DIR}/executables/z-cu.c
+  ${OPENAIR_DIR}/executables/softmodem-common.c
+  ${OPENAIR_DIR}/radio/COMMON/common_lib.c
+  ${OPENAIR_DIR}/radio/COMMON/record_player.c
+  ${OPENAIR_DIR}/common/utils/lte/ue_power.c
+  ${OPENAIR_DIR}/common/utils/lte/prach_utils.c
+  ${PHY_INTERFACE_DIR}/queue_t.c
+  ${OPENAIR1_DIR}/PHY/TOOLS/phy_scope_interface.c
+  )
+
+target_link_libraries(z-cu PRIVATE
+  -Wl,--start-group
+  UTIL HASHTABLE SCTP_CLIENT SCHED_LIB SCHED_RU_LIB SCHED_NR_LIB PHY_NR PHY PHY_COMMON PHY_NR_COMMON PHY_RU ZCUGTPV1U SECURITY
+  ITTI ${NAS_UE_LIB} lte_rrc nr_rrc
+  ngap s1ap L2_LTE_NR L2_NR MAC_NR_COMMON NFAPI_LIB NFAPI_VNF_LIB NFAPI_PNF_LIB NFAPI_USER_LIB SIMU
+  x2ap f1ap m2ap m3ap e1ap shlib_loader
+  time_management
+  -Wl,--end-group z dl)
+
+target_link_libraries(z-cu PRIVATE pthread m CONFIG_LIB rt)
+target_link_libraries(z-cu PRIVATE ${T_LIB})
+target_link_libraries(z-cu PRIVATE asn1_nr_rrc_hdrs asn1_lte_rrc_hdrs)
+target_link_libraries(z-cu PRIVATE asn1_nr_rrc_hdrs asn1_lte_rrc_hdrs)
+add_boolean_option(OAI_WLS OFF "Activate OAI's WLS driver" OFF)
+if (OAI_WLS)
+    target_link_libraries(z-cu PUBLIC wls_integration_lib)
+else()
+    target_link_libraries(z-cu PUBLIC nfapi_socket_lib)
+endif()
+add_boolean_option(OAI_AERIAL OFF "Activate OAI's AERIAL driver" OFF)
+if (OAI_AERIAL)
+  target_compile_definitions(z-cu PUBLIC ENABLE_AERIAL)
+  target_link_libraries(z-cu PUBLIC aerial_lib)
+endif()
+if(E2_AGENT)
+  target_link_libraries(z-cu PUBLIC e2_agent e2_agent_arg e2_ran_func_du_cucp_cuup)
+  target_compile_definitions(z-cu PRIVATE ${E2AP_VERSION} ${KPM_VERSION} E2_AGENT)
+endif()
+
+
+# force the generation of ASN.1 so that we don't need to wait during the build
+target_link_libraries(z-cu PRIVATE
+  asn1_lte_rrc asn1_nr_rrc asn1_s1ap asn1_ngap asn1_m2ap asn1_m3ap asn1_x2ap asn1_f1ap asn1_lpp)
+
+
+add_executable(z-agf1
+  ${rrc_h}
+  ${nr_rrc_h}
+  ${s1ap_h}
+  ${OPENAIR_DIR}/executables/nr-gnb.c
+  ${OPENAIR_DIR}/executables/nr-ru.c
+  ${OPENAIR_DIR}/executables/z-cu.c
+  ${OPENAIR_DIR}/executables/softmodem-common.c
+  ${OPENAIR_DIR}/radio/COMMON/common_lib.c
+  ${OPENAIR_DIR}/radio/COMMON/record_player.c
+  ${OPENAIR_DIR}/common/utils/lte/ue_power.c
+  ${OPENAIR_DIR}/common/utils/lte/prach_utils.c
+  ${PHY_INTERFACE_DIR}/queue_t.c
+  ${OPENAIR1_DIR}/PHY/TOOLS/phy_scope_interface.c
+  )
+
+target_link_libraries(z-agf1 PRIVATE
+  -Wl,--start-group
+  UTIL HASHTABLE SCTP_CLIENT SCHED_LIB SCHED_RU_LIB SCHED_NR_LIB PHY_NR PHY PHY_COMMON PHY_NR_COMMON PHY_RU ZAGF1GTPV1U SECURITY
+  ITTI ${NAS_UE_LIB} lte_rrc nr_rrc
+  ngap s1ap L2_LTE_NR L2_NR MAC_NR_COMMON NFAPI_LIB NFAPI_VNF_LIB NFAPI_PNF_LIB NFAPI_USER_LIB SIMU
+  x2ap f1ap m2ap m3ap e1ap shlib_loader
+  time_management
+  -Wl,--end-group z dl)
+
+target_link_libraries(z-agf1 PRIVATE pthread m CONFIG_LIB rt)
+target_link_libraries(z-agf1 PRIVATE ${T_LIB})
+target_link_libraries(z-agf1 PRIVATE asn1_nr_rrc_hdrs asn1_lte_rrc_hdrs)
+target_link_libraries(z-agf1 PRIVATE asn1_nr_rrc_hdrs asn1_lte_rrc_hdrs)
+add_boolean_option(OAI_WLS OFF "Activate OAI's WLS driver" OFF)
+if (OAI_WLS)
+    target_link_libraries(z-agf1 PUBLIC wls_integration_lib)
+else()
+    target_link_libraries(z-agf1 PUBLIC nfapi_socket_lib)
+endif()
+add_boolean_option(OAI_AERIAL OFF "Activate OAI's AERIAL driver" OFF)
+if (OAI_AERIAL)
+  target_compile_definitions(z-agf1 PUBLIC ENABLE_AERIAL)
+  target_link_libraries(z-agf1 PUBLIC aerial_lib)
+endif()
+if(E2_AGENT)
+  target_link_libraries(z-agf1 PUBLIC e2_agent e2_agent_arg e2_ran_func_du_cucp_cuup)
+  target_compile_definitions(z-agf1 PRIVATE ${E2AP_VERSION} ${KPM_VERSION} E2_AGENT)
+endif()
+
+
+# force the generation of ASN.1 so that we don't need to wait during the build
+target_link_libraries(z-agf1 PRIVATE
+  asn1_lte_rrc asn1_nr_rrc asn1_s1ap asn1_ngap asn1_m2ap asn1_m3ap asn1_x2ap asn1_f1ap asn1_lpp)
+
+add_executable(z-agf2
+  ${rrc_h}
+  ${nr_rrc_h}
+  ${s1ap_h}
+  ${OPENAIR_DIR}/executables/nr-gnb.c
+  ${OPENAIR_DIR}/executables/nr-ru.c
+  ${OPENAIR_DIR}/executables/z-cu.c
+  ${OPENAIR_DIR}/executables/softmodem-common.c
+  ${OPENAIR_DIR}/radio/COMMON/common_lib.c
+  ${OPENAIR_DIR}/radio/COMMON/record_player.c
+  ${OPENAIR_DIR}/common/utils/lte/ue_power.c
+  ${OPENAIR_DIR}/common/utils/lte/prach_utils.c
+  ${PHY_INTERFACE_DIR}/queue_t.c
+  ${OPENAIR1_DIR}/PHY/TOOLS/phy_scope_interface.c
+  )
+
+target_link_libraries(z-agf2 PRIVATE
+  -Wl,--start-group
+  UTIL HASHTABLE SCTP_CLIENT SCHED_LIB SCHED_RU_LIB SCHED_NR_LIB PHY_NR PHY PHY_COMMON PHY_NR_COMMON PHY_RU ZAGF2GTPV1U SECURITY
+  ITTI ${NAS_UE_LIB} lte_rrc nr_rrc
+  ngap s1ap L2_LTE_NR L2_NR MAC_NR_COMMON NFAPI_LIB NFAPI_VNF_LIB NFAPI_PNF_LIB NFAPI_USER_LIB SIMU
+  x2ap f1ap m2ap m3ap e1ap shlib_loader
+  time_management
+  -Wl,--end-group z dl)
+
+target_link_libraries(z-agf2 PRIVATE pthread m CONFIG_LIB rt)
+target_link_libraries(z-agf2 PRIVATE ${T_LIB})
+target_link_libraries(z-agf2 PRIVATE asn1_nr_rrc_hdrs asn1_lte_rrc_hdrs)
+target_link_libraries(z-agf2 PRIVATE asn1_nr_rrc_hdrs asn1_lte_rrc_hdrs)
+add_boolean_option(OAI_WLS OFF "Activate OAI's WLS driver" OFF)
+if (OAI_WLS)
+    target_link_libraries(z-agf2 PUBLIC wls_integration_lib)
+else()
+    target_link_libraries(z-agf2 PUBLIC nfapi_socket_lib)
+endif()
+add_boolean_option(OAI_AERIAL OFF "Activate OAI's AERIAL driver" OFF)
+if (OAI_AERIAL)
+  target_compile_definitions(z-agf2 PUBLIC ENABLE_AERIAL)
+  target_link_libraries(z-agf2 PUBLIC aerial_lib)
+endif()
+if(E2_AGENT)
+  target_link_libraries(z-agf2 PUBLIC e2_agent e2_agent_arg e2_ran_func_du_cucp_cuup)
+  target_compile_definitions(z-agf2 PRIVATE ${E2AP_VERSION} ${KPM_VERSION} E2_AGENT)
+endif()
+
+
+# force the generation of ASN.1 so that we don't need to wait during the build
+target_link_libraries(z-agf2 PRIVATE
+  asn1_lte_rrc asn1_nr_rrc asn1_s1ap asn1_ngap asn1_m2ap asn1_m3ap asn1_x2ap asn1_f1ap asn1_lpp)
+
 
 # nr-softmodem
 ###################################################
