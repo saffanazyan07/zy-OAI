@@ -147,6 +147,7 @@ static const char *const flag_name[] = {FOREACH_FLAG(FLAG_TEXT) ""};
   COMP_DEF(CLI, )               \
   COMP_DEF(OCM, )               \
   COMP_DEF(GTPU, )              \
+  COMP_DEF(UPEF, )              \
   COMP_DEF(SDAP, )              \
   COMP_DEF(SPGW, )              \
   COMP_DEF(S1AP, )              \
