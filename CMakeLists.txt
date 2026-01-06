@@ -1388,6 +1388,7 @@ include_directories(${OPENAIR3_DIR}/ocp-gtp)
 add_library (ZCUGTPV1U
   ${RRC_DIR}/rrc_eNB_GTPV1U.c
   ${OPENAIR3_DIR}/ocp-gtpu/gtp_itf_z-cu.cpp
+  ${OPENAIR3_DIR}/ocp-gtpu/upef_z-cu.cpp
   ${OPENAIR3_DIR}/ocp-gtpu/gtpu_extensions.c
 )
 target_link_libraries(ZCUGTPV1U PRIVATE asn1_nr_rrc_hdrs asn1_lte_rrc_hdrs)
@@ -1397,6 +1398,7 @@ include_directories(${OPENAIR3_DIR}/ocp-gtp)
 add_library(ZAGF1GTPV1U
   ${RRC_DIR}/rrc_eNB_GTPV1U.c
   ${OPENAIR3_DIR}/ocp-gtpu/gtp_itf_z-agf1.cpp
+  ${OPENAIR3_DIR}/ocp-gtpu/upef_z-agf1.cpp
   ${OPENAIR3_DIR}/ocp-gtpu/gtpu_extensions.c
 )
 target_link_libraries(ZAGF1GTPV1U PRIVATE asn1_nr_rrc_hdrs asn1_lte_rrc_hdrs)
@@ -1406,6 +1408,7 @@ include_directories(${OPENAIR3_DIR}/ocp-gtp)
 add_library(ZAGF2GTPV1U
   ${RRC_DIR}/rrc_eNB_GTPV1U.c
   ${OPENAIR3_DIR}/ocp-gtpu/gtp_itf_z-agf2.cpp
+  ${OPENAIR3_DIR}/ocp-gtpu/upef_z-agf2.cpp
   ${OPENAIR3_DIR}/ocp-gtpu/gtpu_extensions.c
 )
 target_link_libraries(ZAGF2GTPV1U PRIVATE asn1_nr_rrc_hdrs asn1_lte_rrc_hdrs)
@@ -1847,7 +1850,7 @@ add_executable(d-cu
 
 target_link_libraries(d-cu PRIVATE
   -Wl,--start-group
-  UTIL HASHTABLE SCTP_CLIENT SCHED_LIB SCHED_RU_LIB SCHED_NR_LIB PHY_NR PHY PHY_COMMON PHY_NR_COMMON PHY_RU GTPV1U SECURITY
+  UTIL HASHTABLE SCTP_CLIENT SCHED_LIB SCHED_RU_LIB SCHED_NR_LIB PHY_NR PHY PHY_COMMON PHY_NR_COMMON PHY_RU DCUGTPV1U SECURITY
   ITTI ${NAS_UE_LIB} lte_rrc nr_rrc
   ngap s1ap L2_LTE_NR L2_NR MAC_NR_COMMON NFAPI_LIB NFAPI_VNF_LIB NFAPI_PNF_LIB NFAPI_USER_LIB SIMU
   x2ap f1ap m2ap m3ap e1ap shlib_loader

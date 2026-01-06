@@ -39,7 +39,7 @@ unsigned short config_frames[4] = {2,9,11,13};
 #include "nr-softmodem.h"
 #include <common/utils/assertions.h>
 #include <openair2/GNB_APP/gnb_app.h>
-#include <openair3/ocp-gtpu/gtp_itf.h>
+#include <openair3/ocp-gtpu/gtp_itf_d-cu.h>
 #include <pthread.h>
 #include <sched.h>
 #include <simple_executable.h>
