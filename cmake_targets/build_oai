@@ -227,9 +227,14 @@ function main() {
             TARGET_LIST="$TARGET_LIST z-cu"
             echo_info "Will compile gNB"
             shift;;
-      --z-agf)
+      --z-agf1)
             gNB=1
-            TARGET_LIST="$TARGET_LIST z-agf"
+            TARGET_LIST="$TARGET_LIST z-agf1"
+            echo_info "Will compile gNB"
+            shift;;
+      --z-agf2)
+            gNB=1
+            TARGET_LIST="$TARGET_LIST z-agf2"
             echo_info "Will compile gNB"
             shift;;
       --d-cu)
