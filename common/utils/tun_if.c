@@ -271,7 +271,7 @@ int tun_generate_ue_ifname(char *ifname, int instance_id, int pdu_session_id)
 {
   char pdu_session_string[10];
   snprintf(pdu_session_string, sizeof(pdu_session_string), "p%d", pdu_session_id);
-  return snprintf(ifname, IFNAMSIZ, "%s%d%s", "oaitun_ue", instance_id + 1, pdu_session_id == -1 ? "" : pdu_session_string);
+  return snprintf(ifname, IFNAMSIZ, "%s%d%s", "proxy-ue", instance_id + 1, pdu_session_id == -1 ? "" : pdu_session_string);
 }
 
 void tun_destroy(const char *dev)

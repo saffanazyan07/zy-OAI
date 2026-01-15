@@ -206,7 +206,7 @@ int esm_ebr_context_create(
               char ip[20];
               unsigned char *ip_addr = (unsigned char *)pdn->ip_addr;
               snprintf(ip, sizeof(ip), "%d.%d.%d.%d", ip_addr[0], ip_addr[1], ip_addr[2], ip_addr[3]);
-              const char *ifn = get_softmodem_params()->nsa ? "oaitun_nru" : "oaitun_ue";
+              const char *ifn = get_softmodem_params()->nsa ? "oaitun_nru" : "proxy-ue";
               char ifname[IFNAMSIZ];
               tun_generate_ifname(ifname, ifn, 0);
               tun_config(ifname, ip, NULL);
