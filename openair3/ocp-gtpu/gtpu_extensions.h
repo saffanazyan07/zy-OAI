@@ -32,6 +32,7 @@ typedef enum {
   /* 38.425 */
   GTPU_EXT_DL_DATA_DELIVERY_STATUS,
   GTPU_EXT_DL_USER_DATA,
+  GTPU_EXT_LBO, //dita 
 } gtpu_extension_header_type_t;
 
 /* 38.415 */
@@ -77,11 +78,18 @@ typedef struct {
 } dl_user_data_t;
 
 typedef struct {
+  uint8_t lbo_flag;
+  uint8_t hop;
+  uint8_t reserved[2];
+} gtpu_lbo_ie_t;
+
+typedef struct {
   gtpu_extension_header_type_t type;
   union {
     ul_pdu_session_information_t ul_pdu_session_information;
     dl_data_delivery_status_t dl_data_delivery_status;
     dl_user_data_t dl_user_data;
+    gtpu_lbo_ie_t lbo;  //dita
   };
 } gtpu_extension_header_t;
 

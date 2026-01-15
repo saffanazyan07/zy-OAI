@@ -28,6 +28,8 @@
 #define NR_RAN_CONTAINER        0x84
 #define PDU_SESSION_CONTAINER   0x85
 
+#define GTPU_EXT_PRIVATE_LBO    0xF1 //dita
+
 /* from an extension type, returns its "extension header type"
  * as defined in 29.281 Figure 5.2.1-3
  */
@@ -42,6 +44,8 @@ int serialize_gtpu_extension_type(gtpu_extension_header_type_t type)
     case GTPU_EXT_DL_DATA_DELIVERY_STATUS:
     case GTPU_EXT_DL_USER_DATA:
       return NR_RAN_CONTAINER;
+    case GTPU_EXT_LBO:
+      return GTPU_EXT_PRIVATE_LBO; 
     default:
       AssertFatal(0, "unknown GTPU extension type %d\n", type);
   }
@@ -118,45 +122,76 @@ static int serialize_dl_user_data(byte_array_producer_t *b, dl_user_data_t *ext)
   return 1;
 }
 
-/* returns -1 on error, number of serialized bytes on success */
-int serialize_extension(gtpu_extension_header_t *ext, gtpu_extension_header_type_t next, uint8_t *out_buf, int out_len)
+static int serialize_lbo_extension(byte_array_producer_t *b,
+                                   const gtpu_lbo_ie_t *lbo)
 {
-  byte_array_producer_t b;
+  // LBO payload = 4 bytes
+  if (!byte_array_producer_put_byte(b, lbo->lbo_flag))
+    return -1;
 
-  b = byte_array_producer_from_buffer(out_buf, out_len);
-  /* length - will be set later */
+  if (!byte_array_producer_put_byte(b, lbo->hop))
+    return -1;
+
+  if (!byte_array_producer_put_byte(b, lbo->reserved[0]))
+    return -1;
+
+  if (!byte_array_producer_put_byte(b, lbo->reserved[1]))
+    return -1;
+
+  return 0;
+}
+int serialize_extension(gtpu_extension_header_t *ext,
+                        gtpu_extension_header_type_t next,
+                        uint8_t *out_buf,
+                        int out_len)
+{
+  byte_array_producer_t b =
+      byte_array_producer_from_buffer(out_buf, out_len);
+
+  /* length placeholder */
   if (!byte_array_producer_put_byte(&b, 0))
     goto error;
 
   switch (ext->type) {
     case GTPU_EXT_UL_PDU_SESSION_INFORMATION:
-      if (!serialize_ul_pdu_session_information(&b, &ext->ul_pdu_session_information))
+      if (!serialize_ul_pdu_session_information(&b,
+              &ext->ul_pdu_session_information))
         goto error;
       break;
+
     case GTPU_EXT_DL_DATA_DELIVERY_STATUS:
-      if (!serialize_dl_data_delivery_status(&b, &ext->dl_data_delivery_status))
+      if (!serialize_dl_data_delivery_status(&b,
+              &ext->dl_data_delivery_status))
         goto error;
       break;
+
     case GTPU_EXT_DL_USER_DATA:
-      if (!serialize_dl_user_data(&b, &ext->dl_user_data))
+      if (!serialize_dl_user_data(&b,
+              &ext->dl_user_data))
         goto error;
       break;
+
+    case GTPU_EXT_LBO:
+      if (serialize_lbo_extension(&b, &ext->lbo) < 0)
+        goto error;
+      break;
+
     default:
       LOG_E(GTPU, "unknown extension type %d\n", ext->type);
       return -1;
   }
 
-  /* padding */
+  /* padding to 4-octet boundary */
   while ((b.pos & 3) != 3)
     if (!byte_array_producer_put_byte(&b, 0))
       goto error;
 
-  /* next */
-  if (!byte_array_producer_put_byte(&b, serialize_gtpu_extension_type(next)))
+  /* next extension header type */
+  if (!byte_array_producer_put_byte(&b,
+        serialize_gtpu_extension_type(next)))
     goto error;
 
-  /* length is now know */
-  DevAssert(b.pos / 4 <= 255);
+  /* set length (in 4-octet units) */
   out_buf[0] = b.pos / 4;
 
   return b.pos;

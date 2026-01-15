@@ -459,6 +459,7 @@ static void deliver_pdu_drb_ue(void *deliver_pdu_data, ue_id_t ue_id, int rb_id,
   enqueue_rlc_data_req(&ctxt, 0, rb_id, sdu_id, 0, size, memblock);
 }
 
+// dita: need to explore for LBO
 static void deliver_pdu_drb_gnb(void *deliver_pdu_data, ue_id_t ue_id, int rb_id,
                                 char *buf, int size, int sdu_id)
 {

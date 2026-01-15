@@ -693,7 +693,7 @@ void RCconfig_verify(configmodule_interface_t *cfg, ngran_node_t node_type)
   if (NODE_IS_CU(node_type)) {
     // verify that there is no SCC and radio config in the case of CU
     verify_section_notset(cfg, GNB_CONFIG_STRING_GNB_LIST ".[0]", GNB_CONFIG_STRING_SERVINGCELLCONFIGCOMMON);
-
+    
     verify_gnb_param_notset(gnbp, GNB_PDSCH_ANTENNAPORTS_N1_IDX, GNB_CONFIG_STRING_PDSCHANTENNAPORTS_N1);
     verify_gnb_param_notset(gnbp, GNB_PDSCH_ANTENNAPORTS_N2_IDX, GNB_CONFIG_STRING_PDSCHANTENNAPORTS_N2);
     verify_gnb_param_notset(gnbp, GNB_PDSCH_ANTENNAPORTS_XP_IDX, GNB_CONFIG_STRING_PDSCHANTENNAPORTS_XP);
