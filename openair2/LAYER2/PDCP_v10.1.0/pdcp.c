@@ -2173,7 +2173,7 @@ uint64_t pdcp_module_init( uint64_t pdcp_optmask, int id) {
     int endx = (id == 0) ? num_if : id;
     for (int i = begx; i < endx; i++) {
       char ifname[IFNAMSIZ];
-      tun_generate_ifname(ifname, "oaitun_ue", i);
+      tun_generate_ifname(ifname, "proxy-ue", i);
       tun_init(ifname, i);
     }
     char ifname[IFNAMSIZ];

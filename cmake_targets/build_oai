@@ -237,6 +237,11 @@ function main() {
             TARGET_LIST="$TARGET_LIST z-agf2"
             echo_info "Will compile gNB"
             shift;;
+      --proxy-ue)
+            nrUE=1
+            TARGET_LIST="$TARGET_LIST proxy-ue"
+            echo_info "Will compile NR UE"
+            shift;;
       --d-cu)
             gNB=1
             TARGET_LIST="$TARGET_LIST d-cu"

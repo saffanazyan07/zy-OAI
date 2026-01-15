@@ -756,7 +756,7 @@ rrc_ue_establish_drb(
              UE_NAS_USE_TUN ? 1 : (ip_addr_offset3 + ue_mod_idP + 1),
              ip_addr_offset4 + ue_mod_idP + 1);
     char ifname[IFNAMSIZ];
-    tun_generate_ifname(ifname, "oaitun_ue", ip_addr_offset3 + ue_mod_idP);
+    tun_generate_ifname(ifname, "proxy-ue", ip_addr_offset3 + ue_mod_idP);
     oip_ifup = tun_config(ifname, ip, NULL);
 
     if (oip_ifup == 0 && (!UE_NAS_USE_TUN)) { // interface is up --> send a config the DRB

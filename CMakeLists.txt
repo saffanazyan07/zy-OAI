@@ -2037,6 +2037,39 @@ target_link_libraries(z-agf2 PRIVATE
   asn1_lte_rrc asn1_nr_rrc asn1_s1ap asn1_ngap asn1_m2ap asn1_m3ap asn1_x2ap asn1_f1ap asn1_lpp)
 
 
+add_executable(proxy-ue
+  ${rrc_h}
+  ${s1ap_h}
+  ${OPENAIR_DIR}/executables/proxy-ue.c
+  ${OPENAIR_DIR}/executables/position_interface.c
+  ${OPENAIR_DIR}/executables/nr-ue.c
+  ${OPENAIR_DIR}/executables/softmodem-common.c
+  ${OPENAIR_DIR}/radio/COMMON/common_lib.c
+  ${OPENAIR_DIR}/radio/COMMON/record_player.c
+  ${OPENAIR2_DIR}/LAYER2/NR_MAC_COMMON/nr_mac_common.c
+  ${OPENAIR2_DIR}/LAYER2/NR_MAC_COMMON/nr_mac_common_tdd.c
+  ${OPENAIR1_DIR}/PHY/TOOLS/phy_scope_interface.c
+  ${NFAPI_USER_DIR}/nfapi.c
+  ${PHY_INTERFACE_DIR}/queue_t.c
+  )
+
+target_link_libraries(proxy-ue PRIVATE
+  -Wl,--start-group
+  nr_rrc SECURITY UTIL HASHTABLE SCHED_RU_LIB SCHED_NR_UE_LIB
+  PHY_COMMON PHY_NR_COMMON PHY_NR_UE NR_L2_UE MAC_NR_COMMON NFAPI_LIB
+  ITTI SIMU shlib_loader
+  time_management
+  -Wl,--end-group z dl)
+
+target_link_libraries(proxy-ue PRIVATE pthread m CONFIG_LIB rt nr_ue_phy_meas)
+target_link_libraries(proxy-ue PRIVATE ${T_LIB})
+target_link_libraries(proxy-ue PRIVATE nr_nas lib_uicc usim_lib)
+target_link_libraries(proxy-ue PRIVATE asn1_nr_rrc_hdrs asn1_lte_rrc_hdrs)
+
+# force the generation of ASN.1 so that we don't need to wait during the build
+target_link_libraries(proxy-ue PRIVATE
+                      asn1_lte_rrc asn1_nr_rrc asn1_s1ap asn1_ngap asn1_m2ap asn1_m3ap asn1_x2ap asn1_f1ap asn1_lpp)
+
 # nr-softmodem
 ###################################################
 
