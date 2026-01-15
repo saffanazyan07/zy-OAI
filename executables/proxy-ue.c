@@ -27,64 +27,55 @@
 #include <errno.h>
 
 #include "T.h"
-#include "common/oai_version.h"
 #include "assertions.h"
-#include "PHY/types.h"
-#include "PHY/defs_nr_UE.h"
+#include <executables/proxy-ue.h>
+#include "executables/softmodem-common.h"
+#include "executables/thread-common.h"
+#include "NR_IF_Module.h"
+#include "UTIL/OPT/opt.h"
+#include "LAYER2/nr_pdcp/nr_pdcp_oai_api.h"
+#include "nr_rlc/nr_rlc_oai_api.h"
+#include "intertask_interface.h"
+#include "system.h"
+#include "nr_nas_msg.h"
+#include "actor.h"
 #include "SCHED_NR_UE/defs.h"
+#include "common/oai_version.h"
 #include "common/ran_context.h"
 #include "common/config/config_userapi.h"
 #include "common/utils/load_module_shlib.h"
-//#undef FRAME_LENGTH_COMPLEX_SAMPLES //there are two conflicting definitions, so we better make sure we don't use it at all
 #include "common/utils/nr/nr_common.h"
+#include "common/utils/LOG/log.h"
+#include "common/utils/time_manager/time_manager.h"
+#include "common/utils/LOG/vcd_signal_dumper.h"
 #include "radio/COMMON/common_lib.h"
 #include "radio/ETHERNET/if_defs.h"
-
-//#undef FRAME_LENGTH_COMPLEX_SAMPLES //there are two conflicting definitions, so we better make sure we don't use it at all
-#include "openair1/PHY/MODULATION/nr_modulation.h"
 #include "PHY/CODING/nrLDPC_coding/nrLDPC_coding_interface.h"
 #include "PHY/phy_vars_nr_ue.h"
 #include "PHY/NR_UE_TRANSPORT/nr_transport_proto_ue.h"
 #include "PHY/NR_TRANSPORT/nr_dlsch.h"
-//#include "../../SIMU/USER/init_lte.h"
-
+#include "PHY/types.h"
+#include "PHY/INIT/nr_phy_init.h"
+#include "PHY/defs_nr_UE.h"
 #include "PHY_INTERFACE/phy_interface_vars.h"
-#include "NR_IF_Module.h"
+#include "PHY/TOOLS/phy_scope_interface.h"
+#include "PHY/TOOLS/nr_phy_scope.h"
+
 #include "openair1/SIMULATION/TOOLS/sim.h"
+#include "openair1/PHY/MODULATION/nr_modulation.h"
+#include <openair1/SCHED_NR_UE/fapi_nr_ue_l1.h>
+#include <openair1/PHY/MODULATION/nr_modulation.h>
+#include "openair2/GNB_APP/gnb_paramdef.h"
+#include <openair2/RRC/NR_UE/rrc_proto.h>
+#include <openair2/LAYER2/NR_MAC_UE/mac_defs.h>
+#include <openair2/LAYER2/NR_MAC_UE/mac_proto.h>
+#include <openair2/NR_UE_PHY_INTERFACE/NR_IF_Module.h>
 #include "openair2/RRC/NR_UE/L2_interface_ue.h"
 
 #ifdef SMBV
 #include "PHY/TOOLS/smbv.h"
 unsigned short config_frames[4] = {2,9,11,13};
 #endif
-#include "common/utils/LOG/log.h"
-#include "common/utils/time_manager/time_manager.h"
-#include "common/utils/LOG/vcd_signal_dumper.h"
-#include "UTIL/OPT/opt.h"
-#include "LAYER2/nr_pdcp/nr_pdcp_oai_api.h"
-#include "intertask_interface.h"
-#include "PHY/INIT/nr_phy_init.h"
-#include "system.h"
-#include <openair2/RRC/NR_UE/rrc_proto.h>
-#include <openair2/LAYER2/NR_MAC_UE/mac_defs.h>
-#include <openair2/LAYER2/NR_MAC_UE/mac_proto.h>
-#include <openair2/NR_UE_PHY_INTERFACE/NR_IF_Module.h>
-#include <openair1/SCHED_NR_UE/fapi_nr_ue_l1.h>
-#include "nr_rlc/nr_rlc_oai_api.h"
-/* Callbacks, globals and object handlers */
-
-//#include "stats.h"
-// current status is that every UE has a DL scope for a SINGLE eNB (eNB_id=0)
-#include "PHY/TOOLS/phy_scope_interface.h"
-#include "PHY/TOOLS/nr_phy_scope.h"
-#include <executables/nr-uesoftmodem.h>
-#include "executables/softmodem-common.h"
-#include "executables/thread-common.h"
-
-#include "nr_nas_msg.h"
-#include <openair1/PHY/MODULATION/nr_modulation.h>
-#include "openair2/GNB_APP/gnb_paramdef.h"
-#include "actor.h"
 
 THREAD_STRUCT thread_struct;
 nrUE_params_t nrUE_params = {0};
@@ -103,7 +94,6 @@ double          rx_gain_off = 0.0;
 uint64_t        downlink_frequency[MAX_NUM_CCs][4];
 int32_t         uplink_frequency_offset[MAX_NUM_CCs][4];
 uint64_t        sidelink_frequency[MAX_NUM_CCs][4];
-// UE and OAI config variables
 double          cpuf;
 
 int create_tasks_nrue(uint32_t ue_nb) {
@@ -125,7 +115,6 @@ int create_tasks_nrue(uint32_t ue_nb) {
   }
 
   itti_wait_ready(0);
-
   return 0;
 }
 
@@ -146,7 +135,6 @@ void exit_function(const char *file, const char *function, const int line, const
       }
     }
   }
-
   if (assert) {
     abort();
   } else {
@@ -208,7 +196,7 @@ void set_options(int CC_id, PHY_VARS_NR_UE *UE){
 
   fp->nb_antennas_rx       = nrUE_params.nb_antennas_rx;
   fp->nb_antennas_tx       = nrUE_params.nb_antennas_tx;
-  fp->threequarter_fs = get_softmodem_params()->threequarter_fs;
+  fp->threequarter_fs      = get_softmodem_params()->threequarter_fs;
   fp->N_RB_DL              = nrUE_params.N_RB_DL;
   fp->ssb_start_subcarrier = nrUE_params.ssb_start_subcarrier;
   fp->ofdm_offset_divisor  = nrUE_params.ofdm_offset_divisor;
@@ -305,7 +293,7 @@ int NB_UE_INST = 1;
 configmodule_interface_t *uniqCfg = NULL;
 nrLDPC_coding_interface_t nrLDPC_coding_interface = {0};
 
-int main(int argc, char **argv)
+int proxy_ue(int argc, char **argv)
 {
   start_background_system();
 

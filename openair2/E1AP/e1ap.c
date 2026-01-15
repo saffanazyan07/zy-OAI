@@ -737,7 +737,7 @@ void cuup_init_n3(instance_t instance)
     strcpy(tmp.originHost, nc->localAddressN3);
     sprintf(tmp.originService, "%d", nc->localPortN3);
     sprintf(tmp.destinationService, "%d", nc->remotePortN3);
-    LOG_I(GTPU, "Configuring GTPu address : %s, port : %s\n", tmp.originHost, tmp.originService);
+    LOG_I(E1AP, "Configuring GTPu address : %s, port : %s\n", tmp.originHost, tmp.originService);
     // Fixme: fully inconsistent instances management
     // dirty global var is a bad fix
     extern instance_t legacyInstanceMapping;

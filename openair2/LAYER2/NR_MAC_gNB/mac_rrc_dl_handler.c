@@ -940,8 +940,6 @@ void dl_rrc_message_transfer(const f1ap_dl_rrc_message_t *dl_rrc)
     bool success = du_add_f1_ue_data(dl_rrc->gNB_DU_ue_id, &new_ue_data);
     DevAssert(success);
   }
-
-
   /* if we get the old-gNB-DU-UE-ID, this means there is a reestablishment
    * ongoing. */
   if (dl_rrc->old_gNB_DU_ue_id != NULL) {

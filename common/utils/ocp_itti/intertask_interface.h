@@ -44,7 +44,7 @@ typedef struct {
   uint32_t      interval_sec;
   uint32_t      interval_us;
   long          task_id;
-  instance_t       instance;
+  instance_t    instance;
   timer_type_t  type;
   void         *timer_arg;
   long          timer_id;
@@ -527,7 +527,7 @@ MessageDef *itti_alloc_new_message(
  **/
 MessageDef *itti_alloc_new_message_sized(
   task_id_t         origin_task_id,
-  instance_t originInstance,
+  instance_t        originInstance,
   MessagesIds       message_id,
   MessageHeaderSize size);
 
@@ -553,7 +553,7 @@ int timer_setup(
   uint32_t      interval_sec,
   uint32_t      interval_us,
   task_id_t     task_id,
-  instance_t       instance,
+  instance_t    instance,
   timer_type_t  type,
   void         *timer_arg,
   long         *timer_id);

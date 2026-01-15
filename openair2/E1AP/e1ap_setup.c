@@ -44,18 +44,19 @@ static void get_NGU_S1U_addr(char **addr, uint16_t *port)
 
   // Config GTPu
   char gtpupath[MAX_OPTNAME_SIZE * 2 + 8];
-  LOG_I(GTPU, "Configuring GTPu\n");
+  LOG_I(E1AP, "Configuring GTPu\n");
   sprintf(gtpupath, "%s.[%i].%s", GNB_CONFIG_STRING_GNB_LIST, 0, GNB_CONFIG_STRING_NETWORK_INTERFACES_CONFIG);
   GET_PARAMS(NETParams, GNBNETPARAMS_DESC, gtpupath);
 
   char *address;
   if (NETParams[GNB_IPV4_ADDRESS_FOR_NG_AMF_IDX].strptr != NULL) {
-    LOG_I(GTPU, "SA mode \n");
+    LOG_I(E1AP, "SA mode \n");
+    
     AssertFatal(gnb_ipv4_address_for_NGU != NULL, "NG-U IPv4 address is NULL: could not read IPv4 address\n");
     address = strdup(gnb_ipv4_address_for_NGU);
     *port = gnb_port_for_NGU;
   } else {
-    LOG_I(GTPU, "NSA mode \n");
+    LOG_I(E1AP, "NSA mode \n");
     AssertFatal(gnb_ipv4_address_for_S1U != NULL, "S1U IPv4 address is NULL: could not read IPv4 address\n");
     address = strdup(gnb_ipv4_address_for_S1U);
     *port = gnb_port_for_S1U;
