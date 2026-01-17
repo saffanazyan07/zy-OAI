@@ -1410,28 +1410,31 @@ include_directories(${OPENAIR3_DIR}/ocp-gtp)
 add_library (ZCUGTPV1U
   ${NR_RRC_DIR}/rrc_gNB_GTPV1U.c
   ${RRC_DIR}/rrc_eNB_GTPV1U.c
+  ${OPENAIR3_DIR}/ocp-gtpu/upef_z-cu.cpp
   ${OPENAIR3_DIR}/ocp-gtpu/gtp_itf_z-cu.cpp
 )
 target_link_libraries(ZCUGTPV1U PRIVATE asn1_nr_rrc_hdrs asn1_lte_rrc_hdrs)
 target_link_libraries(ZCUGTPV1U PRIVATE SIMU)
 include_directories(${OPENAIR3_DIR}/ocp-gtp)
 
-add_library(GTPV1U_Z_AGF1
+add_library(ZAGF1GTPV1U
   ${NR_RRC_DIR}/rrc_gNB_GTPV1U.c
   ${RRC_DIR}/rrc_eNB_GTPV1U.c
   ${OPENAIR3_DIR}/ocp-gtpu/gtp_itf_z-agf1.cpp
+  ${OPENAIR3_DIR}/ocp-gtpu/upef_z-agf1.cpp
 )
-target_link_libraries(GTPV1U_Z_AGF1 PRIVATE asn1_nr_rrc_hdrs asn1_lte_rrc_hdrs)
-target_link_libraries(GTPV1U_Z_AGF1 PRIVATE SIMU)
+target_link_libraries(ZAGF1GTPV1U PRIVATE asn1_nr_rrc_hdrs asn1_lte_rrc_hdrs)
+target_link_libraries(ZAGF1GTPV1U PRIVATE SIMU)
 include_directories(${OPENAIR3_DIR}/ocp-gtp)
 
-add_library(GTPV1U_Z_AGF2
+add_library(ZAGF2GTPV1U
   ${NR_RRC_DIR}/rrc_gNB_GTPV1U.c
   ${RRC_DIR}/rrc_eNB_GTPV1U.c
   ${OPENAIR3_DIR}/ocp-gtpu/gtp_itf_z-agf2.cpp
+  ${OPENAIR3_DIR}/ocp-gtpu/upef_z-agf2.cpp
 )
-target_link_libraries(GTPV1U_Z_AGF2 PRIVATE asn1_nr_rrc_hdrs asn1_lte_rrc_hdrs)
-target_link_libraries(GTPV1U_Z_AGF2 PRIVATE SIMU)
+target_link_libraries(ZAGF2GTPV1U PRIVATE asn1_nr_rrc_hdrs asn1_lte_rrc_hdrs)
+target_link_libraries(ZAGF2GTPV1U PRIVATE SIMU)
 include_directories(${OPENAIR3_DIR}/ocp-gtp)
 
 ### end zyzy edit
@@ -2099,7 +2102,7 @@ add_executable(z-agf1
 
 target_link_libraries(z-agf1 PRIVATE
   -Wl,--start-group
-  UTIL HASHTABLE SCTP_CLIENT SCHED_LIB SCHED_RU_LIB SCHED_NR_LIB PHY_NR PHY PHY_COMMON PHY_NR_COMMON PHY_RU GTPV1U_Z_AGF1 SECURITY
+  UTIL HASHTABLE SCTP_CLIENT SCHED_LIB SCHED_RU_LIB SCHED_NR_LIB PHY_NR PHY PHY_COMMON PHY_NR_COMMON PHY_RU ZAGF1GTPV1U SECURITY
   ITTI ${NAS_UE_LIB} lte_rrc nr_rrc
   ngap s1ap L2_LTE_NR L2_NR MAC_NR_COMMON NFAPI_LIB NFAPI_VNF_LIB NFAPI_PNF_LIB NFAPI_USER_LIB SIMU
   x2ap f1ap m2ap m3ap e1ap shlib_loader
@@ -2142,7 +2145,7 @@ add_executable(z-agf2
 
 target_link_libraries(z-agf2 PRIVATE
   -Wl,--start-group
-  UTIL HASHTABLE SCTP_CLIENT SCHED_LIB SCHED_RU_LIB SCHED_NR_LIB PHY_NR PHY PHY_COMMON PHY_NR_COMMON PHY_RU GTPV1U_Z_AGF2 SECURITY
+  UTIL HASHTABLE SCTP_CLIENT SCHED_LIB SCHED_RU_LIB SCHED_NR_LIB PHY_NR PHY PHY_COMMON PHY_NR_COMMON PHY_RU ZAGF2GTPV1U SECURITY
   ITTI ${NAS_UE_LIB} lte_rrc nr_rrc
   ngap s1ap L2_LTE_NR L2_NR MAC_NR_COMMON NFAPI_LIB NFAPI_VNF_LIB NFAPI_PNF_LIB NFAPI_USER_LIB SIMU
   x2ap f1ap m2ap m3ap e1ap shlib_loader
@@ -2164,6 +2167,36 @@ endif()
 # force the generation of ASN.1 so that we don't need to wait during the build
 target_link_libraries(z-agf2 PRIVATE
   asn1_lte_rrc asn1_nr_rrc asn1_s1ap asn1_ngap asn1_m2ap asn1_m3ap asn1_x2ap asn1_f1ap asn1_lpp)
+
+add_executable(proxy-ue
+  ${rrc_h}
+  ${s1ap_h}
+  ${OPENAIR_DIR}/executables/proxy-ue.c
+  ${OPENAIR_DIR}/executables/position_interface.c
+  ${OPENAIR_DIR}/executables/nr-ue.c
+  ${OPENAIR_DIR}/executables/softmodem-common.c
+  ${OPENAIR_DIR}/radio/COMMON/common_lib.c
+  ${OPENAIR_DIR}/radio/COMMON/record_player.c
+  ${OPENAIR2_DIR}/LAYER2/NR_MAC_COMMON/nr_mac_common.c
+  ${OPENAIR3_DIR}/NAS/UE/nas_ue_task.c
+  ${OPENAIR1_DIR}/PHY/TOOLS/phy_scope_interface.c
+  )
+
+target_link_libraries(proxy-ue PRIVATE
+  -Wl,--start-group
+  nr_rrc SECURITY UTIL HASHTABLE SCHED_RU_LIB SCHED_NR_UE_LIB
+  PHY_COMMON PHY_NR_COMMON PHY_NR_UE NR_L2_UE L2_UE_LTE_NR MAC_NR_COMMON NFAPI_LIB NFAPI_PNF_LIB
+  NFAPI_USER_LIB MISC_NFAPI_NR_LIB
+  ITTI LIB_5GNAS_GNB LIB_NAS_SIMUE ${NAS_SIM_LIB} SIMU shlib_loader
+  -Wl,--end-group z dl)
+
+target_link_libraries(proxy-ue PRIVATE pthread m CONFIG_LIB rt nr_ue_phy_meas)
+target_link_libraries(proxy-ue PRIVATE ${T_LIB})
+target_link_libraries(proxy-ue PRIVATE asn1_nr_rrc_hdrs asn1_lte_rrc_hdrs)
+
+# force the generation of ASN.1 so that we don't need to wait during the build
+target_link_libraries(proxy-ue PRIVATE
+                      asn1_lte_rrc asn1_nr_rrc asn1_s1ap asn1_ngap asn1_m2ap asn1_m3ap asn1_x2ap asn1_f1ap asn1_lpp)
 ##### end-edited zyzy
 
 # nr-uesoftmodem is  UE implementation
