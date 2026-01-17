@@ -265,8 +265,13 @@ function main() {
        --z-agf)
             gNB=1
             nrUE=1
-            TARGET_LIST="$TARGET_LIST z-agf nr-uesoftmodem"
+            TARGET_LIST="$TARGET_LIST z-agf1 z-agf2 proxy-ue"
             echo_info "Will compile Z-AGF"
+            shift;;
+       --proxy-ue)
+            nrUE=1
+            TARGET_LIST="$TARGET_LIST proxy-ue"
+            echo_info "Will compile NR UE"
             shift;;       
        --mu)
             CMAKE_CMD="$CMAKE_CMD -DUE_EXPANSION=True -DPRE_SCD_THREAD=True"
