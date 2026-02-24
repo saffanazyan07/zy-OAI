@@ -97,7 +97,7 @@ typedef struct Gtpv1uExtHeader {
 #define GTP_END_MARKER                                       (254)
 #define GTP_GPDU                                             (255)
 
-//dita
+//dita edited
 #define LBO_CONTAINER 0x90
 
 typedef struct LboContainer {
@@ -110,7 +110,7 @@ typedef struct Gtpv1uLboExtHeader {
   LboContainerT lbo;
   uint8_t NextExtHeaderType;
 } __attribute__((packed)) Gtpv1uLboExtHeaderT;
-//dita end
+//dita edited end
 
 typedef struct gtpv1u_bearer_s {
   /* TEID used in dl and ul */
@@ -122,7 +122,7 @@ typedef struct gtpv1u_bearer_s {
   uint16_t        seqNum;
   uint8_t         npduNum;
   int             outgoing_qfi;
-    /* dita */
+////////* dita edited *//////////////
   bool            lbo_enable;
 } gtpv1u_bearer_t;
 
@@ -357,7 +357,7 @@ void gtpv1uSendDirect(instance_t instance,
   // copy to release the mutex
   gtpv1u_bearer_t tmp = ptr2->second;
   pthread_mutex_unlock(&globGtp.gtp_lock);
-  //dita
+///////////////////////dita edited new /////////////////////////////////////
   // ---- Build Extension Headers (chaining) ----
   uint8_t extBuf[64];
   uint8_t *p = extBuf;
@@ -381,7 +381,7 @@ void gtpv1uSendDirect(instance_t instance,
     p += sizeof(Gtpv1uExtHeaderT);
   }
 
-  /* 2️⃣ LBO Container (AUTO jika PSC ada) */
+  /* 2️ LBO Container (AUTO jika PSC ada) */
   if (psc) {
     psc->NextExtHeaderType = LBO_CONTAINER;
 
